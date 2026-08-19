@@ -6,7 +6,7 @@
 <title>memiro · дизайн-направления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&family=Tektur:wght@500;700;900&family=Rubik+Mono+One&family=IBM+Plex+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Golos+Text:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&family=Tektur:wght@500;700;900&family=Rubik+Mono+One&family=IBM+Plex+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Golos+Text:wght@400;600&family=Comfortaa:wght@500;700&family=Nunito:wght@400;600;800&family=Tenor+Sans&family=Rubik:wght@400;600;900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -129,6 +129,51 @@
   #salon .swatches { background: #24402f; border: 1px solid #35543f; }
   #salon .swatches h3, #salon .chip span, #salon .type-note { color: #9aa79a; }
 
+  /* Direction G: Мягкость */
+  #myagkost { background: #f3eef9; color: #2c2440; font-family: "Nunito", sans-serif; }
+  #myagkost h2, #myagkost .specimen .big { font-family: "Comfortaa", sans-serif; font-weight: 700; letter-spacing: -0.01em; }
+  #myagkost .board-tag { background: #8f7ad6; color: #fff; }
+  #myagkost .mood { color: #6b6383; }
+  #myagkost .specimen { background: #ffffff; border: none; border-radius: 32px; box-shadow: 0 12px 40px rgba(93, 74, 156, 0.10); }
+  #myagkost .side .photo { border-radius: 32px; }
+  #myagkost .body-sample { color: #6b6383; }
+  #myagkost .btn { border-radius: 999px; }
+  #myagkost .btn.primary { background: #8f7ad6; color: #fff; }
+  #myagkost .btn.ghost { border: 2px solid #d9d0ee; color: #2c2440; }
+  #myagkost .swatches { background: #ffffff; border: none; border-radius: 32px; box-shadow: 0 12px 40px rgba(93, 74, 156, 0.10); }
+  #myagkost .swatches h3, #myagkost .chip span, #myagkost .type-note { color: #8a80a3; }
+  #myagkost .chip { border-radius: 20px; }
+
+  /* Direction H: Арка */
+  #arka { background: #eef0f2; color: #33393f; font-family: "Golos Text", sans-serif; }
+  #arka h2, #arka .specimen .big { font-family: "Tenor Sans", sans-serif; font-weight: 400; letter-spacing: 0.01em; }
+  #arka .board-tag { background: #b4552f; color: #fff; }
+  #arka .mood { color: #62696f; }
+  #arka .specimen { background: #f9fafb; border: 1px solid #dde1e5; border-radius: 200px 200px 20px 20px; padding-top: 64px; text-align: center; align-items: center; }
+  #arka .specimen .cta-row { justify-content: center; }
+  #arka .specimen .body-sample { margin-left: auto; margin-right: auto; }
+  #arka .side .photo { border-radius: 200px 200px 20px 20px; }
+  #arka .body-sample { color: #62696f; }
+  #arka .btn.primary { background: #b4552f; color: #fff; }
+  #arka .btn.ghost { border: 1px solid #b8bec4; color: #33393f; }
+  #arka .swatches { background: #f9fafb; border: 1px solid #dde1e5; border-radius: 20px; }
+  #arka .swatches h3, #arka .chip span, #arka .type-note { color: #7b8288; }
+  #arka .chip { border-radius: 32px 32px 8px 8px; }
+
+  /* Direction I: Пунш */
+  #punsh { background: #fdfcfa; color: #17161a; font-family: "Rubik", sans-serif; }
+  #punsh h2, #punsh .specimen .big { font-weight: 900; letter-spacing: -0.02em; text-transform: uppercase; }
+  #punsh .board-tag { background: #f22e6b; color: #fff; }
+  #punsh .mood { color: #57555c; }
+  #punsh .specimen { background: #ffffff; border: 2px solid #17161a; border-radius: 24px; }
+  #punsh .side .photo { border: 2px solid #17161a; border-radius: 24px; }
+  #punsh .body-sample { color: #57555c; }
+  #punsh .btn { border-radius: 999px; }
+  #punsh .btn.primary { background: #f22e6b; color: #fff; }
+  #punsh .btn.ghost { border: 2px solid #17161a; color: #17161a; }
+  #punsh .swatches { background: #ffffff; border: 2px solid #17161a; border-radius: 24px; }
+  #punsh .swatches h3, #punsh .chip span, #punsh .type-note { color: #6f6d75; }
+
   .verdict { max-width: 880px; margin: 0 auto; padding: 64px 24px 96px; }
   .verdict h2 { font-size: 26px; letter-spacing: -0.01em; }
   .verdict p { margin-top: 12px; color: #52525b; line-height: 1.65; }
@@ -139,7 +184,7 @@
 
 <header class="intro">
   <h1>memiro: три визуальных направления</h1>
-  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже шесть направлений: типографика, палитра и настроение.
+  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже девять направлений: типографика, палитра и настроение.
      Первые три спокойнее, последние три смелее. Выберите одно, и макеты страниц будут доработаны в нём.</p>
   <nav class="jump">
     <a href="#svet">1 · Свет</a>
@@ -148,6 +193,9 @@
     <a href="#hrom">4 · Хром</a>
     <a href="#plakat">5 · Плакат</a>
     <a href="#salon">6 · Салон</a>
+    <a href="#myagkost">7 · Мягкость</a>
+    <a href="#arka">8 · Арка</a>
+    <a href="#punsh">9 · Пунш</a>
   </nav>
 </header>
 
@@ -385,6 +433,126 @@
           </div>
           <p class="type-note">Playfair Display для заголовков (антиква с выразительным курсивом, кириллица) +
              Golos Text для текста. Обоснование антиквы: интерьерный люкс, предметная съёмка, «журнальная» подача.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ G ============ -->
+<section class="board" id="myagkost">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Игровое</span>
+      <h2>Мягкость</h2>
+    </div>
+    <p class="mood">Пастель и округлость: лавандовый фон, скруглённые карточки-подушки, мягкие тени.
+       Подача от фигурных зеркал: месяц, капля, «Микки» здесь выглядят как персонажи.
+       Настроение: детская и спальня, уют, дружелюбный бренд.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Зеркала, которые хочется потрогать</div>
+          <p class="body-sample" style="margin-top:18px">Месяц с тёплой подсветкой-ночником, капля, арка:
+             изготовим в вашем размере и повесим.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-mesyats-halo-moon-6a15d5dec507b.jpg" alt="Зеркало месяц Halo Moon"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#f3eef9;border:1px solid #ddd2ee"><span>фон #F3EEF9</span></div>
+            <div class="chip" style="background:#ffffff;border:1px solid #ddd2ee"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#2c2440"><span>текст #2C2440</span></div>
+            <div class="chip" style="background:#8f7ad6"><span>лаванда #8F7AD6</span></div>
+          </div>
+          <p class="type-note">Comfortaa для заголовков (округлая кириллица) + Nunito для текста.
+             Радиус 32px, мягкие цветные тени, кнопки-пилюли.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ H ============ -->
+<section class="board" id="arka">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Тёплое</span>
+      <h2>Арка</h2>
+    </div>
+    <p class="mood">Мотив арки во всём: фотографии и карточки обрезаны полукруглым сводом, как самые продаваемые
+       арочные зеркала. Терракота на прохладном сером, спокойная антиква-гротеск.
+       Настроение: галерея с колоннами, средиземноморский полдень.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Всё начинается<br>с отражения</div>
+          <p class="body-sample" style="margin-top:18px">Арки, овалы и порталы под ваш размер.
+             Изготовим, привезём и установим в Санкт-Петербурге.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-arka-grand-arc-6a15d5f39cc29.jpg" alt="Зеркало арка Grand Arc"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#eef0f2;border:1px solid #dde1e5"><span>фон #EEF0F2</span></div>
+            <div class="chip" style="background:#f9fafb;border:1px solid #dde1e5"><span>карточки #F9FAFB</span></div>
+            <div class="chip" style="background:#33393f"><span>текст #33393F</span></div>
+            <div class="chip" style="background:#b4552f"><span>терракота #B4552F</span></div>
+          </div>
+          <p class="type-note">Tenor Sans для заголовков (тонкая классическая кириллица) + Golos Text для текста.
+             Арочные обрезки фото и карточек, терракота только на кнопках и ценах.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ I ============ -->
+<section class="board" id="punsh">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Яркое</span>
+      <h2>Пунш</h2>
+    </div>
+    <p class="mood">Белый холст, чёрный контур и один удар цвета: малиновый. Капс-заголовки Rubik 900,
+       карточки с обводкой, крупные цены. Энергия молодого DTC-бренда: просто, громко, весело.
+       Настроение: поп-витрина, стикеры, уверенность.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Твоё зеркало.<br>Твои правила</div>
+          <p class="body-sample" style="margin-top:18px">Выбери форму, раму и подсветку. Размер любой,
+             цена считается сразу. Повесим сами.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-kaplya-dew-glow-6a15d7de287c2.jpg" alt="Зеркало капля Dew Glow"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#fdfcfa;border:2px solid #17161a"><span>фон #FDFCFA</span></div>
+            <div class="chip" style="background:#ffffff;border:2px solid #17161a"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#17161a"><span>контур #17161A</span></div>
+            <div class="chip" style="background:#f22e6b"><span>малина #F22E6B</span></div>
+          </div>
+          <p class="type-note">Rubik (кириллица): заголовки 900 капсом, текст 400. Обводки 2px,
+             радиус 24px, малиновый только для CTA, бейджей и цен.</p>
         </div>
       </div>
     </div>
