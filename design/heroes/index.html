@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · четыре hero-направления</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #ececee; color: #1b1d21; font-family: "Manrope", system-ui, sans-serif; padding: 64px 24px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
+  p { margin-top: 12px; color: #52525b; line-height: 1.6; }
+  ol { margin-top: 28px; list-style: none; display: grid; gap: 12px; }
+  a.card { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; background: #fff; border: 1px solid #dcdee2; border-radius: 14px; padding: 20px 24px; text-decoration: none; color: inherit; transition: transform .15s; }
+  a.card:hover { transform: translateY(-2px); }
+  a.card strong { font-size: 18px; }
+  a.card span { font-size: 13.5px; color: #8b8f98; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Четыре hero-направления на реальных фото</h1>
+  <p>Каждая ссылка ведёт на живой первый экран сайта в своём направлении. Открывай по очереди на весь экран и выбирай.</p>
+  <ol>
+    <li><a class="card" href="1-svet.html"><strong>1 · Галерея света</strong><span>фото как холст, светло, графит</span></a></li>
+    <li><a class="card" href="2-noch.html"><strong>2 · Ночная витрина</strong><span>тьма + янтарный LED-ореол</span></a></li>
+    <li><a class="card" href="3-classika.html"><strong>3 · Петербургская классика</strong><span>стоун, антиква, музейность</span></a></li>
+    <li><a class="card" href="4-blok.html"><strong>4 · Цветной блок</strong><span>кобальтовый модернизм, радиус 0</span></a></li>
+  </ol>
+</div>
+</body>
+</html>

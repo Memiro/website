@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · Галерея света</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Manrope", system-ui, sans-serif; color: #1b1d21; background: #f2f3f5; }
+
+  /* Image-as-canvas: фото на весь экран, текст в безопасной зоне снизу слева */
+  .hero { position: relative; min-height: 100dvh; overflow: hidden; }
+  .hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+  .hero .scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(242,243,245,0.10) 0%, rgba(242,243,245,0) 35%, rgba(242,243,245,0.88) 86%, #f2f3f5 100%); }
+
+  .nav { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; align-items: center; gap: 32px; padding: 0 40px; height: 72px; }
+  .wordmark { font-size: 22px; font-weight: 800; letter-spacing: 0.04em; text-decoration: none; color: #1b1d21; }
+  .nav nav { display: flex; gap: 26px; margin-right: auto; }
+  .nav nav a { text-decoration: none; font-size: 14.5px; font-weight: 600; color: #3f4249; }
+  .nav .phone { font-size: 14.5px; font-weight: 700; color: #1b1d21; text-decoration: none; }
+  @media (max-width: 900px) { .nav nav, .nav .phone { display: none; } }
+
+  .copy { position: absolute; z-index: 2; left: 40px; right: 40px; bottom: 56px; max-width: 640px; }
+  .copy h1 { font-size: clamp(36px, 5.4vw, 68px); font-weight: 800; letter-spacing: -0.025em; line-height: 1.02; }
+  .copy p { margin-top: 16px; font-size: 17px; font-weight: 500; color: #3f4249; max-width: 44ch; line-height: 1.55; }
+  .cta { margin-top: 28px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; padding: 15px 30px; border-radius: 999px; font-size: 15px; font-weight: 700; text-decoration: none; transition: transform .15s; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-dark { background: #1b1d21; color: #fff; }
+  .btn-line { border: 1px solid #9a9da4; color: #1b1d21; background: rgba(255,255,255,0.55); backdrop-filter: blur(6px); }
+  @media (max-width: 640px) { .copy { left: 20px; right: 20px; bottom: 36px; } .nav { padding: 0 20px; } }
+</style>
+</head>
+<body>
+<section class="hero">
+  <img class="bg" src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7081_Zerkalo-v-spalnyu-v-serebristoj-rame.webp" alt="Зеркало в серебристой раме отражает окно спальни">
+  <div class="scrim"></div>
+  <header class="nav">
+    <a class="wordmark" href="index.html">memiro</a>
+    <nav>
+      <a href="#">Каталог</a>
+      <a href="#">О нас</a>
+      <a href="#">Доставка и установка</a>
+      <a href="#">Контакты</a>
+    </nav>
+    <a class="phone" href="tel:+79812304050">+7 981 230-40-50</a>
+  </header>
+  <div class="copy">
+    <h1>Зеркала под ваш интерьер</h1>
+    <p>Проектируем и изготавливаем зеркала в Санкт-Петербурге: любой размер, форма и подсветка. Устанавливают наши мастера.</p>
+    <div class="cta">
+      <a class="btn btn-dark" href="#">Смотреть каталог</a>
+      <a class="btn btn-line" href="#">Рассчитать размер</a>
+    </div>
+  </div>
+</section>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · Ночная витрина</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Onest:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Onest", system-ui, sans-serif; color: #f0efec; background: #101014; }
+
+  /* Centered low: фото-сцена сверху, гигантский заголовок в нижних 40% */
+  .hero { position: relative; min-height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+  .hero img.bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; filter: brightness(0.72) saturate(1.05); }
+  .hero .scrim { position: absolute; inset: 0; background: radial-gradient(ellipse 90% 60% at 50% 30%, rgba(16,16,20,0) 0%, rgba(16,16,20,0.55) 62%, rgba(16,16,20,0.94) 100%); }
+
+  .nav { position: relative; z-index: 3; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 72px; }
+  .wordmark { font-family: "Unbounded", sans-serif; font-size: 19px; font-weight: 700; letter-spacing: 0.02em; text-decoration: none; color: #f0efec; }
+  .nav .phone { font-size: 14.5px; font-weight: 700; color: #f0efec; text-decoration: none; opacity: 0.9; }
+
+  .copy { position: relative; z-index: 2; margin-top: auto; text-align: center; padding: 0 24px 64px; }
+  .copy h1 { font-family: "Unbounded", sans-serif; font-size: clamp(30px, 4.8vw, 60px); font-weight: 700; line-height: 1.06; letter-spacing: 0; text-shadow: 0 2px 40px rgba(16,16,20,0.6); }
+  .copy h1 .glow { color: #e3a857; }
+  .copy p { margin-top: 18px; font-size: 16.5px; color: #c9c6bd; max-width: 52ch; margin-left: auto; margin-right: auto; line-height: 1.6; }
+  .cta { margin-top: 30px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; padding: 15px 32px; border-radius: 999px; font-size: 15px; font-weight: 700; text-decoration: none; transition: transform .15s; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-amber { background: #e3a857; color: #101014; box-shadow: 0 0 48px rgba(227,168,87,0.28); }
+  .btn-line { border: 1px solid #4a4a54; color: #f0efec; }
+  @media (max-width: 640px) { .nav { padding: 0 20px; } }
+</style>
+</head>
+<body>
+<section class="hero">
+  <img class="bg" src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7098_Polukrugloe-zerkalo-s-effektnoj-konturnoj-podsvetkoj.webp" alt="Полукруглое зеркало с янтарной контурной подсветкой в тёмной комнате">
+  <div class="scrim"></div>
+  <header class="nav">
+    <a class="wordmark" href="index.html">memiro</a>
+    <a class="phone" href="tel:+79812304050">+7 981 230-40-50</a>
+  </header>
+  <div class="copy">
+    <h1>Свет там,<br>где вы его <span class="glow">хотите</span></h1>
+    <p>Зеркала с контурной подсветкой, сенсорными выключателями и подогревом. Изготовим под ваш размер и установим.</p>
+    <div class="cta">
+      <a class="btn btn-amber" href="#">Смотреть каталог</a>
+      <a class="btn btn-line" href="#">Рассчитать размер</a>
+    </div>
+  </div>
+</section>
+</body>
+</html>
