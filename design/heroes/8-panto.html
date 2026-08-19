@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · в духе Panto</title>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --orange: #e58411;
+    --ink: #1e1e1e;
+    --grey: #7a7a7a;
+    --paper: #ffffff;
+    --soft-bg: #f7f7f7;
+    --footer: #1a1c20;
+  }
+  body { font-family: "Onest", system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+  img { display: block; }
+  a { color: inherit; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 clamp(20px, 3.5vw, 40px); }
+
+  /* ============ HERO: полноэкранное фото, центр, поиск ============ */
+  .hero { position: relative; min-height: 100dvh; background: #12272f; overflow: hidden; }
+  .hero .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 42%; }
+  .hero .fade { position: absolute; inset-inline: 0; bottom: -2px; height: 26%; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 78%, #ffffff 100%); }
+
+  .nav { position: relative; z-index: 5; display: flex; align-items: center; justify-content: space-between; height: 80px; padding: 0 clamp(20px, 4vw, 56px); color: #fff; }
+  .wordmark { font-size: 22px; font-weight: 800; letter-spacing: 0.03em; color: #fff; text-decoration: none; }
+  .nav nav { display: flex; gap: 34px; }
+  .nav nav a { font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.9); text-decoration: none; }
+  .nav nav a:hover { color: #fff; }
+  .nav .cart { font-size: 15px; font-weight: 600; color: #fff; text-decoration: none; }
+  @media (max-width: 860px) { .nav nav { display: none; } }
+
+  .hero-copy { position: relative; z-index: 4; max-width: 720px; margin: 0 auto; text-align: center; color: #fff; padding: clamp(40px, 10vh, 110px) 20px 0; }
+  .hero-copy h1 { font-size: clamp(32px, 4.4vw, 58px); font-weight: 600; line-height: 1.18; }
+  .hero-copy p { margin: 22px auto 0; font-size: 17px; line-height: 1.6; max-width: 46ch; color: rgba(255,255,255,0.92); }
+  .search { position: relative; display: inline-block; margin-top: 30px; width: min(420px, 86%); }
+  .search input { width: 100%; padding: 16px 62px 16px 26px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); background: rgba(255,255,255,0.22); backdrop-filter: blur(10px); color: #fff; font: inherit; font-size: 15px; }
+  .search input::placeholder { color: rgba(255,255,255,0.85); }
+  .search button { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); width: 42px; height: 42px; border-radius: 999px; border: none; background: var(--orange); color: #fff; font-size: 16px; cursor: pointer; }
+
+  /* Точки-хотспоты на фото, одна раскрыта */
+  .dot { position: absolute; z-index: 3; width: 26px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.35); backdrop-filter: blur(4px); border: none; cursor: pointer; }
+  .dot::after { content: ""; position: absolute; inset: 8px; border-radius: 999px; background: #fff; }
+  .dot-1 { left: 16%; bottom: 34%; }
+  .dot-2 { right: 12%; bottom: 22%; }
+  .spot { position: absolute; z-index: 4; left: 55%; bottom: 30%; background: rgba(255,255,255,0.92); color: var(--ink); border-radius: 14px; padding: 14px 18px; font-size: 14px; box-shadow: 0 14px 40px rgba(0,0,0,0.22); }
+  .spot b { display: block; font-weight: 700; }
+  .spot span { color: var(--grey); font-size: 13px; }
+  .spot .price { color: var(--orange); font-weight: 700; margin-top: 4px; display: block; font-size: 15px; }
+  .spot::before { content: ""; position: absolute; left: -34px; top: 50%; width: 26px; height: 26px; transform: translateY(-50%); border-radius: 999px; background: rgba(255,255,255,0.5); }
+  @media (max-width: 860px) { .spot, .dot { display: none; } }
+
+  /* ============ Почему memiro: заголовок + 3 колонки ============ */
+  .why { padding: 96px 0 40px; }
+  .why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(24px, 3.5vw, 48px); align-items: start; }
+  @media (max-width: 960px) { .why-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .why-grid { grid-template-columns: 1fr; } }
+  .why h2 { font-size: clamp(28px, 3vw, 40px); font-weight: 700; line-height: 1.15; }
+  .why h3 { font-size: 21px; font-weight: 600; margin-bottom: 12px; }
+  .why p { font-size: 15px; color: var(--grey); line-height: 1.65; margin-bottom: 14px; }
+  .more { font-size: 15px; font-weight: 600; color: var(--orange); text-decoration: none; }
+  .more:hover { text-decoration: underline; }
+
+  /* ============ Бестселлеры: табы + карточки ============ */
+  .best { padding: 56px 0 24px; background: var(--soft-bg); }
+  .best h2 { text-align: center; font-size: clamp(28px, 3vw, 40px); font-weight: 700; }
+  .tabs { display: flex; justify-content: center; gap: 10px; margin: 28px 0 40px; flex-wrap: wrap; }
+  .tab { font: inherit; font-size: 14.5px; font-weight: 500; padding: 10px 22px; border-radius: 999px; border: none; background: transparent; color: var(--grey); cursor: pointer; }
+  .tab.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; padding-bottom: 56px; }
+  @media (max-width: 1080px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 16px; overflow: hidden; text-decoration: none; box-shadow: 0 8px 26px rgba(0,0,0,0.05); transition: transform .2s; position: relative; }
+  .card:hover { transform: translateY(-4px); }
+  .card .ph { display: block; aspect-ratio: 1; overflow: hidden; background: #eef0f0; }
+  .card .ph img { width: 100%; height: 100%; object-fit: cover; }
+  .card .m { display: block; padding: 16px 18px 20px; }
+  .card .cat { display: block; font-size: 12.5px; color: var(--grey); }
+  .card .name { display: block; font-size: 17px; font-weight: 700; margin-top: 4px; }
+  .card .stars { display: block; margin-top: 6px; color: var(--orange); font-size: 13px; letter-spacing: 2px; }
+  .card .rowp { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .card .price { font-size: 17px; font-weight: 700; }
+  .card .price small { font-size: 12.5px; color: var(--grey); font-weight: 500; }
+  .card .plus { width: 34px; height: 34px; border-radius: 999px; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 18px; line-height: 1; }
+  .badge { position: absolute; left: 14px; top: 14px; background: var(--orange); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; }
+
+  /* ============ Опыт: фото слева, текст справа ============ */
+  .exp { padding: 96px 0; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 80px); align-items: center; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+  .split .ph { border-radius: 18px; overflow: hidden; }
+  .split .ph img { width: 100%; height: clamp(320px, 46vw, 520px); object-fit: cover; }
+  .eyebrow { font-size: 15px; font-weight: 700; color: var(--orange); margin-bottom: 14px; display: block; }
+  .split h2 { font-size: clamp(26px, 2.8vw, 38px); font-weight: 700; line-height: 1.2; max-width: 16ch; }
+  .split p { margin: 18px 0 24px; font-size: 15.5px; color: var(--grey); line-height: 1.7; max-width: 52ch; }
+  .btn { display: inline-flex; padding: 14px 30px; border-radius: 999px; background: var(--orange); color: #fff; font-size: 15px; font-weight: 600; text-decoration: none; transition: transform .15s; }
+  .btn:hover { transform: translateY(-1px); }
+
+  /* ============ Материалы: текст слева, коллаж справа ============ */
+  .mat { padding: 0 0 96px; }
+  .collage { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; align-items: end; }
+  .collage .s { display: grid; gap: 16px; }
+  .collage img { width: 100%; object-fit: cover; border-radius: 14px; }
+  .collage .s img { aspect-ratio: 1; }
+  .collage .b img { aspect-ratio: 4/5; }
+
+  /* ============ Отзывы ============ */
+  .reviews { background: var(--soft-bg); padding: 72px 0 88px; }
+  .reviews h2 { text-align: center; font-size: clamp(28px, 3vw, 40px); font-weight: 700; margin-bottom: 44px; }
+  .rev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  @media (max-width: 900px) { .rev-grid { grid-template-columns: 1fr; } }
+  .rev { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 26px rgba(0,0,0,0.05); }
+  .rev .cover { display: block; aspect-ratio: 16/9; overflow: hidden; }
+  .rev .cover img { width: 100%; height: 100%; object-fit: cover; }
+  .rev .body { padding: 20px 22px 24px; text-align: center; }
+  .rev .who { font-weight: 700; }
+  .rev .role { font-size: 13px; color: var(--grey); margin-top: 2px; }
+  .rev p { font-size: 14.5px; color: var(--grey); line-height: 1.65; margin-top: 12px; }
+  .rev .stars { color: var(--orange); letter-spacing: 3px; margin-top: 12px; font-size: 14px; }
+
+  /* ============ Подвал ============ */
+  .footer { background: var(--footer); color: #b9bdc4; padding: 64px 0 28px; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 36px; padding-bottom: 44px; }
+  @media (max-width: 860px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+  .footer .wordmark { color: #fff; }
+  .footer p { font-size: 14px; line-height: 1.7; max-width: 30ch; margin-top: 14px; }
+  .footer h4 { color: var(--orange); font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+  .footer ul { list-style: none; display: grid; gap: 10px; font-size: 14.5px; }
+  .footer a { text-decoration: none; }
+  .footer a:hover { color: #fff; }
+  .footer-bottom { border-top: 1px solid #30343b; padding-top: 22px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #8b8f96; }
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <img class="bg" src="https://memiro.ru/wp-content/uploads/2026/05/mir-portal-6a15d5da0e366.jpg" alt="Спальня с арочным зеркалом Mir Portal с тёплой контурной подсветкой">
+  <header class="nav">
+    <a class="wordmark" href="index.html">memiro</a>
+    <nav>
+      <a href="#">Каталог</a>
+      <a href="#">Доставка и установка</a>
+      <a href="#">О студии</a>
+      <a href="#">Контакты</a>
+    </nav>
+    <a class="cart" href="#">Корзина · 2</a>
+  </header>
+  <div class="hero-copy">
+    <h1>Сделайте интерьер светлее и современнее</h1>
+    <p>Зеркала ручной работы с подсветкой: под ваш размер, форму и комнату. Изготовим и установим в Санкт-Петербурге.</p>
+    <form class="search" action="#">
+      <input type="text" placeholder="Найти зеркало">
+      <button aria-label="Искать">⌕</button>
+    </form>
+  </div>
+  <button class="dot dot-1" aria-label="Товар на фото"></button>
+  <button class="dot dot-2" aria-label="Товар на фото"></button>
+  <div class="spot">
+    <b>Mir Portal</b>
+    <span>арочное зеркало с подсветкой</span>
+    <span class="price">15 012 ₽</span>
+  </div>
+  <div class="fade"></div>
+</section>
+
+<section class="why wrap">
+  <div class="why-grid">
+    <h2>Почему<br>memiro</h2>
+    <div>
+      <h3>Ручное производство</h3>
+      <p>Каждое зеркало делаем в собственной мастерской под конкретный заказ: ваша форма, размер и рама.</p>
+      <a class="more" href="#">Подробнее →</a>
+    </div>
+    <div>
+      <h3>Подсветка и опции</h3>
+      <p>Контурная подсветка трёх температур, сенсорные выключатели, подогрев от запотевания.</p>
+      <a class="more" href="#">Подробнее →</a>
+    </div>
+    <div>
+      <h3>Установка мастерами</h3>
+      <p>Привозим и вешаем сами: по уровню, с крепежом под вашу стену. Стекло не едет в такси.</p>
+      <a class="more" href="#">Подробнее →</a>
+    </div>
+  </div>
+</section>
+
+<section class="best">
+  <div class="wrap">
+    <h2>Бестселлеры</h2>
+    <div class="tabs">
+      <button class="tab on">Все</button>
+      <button class="tab">С подсветкой</button>
+      <button class="tab">В раме</button>
+      <button class="tab">Фигурные</button>
+      <button class="tab">На дверь</button>
+    </div>
+    <div class="cards">
+      <a class="card" href="#">
+        <span class="badge">Акция</span>
+        <span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-mesyats-halo-moon-6a15d5dec507b.jpg" alt="Зеркало месяц Halo Moon"></span>
+        <span class="m">
+          <span class="cat">Фигурные</span>
+          <span class="name">Halo Moon</span>
+          <span class="stars">★★★★★</span>
+          <span class="rowp"><span class="price">11 795 ₽</span><span class="plus">+</span></span>
+        </span>
+      </a>
+      <a class="card" href="#">
+        <span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/mir-portal-6a15d5da0e366.jpg" alt="Зеркало Mir Portal"></span>
+        <span class="m">
+          <span class="cat">С подсветкой</span>
+          <span class="name">Mir Portal</span>
+          <span class="stars">★★★★★</span>
+          <span class="rowp"><span class="price">15 012 ₽</span><span class="plus">+</span></span>
+        </span>
+      </a>
+      <a class="card" href="#">
+        <span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/bronzovoe-zerkalo-dual-metallic-6a15d7d3eb37d.jpg" alt="Бронзовое зеркало Dual Metallic"></span>
+        <span class="m">
+          <span class="cat">В раме</span>
+          <span class="name">Dual Metallic</span>
+          <span class="stars">★★★★★</span>
+          <span class="rowp"><span class="price">7 998 ₽</span><span class="plus">+</span></span>
+        </span>
+      </a>
+      <a class="card" href="#">
+        <span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-kaplya-dew-glow-6a15d7de287c2.jpg" alt="Зеркало капля Dew Glow"></span>
+        <span class="m">
+          <span class="cat">Фигурные</span>
+          <span class="name">Dew Glow</span>
+          <span class="stars">★★★★★</span>
+          <span class="rowp"><span class="price">7 998 ₽</span><span class="plus">+</span></span>
+        </span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="exp wrap">
+  <div class="split">
+    <div class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/capsule-metal-led-6a15d5e78dd33.jpg" alt="Зеркало Capsule Metal Led в интерьере"></div>
+    <div>
+      <span class="eyebrow">О студии</span>
+      <h2>Делаем зеркала, которые меняют комнату</h2>
+      <p>Зеркало добавляет свет и пространство даже небольшой комнате. Мы проектируем каждое под конкретный интерьер: слушаем, предлагаем эскизы и доводим до установки. Возьмёмся и за ту форму, от которой отказались другие.</p>
+      <a class="btn" href="#">Подробнее о студии</a>
+    </div>
+  </div>
+</section>
+
+<section class="mat wrap">
+  <div class="split">
+    <div>
+      <span class="eyebrow">Материалы</span>
+      <h2>Серьёзные материалы по честной цене</h2>
+      <p>Осветлённое стекло без зелени, влагостойкая амальгама, алюминиевые и металлические рамы, светодиоды с рассеивателем. Всё то же, что в дорогих салонах, без наценки салона.</p>
+      <a class="btn" href="#">Смотреть каталог</a>
+    </div>
+    <div class="collage">
+      <div class="s">
+        <img src="https://memiro.ru/wp-content/uploads/2026/05/bronzovoe-zerkalo-dual-metallic-6a15d7d3eb37d.jpg" alt="Бронзовое стекло Dual Metallic">
+        <img src="https://memiro.ru/wp-content/uploads/2026/05/sostarennoe-zerkalo-solid-black-6a15d7decd23c.jpg" alt="Состаренное зеркало Solid Black">
+      </div>
+      <div class="b">
+        <img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-arka-grand-arc-6a15d5f39cc29.jpg" alt="Арочное зеркало Grand Arc">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="reviews">
+  <div class="wrap">
+    <h2>Отзывы клиентов</h2>
+    <div class="rev-grid">
+      <figure class="rev">
+        <span class="cover"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-mesyats-halo-moon-6a15d5dec507b.jpg" alt="Зеркало месяц в детской"></span>
+        <figcaption class="body">
+          <div class="who">Полина Ерохина</div>
+          <div class="role">зеркало в детскую</div>
+          <p>«Заказали месяц с тёплой подсветкой. Сделали за неделю, повесили идеально ровно, ребёнок в восторге от ночника».</p>
+          <div class="stars">★★★★★</div>
+        </figcaption>
+      </figure>
+      <figure class="rev">
+        <span class="cover"><img src="https://memiro.ru/wp-content/uploads/2026/05/capsule-metal-led-6a15d5e78dd33.jpg" alt="Зеркало в ванной"></span>
+        <figcaption class="body">
+          <div class="who">Дмитрий Савельев</div>
+          <div class="role">зеркало в ванную</div>
+          <p>«Спасибо за оперативность и качество. Подсветка с сенсором работает безупречно, смотрится дороже, чем стоило».</p>
+          <div class="stars">★★★★★</div>
+        </figcaption>
+      </figure>
+      <figure class="rev">
+        <span class="cover"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-arka-grand-arc-6a15d5f39cc29.jpg" alt="Арочное зеркало в спальне"></span>
+        <figcaption class="body">
+          <div class="who">Марина Ковальчук</div>
+          <div class="role">арочное зеркало в спальню</div>
+          <p>«Нестандартный размер, от которого отказались две студии. Memiro сделали и установили за десять дней».</p>
+          <div class="stars">★★★★★</div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <a class="wordmark" href="index.html">memiro</a>
+      <p>Студия зеркал в Санкт-Петербурге: изготовление, доставка и установка.</p>
+    </div>
+    <div>
+      <h4>Каталог</h4>
+      <ul>
+        <li><a href="#">Все зеркала</a></li>
+        <li><a href="#">С подсветкой</a></li>
+        <li><a href="#">В раме</a></li>
+        <li><a href="#">Фигурные</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Компания</h4>
+      <ul>
+        <li><a href="#">О студии</a></li>
+        <li><a href="#">Доставка и установка</a></li>
+        <li><a href="#">Контакты</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Связь</h4>
+      <ul>
+        <li><a href="tel:+79812304050">+7 981 230-40-50</a></li>
+        <li><a href="mailto:memiro.ru@yandex.ru">memiro.ru@yandex.ru</a></li>
+        <li><a href="#">WhatsApp · Telegram · VK</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>© memiro, 2026</span>
+    <a href="#">Политика обработки персональных данных</a>
+  </div>
+</footer>
+
+</body>
+</html>
