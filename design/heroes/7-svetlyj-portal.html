@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · Светлый портал</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;1,500&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --paper: #f6f4ef;
+    --card: #ffffff;
+    --ink: #23262a;
+    --soft: #6d7076;
+    --line: #e3dfd6;
+    --amber: #c98a3b;
+    --amber-glow: rgba(201, 138, 59, 0.35);
+    --night: #12272f;
+  }
+  body { font-family: "Golos Text", system-ui, sans-serif; background: var(--paper); color: var(--ink); }
+  img { display: block; }
+  a { color: inherit; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 clamp(20px, 3.5vw, 48px); }
+
+  .nav { display: flex; align-items: center; gap: 36px; height: 76px; border-bottom: 1px solid var(--line); }
+  .wordmark { font-size: 21px; font-weight: 600; letter-spacing: 0.14em; text-decoration: none; }
+  .nav nav { display: flex; gap: 26px; margin-right: auto; }
+  .nav nav a { font-size: 14.5px; color: var(--soft); text-decoration: none; }
+  .nav nav a:hover { color: var(--ink); }
+  .nav .side { display: flex; align-items: center; gap: 22px; font-size: 14px; }
+  .nav .side a { text-decoration: none; color: var(--ink); font-weight: 500; }
+  .nav .phone { font-weight: 600; }
+  @media (max-width: 900px) { .nav nav, .nav .phone { display: none; } }
+
+  /* Хиро: редакционная сетка, слева текст, справа композиция из трёх арок */
+  .hero { display: grid; grid-template-columns: 5fr 7fr; gap: clamp(24px, 4vw, 64px); align-items: center; padding: clamp(28px, 4.5vh, 48px) 0; }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+
+  .copy h1 { font-family: "Playfair Display", serif; font-weight: 500; font-size: clamp(38px, 4.4vw, 62px); line-height: 1.06; }
+  .copy h1 em { font-style: italic; color: var(--amber); }
+  .copy > p { margin-top: 18px; font-size: 16px; color: var(--soft); max-width: 42ch; line-height: 1.7; }
+  .cta { margin-top: 28px; display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .btn { display: inline-flex; padding: 15px 30px; border-radius: 999px; background: var(--ink); color: var(--paper); font-size: 15px; font-weight: 500; text-decoration: none; transition: transform .15s; }
+  .btn:hover { transform: translateY(-1px); }
+  .link { font-size: 15px; text-decoration: none; border-bottom: 1px solid rgba(35, 38, 42, 0.4); padding-bottom: 3px; }
+
+  .facts { margin-top: 34px; display: flex; gap: 0; border-top: 1px solid var(--line); }
+  .facts div { padding: 14px 22px 0 0; margin-right: 22px; }
+  .facts b { display: block; font-family: "Playfair Display", serif; font-size: 24px; font-weight: 500; }
+  .facts span { font-size: 13px; color: var(--soft); }
+
+  /* Композиция из арок: продукт как элемент дизайна */
+  .arches { display: grid; grid-template-columns: 7fr 5fr; grid-template-rows: auto auto; gap: 18px; align-items: end; }
+  .arch-card { position: relative; overflow: hidden; text-decoration: none; }
+  .arch-card img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+  .arch-card:hover img { transform: scale(1.03); }
+  .arch-card .tag { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(246, 244, 239, 0.92); color: var(--ink); font-size: 12.5px; font-weight: 500; padding: 7px 14px; border-radius: 999px; white-space: nowrap; }
+  .arch-a { grid-row: span 2; aspect-ratio: 10/13; border-radius: 999px 999px 18px 18px; box-shadow: 0 0 0 2px var(--amber), 0 0 32px var(--amber-glow); }
+  .arch-b { aspect-ratio: 1; border-radius: 50%; }
+  .arch-c { aspect-ratio: 10/11; border-radius: 999px 999px 18px 18px; }
+  @media (max-width: 640px) { .arches { grid-template-columns: 1fr 1fr; } .arch-a { grid-row: span 1; } }
+
+  /* Силуэты категорий: плотная полоса с счётчиками */
+  .shapes { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .shapes-row { display: grid; grid-template-columns: repeat(5, 1fr); }
+  .shape { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 20px 8px; text-decoration: none; border-right: 1px solid var(--line); transition: background .15s; }
+  .shape:first-child { border-left: 1px solid var(--line); }
+  .shape:hover { background: var(--card); }
+  .shape i { display: block; width: 30px; height: 40px; border: 1.5px solid var(--ink); }
+  .shape .round { border-radius: 50%; height: 30px; }
+  .shape .arch { border-radius: 999px 999px 3px 3px; }
+  .shape .drop { border-radius: 3px 50% 50% 50%; transform: rotate(45deg); width: 28px; height: 28px; }
+  .shape .rect { border-radius: 2px; }
+  .shape .oval { border-radius: 50%; }
+  .shape .glow { box-shadow: 0 0 14px var(--amber-glow); border-color: var(--amber); }
+  .shape .framed { border-width: 4px; }
+  .shape b { font-size: 14.5px; font-weight: 500; display: block; }
+  .shape span { font-size: 12.5px; color: var(--soft); }
+  @media (max-width: 900px) { .shapes-row { grid-template-columns: repeat(2, 1fr); } .shape { border: none !important; } }
+
+  /* Популярное: плотная торговая сетка */
+  .popular { padding: 44px 0 56px; }
+  .popular-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 24px; }
+  .popular-head h2 { font-family: "Playfair Display", serif; font-weight: 500; font-size: clamp(26px, 3vw, 36px); }
+  .popular-head a { font-size: 14.5px; text-decoration: none; border-bottom: 1px solid rgba(35,38,42,0.4); padding-bottom: 2px; }
+  .goods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  @media (max-width: 900px) { .goods { grid-template-columns: repeat(2, 1fr); } }
+  .good { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; text-decoration: none; transition: transform .2s, box-shadow .2s; }
+  .good:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(35, 38, 42, 0.08); }
+  .good .ph { display: block; aspect-ratio: 4/5; overflow: hidden; }
+  .good .ph img { width: 100%; height: 100%; object-fit: cover; }
+  .good .m { padding: 14px 16px 18px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .good .m b { font-size: 14.5px; font-weight: 500; }
+  .good .m span { font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+  .good .m .sale { color: var(--amber); }
+</style>
+</head>
+<body>
+
+<header class="nav wrap">
+  <a class="wordmark" href="index.html">memiro</a>
+  <nav>
+    <a href="#">Каталог</a>
+    <a href="#">Доставка и установка</a>
+    <a href="#">О студии</a>
+    <a href="#">Контакты</a>
+  </nav>
+  <div class="side">
+    <a class="phone" href="tel:+79812304050">+7 981 230-40-50</a>
+    <a href="#">Избранное</a>
+    <a href="#">Корзина · 2</a>
+  </div>
+</header>
+
+<section class="hero wrap">
+  <div class="copy">
+    <h1>Свет обретает <em>форму</em></h1>
+    <p>Зеркала с контурной подсветкой ручной работы. Любой размер и форма, установка нашими мастерами в Санкт-Петербурге.</p>
+    <div class="cta">
+      <a class="btn" href="#">Смотреть каталог</a>
+      <a class="link" href="#">Рассчитать свой размер</a>
+    </div>
+    <div class="facts">
+      <div><b>88</b><span>моделей в каталоге</span></div>
+      <div><b>от 5 дней</b><span>на изготовление</span></div>
+      <div><b>СПб</b><span>доставка и установка</span></div>
+    </div>
+  </div>
+
+  <div class="arches">
+    <a class="arch-card arch-a" href="#">
+      <img src="https://memiro.ru/wp-content/uploads/2026/05/mir-portal-6a15d5da0e366.jpg" alt="Арочное зеркало Mir Portal с тёплой подсветкой">
+      <span class="tag">Mir Portal · 15 012 ₽</span>
+    </a>
+    <a class="arch-card arch-b" href="#">
+      <img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-mesyats-halo-moon-6a15d5dec507b.jpg" alt="Зеркало месяц Halo Moon">
+      <span class="tag">Halo Moon</span>
+    </a>
+    <a class="arch-card arch-c" href="#">
+      <img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-kaplya-dew-glow-6a15d7de287c2.jpg" alt="Зеркало капля Dew Glow">
+      <span class="tag">Dew Glow</span>
+    </a>
+  </div>
+</section>
+
+<nav class="shapes" aria-label="Формы зеркал">
+  <div class="wrap shapes-row">
+    <a class="shape" href="#"><i class="round"></i><span><b>Круглые</b><span>12 моделей</span></span></a>
+    <a class="shape" href="#"><i class="drop"></i><span><b>Фигурные</b><span>24 модели</span></span></a>
+    <a class="shape" href="#"><i class="rect"></i><span><b>Прямоугольные</b><span>52 модели</span></span></a>
+    <a class="shape" href="#"><i class="arch glow"></i><span><b>С подсветкой</b><span>48 моделей</span></span></a>
+    <a class="shape" href="#"><i class="oval framed"></i><span><b>В раме</b><span>37 моделей</span></span></a>
+  </div>
+</nav>
+
+<section class="popular wrap">
+  <div class="popular-head">
+    <h2>Популярное этой весной</h2>
+    <a href="#">Весь каталог</a>
+  </div>
+  <div class="goods">
+    <a class="good" href="#"><span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/capsule-metal-led-6a15d5e78dd33.jpg" alt="Capsule Metal Led"></span><span class="m"><b>Capsule Led</b><span class="sale">Акция</span></span></a>
+    <a class="good" href="#"><span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/bronzovoe-zerkalo-dual-metallic-6a15d7d3eb37d.jpg" alt="Бронзовое зеркало Dual Metallic"></span><span class="m"><b>Dual Metallic</b><span>7 998 ₽</span></span></a>
+    <a class="good" href="#"><span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-arka-grand-arc-6a15d5f39cc29.jpg" alt="Зеркало арка Grand Arc"></span><span class="m"><b>Grand Arc</b><span>по запросу</span></span></a>
+    <a class="good" href="#"><span class="ph"><img src="https://memiro.ru/wp-content/uploads/2026/05/sostarennoe-zerkalo-solid-black-6a15d7decd23c.jpg" alt="Состаренное зеркало Solid Black"></span><span class="m"><b>Solid Black</b><span>по запросу</span></span></a>
+  </div>
+</section>
+
+</body>
+</html>
