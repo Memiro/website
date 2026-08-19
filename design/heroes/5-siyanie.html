@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · Сияние</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* Палитра взята из фирменных рендеров memiro: стена #17313c, свечение #e8b26a, крем #efe9df */
+  body { font-family: "Manrope", system-ui, sans-serif; color: #efe9df; background: #12272f; }
+
+  .hero { min-height: 100dvh; display: grid; grid-template-columns: 46fr 54fr; }
+  @media (max-width: 900px) { .hero { grid-template-columns: 1fr; } }
+
+  .col { display: flex; flex-direction: column; background: linear-gradient(200deg, #17313c 0%, #12272f 70%); }
+  .nav { display: flex; align-items: center; justify-content: space-between; height: 80px; padding: 0 clamp(24px, 4vw, 56px); }
+  .wordmark { font-size: 22px; font-weight: 800; letter-spacing: 0.05em; text-decoration: none; color: #efe9df; }
+  .nav .phone { font-size: 14px; font-weight: 600; color: #c8c2b4; text-decoration: none; }
+  .nav .phone:hover { color: #efe9df; }
+
+  .copy { margin: auto 0; padding: 40px clamp(24px, 4vw, 56px) 48px; }
+  .copy h1 { font-size: clamp(34px, 3.9vw, 56px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.06; }
+  .copy h1 .amber { color: #e8b26a; }
+  .copy p { margin-top: 18px; font-size: 16.5px; color: #b7bcb4; max-width: 42ch; line-height: 1.65; }
+  .cta { margin-top: 32px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; padding: 15px 30px; border-radius: 999px; font-size: 15px; font-weight: 700; text-decoration: none; transition: transform .15s; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-amber { background: #e8b26a; color: #12272f; }
+  .btn-line { border: 1px solid #3d5560; color: #efe9df; }
+
+  /* Мини-коллекция: три формы из той же серии */
+  .strip { display: flex; gap: 14px; padding: 0 clamp(24px, 4vw, 56px) 44px; }
+  .strip a { flex: 1; max-width: 132px; text-decoration: none; color: #c8c2b4; font-size: 12.5px; line-height: 1.4; }
+  .strip img { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 8px; transition: transform .2s; }
+  .strip a:hover img { transform: translateY(-3px); }
+
+  .pic { position: relative; overflow: hidden; min-height: 48vh; }
+  .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 38%; }
+  .pic .price { position: absolute; right: 28px; bottom: 26px; background: rgba(18, 39, 47, 0.85); backdrop-filter: blur(8px); color: #efe9df; font-size: 13.5px; font-weight: 600; padding: 12px 18px; border-radius: 999px; text-decoration: none; }
+  .pic .price b { color: #e8b26a; }
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="col">
+    <header class="nav">
+      <a class="wordmark" href="index.html">memiro</a>
+      <a class="phone" href="tel:+79812304050">+7 981 230-40-50</a>
+    </header>
+    <div class="copy">
+      <h1>Зеркала, которые<br><span class="amber">светятся</span> для вас</h1>
+      <p>Контурная подсветка, любой размер и форма. Изготавливаем в Санкт-Петербурге, привозим и устанавливаем сами.</p>
+      <div class="cta">
+        <a class="btn btn-amber" href="#">Смотреть каталог</a>
+        <a class="btn btn-line" href="#">Рассчитать размер</a>
+      </div>
+    </div>
+    <div class="strip">
+      <a href="#"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-mesyats-halo-moon-6a15d5dec507b.jpg" alt="Зеркало месяц Halo Moon">Halo Moon</a>
+      <a href="#"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-kaplya-dew-glow-6a15d7de287c2.jpg" alt="Зеркало капля Dew Glow">Dew Glow</a>
+      <a href="#"><img src="https://memiro.ru/wp-content/uploads/2026/05/capsule-metal-led-6a15d5e78dd33.jpg" alt="Зеркало Capsule Metal Led">Capsule Led</a>
+    </div>
+  </div>
+  <div class="pic">
+    <img src="https://memiro.ru/wp-content/uploads/2026/05/mir-portal-6a15d5da0e366.jpg" alt="Полукруглое зеркало Mir Portal с тёплой контурной подсветкой над комодом">
+    <a class="price" href="#">Mir Portal · <b>15 012 ₽</b></a>
+  </div>
+</section>
+</body>
+</html>
