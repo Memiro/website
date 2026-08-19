@@ -23,7 +23,7 @@
     background: var(--surface); border: 1px solid var(--line); cursor: pointer; text-decoration: none; color: var(--ink-soft);
   }
   .chip-f:hover { border-color: var(--ink); color: var(--ink); }
-  .chip-f.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .chip-f.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
   .sort { font-size: 14px; color: var(--ink-soft); }
   .sort select { font: inherit; font-weight: 700; color: var(--ink); border: none; background: transparent; cursor: pointer; }
 
@@ -50,7 +50,7 @@
     text-decoration: none; font-weight: 700; font-size: 14.5px; color: var(--ink-soft);
     border: 1px solid var(--line); background: var(--surface);
   }
-  .pager a.here { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .pager a.here { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
   .pager a:hover:not(.here) { border-color: var(--ink); color: var(--ink); }
 </style>
 </head>
@@ -90,14 +90,14 @@
     <a class="chip-f" href="#">Фигурные</a>
     <a class="chip-f" href="#">Акция</a>
   </div>
-  <div class="sort">Сортировка:
+  <label class="sort">Сортировка:
     <select>
       <option>популярные</option>
       <option>дешевле</option>
       <option>дороже</option>
       <option>новинки</option>
     </select>
-  </div>
+  </label>
 </div>
 
 <div class="layout wrap">
@@ -127,6 +127,8 @@
       <label><input type="checkbox">Серебро</label>
       <label><input type="checkbox">Белый</label>
       <label><input type="checkbox">Бронза</label>
+      <label><input type="checkbox">Голубой<span class="n">1</span></label>
+      <label><input type="checkbox">Другое<span class="n">6</span></label>
     </div>
     <div class="fgroup">
       <h3>Подсветка</h3>
