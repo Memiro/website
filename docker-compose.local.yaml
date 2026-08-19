@@ -1,0 +1,16 @@
+# Local contour: `just up` / `just down`.
+services:
+  web:
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  db:
+    env_file: .env
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - memiro-local-db:/var/lib/postgresql/data
+
+volumes:
+  memiro-local-db:
