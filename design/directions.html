@@ -6,7 +6,7 @@
 <title>memiro · дизайн-направления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&family=Tektur:wght@500;700;900&family=Rubik+Mono+One&family=IBM+Plex+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Golos+Text:wght@400;600&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -84,6 +84,51 @@
   #grafika .swatches { background: #fff; border: 2px solid #141414; }
   #grafika .swatches h3, #grafika .chip span, #grafika .type-note { color: #6b6b66; }
 
+  /* Direction D: Хром */
+  #hrom { background: #14161a; color: #e8eaee; font-family: "Onest", sans-serif; }
+  #hrom h2, #hrom .specimen .big {
+    font-family: "Tektur", sans-serif; font-weight: 700;
+    background: linear-gradient(160deg, #f6f7f9 0%, #9aa3b2 38%, #e6e9ee 52%, #6d7684 74%, #cfd4dc 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #hrom .board-tag { background: linear-gradient(160deg, #f0f2f5, #8f98a7); color: #14161a; }
+  #hrom .mood { color: #9aa1ac; }
+  #hrom .specimen { background: #1b1e24; border: 1px solid #2c313a; }
+  #hrom .body-sample { color: #9aa1ac; }
+  #hrom .btn.primary { background: linear-gradient(160deg, #f0f2f5, #a6aebc); color: #14161a; }
+  #hrom .btn.ghost { border: 1px solid #3d434e; color: #e8eaee; }
+  #hrom .swatches { background: #1b1e24; border: 1px solid #2c313a; }
+  #hrom .swatches h3, #hrom .chip span, #hrom .type-note { color: #868d99; }
+
+  /* Direction E: Плакат */
+  #plakat { background: #f4f4f0; color: #111111; font-family: "IBM Plex Sans", sans-serif; }
+  #plakat h2, #plakat .specimen .big { font-family: "Rubik Mono One", sans-serif; font-weight: 400; text-transform: uppercase; font-size: clamp(22px, 3vw, 38px); line-height: 1.2; }
+  #plakat h2 { font-size: clamp(26px, 4vw, 44px); }
+  #plakat .board-tag { background: #86e300; color: #111; border: 2px solid #111; }
+  #plakat .mood { color: #4c4c48; }
+  #plakat .specimen { background: #fff; border: 3px solid #111; border-radius: 0; box-shadow: 8px 8px 0 #111; }
+  #plakat .side .photo, #plakat .swatches, #plakat .chip { border-radius: 0; }
+  #plakat .swatches { background: #fff; border: 3px solid #111; box-shadow: 8px 8px 0 #111; }
+  #plakat .photo { border: 3px solid #111; box-shadow: 8px 8px 0 #111; }
+  #plakat .body-sample { color: #4c4c48; }
+  #plakat .btn { border-radius: 0; }
+  #plakat .btn.primary { background: #86e300; color: #111; border: 2px solid #111; }
+  #plakat .btn.ghost { border: 2px solid #111; color: #111; }
+  #plakat .swatches h3, #plakat .chip span, #plakat .type-note { color: #63635e; }
+
+  /* Direction F: Салон */
+  #salon { background: #1e352a; color: #efece3; font-family: "Golos Text", sans-serif; }
+  #salon h2, #salon .specimen .big { font-family: "Playfair Display", serif; font-weight: 500; letter-spacing: 0; }
+  #salon .specimen .big em { font-style: italic; line-height: 1.15; }
+  #salon .board-tag { background: #d9a441; color: #1e352a; }
+  #salon .mood { color: #b3bdb0; }
+  #salon .specimen { background: #24402f; border: 1px solid #35543f; }
+  #salon .body-sample { color: #b3bdb0; }
+  #salon .btn.primary { background: #d9a441; color: #1e352a; }
+  #salon .btn.ghost { border: 1px solid #4a6a55; color: #efece3; }
+  #salon .swatches { background: #24402f; border: 1px solid #35543f; }
+  #salon .swatches h3, #salon .chip span, #salon .type-note { color: #9aa79a; }
+
   .verdict { max-width: 880px; margin: 0 auto; padding: 64px 24px 96px; }
   .verdict h2 { font-size: 26px; letter-spacing: -0.01em; }
   .verdict p { margin-top: 12px; color: #52525b; line-height: 1.65; }
@@ -94,12 +139,15 @@
 
 <header class="intro">
   <h1>memiro: три визуальных направления</h1>
-  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже три направления: типографика, палитра и настроение.
-     Выберите одно, и макеты страниц будут доработаны в нём. Рекомендация студии: направление «Свет».</p>
+  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже шесть направлений: типографика, палитра и настроение.
+     Первые три спокойнее, последние три смелее. Выберите одно, и макеты страниц будут доработаны в нём.</p>
   <nav class="jump">
     <a href="#svet">1 · Свет</a>
     <a href="#glubina">2 · Глубина</a>
     <a href="#grafika">3 · Графика</a>
+    <a href="#hrom">4 · Хром</a>
+    <a href="#plakat">5 · Плакат</a>
+    <a href="#salon">6 · Салон</a>
   </nav>
 </header>
 
@@ -217,6 +265,126 @@
           </div>
           <p class="type-note">Commissioner (кириллица): заголовки 900, текст 400. Радиус 0 везде,
              рамки 2px вместо теней, кобальт только для кнопок и цен.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ D ============ -->
+<section class="board" id="hrom">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Смелое</span>
+      <h2>Хром</h2>
+    </div>
+    <p class="mood">Жидкий металл: тёмный графит и хромированные заголовки-градиенты, как полированная кромка зеркала.
+       Техно-эстетика без неона: блеск даёт сам шрифт. Настроение: футуристичный шоурум,
+       дорогая техника, немного Y2K.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Отражение<br>стального качества</div>
+          <p class="body-sample" style="margin-top:18px">Алюминий, металл и стекло: зеркала под ваш размер,
+             с установкой нашими мастерами.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/capsule-metal-led-6a15d5e78dd33.jpg" alt="Зеркало Capsule Metal Led"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#14161a;border:1px solid #2c313a"><span>фон #14161A</span></div>
+            <div class="chip" style="background:#1b1e24;border:1px solid #2c313a"><span>карточки #1B1E24</span></div>
+            <div class="chip" style="background:linear-gradient(160deg,#f0f2f5,#8f98a7)"><span>хром-градиент</span></div>
+            <div class="chip" style="background:#e8eaee"><span>текст #E8EAEE</span></div>
+          </div>
+          <p class="type-note">Tektur для заголовков (гранёная техно-кириллица, хром-градиент текстом) + Onest для текста.
+             Кнопки металлические, без неона и свечений.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ E ============ -->
+<section class="board" id="plakat">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Очень смелое</span>
+      <h2>Плакат</h2>
+    </div>
+    <p class="mood">Брутализм: жирные чёрные рамки, жёсткие тени-офсеты, акцент кислотного цвета,
+       заголовки капсом моноширинным плакатным шрифтом. Сайт кричит, но честно: цены крупно, кнопки как штампы.
+       Настроение: уличный плакат, дерзкая молодая студия.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Зеркало.<br>Ваш размер.</div>
+          <p class="body-sample" style="margin-top:18px">88 моделей в каталоге. Не подошло: сделаем по эскизу.
+             Привезём и повесим сами.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/mir-portal-6a15d5da0e366.jpg" alt="Зеркало Mir Portal"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#f4f4f0;border:2px solid #111"><span>фон #F4F4F0</span></div>
+            <div class="chip" style="background:#ffffff;border:2px solid #111"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#111111"><span>чернила #111</span></div>
+            <div class="chip" style="background:#86e300;border:2px solid #111"><span>кислота #86E300</span></div>
+          </div>
+          <p class="type-note">Rubik Mono One для заголовков (плакатная моноширинная кириллица, только капс) +
+             IBM Plex Sans для текста. Рамки 3px, тени 8px без размытия, радиус 0.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ F ============ -->
+<section class="board" id="salon">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Смелое</span>
+      <h2>Салон</h2>
+    </div>
+    <p class="mood">Интерьерный люкс: глубокий лесной зелёный, антиква с курсивом, янтарный акцент.
+       Сайт как дорогой мебельный салон: неторопливый, с крупными фотографиями и большим воздухом.
+       Настроение: журнал об интерьерах, вечерний свет, латунь и бархат.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Зеркало, вокруг<br>которого <em>собирается</em> комната</div>
+          <p class="body-sample" style="margin-top:18px">Изготовим под ваш интерьер: форма, рама и подсветка
+             на выбор. Установка входит в заказ.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7087_Bolshoe-zerkalo-v-zolotoj-alyuminievoj-rame.webp" alt="Большое зеркало в золотой алюминиевой раме"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#1e352a"><span>фон #1E352A</span></div>
+            <div class="chip" style="background:#24402f;border:1px solid #35543f"><span>карточки #24402F</span></div>
+            <div class="chip" style="background:#efece3"><span>текст #EFECE3</span></div>
+            <div class="chip" style="background:#d9a441"><span>янтарь #D9A441</span></div>
+          </div>
+          <p class="type-note">Playfair Display для заголовков (антиква с выразительным курсивом, кириллица) +
+             Golos Text для текста. Обоснование антиквы: интерьерный люкс, предметная съёмка, «журнальная» подача.</p>
         </div>
       </div>
     </div>
