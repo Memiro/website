@@ -246,7 +246,7 @@ h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.08; }
 .thumbs img { width: 100%; aspect-ratio: 1; object-fit: cover; }
 
 .info h1 { font-size: clamp(26px, 3vw, 36px); font-weight: 800; }
-.sku { margin-top: 8px; font-size: 13.5px; color: var(--ink-faint); }
+.article { margin-top: 8px; font-size: 13.5px; color: var(--ink-faint); }
 .price-row { margin-top: 18px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 .price-now { font-size: 32px; font-weight: 800; }
 .price-note { font-size: 13.5px; color: var(--ink-soft); }

@@ -1,3 +1,5 @@
+"""Фильтры шаблонов витрины: цены и русские склонения."""
+
 from django import template
 
 register = template.Library()

@@ -223,7 +223,7 @@ def test_applied_filters_block(client: Client, shop: SimpleNamespace) -> None:
 def test_counts_exclude_own_attribute_selection(
     shop: SimpleNamespace,
 ) -> None:
-    """Счётчики значений — фасетные: своя группа не сужает сама себя."""
+    """Счётчик значения не сужается выбором в своей же группе."""
     base = shop.category.products.filter(is_published=True)
     filters = CatalogFilters.parse(shop.category, QueryDict("podsvetka=1"))
 

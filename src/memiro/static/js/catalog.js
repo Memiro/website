@@ -31,20 +31,35 @@
   );
 
   // --- Применение фильтров ---
+  const applyButton = form.querySelector("[data-apply]");
   const applyCount = form.querySelector("[data-apply-count]");
+  const applyPlural = form.querySelector("[data-apply-plural]");
+  const pluralize = (n) => {
+    const tail = n % 10;
+    const teens = n % 100;
+    if (teens >= 11 && teens <= 14) return "товаров";
+    if (tail === 1) return "товар";
+    if (tail >= 2 && tail <= 4) return "товара";
+    return "товаров";
+  };
+  const setCount = (n) => {
+    if (applyCount) applyCount.textContent = String(n);
+    if (applyPlural) applyPlural.textContent = pluralize(n);
+    // Пустая комбинация отвечает 404 — на неё не отправляем
+    if (applyButton) applyButton.disabled = n === 0;
+  };
   const refreshCount = async () => {
     if (!applyCount) return;
     try {
       const response = await fetch(formUrl());
       if (!response.ok) {
-        // Пустая комбинация отвечает 404 — товаров ноль
-        applyCount.textContent = "0";
+        setCount(0);
         return;
       }
       const html = await response.text();
       const doc = new DOMParser().parseFromString(html, "text/html");
       const total = doc.querySelector("[data-total-count]");
-      if (total) applyCount.textContent = total.dataset.totalCount;
+      if (total) setCount(Number(total.dataset.totalCount));
     } catch {
       /* сеть моргнула — кнопка остаётся с прежним числом */
     }
@@ -93,6 +108,10 @@
       const pager = document.querySelector("[data-pager]");
       const nextPager = doc.querySelector("[data-pager]");
       if (pager && nextPager) pager.replaceWith(nextPager);
+      // URL и canonical двигаются вместе — self-canonical по ADR-0003
+      const canonical = document.querySelector('link[rel="canonical"]');
+      const nextCanonical = doc.querySelector('link[rel="canonical"]');
+      if (canonical && nextCanonical) canonical.href = nextCanonical.href;
       history.replaceState(null, "", link.href);
       if (nextMore) {
         link.closest(".show-more").replaceWith(

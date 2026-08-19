@@ -23,18 +23,12 @@ if TYPE_CHECKING:
 
 PAGE_SIZE = 12
 
-# Ключ сортировки → порядок выборки; первый ключ — сортировка по умолчанию
+# Ключ сортировки → (порядок выборки, подпись в селекте)
 SORTS = {
-    "popular": ("-is_popular", "order", "name"),
-    "price": ("price", "order", "name"),
-    "-price": ("-price", "order", "name"),
-    "new": ("-created_at", "order", "name"),
-}
-SORT_LABELS = {
-    "popular": "популярные",
-    "price": "дешевле",
-    "-price": "дороже",
-    "new": "новинки",
+    "popular": (("-is_popular", "order", "name"), "популярные"),
+    "price": (("price", "order", "name"), "дешевле"),
+    "-price": (("-price", "order", "name"), "дороже"),
+    "new": (("-created_at", "order", "name"), "новинки"),
 }
 DEFAULT_SORT = "popular"
 
@@ -48,7 +42,7 @@ def _sort_options(sort_key: str) -> list[dict[str, object]]:
             "label": label,
             "is_selected": key == sort_key,
         }
-        for key, label in SORT_LABELS.items()
+        for key, (_, label) in SORTS.items()
     ]
 
 
@@ -76,7 +70,8 @@ def category(request: HttpRequest, slug: str) -> HttpResponse:
 
     sort = request.GET.get("sort") or ""
     sort_key = sort if sort in SORTS else DEFAULT_SORT
-    page = _page(products.order_by(*SORTS[sort_key]), request.GET)
+    ordering, _ = SORTS[sort_key]
+    page = _page(products.order_by(*ordering), request.GET)
 
     applied = [
         {
@@ -128,6 +123,8 @@ def product(
             "specs": specs,
             "related": related,
             "gallery": list(product.gallery.all()),
+            # Пустой ImageField ложный — фолбэк на малое фото
+            "main_photo": product.photo_large or product.photo_small,
             "canonical": request.build_absolute_uri(request.path),
         },
     )
@@ -148,7 +145,7 @@ def _canonical(
     sort: str,
     page: Page,
 ) -> str:
-    """Canonical по ADR-0003: фасеты и сортировка → чистая категория,
+    """Canonical по ADR-0003: фильтры и сортировка → чистая категория,
     пагинация — self-canonical."""
     url = request.build_absolute_uri(
         reverse("category", kwargs={"slug": category.slug})

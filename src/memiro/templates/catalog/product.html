@@ -11,16 +11,14 @@
 <div class="pdp wrap">
   <div class="gallery">
     <div class="main">
-      {% if product.photo_large %}
-      <img data-gallery-main src="{{ product.photo_large.url }}" alt="{{ product.name }}">
-      {% elif product.photo_small %}
-      <img data-gallery-main src="{{ product.photo_small.url }}" alt="{{ product.name }}">
+      {% if main_photo %}
+      <img data-gallery-main src="{{ main_photo.url }}" alt="{{ product.name }}">
       {% endif %}
     </div>
     {% if gallery %}
     <div class="thumbs">
-      {% if product.photo_large %}
-      <button class="on" type="button" data-src="{{ product.photo_large.url }}"><img src="{{ product.photo_large.url }}" alt="{{ product.name }}"></button>
+      {% if main_photo %}
+      <button class="on" type="button" data-src="{{ main_photo.url }}"><img src="{{ main_photo.url }}" alt="{{ product.name }}"></button>
       {% endif %}
       {% for shot in gallery %}
       <button type="button" data-src="{{ shot.image.url }}"><img src="{{ shot.image.url }}" alt="{{ product.name }} — фото {{ forloop.counter }}"></button>
@@ -32,7 +30,7 @@
   <div class="info">
     {% if product.is_promo %}<span class="badge badge-sale">Акция</span>{% endif %}
     <h1>{{ product.name }}</h1>
-    {% if product.article %}<p class="sku">Артикул {{ product.article }}</p>{% endif %}
+    {% if product.article %}<p class="article">Артикул {{ product.article }}</p>{% endif %}
     <div class="price-row">
       <span class="price-now">от {{ product.price|rub }} ₽</span>
       <span class="price-note">цена минимальной конфигурации</span>
