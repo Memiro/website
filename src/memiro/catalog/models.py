@@ -68,6 +68,33 @@ class Attribute(models.Model):
     def belongs_to(self, category_id: int | None) -> bool:
         return self.category_id == category_id
 
+    def clean(self) -> None:
+        """Категорию и тип атрибута, уже назначенного товарам, не сменить.
+
+        Иначе товары молча остаются со значениями чужой категории или
+        не соответствующими типу.
+        """
+        if self._state.adding:
+            return
+        stored = (
+            Attribute.objects.filter(pk=self.pk)
+            .values("category_id", "kind")
+            .first()
+        )
+        if stored is None or not self.product_values.exists():
+            return
+        errors: dict[str, str] = {}
+        if stored["category_id"] != self.category_id:
+            errors["category"] = (
+                "Нельзя сменить категорию: атрибут уже назначен товарам."
+            )
+        if stored["kind"] != self.kind:
+            errors["kind"] = (
+                "Нельзя сменить тип: атрибут уже назначен товарам."
+            )
+        if errors:
+            raise ValidationError(errors)
+
 
 class AttributeValue(models.Model):
     """Значение из справочника атрибута типа «выбор из списка»."""
@@ -159,6 +186,15 @@ class ProductImage(models.Model):
         return f"Фото {self.pk} — {self.product}"
 
 
+# Какое поле ProductAttribute хранит значение атрибута каждого типа;
+# единственное место, где тип разворачивается в поле
+VALUE_FIELD_BY_KIND = {
+    Attribute.Kind.CHOICE: "value_option",
+    Attribute.Kind.BOOLEAN: "value_bool",
+    Attribute.Kind.NUMBER: "value_number",
+}
+
+
 class ProductAttribute(models.Model):
     """Значение атрибута у товара: заполняется поле под тип атрибута."""
 
@@ -171,13 +207,17 @@ class ProductAttribute(models.Model):
     attribute = models.ForeignKey(
         Attribute,
         verbose_name="атрибут",
-        on_delete=models.CASCADE,
+        # PROTECT: атрибут, назначенный товарам, не удаляется молча —
+        # сначала снять его с товаров
+        on_delete=models.PROTECT,
         related_name="product_values",
     )
     value_option = models.ForeignKey(
         AttributeValue,
         verbose_name="значение из списка",
-        on_delete=models.CASCADE,
+        # PROTECT: чистка справочника не должна молча стирать
+        # характеристики товаров
+        on_delete=models.PROTECT,
         related_name="product_assignments",
         null=True,
         blank=True,
@@ -227,12 +267,9 @@ class ProductAttribute(models.Model):
             raise ValidationError(errors)
 
     def _kind_errors(self) -> dict[str, str]:
-        kind = self.attribute.kind
-        expected_field = {
-            Attribute.Kind.CHOICE: "value_option",
-            Attribute.Kind.BOOLEAN: "value_bool",
-            Attribute.Kind.NUMBER: "value_number",
-        }[Attribute.Kind(kind)]
+        expected_field = VALUE_FIELD_BY_KIND[
+            Attribute.Kind(self.attribute.kind)
+        ]
         filled = {
             "value_option": self.value_option_id is not None,
             "value_bool": self.value_bool is not None,

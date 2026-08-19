@@ -1,8 +1,8 @@
 from http import HTTPStatus
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.db.models import ProtectedError
 from django.test import Client
 
 from memiro.catalog.models import (
@@ -12,18 +12,6 @@ from memiro.catalog.models import (
     Product,
     ProductAttribute,
 )
-
-
-@pytest.fixture
-def admin(client: Client) -> Client:
-    """Клиент, вошедший в админку суперпользователем."""
-    get_user_model().objects.create_superuser(
-        username="owner",
-        email="owner@example.com",
-        password="owner-password",
-    )
-    client.login(username="owner", password="owner-password")
-    return client
 
 
 @pytest.fixture
@@ -55,9 +43,11 @@ def product_payload(category: Category, **extra: object) -> dict[str, object]:
 
 
 @pytest.mark.django_db
-def test_product_created_via_admin(admin: Client, category: Category) -> None:
+def test_product_created_via_admin(
+    admin_client: Client, category: Category
+) -> None:
     """Владелец создаёт товар в админке."""
-    response = admin.post(
+    response = admin_client.post(
         "/admin/catalog/product/add/",
         product_payload(category),
     )
@@ -69,9 +59,11 @@ def test_product_created_via_admin(admin: Client, category: Category) -> None:
 
 
 @pytest.mark.django_db
-def test_product_price_is_required(admin: Client, category: Category) -> None:
+def test_product_price_is_required(
+    admin_client: Client, category: Category
+) -> None:
     """Без цены товар не сохраняется — режима «цена по запросу» нет."""
-    response = admin.post(
+    response = admin_client.post(
         "/admin/catalog/product/add/",
         product_payload(category, price=""),
     )
@@ -82,10 +74,10 @@ def test_product_price_is_required(admin: Client, category: Category) -> None:
 
 @pytest.mark.django_db
 def test_product_price_must_be_positive(
-    admin: Client, category: Category
+    admin_client: Client, category: Category
 ) -> None:
     """Нулевая цена отклоняется валидацией."""
-    response = admin.post(
+    response = admin_client.post(
         "/admin/catalog/product/add/",
         product_payload(category, price="0"),
     )
@@ -96,7 +88,7 @@ def test_product_price_must_be_positive(
 
 @pytest.mark.django_db
 def test_own_category_attribute_accepted(
-    admin: Client, category: Category
+    admin_client: Client, category: Category
 ) -> None:
     """Атрибут своей категории сохраняется у товара."""
     attribute = Attribute.objects.create(
@@ -107,7 +99,7 @@ def test_own_category_attribute_accepted(
     )
     value = AttributeValue.objects.create(attribute=attribute, value="Круг")
 
-    response = admin.post(
+    response = admin_client.post(
         "/admin/catalog/product/add/",
         product_payload(
             category,
@@ -126,7 +118,7 @@ def test_own_category_attribute_accepted(
 
 @pytest.mark.django_db
 def test_foreign_category_attribute_rejected(
-    admin: Client, category: Category
+    admin_client: Client, category: Category
 ) -> None:
     """Атрибут чужой категории товару не назначить."""
     other = Category.objects.create(name="Перегородки", slug="peregorodki")
@@ -138,7 +130,7 @@ def test_foreign_category_attribute_rejected(
     )
     value = AttributeValue.objects.create(attribute=foreign, value="Чёрный")
 
-    response = admin.post(
+    response = admin_client.post(
         "/admin/catalog/product/add/",
         product_payload(
             category,
@@ -206,11 +198,11 @@ def test_category_visible_only_with_published_products(
 
 @pytest.mark.django_db
 def test_category_change_with_attribute_removal_is_one_step(
-    admin: Client, category: Category
+    admin_client: Client, category: Category
 ) -> None:
-    """Смена категории с удалением старых атрибутов проходит одним
+    """Смена категории с чисткой атрибутов проходит одним сохранением.
 
-    сохранением: строки, помеченные на удаление, не валидируются.
+    Строки, помеченные на удаление, формсет не валидирует.
     """
     other = Category.objects.create(name="Перегородки", slug="peregorodki")
     attribute = Attribute.objects.create(
@@ -227,7 +219,7 @@ def test_category_change_with_attribute_removal_is_one_step(
         product=product, attribute=attribute, value_option=value
     )
 
-    response = admin.post(
+    response = admin_client.post(
         f"/admin/catalog/product/{product.pk}/change/",
         product_payload(
             other,
@@ -246,3 +238,109 @@ def test_category_change_with_attribute_removal_is_one_step(
     product.refresh_from_db()
     assert product.category == other
     assert not product.attribute_values.exists()
+
+
+@pytest.fixture
+def assigned_attribute(category: Category) -> Attribute:
+    """Атрибут «Форма», уже назначенный товару через значение «Круг»."""
+    attribute = Attribute.objects.create(
+        category=category,
+        name="Форма",
+        slug="forma",
+        kind=Attribute.Kind.CHOICE,
+    )
+    value = AttributeValue.objects.create(attribute=attribute, value="Круг")
+    product = Product.objects.create(
+        category=category, name="Зеркало", slug="z", price=PRICE
+    )
+    ProductAttribute.objects.create(
+        product=product, attribute=attribute, value_option=value
+    )
+    return attribute
+
+
+def attribute_payload(attribute: Attribute, **extra: object) -> dict:
+    """Форма атрибута для POST в админку, инлайн значений нетронут."""
+    payload: dict[str, object] = {
+        "category": str(attribute.category_id),
+        "name": attribute.name,
+        "slug": attribute.slug,
+        "kind": attribute.kind,
+        "order": "0",
+        "values-TOTAL_FORMS": "0",
+        "values-INITIAL_FORMS": "0",
+        "_save": "",
+    }
+    payload.update(extra)
+    return payload
+
+
+@pytest.mark.django_db
+def test_assigned_attribute_category_change_blocked(
+    admin_client: Client, assigned_attribute: Attribute
+) -> None:
+    """Категорию атрибута, назначенного товарам, не сменить:
+
+    иначе товары молча остались бы с атрибутами чужой категории.
+    """
+    other = Category.objects.create(name="Перегородки", slug="peregorodki")
+
+    response = admin_client.post(
+        f"/admin/catalog/attribute/{assigned_attribute.pk}/change/",
+        attribute_payload(assigned_attribute, category=str(other.pk)),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assigned_attribute.refresh_from_db()
+    assert assigned_attribute.category_id != other.pk
+
+
+@pytest.mark.django_db
+def test_assigned_attribute_kind_change_blocked(
+    admin_client: Client, assigned_attribute: Attribute
+) -> None:
+    """Тип атрибута, назначенного товарам, не сменить:
+
+    значения у товаров перестали бы соответствовать типу.
+    """
+    response = admin_client.post(
+        f"/admin/catalog/attribute/{assigned_attribute.pk}/change/",
+        attribute_payload(
+            assigned_attribute, kind=Attribute.Kind.NUMBER.value
+        ),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assigned_attribute.refresh_from_db()
+    assert assigned_attribute.kind == Attribute.Kind.CHOICE
+
+
+@pytest.mark.django_db
+def test_used_attribute_value_is_protected(
+    assigned_attribute: Attribute,
+) -> None:
+    """Значение справочника, назначенное товарам, не удалить —
+
+    чистка справочника не должна молча стирать характеристики.
+    """
+    value = assigned_attribute.values.get()
+
+    with pytest.raises(ProtectedError):
+        value.delete()
+
+
+@pytest.mark.django_db
+def test_assigned_attribute_is_protected_until_unassigned(
+    assigned_attribute: Attribute,
+) -> None:
+    """Атрибут, назначенный товарам, не удалить; снятый с товаров —
+
+    удаляется вместе со своим справочником значений.
+    """
+    with pytest.raises(ProtectedError):
+        assigned_attribute.delete()
+
+    ProductAttribute.objects.all().delete()
+    assigned_attribute.delete()
+
+    assert not AttributeValue.objects.exists()

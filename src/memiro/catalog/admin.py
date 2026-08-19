@@ -60,9 +60,10 @@ class ProductImageInline(admin.TabularInline):
 
 class ProductAttributeFormSet(BaseInlineFormSet):
     def clean(self) -> None:
-        """Атрибуты чужой категории режем и при создании товара,
+        """Режет атрибуты чужой категории при создании товара.
 
-        когда сам товар ещё не сохранён и model.clean его не видит.
+        Пока товар не сохранён, model.clean категории не видит —
+        проверяем на уровне формсета, где родительская форма уже есть.
         """
         super().clean()
         category_id = self.instance.category_id
