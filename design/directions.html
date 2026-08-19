@@ -6,7 +6,7 @@
 <title>memiro · дизайн-направления</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&family=Tektur:wght@500;700;900&family=Rubik+Mono+One&family=IBM+Plex+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Golos+Text:wght@400;600&family=Comfortaa:wght@500;700&family=Nunito:wght@400;600;800&family=Tenor+Sans&family=Rubik:wght@400;600;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&family=Tektur:wght@500;700;900&family=Rubik+Mono+One&family=IBM+Plex+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Golos+Text:wght@400;600&family=Comfortaa:wght@500;700&family=Nunito:wght@400;600;800&family=Tenor+Sans&family=Rubik:wght@400;600;900&family=Jost:wght@300;400;600&family=Inter+Tight:wght@400;600;800&family=Alegreya+Sans:wght@400;500;700&family=Oswald:wght@500;600&family=PT+Sans:wght@400;700&family=Neucha&family=Exo+2:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -174,6 +174,91 @@
   #punsh .swatches { background: #ffffff; border: 2px solid #17161a; border-radius: 24px; }
   #punsh .swatches h3, #punsh .chip span, #punsh .type-note { color: #6f6d75; }
 
+  /* Direction J: Витрина */
+  #vitrina { background: #f6f6f6; color: #1a1a1a; font-family: "Jost", sans-serif; }
+  #vitrina h2, #vitrina .specimen .big { font-weight: 300; text-transform: uppercase; letter-spacing: 0.08em; }
+  #vitrina .specimen .big { font-size: clamp(26px, 3vw, 40px); line-height: 1.2; }
+  #vitrina .board-tag { background: #1a1a1a; color: #f6f6f6; }
+  #vitrina .mood { color: #5c5c5c; }
+  #vitrina .specimen { background: #ffffff; border: none; border-radius: 0; }
+  #vitrina .side .photo, #vitrina .swatches, #vitrina .chip { border-radius: 0; }
+  #vitrina .photo img { height: 340px; }
+  #vitrina .body-sample { color: #5c5c5c; }
+  #vitrina .btn { border-radius: 0; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; font-size: 12.5px; }
+  #vitrina .btn.primary { background: #1a1a1a; color: #f6f6f6; }
+  #vitrina .btn.ghost { border: 1px solid #1a1a1a; color: #1a1a1a; }
+  #vitrina .swatches { background: #ffffff; border: none; }
+  #vitrina .swatches h3, #vitrina .chip span, #vitrina .type-note { color: #7a7a7a; }
+
+  /* Direction K: Полночь */
+  #polnoch { background: #0b0d12; color: #e7eaf2; font-family: "Inter Tight", sans-serif; }
+  #polnoch h2, #polnoch .specimen .big { font-weight: 800; letter-spacing: -0.025em; }
+  #polnoch .board-tag { background: #4c7dff; color: #fff; }
+  #polnoch .mood { color: #8b93a7; }
+  #polnoch .specimen { background: #12151d; border: 1px solid #1f2430; box-shadow: inset 0 1px 0 rgba(231, 234, 242, 0.06); }
+  #polnoch .body-sample { color: #8b93a7; }
+  #polnoch .btn.primary { background: #4c7dff; color: #fff; }
+  #polnoch .btn.ghost { border: 1px solid #2b3242; color: #e7eaf2; }
+  #polnoch .swatches { background: #12151d; border: 1px solid #1f2430; }
+  #polnoch .swatches h3, #polnoch .chip span, #polnoch .type-note { color: #767e91; }
+
+  /* Direction L: Штиль */
+  #shtil { background: #e8eef5; color: #22334a; font-family: "Alegreya Sans", sans-serif; }
+  #shtil h2, #shtil .specimen .big { font-weight: 700; letter-spacing: -0.01em; }
+  #shtil .board-tag { background: #3b82c4; color: #fff; }
+  #shtil .mood { color: #5a6f88; }
+  #shtil .specimen { background: #f7fafd; border: 1px solid #d4dfeb; border-radius: 22px; }
+  #shtil .side .photo { border-radius: 22px; }
+  #shtil .body-sample { color: #5a6f88; }
+  #shtil .btn.primary { background: #3b82c4; color: #fff; }
+  #shtil .btn.ghost { border: 1px solid #b7c8da; color: #22334a; }
+  #shtil .swatches { background: #f7fafd; border: 1px solid #d4dfeb; border-radius: 22px; }
+  #shtil .swatches h3, #shtil .chip span, #shtil .type-note { color: #74879c; }
+
+  /* Direction M: Афиша */
+  #afisha { background: #ffffff; color: #101010; font-family: "PT Sans", sans-serif; }
+  #afisha h2, #afisha .specimen .big { font-family: "Oswald", sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.01em; }
+  #afisha .specimen .big { font-size: clamp(34px, 4vw, 54px); line-height: 1.05; }
+  #afisha .board-tag { background: #101010; color: #ffd23f; }
+  #afisha .mood { color: #4e4e4e; }
+  #afisha .specimen { background: #ffd23f; border: none; border-radius: 8px; }
+  #afisha .side .photo { border-radius: 8px; }
+  #afisha .body-sample { color: #3d3413; }
+  #afisha .btn { border-radius: 6px; text-transform: uppercase; font-family: "Oswald", sans-serif; font-weight: 500; letter-spacing: 0.04em; }
+  #afisha .btn.primary { background: #101010; color: #fff; }
+  #afisha .btn.ghost { border: 2px solid #101010; color: #101010; }
+  #afisha .swatches { background: #f5f5f2; border-radius: 8px; }
+  #afisha .swatches h3, #afisha .chip span, #afisha .type-note { color: #6a6a66; }
+
+  /* Direction N: Скетч */
+  #sketch { background: #fffdf6; color: #26221c; font-family: "Nunito", sans-serif; }
+  #sketch h2, #sketch .specimen .big { font-family: "Neucha", cursive; font-weight: 400; }
+  #sketch .specimen .big { font-size: clamp(32px, 3.8vw, 50px); }
+  #sketch .specimen .big mark { background: #ffd83d; padding: 0 6px; border-radius: 4px; }
+  #sketch .board-tag { background: #ffd83d; color: #26221c; border: 2px dashed #26221c; }
+  #sketch .mood { color: #5f584d; }
+  #sketch .specimen { background: #ffffff; border: 2px dashed #26221c; border-radius: 14px; }
+  #sketch .side .photo { border: 2px solid #26221c; border-radius: 14px; transform: rotate(-1.2deg); }
+  #sketch .body-sample { color: #5f584d; }
+  #sketch .btn { border-radius: 999px; }
+  #sketch .btn.primary { background: #26221c; color: #fffdf6; }
+  #sketch .btn.ghost { border: 2px dashed #26221c; color: #26221c; }
+  #sketch .swatches { background: #ffffff; border: 2px dashed #26221c; border-radius: 14px; }
+  #sketch .swatches h3, #sketch .chip span, #sketch .type-note { color: #7a7263; }
+
+  /* Direction O: Ретрофутур */
+  #retrofutur { background: #f4f2ec; color: #2a2a24; font-family: "Exo 2", sans-serif; }
+  #retrofutur h2, #retrofutur .specimen .big { font-weight: 800; letter-spacing: -0.01em; }
+  #retrofutur .board-tag { background: #b5402e; color: #f4f2ec; }
+  #retrofutur .mood { color: #5c5c50; }
+  #retrofutur .specimen { background: #fbfaf6; border: 2px solid #2a2a24; border-radius: 120px 24px 24px 24px; padding-top: 48px; }
+  #retrofutur .side .photo { border: 2px solid #2a2a24; border-radius: 24px 24px 120px 24px; }
+  #retrofutur .body-sample { color: #5c5c50; }
+  #retrofutur .btn.primary { background: #b5402e; color: #f4f2ec; }
+  #retrofutur .btn.ghost { border: 2px solid #6b6f3f; color: #2a2a24; }
+  #retrofutur .swatches { background: #fbfaf6; border: 2px solid #2a2a24; border-radius: 24px; }
+  #retrofutur .swatches h3, #retrofutur .chip span, #retrofutur .type-note { color: #74746a; }
+
   .verdict { max-width: 880px; margin: 0 auto; padding: 64px 24px 96px; }
   .verdict h2 { font-size: 26px; letter-spacing: -0.01em; }
   .verdict p { margin-top: 12px; color: #52525b; line-height: 1.65; }
@@ -184,7 +269,7 @@
 
 <header class="intro">
   <h1>memiro: три визуальных направления</h1>
-  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже девять направлений: типографика, палитра и настроение.
+  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже пятнадцать направлений: типографика, палитра и настроение.
      Первые три спокойнее, последние три смелее. Выберите одно, и макеты страниц будут доработаны в нём.</p>
   <nav class="jump">
     <a href="#svet">1 · Свет</a>
@@ -196,6 +281,12 @@
     <a href="#myagkost">7 · Мягкость</a>
     <a href="#arka">8 · Арка</a>
     <a href="#punsh">9 · Пунш</a>
+    <a href="#vitrina">10 · Витрина</a>
+    <a href="#polnoch">11 · Полночь</a>
+    <a href="#shtil">12 · Штиль</a>
+    <a href="#afisha">13 · Афиша</a>
+    <a href="#sketch">14 · Скетч</a>
+    <a href="#retrofutur">15 · Ретрофутур</a>
   </nav>
 </header>
 
@@ -553,6 +644,246 @@
           </div>
           <p class="type-note">Rubik (кириллица): заголовки 900 капсом, текст 400. Обводки 2px,
              радиус 24px, малиновый только для CTA, бейджей и цен.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ J ============ -->
+<section class="board" id="vitrina">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Люкс-минимал</span>
+      <h2>Витрина</h2>
+    </div>
+    <p class="mood">По мотивам 207ouest и Haus: фотография во весь экран, текста минимум, лёгкий разреженный
+       капс без единого лишнего элемента. Монохром без акцентного цвета: работает только товар.
+       Настроение: парфюмерный бутик, тишина, дорого.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Зеркала<br>ручной работы</div>
+          <p class="body-sample" style="margin-top:18px">Санкт-Петербург. Изготовление под размер,
+             доставка и установка мастерами студии.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7088_Bolshoe-zerkalo-v-beloj-alyuminievoj-rame.webp" alt="Большое зеркало в белой алюминиевой раме"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#f6f6f6;border:1px solid #dfdfdf"><span>фон #F6F6F6</span></div>
+            <div class="chip" style="background:#ffffff;border:1px solid #dfdfdf"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#1a1a1a"><span>текст #1A1A1A</span></div>
+            <div class="chip" style="background:#7a7a7a"><span>серый #7A7A7A</span></div>
+          </div>
+          <p class="type-note">Jost (кириллица): заголовки лёгким весом 300 капсом с разрядкой, текст 400.
+             Радиус 0, без теней, кнопки-прямоугольники капсом.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ K ============ -->
+<section class="board" id="polnoch">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Тёмное техно</span>
+      <h2>Полночь</h2>
+    </div>
+    <p class="mood">По мотивам Noon и современных дарк-витрин: глубокий сине-чёрный, драматичные ракурсы товара,
+       один электрик-синий акцент, аккуратные карточки с тонкой светлой кромкой.
+       Настроение: ночной город, приложение, а не сайт.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Зеркало под ваш<br>размер за 10 дней</div>
+          <p class="body-sample" style="margin-top:18px">Каталог из 88 моделей, онлайн-расчёт цены
+             и установка мастерами студии.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/sostarennoe-zerkalo-solid-black-6a15d7decd23c.jpg" alt="Состаренное зеркало Solid Black"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#0b0d12;border:1px solid #1f2430"><span>фон #0B0D12</span></div>
+            <div class="chip" style="background:#12151d;border:1px solid #1f2430"><span>карточки #12151D</span></div>
+            <div class="chip" style="background:#e7eaf2"><span>текст #E7EAF2</span></div>
+            <div class="chip" style="background:#4c7dff"><span>электрик #4C7DFF</span></div>
+          </div>
+          <p class="type-note">Inter Tight (кириллица): плотные заголовки 800, текст 400.
+             Синий только для CTA и состояний, никаких свечений.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ L ============ -->
+<section class="board" id="shtil">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Спокойное</span>
+      <h2>Штиль</h2>
+    </div>
+    <p class="mood">По мотивам Calm: туманно-голубая гамма, мягкие скругления, гуманистический шрифт,
+       ощущение утреннего света и воды. Зеркало как элемент спокойного дома.
+       Настроение: спа, свежий воздух, доверие.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Дом начинается<br>со светлого отражения</div>
+          <p class="body-sample" style="margin-top:18px">Спокойные формы, мягкая подсветка, установка
+             без хлопот. Изготовим под ваш размер.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-v-golubom-bagete-deep-blue-6a15d5d4ba9d7.jpg" alt="Зеркало в голубом багете Deep Blue"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#e8eef5;border:1px solid #d4dfeb"><span>фон #E8EEF5</span></div>
+            <div class="chip" style="background:#f7fafd;border:1px solid #d4dfeb"><span>карточки #F7FAFD</span></div>
+            <div class="chip" style="background:#22334a"><span>текст #22334A</span></div>
+            <div class="chip" style="background:#3b82c4"><span>вода #3B82C4</span></div>
+          </div>
+          <p class="type-note">Alegreya Sans (кириллица): тёплый гуманистический гротеск, заголовки 700.
+             Радиус 22px, лёгкие рамки вместо теней.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ M ============ -->
+<section class="board" id="afisha">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Дерзкое</span>
+      <h2>Афиша</h2>
+    </div>
+    <p class="mood">По мотивам Snacklins и De La Calle: узкий плакатный капс поверх крупных фото,
+       у каждой категории каталога свой цвет подложки, цены огромные. Жёлтый, чёрный, белый.
+       Настроение: витрина рынка, честный прайс, энергия.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">88 зеркал.<br>Любой размер</div>
+          <p class="body-sample" style="margin-top:18px">Выбирай форму и подсветку, цена считается сразу.
+             Доставим и повесим по Петербургу.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/pryamougolnoe-zerkalo-kov-duo-graph-6a15d7d932903.jpg" alt="Прямоугольное зеркало Kov Duo Graph"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#ffffff;border:1px solid #e0e0dc"><span>фон #FFF</span></div>
+            <div class="chip" style="background:#ffd23f"><span>жёлтый #FFD23F</span></div>
+            <div class="chip" style="background:#101010"><span>чернила #101010</span></div>
+            <div class="chip" style="background:#f5f5f2;border:1px solid #e0e0dc"><span>серый #F5F5F2</span></div>
+          </div>
+          <p class="type-note">Oswald для заголовков (узкий плакатный капс, кириллица) + PT Sans для текста.
+             Цветные подложки секций, у категорий свои цвета.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ N ============ -->
+<section class="board" id="sketch">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Рукописное</span>
+      <h2>Скетч</h2>
+    </div>
+    <p class="mood">По мотивам Nugget и Couplet Coffee: рукописные заголовки, пунктирные рамки,
+       маркерные выделения, чуть повёрнутые фото, как эскизы на столе мастера.
+       Настроение: мастерская, тёплый юмор, «сделано руками».</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Нарисуйте зеркало, <mark>мы сделаем</mark></div>
+          <p class="body-sample" style="margin-top:18px">Присылайте эскиз или выбирайте из каталога.
+             Изготовим, привезём и повесим.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-trelyazh-golden-glance-6a15d5ec02fd9.jpg" alt="Зеркало трельяж Golden Glance"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#fffdf6;border:1px solid #e8e2d2"><span>фон #FFFDF6</span></div>
+            <div class="chip" style="background:#ffffff;border:2px dashed #26221c"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#26221c"><span>текст #26221C</span></div>
+            <div class="chip" style="background:#ffd83d"><span>маркер #FFD83D</span></div>
+          </div>
+          <p class="type-note">Neucha для заголовков (рукописная кириллица) + Nunito для текста.
+             Пунктирные рамки, маркерные выделения, лёгкие повороты фото.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ O ============ -->
+<section class="board" id="retrofutur">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Смелое</span>
+      <h2>Ретрофутур</h2>
+    </div>
+    <p class="mood">По мотивам Daylight: изгибы и «дуги» в скруглениях блоков, бумажный фон,
+       оливковый и кирпичный из семидесятых, техничный шрифт. Ретро-будущее, где зеркало ощущается прибором.
+       Настроение: журнал о дизайне 1974 года, снятый сегодня.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Отражение<br>нового поколения</div>
+          <p class="body-sample" style="margin-top:18px">Подсветка с сенсором и подогревом, размер любой.
+             Установка входит в заказ.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2026/05/zerkalo-na-dver-view-match-view-match.webp" alt="Зеркало на дверь View Match"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#f4f2ec;border:1px solid #ddd9cc"><span>бумага #F4F2EC</span></div>
+            <div class="chip" style="background:#2a2a24"><span>текст #2A2A24</span></div>
+            <div class="chip" style="background:#6b6f3f"><span>олива #6B6F3F</span></div>
+            <div class="chip" style="background:#b5402e"><span>кирпич #B5402E</span></div>
+          </div>
+          <p class="type-note">Exo 2 (кириллица): технотипографика 800 для заголовков, 400 для текста.
+             Асимметричные дуговые скругления, рамки 2px, кирпич только на CTA.</p>
         </div>
       </div>
     </div>
