@@ -7,7 +7,7 @@
 
 ### Issue tracker
 
-Issues live in GitHub Issues for Memiro/website (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+Issues live as local markdown files under `.scratch/<feature>/` in this repo. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
