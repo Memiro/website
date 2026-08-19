@@ -152,6 +152,8 @@ class Product(models.Model):
         blank=True,
     )
     is_published = models.BooleanField("опубликован", default=False)
+    # Для сортировки каталога «новинки»
+    created_at = models.DateTimeField("создан", auto_now_add=True)
     is_popular = models.BooleanField("популярное", default=False)
     is_promo = models.BooleanField("акция", default=False)
     order = models.PositiveIntegerField("порядок", default=0)

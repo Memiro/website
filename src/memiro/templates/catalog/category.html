@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load static catalog_tags %}
+
+{% block title %}{{ category.name }} — memiro{% endblock %}
+{% block head %}<link rel="canonical" href="{{ canonical }}">{% endblock %}
+{% block nav_catalog %}class="active"{% endblock %}
+
+{% block content %}
+<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / <a href="{% url 'catalog' %}">Каталог</a> / {{ category.name }}</nav>
+
+<div class="cat-head wrap">
+  <h1 class="h-section">{{ category.name }}</h1>
+  <span class="count" data-total-count="{{ page.paginator.count }}">{{ page.paginator.count }} {{ page.paginator.count|ru_plural:"товар,товара,товаров" }}</span>
+</div>
+
+<div class="toolbar wrap">
+  <div class="chips">
+    <button class="chip-f only-mobile" type="button" data-drawer-open>Фильтры{% if applied %} · {{ applied|length }}{% endif %}</button>
+    {% for chip in applied %}
+    <a class="chip-f on" href="{% if chip.query %}?{{ chip.query }}{% else %}{{ request.path }}{% endif %}" title="Убрать фильтр">{{ chip.label }} ✕</a>
+    {% endfor %}
+    {% if applied %}<a class="chip-f reset" href="{{ request.path }}">Сбросить всё</a>{% endif %}
+  </div>
+  <label class="sort">Сортировка:
+    <select name="sort" form="catalog-filters" data-sort>
+      {% for option in sort_options %}
+      <option value="{{ option.value }}"{% if option.is_selected %} selected{% endif %}>{{ option.label }}</option>
+      {% endfor %}
+    </select>
+  </label>
+</div>
+
+<div class="layout wrap">
+  <aside class="filters" data-drawer>
+    <div class="drawer-head only-mobile">
+      <span class="drawer-title">Фильтры</span>
+      <button class="drawer-close" type="button" data-drawer-close aria-label="Закрыть фильтры">✕</button>
+    </div>
+    <form id="catalog-filters" method="get" action="{{ request.path }}" data-filters-form>
+      {% for group in groups %}
+      <div class="fgroup">
+        <h3>{{ group.attribute.name }}</h3>
+        {% for option in group.options %}
+        <label{% if not option.count and not option.is_selected %} class="off"{% endif %}>
+          <input type="checkbox" name="{{ group.attribute.slug }}" value="{{ option.token }}"{% if option.is_selected %} checked{% endif %}{% if not option.count and not option.is_selected %} disabled{% endif %}>
+          {{ option.label }}<span class="n">{{ option.count }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <button class="btn btn-primary apply" type="submit">Показать <span data-apply-count>{{ page.paginator.count }}</span> товаров</button>
+      {% if applied %}<a class="btn btn-ghost" href="{{ request.path }}">Сбросить фильтры</a>{% endif %}
+    </form>
+  </aside>
+  <div class="drawer-backdrop" data-drawer-close hidden></div>
+
+  <main>
+    <div class="grid" data-grid>
+      {% for product in page %}{% include "catalog/_card.html" %}{% endfor %}
+    </div>
+
+    {% if page.has_next %}
+    <div class="show-more">
+      <a class="btn btn-ghost" data-show-more href="?{{ next_query }}">Показать ещё</a>
+    </div>
+    {% endif %}
+
+    {% if page.paginator.num_pages > 1 %}
+    <nav class="pager" data-pager>
+      {% for link in page_links %}
+      <a{% if link.is_current %} class="here"{% endif %} href="{% if link.query %}?{{ link.query }}{% else %}{{ request.path }}{% endif %}">{{ link.number }}</a>
+      {% endfor %}
+    </nav>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/catalog.js' %}" defer></script>{% endblock %}

@@ -1,0 +1,13 @@
+{% load catalog_tags %}
+<a class="product-card" href="{% url 'product' product.category.slug product.slug %}">
+  <div class="pic">
+    {% if product.photo_small %}
+    <img src="{{ product.photo_small.url }}" alt="{{ product.name }}" loading="lazy">
+    {% endif %}
+  </div>
+  <div class="meta">
+    {% if product.is_promo %}<span class="badge badge-sale">Акция</span>{% endif %}
+    <div class="name">{{ product.name }}</div>
+    <div class="price">от {{ product.price|rub }} ₽</div>
+  </div>
+</a>

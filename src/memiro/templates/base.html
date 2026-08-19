@@ -1,0 +1,78 @@
+{% load static %}<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}memiro — интерьерные зеркала{% endblock %}</title>
+{% block head %}{% endblock %}
+<link rel="stylesheet" href="{% static 'css/site.css' %}">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-row">
+    <a class="wordmark" href="{% url 'home' %}">memiro</a>
+    <nav class="nav-links">
+      <a {% block nav_catalog %}{% endblock %} href="{% url 'catalog' %}">Каталог</a>
+      <a href="#">О нас</a>
+      <a href="#">Доставка и установка</a>
+      <a href="#">Контакты</a>
+    </nav>
+    <div class="nav-side">
+      <a class="nav-phone" href="tel:+79812304050">+7 981 230-40-50</a>
+      <a class="nav-pill" href="#">Избранное</a>
+      <a class="nav-pill" href="#">Корзина</a>
+      <button class="nav-pill nav-menu" type="button" data-menu-toggle
+              aria-expanded="false" aria-controls="mobile-menu">Меню</button>
+    </div>
+  </div>
+  <nav class="mobile-menu" id="mobile-menu" hidden>
+    <a href="{% url 'catalog' %}">Каталог</a>
+    <a href="#">О нас</a>
+    <a href="#">Доставка и установка</a>
+    <a href="#">Контакты</a>
+    <a href="tel:+79812304050">+7 981 230-40-50</a>
+  </nav>
+</header>
+
+{% block content %}{% endblock %}
+
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <a class="wordmark" href="{% url 'home' %}">memiro</a>
+      <p class="footer-about">Студия зеркал в Санкт-Петербурге.
+        Изготовление, доставка и установка.</p>
+    </div>
+    <div>
+      <h4>Каталог</h4>
+      <ul>
+        <li><a href="{% url 'catalog' %}">Все товары</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Компания</h4>
+      <ul>
+        <li><a href="#">О нас</a></li>
+        <li><a href="#">Доставка и установка</a></li>
+        <li><a href="#">Контакты</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Связь</h4>
+      <ul>
+        <li><a href="tel:+79812304050">+7 981 230-40-50</a></li>
+        <li><a href="mailto:memiro.ru@yandex.ru">memiro.ru@yandex.ru</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>© memiro, 2026</span>
+    <a href="#">Политика обработки персональных данных</a>
+  </div>
+</footer>
+
+<script src="{% static 'js/site.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

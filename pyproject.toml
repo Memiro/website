@@ -104,8 +104,10 @@ allowed-confusables = [
 "src/memiro/**/migrations/**" = ["ALL"]
 # S101: assert — язык pytest; S105/S106: пароли в тестах выдуманы;
 # TC002: аннотации фикстур pytest — документация, прятать их в
-# TYPE_CHECKING в тестах незачем
-"tests/**" = ["S101", "S105", "S106", "TC002"]
+# TYPE_CHECKING в тестах незачем; ARG001: фикстуры pytest запрашиваются
+# и ради побочного эффекта (наполнение БД); RUF001: узкий неразрывный
+# пробел в ожидаемых ценах — намеренная типографика
+"tests/**" = ["S101", "S105", "S106", "TC002", "ARG001", "RUF001"]
 
 [tool.ruff.format]
 docstring-code-format = true

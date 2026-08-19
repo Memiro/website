@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Каталог — memiro{% endblock %}
+{% block nav_catalog %}class="active"{% endblock %}
+
+{% block content %}
+<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Каталог</nav>
+
+<div class="cat-head wrap">
+  <h1 class="h-section">Каталог</h1>
+</div>
+
+<div class="wrap">
+  {% if categories %}
+  <ul class="category-list">
+    {% for category in categories %}
+    <li><a class="btn btn-ghost" href="{% url 'category' category.slug %}">{{ category.name }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="sub">Каталог наполняется — загляните позже.</p>
+  {% endif %}
+</div>
+{% endblock %}
