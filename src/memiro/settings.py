@@ -1,8 +1,13 @@
 import os
 from pathlib import Path
 
-# BASE_DIR — корень репозитория (settings.py лежит в src/memiro/)
-BASE_DIR = Path(__file__).resolve().parents[2]
+# PACKAGE_DIR — каталог пакета memiro: пути внутри пакета (шаблоны)
+# должны переживать non-editable установку в site-packages (docker)
+PACKAGE_DIR = Path(__file__).resolve().parent
+
+# BASE_DIR — рабочий каталог процесса: сюда кладутся артефакты вне
+# пакета (SQLite в разработке, STATIC_ROOT при collectstatic)
+BASE_DIR = Path.cwd()
 
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
@@ -41,7 +46,7 @@ ROOT_URLCONF = "memiro.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "src" / "memiro" / "templates"],
+        "DIRS": [PACKAGE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

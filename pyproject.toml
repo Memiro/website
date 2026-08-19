@@ -96,8 +96,7 @@ allowed-confusables = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Django settings — модульные константы, а не код: магические числа
-# и «неиспользуемые» импорты здесь читает сам Django
+# S105: дефолтный SECRET_KEY для разработки — не секрет
 "src/memiro/settings.py" = ["S105"]
 # Миграции пишет Django, их стиль не наш
 "src/memiro/**/migrations/**" = ["ALL"]
@@ -110,7 +109,7 @@ allowed-confusables = [
 docstring-code-format = true
 
 [tool.ruff.lint.isort]
-known-first-party = ["src", "tests"]
+known-first-party = ["memiro", "tests"]
 no-lines-before = ["local-folder"]
 
 [tool.coverage.run]
@@ -130,10 +129,9 @@ exclude_also = [
     "pass",
     '\.\.\.',
 ]
-omit = ['*/__init__.py']
 
 [tool.bandit]
 targets = "src"
 
 [tool.codespell]
-skip = "*.pyi,*.pyc,./site,uv.lock"
+skip = "*.pyi,*.pyc,uv.lock"
