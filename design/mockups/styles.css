@@ -1,0 +1,138 @@
+/* memiro · направление «Свет» · токены и компоненты макетов
+   Manrope (кириллица), холодный светлый фон, графит, акцент #2F5DA8, радиус 16px, кнопки-пилюли */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #f2f3f5;
+  --surface: #ffffff;
+  --line: #e2e4e8;
+  --ink: #1b1d21;
+  --ink-soft: #52525b;
+  --ink-faint: #8b8f98;
+  --accent: #2f5da8;
+  --accent-ink: #ffffff;
+  --line-strong: #c9cbd1;
+  --pic-bg: #eceef1;
+  --on-ink: #ffffff;
+  --footer-text: #d5d7dc;
+  --footer-line: #33363c;
+  --footer-faint: #9a9ea6;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(27, 29, 33, 0.04), 0 8px 24px rgba(27, 29, 33, 0.05);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+
+/* ---------- Навигация ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(242, 243, 245, 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-row { display: flex; align-items: center; gap: 32px; height: 68px; }
+.wordmark { font-size: 22px; font-weight: 800; letter-spacing: 0.04em; text-decoration: none; }
+.nav-links { display: flex; gap: 26px; margin-right: auto; }
+.nav-links a { text-decoration: none; font-size: 14.5px; font-weight: 600; color: var(--ink-soft); transition: color .15s; }
+.nav-links a:hover, .nav-links a.active { color: var(--ink); }
+.nav-side { display: flex; align-items: center; gap: 18px; }
+.nav-phone { font-size: 14.5px; font-weight: 700; text-decoration: none; }
+.nav-pill {
+  position: relative; display: inline-flex; align-items: center;
+  height: 38px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  text-decoration: none; font-size: 13.5px; font-weight: 700;
+  transition: transform .15s;
+}
+.nav-pill:hover { transform: translateY(-1px); }
+.nav-pill .count {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+  font-size: 10.5px; font-weight: 800; display: grid; place-items: center;
+}
+.nav-menu { display: none; }
+@media (max-width: 900px) {
+  .nav-links, .nav-phone { display: none; }
+  .nav-menu { display: inline-flex; }
+}
+
+/* ---------- Типографика ---------- */
+h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.08; }
+.h-display { font-size: clamp(34px, 4.6vw, 58px); font-weight: 800; }
+.h-section { font-size: clamp(26px, 3.2vw, 38px); font-weight: 800; }
+.sub { color: var(--ink-soft); }
+
+/* ---------- Кнопки ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 28px; border-radius: 999px; border: none; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 700; text-decoration: none;
+  white-space: nowrap; transition: transform .15s, box-shadow .15s;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--ink); color: var(--on-ink); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-ghost { background: transparent; border: 1px solid var(--line-strong); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--ink); }
+.btn-accent { background: var(--accent); color: var(--accent-ink); }
+.btn-accent:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+/* ---------- Карточка товара ---------- */
+.product-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden; text-decoration: none; display: flex; flex-direction: column;
+  transition: transform .2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .2s;
+}
+.product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.product-card .pic { aspect-ratio: 4 / 5; overflow: hidden; background: var(--pic-bg); }
+.product-card .pic img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s cubic-bezier(0.16, 1, 0.3, 1); }
+.product-card:hover .pic img { transform: scale(1.03); }
+.product-card .meta { padding: 16px 18px 20px; }
+.product-card .name { font-size: 15px; font-weight: 700; line-height: 1.35; }
+.product-card .price { margin-top: 6px; font-size: 16px; font-weight: 800; }
+.product-card .price.on-request { color: var(--ink-soft); font-weight: 600; font-size: 14px; }
+.badge {
+  display: inline-block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.02em;
+  padding: 4px 10px; border-radius: 999px; margin-bottom: 8px;
+}
+.badge-sale { background: var(--accent); color: var(--accent-ink); }
+.badge-out { background: var(--pic-bg); color: var(--ink-soft); }
+
+/* ---------- Формы ---------- */
+.field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.field input, .field select {
+  width: 100%; padding: 12px 14px; font: inherit; font-size: 15px;
+  border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); color: var(--ink);
+}
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.field .hint { font-size: 12.5px; color: var(--ink-faint); margin-top: 5px; }
+
+/* ---------- Подвал ---------- */
+.footer { background: var(--ink); color: var(--footer-text); margin-top: 96px; }
+.footer a { color: var(--footer-text); text-decoration: none; }
+.footer a:hover { color: #fff; }
+.footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 40px; padding: 64px 0 48px; }
+.footer .wordmark { color: #fff; }
+.footer h4 { color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
+.footer ul { list-style: none; display: grid; gap: 9px; font-size: 14.5px; }
+.footer-bottom { border-top: 1px solid var(--footer-line); padding: 20px 0; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--footer-faint); }
+@media (max-width: 900px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+
+/* ---------- Появление при прокрутке (эскиз будущей анимации) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s cubic-bezier(0.16, 1, 0.3, 1), transform .6s cubic-bezier(0.16, 1, 0.3, 1); }
+  .reveal.in { opacity: 1; transform: none; }
+}

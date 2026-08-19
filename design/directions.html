@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>memiro · дизайн-направления</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;700&family=Commissioner:wght@400;600;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { background: #ececee; color: #1b1d21; font-family: "Manrope", system-ui, sans-serif; }
+  img { max-width: 100%; display: block; }
+
+  .intro { max-width: 880px; margin: 0 auto; padding: 72px 24px 48px; }
+  .intro h1 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.02em; line-height: 1.05; font-weight: 800; }
+  .intro p { margin-top: 16px; color: #52525b; line-height: 1.6; max-width: 62ch; }
+  .intro .jump { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .intro .jump a { text-decoration: none; font-weight: 700; font-size: 14px; padding: 10px 18px; border-radius: 999px; border: 1px solid #c9cbd1; color: #1b1d21; background: #fff; transition: transform .15s ease; }
+  .intro .jump a:hover { transform: translateY(-1px); }
+
+  .board { padding: 72px 24px 88px; }
+  .board-inner { max-width: 1180px; margin: 0 auto; }
+  .board-head { display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; }
+  .board-tag { font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 999px; }
+  .board h2 { font-size: clamp(30px, 4.5vw, 52px); letter-spacing: -0.02em; line-height: 1.05; }
+  .board .mood { margin-top: 14px; max-width: 66ch; line-height: 1.65; font-size: 16px; }
+  .board-grid { margin-top: 40px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 24px; align-items: stretch; }
+  @media (max-width: 860px) { .board-grid { grid-template-columns: 1fr; } }
+
+  .specimen { border-radius: 16px; padding: 36px; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; min-height: 420px; }
+  .specimen .big { font-size: clamp(30px, 3.6vw, 46px); line-height: 1.08; letter-spacing: -0.015em; }
+  .specimen .body-sample { max-width: 46ch; line-height: 1.65; font-size: 15px; }
+  .specimen .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .specimen .btn { font-size: 14px; font-weight: 700; padding: 13px 24px; border-radius: 999px; border: none; cursor: default; }
+  .specimen .btn.ghost { background: transparent; }
+
+  .side { display: grid; gap: 24px; }
+  .photo { border-radius: 16px; overflow: hidden; }
+  .photo img { width: 100%; height: 280px; object-fit: cover; }
+  .swatches { border-radius: 16px; padding: 24px; }
+  .swatches h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+  .chip-row { display: flex; gap: 10px; flex-wrap: wrap; padding-bottom: 22px; }
+  .chip { width: 64px; height: 64px; border-radius: 12px; position: relative; }
+  .chip span { position: absolute; bottom: -20px; left: 0; font-size: 10.5px; white-space: nowrap; }
+  .type-note { margin-top: 22px; font-size: 13px; line-height: 1.6; }
+
+  /* Direction A: Свет */
+  #svet { background: #f2f3f5; color: #1b1d21; font-family: "Manrope", sans-serif; }
+  #svet .board-tag { background: #1b1d21; color: #f2f3f5; }
+  #svet .mood { color: #52525b; }
+  #svet .specimen { background: #ffffff; border: 1px solid #e2e4e8; }
+  #svet .specimen .big { font-weight: 800; }
+  #svet .body-sample { color: #52525b; }
+  #svet .btn.primary { background: #1b1d21; color: #fff; }
+  #svet .btn.ghost { border: 1px solid #c9cbd1; color: #1b1d21; }
+  #svet .swatches { background: #ffffff; border: 1px solid #e2e4e8; }
+  #svet .swatches h3, #svet .chip span, #svet .type-note { color: #6b7078; }
+
+  /* Direction B: Глубина */
+  #glubina { background: #101014; color: #f0efec; font-family: "Onest", sans-serif; }
+  #glubina h2, #glubina .specimen .big { font-family: "Unbounded", sans-serif; font-weight: 600; }
+  #glubina .board-tag { background: #e3a857; color: #101014; }
+  #glubina .mood { color: #a3a29b; }
+  #glubina .specimen { background: #17171c; border: 1px solid #26262e; box-shadow: 0 0 80px rgba(227, 168, 87, 0.07) inset; }
+  #glubina .body-sample { color: #a3a29b; }
+  #glubina .btn.primary { background: #e3a857; color: #101014; }
+  #glubina .btn.ghost { border: 1px solid #3a3a44; color: #f0efec; }
+  #glubina .swatches { background: #17171c; border: 1px solid #26262e; }
+  #glubina .swatches h3, #glubina .chip span, #glubina .type-note { color: #8b8a84; }
+
+  /* Direction C: Графика */
+  #grafika { background: #f7f7f4; color: #141414; font-family: "Commissioner", sans-serif; }
+  #grafika h2, #grafika .specimen .big { font-weight: 900; letter-spacing: -0.01em; }
+  #grafika .board-tag { background: #2743c7; color: #fff; }
+  #grafika .mood { color: #5a5a56; }
+  #grafika .specimen { background: #fff; border: 2px solid #141414; border-radius: 0; }
+  #grafika .side .photo, #grafika .swatches, #grafika .chip { border-radius: 0; }
+  #grafika .body-sample { color: #5a5a56; }
+  #grafika .btn { border-radius: 0; }
+  #grafika .btn.primary { background: #2743c7; color: #fff; }
+  #grafika .btn.ghost { border: 2px solid #141414; color: #141414; }
+  #grafika .swatches { background: #fff; border: 2px solid #141414; }
+  #grafika .swatches h3, #grafika .chip span, #grafika .type-note { color: #6b6b66; }
+
+  .verdict { max-width: 880px; margin: 0 auto; padding: 64px 24px 96px; }
+  .verdict h2 { font-size: 26px; letter-spacing: -0.01em; }
+  .verdict p { margin-top: 12px; color: #52525b; line-height: 1.65; }
+  .verdict a { color: #1b1d21; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header class="intro">
+  <h1>memiro: три визуальных направления</h1>
+  <p>Полный редизайн сайта студии, wordmark «memiro» сохраняется. Ниже три направления: типографика, палитра и настроение.
+     Выберите одно, и макеты страниц будут доработаны в нём. Рекомендация студии: направление «Свет».</p>
+  <nav class="jump">
+    <a href="#svet">1 · Свет</a>
+    <a href="#glubina">2 · Глубина</a>
+    <a href="#grafika">3 · Графика</a>
+  </nav>
+</header>
+
+<!-- ============ A ============ -->
+<section class="board" id="svet">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Рекомендуем</span>
+      <h2>Свет</h2>
+    </div>
+    <p class="mood">Холодная светлая галерея: воздух, тонкие линии, графитовый текст, много места для фотографий.
+       Зеркало отражает свет, и сайт построен вокруг этого: нейтральный фон не спорит с товаром.
+       Настроение: дневной шоурум, Apple-сдержанность.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Зеркала, сделанные<br>под ваш интерьер</div>
+          <p class="body-sample" style="margin-top:18px">Проектируем и изготавливаем зеркала в Санкт-Петербурге:
+             любой размер, форма и подсветка. Устанавливают наши мастера.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7081_Zerkalo-v-spalnyu-v-serebristoj-rame.webp" alt="Зеркало в серебристой раме в спальне"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#f2f3f5;border:1px solid #dcdee2"><span>фон #F2F3F5</span></div>
+            <div class="chip" style="background:#ffffff;border:1px solid #dcdee2"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#1b1d21"><span>графит #1B1D21</span></div>
+            <div class="chip" style="background:#2f5da8"><span>акцент #2F5DA8</span></div>
+          </div>
+          <p class="type-note">Manrope (кириллица), один шрифт на всё: плотные заголовки 800, спокойный текст 500.
+             Радиусы 16px, кнопки-пилюли, тени почти отсутствуют.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ B ============ -->
+<section class="board" id="glubina">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Смелое</span>
+      <h2>Глубина</h2>
+    </div>
+    <p class="mood">Тёмное ателье: почти чёрный фон, тёплый янтарный акцент цвета самой подсветки зеркал.
+       Половина каталога memiro со светодиодным контуром, и в этой теме товар буквально светится.
+       Настроение: вечерний интерьер, премиальная витрина.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Свет там,<br>где вы его хотите</div>
+          <p class="body-sample" style="margin-top:18px">Зеркала с контурной подсветкой, сенсорными выключателями
+             и подогревом. Изготовим под ваш размер и установим.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7098_Polukrugloe-zerkalo-s-effektnoj-konturnoj-podsvetkoj.webp" alt="Полукруглое зеркало с контурной подсветкой"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифты</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#101014;border:1px solid #26262e"><span>фон #101014</span></div>
+            <div class="chip" style="background:#17171c;border:1px solid #26262e"><span>карточки #17171C</span></div>
+            <div class="chip" style="background:#f0efec"><span>текст #F0EFEC</span></div>
+            <div class="chip" style="background:#e3a857"><span>LED #E3A857</span></div>
+          </div>
+          <p class="type-note">Unbounded для заголовков (широкая, характерная кириллица) + Onest для текста.
+             Акцентный цвет: тёплый свет самой подсветки, используется только для CTA и свечения.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ C ============ -->
+<section class="board" id="grafika">
+  <div class="board-inner">
+    <div class="board-head">
+      <span class="board-tag">Строгое</span>
+      <h2>Графика</h2>
+    </div>
+    <p class="mood">Монохромная плакатная вёрстка: бумага и чернила, прямые углы, жирная типографика,
+       один насыщенный кобальтовый акцент. Сайт как каталог-журнал: жёсткая сетка, крупные цены, никаких украшений.
+       Настроение: издательский минимализм.</p>
+    <div class="board-grid">
+      <div class="specimen">
+        <div>
+          <div class="big">Каталог: 88 зеркал.<br>Ваше: любое</div>
+          <p class="body-sample" style="margin-top:18px">Форма, рама, подсветка и размер на выбор.
+             Цена считается сразу на странице товара.</p>
+        </div>
+        <div class="cta-row">
+          <button class="btn primary">Смотреть каталог</button>
+          <button class="btn ghost">Рассчитать размер</button>
+        </div>
+      </div>
+      <div class="side">
+        <div class="photo"><img src="https://memiro.ru/wp-content/uploads/2025/09/6899fe331968972677ff7085_Zerkalo-v-alyuminievoj-rame.webp" alt="Зеркало в чёрной алюминиевой раме"></div>
+        <div class="swatches">
+          <h3>Палитра и шрифт</h3>
+          <div class="chip-row">
+            <div class="chip" style="background:#f7f7f4;border:1px solid #dcdcd6"><span>бумага #F7F7F4</span></div>
+            <div class="chip" style="background:#ffffff;border:1px solid #dcdcd6"><span>карточки #FFF</span></div>
+            <div class="chip" style="background:#141414"><span>чернила #141414</span></div>
+            <div class="chip" style="background:#2743c7"><span>кобальт #2743C7</span></div>
+          </div>
+          <p class="type-note">Commissioner (кириллица): заголовки 900, текст 400. Радиус 0 везде,
+             рамки 2px вместо теней, кобальт только для кнопок и цен.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="verdict">
+  <h2>Что дальше</h2>
+  <p>Макеты главной, каталога и карточки товара собраны в направлении «Свет» (папка <a href="mockups/home.html">design/mockups</a>).
+     Если выберете «Глубину» или «Графику», макеты перекрасим: структура страниц общая, меняются токены (цвет, шрифт, радиусы).</p>
+</footer>
+
+</body>
+</html>
