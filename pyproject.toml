@@ -22,6 +22,8 @@ dependencies = [
     "psycopg[binary]==3.3.4",
     # The `.env` fallback the entrypoints load for a bare local run
     "python-dotenv==1.2.3",
+    # ImageField (фото товаров и галерея)
+    "pillow==12.1.0",
 ]
 
 [dependency-groups]
@@ -135,3 +137,6 @@ targets = "src"
 
 [tool.codespell]
 skip = "*.pyi,*.pyc,uv.lock"
+# garant — правовой портал garant.ru в ссылках юр. ресёрча;
+# calle — бренд De La Calle в дизайн-референсах
+ignore-words-list = "garant,calle"
