@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from django.http import HttpResponse
 from django.urls import reverse
 
-from memiro.catalog.filters import FILTERABLE_KINDS
+from memiro.catalog.filters import FILTERABLE_KINDS, PRICE_PARAMS
 from memiro.catalog.models import Attribute
 
 if TYPE_CHECKING:
@@ -24,15 +24,16 @@ CLOSED_PATHS = ("/admin/", "/api/")
 
 
 def filter_params() -> list[str]:
-    """Параметры, порождающие дубли: сортировка и слаги атрибутов."""
+    """Параметры, порождающие дубли: сортировка, цена и слаги атрибутов."""
     slugs = (
         Attribute.objects.filter(kind__in=FILTERABLE_KINDS)
         .order_by("slug")
         .values_list("slug", flat=True)
         .distinct()
     )
-    # Сортировка — такой же параметрический дубль, как фильтр
-    return ["sort", *slugs]
+    # Сортировка и цена — такие же параметрические дубли, как фильтр
+    # по атрибуту, хотя из атрибутов и не растут
+    return ["sort", *PRICE_PARAMS, *slugs]
 
 
 def robots(request: HttpRequest) -> HttpResponse:

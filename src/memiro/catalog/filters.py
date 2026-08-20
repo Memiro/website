@@ -5,6 +5,10 @@
 числовые атрибуты выводятся в карточке товара, но фильтров не дают.
 Счётчик значения — количество товаров при всех остальных выбранных
 фильтрах, кроме фильтров своего атрибута (UX-практика Baymard).
+
+Цена — единственное сужение не из атрибутов, а из поля товара, и
+группой она не является: выбранный диапазон учитывается в счётчиках
+всех групп, включая ту, значение которой сейчас считается.
 """
 
 from __future__ import annotations
@@ -12,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from django.db.models import Count
+from django.db.models import Count, Max, Min
 
 from .models import (
     BOOL_LABELS,
@@ -21,6 +25,7 @@ from .models import (
     AttributeValue,
     ProductAttribute,
 )
+from .templatetags.catalog_tags import rub
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -34,6 +39,11 @@ class FilterError(Exception):
 
 
 FILTERABLE_KINDS = (Attribute.Kind.CHOICE, Attribute.Kind.BOOLEAN)
+
+PRICE_MIN_PARAM = "price_min"
+PRICE_MAX_PARAM = "price_max"
+# Параметры цены закрываются от индексации наравне с прочими (ADR-0003)
+PRICE_PARAMS = (PRICE_MIN_PARAM, PRICE_MAX_PARAM)
 
 
 @dataclass(frozen=True)
@@ -63,6 +73,87 @@ class AppliedFilter:
     token: str
 
 
+@dataclass(frozen=True)
+class PriceRange:
+    """Границы цены, выбранные посетителем; None — граница не задана."""
+
+    minimum: int | None = None
+    maximum: int | None = None
+
+    @classmethod
+    def parse(cls, query: QueryDict) -> PriceRange:
+        """Разбирает границы из querystring; мусор — FilterError."""
+        return cls(
+            minimum=cls._parse_bound(query.get(PRICE_MIN_PARAM)),
+            maximum=cls._parse_bound(query.get(PRICE_MAX_PARAM)),
+        )
+
+    @staticmethod
+    def _parse_bound(raw: str | None) -> int | None:
+        # Не int(): тот принял бы «1_000», «+900» и арабские цифры —
+        # ценой такое не является, а страница по такому URL отвечала бы
+        # 200 с чипом, которого посетитель не набирал
+        if not raw:
+            return None
+        if not (raw.isascii() and raw.isdigit()):
+            message = f"Цена «{raw}» не число"
+            raise FilterError(message)
+        return int(raw)
+
+    @property
+    def is_active(self) -> bool:
+        return self.minimum is not None or self.maximum is not None
+
+    def apply(self, products: QuerySet[Product]) -> QuerySet[Product]:
+        """Сужает выборку по цене; границы включаются в диапазон."""
+        if self.minimum is not None:
+            products = products.filter(price__gte=self.minimum)
+        if self.maximum is not None:
+            products = products.filter(price__lte=self.maximum)
+        return products
+
+    def chips(self) -> list[AppliedFilter]:
+        """Границы — отдельные чипсы: каждая снимается сама по себе."""
+        bounds = (
+            ("от", PRICE_MIN_PARAM, self.minimum),
+            ("до", PRICE_MAX_PARAM, self.maximum),
+        )
+        return [
+            AppliedFilter(
+                label=f"Цена {preposition} {rub(value)} ₽",
+                slug=param,
+                token=str(value),
+            )
+            for preposition, param, value in bounds
+            if value is not None
+        ]
+
+    def control(self, products: QuerySet[Product]) -> PriceControl | None:
+        """Поля «от» и «до» с границами по данным категории.
+
+        None — сужать нечем: все товары категории стоят одинаково.
+        """
+        bounds = products.aggregate(low=Min("price"), high=Max("price"))
+        low, high = bounds["low"], bounds["high"]
+        if low is None or low == high:
+            return None
+        return PriceControl(lowest=low, highest=high, selected=self)
+
+
+@dataclass(frozen=True)
+class PriceControl:
+    """Пара полей «от» и «до» в сайдбаре.
+
+    Границы считаются из опубликованных товаров категории, а не зашиты
+    в вёрстку: у каждой категории свой разброс, и он меняется вместе
+    с каталогом.
+    """
+
+    lowest: int
+    highest: int
+    selected: PriceRange
+
+
 class CatalogFilters:
     """Разобранный набор фильтров одной категории."""
 
@@ -71,10 +162,12 @@ class CatalogFilters:
         attributes: list[Attribute],
         choice_selected: dict[Attribute, tuple[AttributeValue, ...]],
         bool_selected: dict[Attribute, tuple[bool, ...]],
+        price: PriceRange | None = None,
     ) -> None:
         self._attributes = attributes
         self._choice = choice_selected
         self._bool = bool_selected
+        self.price = price or PriceRange()
 
     @classmethod
     def parse(cls, category: Category, query: QueryDict) -> CatalogFilters:
@@ -100,7 +193,12 @@ class CatalogFilters:
                 )
             else:
                 bool_selected[attribute] = cls._parse_bool(attribute, tokens)
-        return cls(attributes, choice_selected, bool_selected)
+        return cls(
+            attributes,
+            choice_selected,
+            bool_selected,
+            PriceRange.parse(query),
+        )
 
     @staticmethod
     def _parse_choice(
@@ -125,7 +223,7 @@ class CatalogFilters:
 
     @property
     def is_active(self) -> bool:
-        return bool(self._choice or self._bool)
+        return bool(self._choice or self._bool) or self.price.is_active
 
     def apply(
         self,
@@ -133,7 +231,12 @@ class CatalogFilters:
         *,
         exclude: Attribute | None = None,
     ) -> QuerySet[Product]:
-        """Сужает выборку: ИЛИ внутри атрибута, И между атрибутами."""
+        """Сужает выборку: ИЛИ внутри атрибута, И между атрибутами.
+
+        `exclude` снимает одну группу — цены это не касается: группой
+        она не является и из счётчиков не выпадает.
+        """
+        products = self.price.apply(products)
         for attribute, values in self._choice.items():
             if attribute == exclude:
                 continue
@@ -235,4 +338,5 @@ class CatalogFilters:
                 )
                 for flag in self._bool.get(attribute, ())
             )
+        chips.extend(self.price.chips())
         return chips

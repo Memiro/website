@@ -575,6 +575,9 @@ def test_robots_closes_filter_params_and_points_to_sitemap(
     assert "Disallow: /admin/" in text
     assert "Disallow: /*?*podsvetka=" in text
     assert "Disallow: /*?*sort=" in text
+    # Цена — такой же параметрический дубль (тикет 13)
+    assert "Disallow: /*?*price_min=" in text
+    assert "Disallow: /*?*price_max=" in text
     # Clean-param — то же самое для Яндекса
     clean = next(
         line for line in text.splitlines() if line.startswith("Clean-param:")
@@ -582,6 +585,8 @@ def test_robots_closes_filter_params_and_points_to_sitemap(
     assert "podsvetka" in clean
     assert "forma" in clean
     assert "sort" in clean
+    assert "price_min" in clean
+    assert "price_max" in clean
     assert "Sitemap: http://testserver/sitemap.xml" in text
 
 

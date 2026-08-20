@@ -104,6 +104,7 @@ def category(request: HttpRequest, slug: str) -> HttpResponse:
             "category": category,
             "page": page,
             "groups": filters.groups(base),
+            "price": filters.price.control(base),
             "applied": applied,
             "sort_options": _sort_options(sort_key),
             "canonical": _canonical(request, category, filters, sort, page),

@@ -238,6 +238,139 @@ def test_counts_exclude_own_attribute_selection(
     assert groups["podsvetka"] == {"да": 1, "нет": 1}
 
 
+# --- Диапазон цены (тикет 13) ----------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("query", "shown", "hidden"),
+    [
+        ("price_max=9000", "View Match", "Halo Moon"),
+        ("price_min=9000", "Halo Moon", "View Match"),
+    ],
+)
+def test_price_bound_narrows(
+    client: Client,
+    shop: SimpleNamespace,
+    query: str,
+    shown: str,
+    hidden: str,
+) -> None:
+    """Halo Moon стоит 11795 ₽, View Match — 8352 ₽."""
+    html = page_html(client, f"/catalog/zerkala/?{query}")
+
+    assert shown in html
+    assert hidden not in html
+
+
+def test_price_bounds_are_inclusive(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Товар с ценой ровно на границе из выдачи не выпадает."""
+    html = page_html(client, "/catalog/zerkala/?price_min=8352&price_max=8352")
+
+    assert "View Match" in html
+    assert "Halo Moon" not in html
+
+
+def test_price_combines_with_attribute_filter(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Диапазон цены и фильтры атрибутов объединяются по И."""
+    html = page_html(
+        client, f"/catalog/zerkala/?forma={shop.krugloe.pk}&price_min=9000"
+    )
+
+    assert "Halo Moon" in html
+    assert "View Match" not in html
+
+
+def test_empty_price_combination_404(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Комбинация «фильтр + цена» без товаров ведёт себя как пустая."""
+    response = client.get(
+        f"/catalog/zerkala/?forma={shop.krugloe.pk}&price_max=9000"
+    )
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+@pytest.mark.parametrize("query", ["price_min=abc", "price_max=-5"])
+def test_garbage_price_404(
+    client: Client, shop: SimpleNamespace, query: str
+) -> None:
+    response = client.get(f"/catalog/zerkala/?{query}")
+
+    assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_price_chip_removes_only_its_bound(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Крестик у чипа цены убирает свою границу, вторую оставляет."""
+    html = page_html(client, "/catalog/zerkala/?price_min=1000&price_max=9000")
+
+    assert "Цена от 1 000 ₽" in html
+    assert "Цена до 9 000 ₽" in html
+    assert "?price_max=9000" in html
+    assert "?price_min=1000" in html
+
+
+def test_price_control_bounds_come_from_products(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Границы — самый дешёвый и самый дорогой опубликованный товар."""
+    html = page_html(client, "/catalog/zerkala/")
+
+    assert 'name="price_min"' in html
+    assert 'placeholder="8352"' in html
+    assert 'placeholder="11795"' in html
+    # Черновик за 1000 ₽ границу не двигает
+    assert 'placeholder="1000"' not in html
+
+
+def test_price_control_hidden_for_single_price(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Сужать нечего, когда все товары категории стоят одинаково."""
+    Product.objects.filter(pk=shop.halo.pk).update(price=shop.view_match.price)
+
+    html = page_html(client, "/catalog/zerkala/")
+
+    assert 'name="price_min"' not in html
+
+
+def test_counts_respect_price_range(shop: SimpleNamespace) -> None:
+    """Цена группой не является — она сужает счётчики всех групп."""
+    base = shop.category.products.filter(is_published=True)
+    filters = CatalogFilters.parse(
+        shop.category, QueryDict("podsvetka=0&price_max=9000")
+    )
+
+    groups = {
+        group.attribute.slug: {
+            option.label: option.count for option in group.options
+        }
+        for group in filters.groups(base)
+    }
+
+    assert groups["forma"] == {"Круглое": 0, "Прямоугольное": 1}
+    # Без ограничения по цене у «да» был бы Halo Moon за 11795 ₽
+    assert groups["podsvetka"] == {"да": 0, "нет": 1}
+
+
+def test_price_filtered_page_canonical_points_to_category(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Цена — такой же параметрический дубль, как прочие фильтры."""
+    html = page_html(client, "/catalog/zerkala/?price_max=11795")
+
+    assert (
+        '<link rel="canonical" href="http://testserver/catalog/zerkala/">'
+        in html
+    )
+
+
 def test_sort_by_price_ascending(
     client: Client, shop: SimpleNamespace
 ) -> None:
