@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Наши работы — memiro{% endblock %}
+
+{% block content %}
+<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Наши работы</nav>
+
+<div class="page wrap">
+  <h1 class="h-section">Наши работы</h1>
+  <p class="page-lead">Фотографии реальных установок: зеркала, которые
+    мы сделали и повесили у наших клиентов.</p>
+
+  {% if works %}
+  <div class="works-grid">
+    {% for work in works %}
+    <figure class="work">
+      <img src="{{ work.image.url }}" alt="{{ work.title }}" loading="lazy">
+      <figcaption>{{ work.title }}</figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted">Раздел наполняется — загляните позже
+    или посмотрите <a href="{% url 'catalog' %}">каталог</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "dmr",
     "memiro.catalog",
+    "memiro.content",
 ]
 
 MIDDLEWARE = [

@@ -12,6 +12,8 @@ build/
 # Django
 db.sqlite3
 staticfiles/
+# Загруженные из админки файлы (фото товаров и работ)
+media/
 
 # The codebase graph — rebuilt locally from the sources
 graphify-out/

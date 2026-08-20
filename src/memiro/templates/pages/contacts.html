@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Контакты — memiro{% endblock %}
+
+{% block content %}
+<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Контакты</nav>
+
+<div class="page wrap">
+  <h1 class="h-section">Контакты</h1>
+
+  <div class="contacts-grid">
+    <div class="contacts-info">
+      <div class="contact-block">
+        <h3>Шоурум</h3>
+        <p>{{ contacts.address }}</p>
+        <p class="muted">{{ contacts.hours }} — напишите
+          или позвоните заранее, встретим и всё покажем.</p>
+      </div>
+      <div class="contact-block">
+        <h3>Телефон</h3>
+        <p><a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a></p>
+      </div>
+      <div class="contact-block">
+        <h3>Почта</h3>
+        <p><a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a></p>
+      </div>
+      <div class="contact-block">
+        <h3>Мессенджеры и соцсети</h3>
+        <div class="contact-links">
+          <a class="nav-pill" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="nav-pill" href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
+          <a class="nav-pill" href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
+        </div>
+      </div>
+    </div>
+    {% comment %}Карта грузится по клику: виджет Яндекса ставит куки,
+    а согласия до нажатия нет (механика согласий — тикет 10){% endcomment %}
+    <div class="contacts-map" data-map data-map-src="{{ contacts.map_embed }}"
+         data-map-title="Шоурум memiro на карте: {{ contacts.address }}">
+      <div class="map-placeholder">
+        <p>Карта загружается с сервиса Яндекс.Карт: он может сохранять
+          файлы cookie в вашем браузере.</p>
+        <button class="btn btn-primary" type="button" data-map-load>Показать карту</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}<script src="{% static 'js/contacts.js' %}" defer></script>{% endblock %}

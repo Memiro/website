@@ -123,6 +123,18 @@ class AttributeValue(models.Model):
         return self.value
 
 
+# Витринный порядок «сначала популярные»: один кортеж на весь проект
+POPULAR_ORDERING = ("-is_popular", "order", "name")
+
+
+class ProductQuerySet(models.QuerySet):
+    def published(self) -> ProductQuerySet:
+        return self.filter(is_published=True)
+
+    def by_popularity(self) -> ProductQuerySet:
+        return self.order_by(*POPULAR_ORDERING)
+
+
 class Product(models.Model):
     """Изделие под заказ; наличия нет, цена обязательна (CONTEXT.md)."""
 
@@ -157,6 +169,8 @@ class Product(models.Model):
     is_popular = models.BooleanField("популярное", default=False)
     is_promo = models.BooleanField("акция", default=False)
     order = models.PositiveIntegerField("порядок", default=0)
+
+    objects = ProductQuerySet.as_manager()
 
     class Meta:
         verbose_name = "товар"

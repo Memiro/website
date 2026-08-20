@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
 from .filters import CatalogFilters, FilterError
-from .models import Category, Product
+from .models import POPULAR_ORDERING, Category, Product
 
 if TYPE_CHECKING:
     from django.core.paginator import Page
@@ -25,7 +25,7 @@ PAGE_SIZE = 12
 
 # Ключ сортировки → (порядок выборки, подпись в селекте)
 SORTS = {
-    "popular": (("-is_popular", "order", "name"), "популярные"),
+    "popular": (POPULAR_ORDERING, "популярные"),
     "price": (("price", "order", "name"), "дешевле"),
     "-price": (("-price", "order", "name"), "дороже"),
     "new": (("-created_at", "order", "name"), "новинки"),
@@ -56,9 +56,7 @@ def catalog(request: HttpRequest) -> HttpResponse:
 
 def category(request: HttpRequest, slug: str) -> HttpResponse:
     category = get_object_or_404(Category.objects.visible(), slug=slug)
-    base = category.products.filter(is_published=True).select_related(
-        "category"
-    )
+    base = category.products.published().select_related("category")
     try:
         filters = CatalogFilters.parse(category, request.GET)
     except FilterError as error:
@@ -102,7 +100,7 @@ def product(
     request: HttpRequest, category_slug: str, slug: str
 ) -> HttpResponse:
     product = get_object_or_404(
-        Product.objects.filter(is_published=True).select_related("category"),
+        Product.objects.published().select_related("category"),
         category__slug=category_slug,
         slug=slug,
     )
@@ -110,10 +108,10 @@ def product(
         "attribute", "value_option"
     ).order_by("attribute__order", "attribute__name")
     related = (
-        product.category.products.filter(is_published=True)
+        product.category.products.published()
         .exclude(pk=product.pk)
         .select_related("category")
-        .order_by("-is_popular", "order", "name")[:4]
+        .by_popularity()[:4]
     )
     return render(
         request,

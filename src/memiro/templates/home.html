@@ -1,12 +1,99 @@
-<!doctype html>
-<html lang="ru">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>memiro — интерьерные зеркала</title>
-  </head>
-  <body>
-    <h1>memiro</h1>
-    <p>Сайт в разработке.</p>
-  </body>
-</html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}memiro — интерьерные зеркала на заказ в Санкт-Петербурге{% endblock %}
+
+{% block content %}
+<section class="hero wrap">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <h1 class="h-display">Зеркала, сделанные под ваш интерьер</h1>
+      <p class="sub">Проектируем и изготавливаем зеркала в Санкт-Петербурге:
+        любой размер, форма и подсветка. Устанавливают наши мастера.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="{% url 'catalog' %}">Смотреть каталог</a>
+        <a class="btn btn-ghost" href="{% url 'works' %}">Наши работы</a>
+      </div>
+    </div>
+    <div class="hero-pic">
+      <img src="{% static 'img/hero-mir-portal.jpg' %}"
+           alt="Арочное зеркало Mir Portal с тёплой контурной подсветкой в спальне"
+           width="1200" height="1607" fetchpriority="high">
+    </div>
+  </div>
+</section>
+
+{% if sale %}
+<section class="promo">
+  <div class="wrap">
+    <div class="promo-row">
+      <strong>Акция: специальные цены на эти зеркала</strong>
+      <a href="{% url 'catalog' %}">Весь каталог</a>
+    </div>
+    <div class="promo-track">
+      {% for product in sale %}{% include "catalog/_card.html" %}{% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if categories %}
+<section class="cats wrap">
+  <h2 class="h-section">Каталог по категориям</h2>
+  <div class="cats-grid">
+    {% for tile in categories %}
+    <a class="cat" href="{% url 'category' tile.category.slug %}">
+      {% if tile.cover %}
+      <img src="{{ tile.cover.url }}" alt="" loading="lazy">
+      {% endif %}
+      <span class="label">{{ tile.category.name }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if popular %}
+<section class="popular wrap">
+  <div class="popular-head">
+    <h2 class="h-section">Популярное</h2>
+    <a href="{% url 'catalog' %}">Весь каталог</a>
+  </div>
+  <div class="popular-track">
+    {% for product in popular %}{% include "catalog/_card.html" %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="steps wrap">
+  <h2 class="h-section">Как оформить заявку</h2>
+  <div class="steps-grid">
+    <div class="step"><span class="num">1</span><h3>Выбор</h3>
+      <p>Выбираете зеркало в каталоге или присылаете свой эскиз.
+        Размер и опции обсуждаются под вашу задачу.</p></div>
+    <div class="step"><span class="num">2</span><h3>Согласование</h3>
+      <p>Менеджер уточняет детали, подтверждает размеры, сроки
+        и итоговую стоимость.</p></div>
+    <div class="step"><span class="num">3</span><h3>Изготовление</h3>
+      <p>Делаем зеркало в собственной мастерской. В зависимости
+        от сложности это занимает от 1 до 15 рабочих дней.</p></div>
+    <div class="step"><span class="num">4</span><h3>Доставка и установка</h3>
+      <p>Привозим и вешаем сами: аккуратно, с уровнем и крепежом
+        под вашу стену.</p></div>
+  </div>
+</section>
+
+<section class="final wrap">
+  <div class="final-box">
+    <div>
+      <h2 class="h-section">Не нашли подходящее? Сделаем по вашему эскизу</h2>
+      <p class="sub">Напишите нам в мессенджер или позвоните:
+        ответим в течение рабочего дня.</p>
+    </div>
+    <div class="final-actions">
+      <a class="btn btn-accent" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">Написать в WhatsApp</a>
+      <a class="btn btn-ghost" href="{{ contacts.telegram }}" target="_blank" rel="noopener">Написать в Telegram</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
