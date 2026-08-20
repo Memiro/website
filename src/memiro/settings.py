@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "dmr",
     "memiro.catalog",
     "memiro.content",
+    "memiro.leads",
 ]
 
 MIDDLEWARE = [
@@ -121,3 +122,11 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Уведомление владельца о заявке: транспорт подменяем (тесты ставят свой)
+LEAD_NOTIFIER = os.environ.get(
+    "LEAD_NOTIFIER",
+    "memiro.leads.notifications.TelegramNotifier",
+)
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")

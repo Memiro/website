@@ -26,6 +26,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("memiro.catalog.urls")),
     path("", include("memiro.content.urls")),
+    path("", include("memiro.leads.urls")),
     path("", include("memiro.api.urls")),
 ]
 

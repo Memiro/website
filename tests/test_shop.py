@@ -1,0 +1,113 @@
+from http import HTTPStatus
+
+import pytest
+from django.test import Client
+
+from memiro.catalog.models import Category, Product
+
+HALO_PRICE = 11795
+VIEW_MATCH_PRICE = 8300
+
+
+@pytest.fixture
+def products(db: None) -> list[Product]:
+    category = Category.objects.create(name="Зеркала", slug="zerkala")
+    return [
+        Product.objects.create(
+            category=category,
+            name=name,
+            slug=slug,
+            price=price,
+            is_published=published,
+        )
+        for name, slug, price, published in (
+            ("Halo Moon", "halo-moon", HALO_PRICE, True),
+            ("View Match", "view-match", VIEW_MATCH_PRICE, True),
+            ("Черновик", "draft", 5000, False),
+        )
+    ]
+
+
+@pytest.mark.django_db
+def test_summaries_return_requested_products(
+    client: Client, products: list[Product]
+) -> None:
+    """Корзина и избранное подтягивают названия и цены с сервера."""
+    ids = f"{products[1].pk},{products[0].pk}"
+
+    response = client.get(f"/api/products?ids={ids}")
+
+    assert response.status_code == HTTPStatus.OK
+    items = response.json()["items"]
+    assert [item["name"] for item in items] == ["View Match", "Halo Moon"]
+    assert items[0]["price"] == VIEW_MATCH_PRICE
+    assert items[0]["url"] == "/catalog/zerkala/view-match/"
+
+
+@pytest.mark.django_db
+def test_summaries_skip_unpublished(
+    client: Client, products: list[Product]
+) -> None:
+    """Снятый с публикации товар исчезает из подборки, а не ломает её."""
+    ids = f"{products[2].pk},{products[0].pk}"
+
+    response = client.get(f"/api/products?ids={ids}")
+
+    assert response.status_code == HTTPStatus.OK
+    assert [item["id"] for item in response.json()["items"]] == [
+        products[0].pk
+    ]
+
+
+@pytest.mark.django_db
+def test_summaries_without_ids_are_empty(client: Client) -> None:
+    """Пустая корзина не требует особого случая на клиенте."""
+    response = client.get("/api/products?ids=")
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["items"] == []
+
+
+@pytest.mark.django_db
+def test_summaries_reject_garbage_ids(client: Client) -> None:
+    """Мусор в параметре — ошибка валидации, а не 500."""
+    response = client.get("/api/products?ids=abc")
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_summaries_reject_oversized_selection(client: Client) -> None:
+    """Подборка не бесконечна: длинный список отбивается явной ошибкой."""
+    ids = ",".join(str(number) for number in range(1, 202))
+
+    response = client.get(f"/api/products?ids={ids}")
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("url", ["/cart/", "/favorites/"])
+def test_shop_pages_open(client: Client, url: str) -> None:
+    """Корзина и избранное отдают страницу; наполняет её клиент."""
+    response = client.get(url)
+
+    assert response.status_code == HTTPStatus.OK
+
+
+@pytest.mark.django_db
+def test_cart_page_has_unchecked_consent_checkbox(client: Client) -> None:
+    """Чекбокс согласия — отдельный и непредотмеченный."""
+    body = client.get("/cart/").content.decode()
+
+    assert 'name="consent"' in body
+    assert "checked" not in body
+
+
+@pytest.mark.django_db
+def test_home_has_lead_form(client: Client) -> None:
+    """Форма заявки живёт и на главной."""
+    body = client.get("/").content.decode()
+
+    assert 'id="lead"' in body
+    assert 'name="consent"' in body

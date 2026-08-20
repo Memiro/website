@@ -1,16 +1,23 @@
 {% load catalog_tags %}
-<a class="product-card" href="{% url 'product' product.category.slug product.slug %}">
-  <div class="pic">
-    {% if product.is_promo %}<span class="badge">Акция</span>{% endif %}
-    {% if product.photo_small %}
-    <img src="{{ product.photo_small.url }}" alt="{{ product.name }}" loading="lazy">
-    {% endif %}
-  </div>
-  <div class="meta">
-    <div class="name">{{ product.name }}</div>
-    <div class="spacer"></div>
-    <div class="price-row">
-      <span class="price">от {{ product.price|rub }} ₽</span>
+<article class="product-card">
+  <a class="card-link" href="{% url 'product' product.category.slug product.slug %}">
+    <div class="pic">
+      {% if product.is_promo %}<span class="badge">Акция</span>{% endif %}
+      {% if product.photo_small %}
+      <img src="{{ product.photo_small.url }}" alt="{{ product.name }}" loading="lazy">
+      {% endif %}
+    </div>
+    <div class="meta">
+      <div class="name">{{ product.name }}</div>
+    </div>
+  </a>
+  <div class="card-actions">
+    <span class="price">от {{ product.price|rub }} ₽</span>
+    <div class="card-buttons">
+      <button class="fav-btn" type="button" data-toggle="favorites" data-product="{{ product.pk }}"
+              aria-pressed="false" title="В избранное" aria-label="В избранное">{% include "icons/heart.svg" %}</button>
+      <button class="cart-btn" type="button" data-toggle="cart" data-product="{{ product.pk }}"
+              aria-pressed="false" data-label-on="В корзине">В корзину</button>
     </div>
   </div>
-</a>
+</article>

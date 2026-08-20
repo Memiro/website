@@ -1,0 +1,28 @@
+{# Форма заявки (тикет 07). Состав корзины подставляет shop.js по data-source. #}
+<form class="lead-form" data-lead-form data-source="{{ source|default:'home' }}"
+      {% if product_id %}data-product="{{ product_id }}"{% endif %}>
+  {% csrf_token %}
+  <label class="field">
+    <span>Ваше имя *</span>
+    <input name="name" type="text" required minlength="2" maxlength="120" autocomplete="name">
+  </label>
+  <label class="field">
+    <span>Телефон *</span>
+    <input name="phone" type="tel" required autocomplete="tel" placeholder="+7 900 000-00-00">
+  </label>
+  <label class="field">
+    <span>E-mail</span>
+    <input name="email" type="email" maxlength="254" autocomplete="email">
+  </label>
+  <label class="field">
+    <span>Комментарий</span>
+    <textarea name="comment" rows="3" maxlength="2000"></textarea>
+  </label>
+  {# Чекбокс намеренно непредотмечен; ссылка на политику ПД приедет тикетом 10 #}
+  <label class="consent">
+    <input type="checkbox" name="consent" value="1" required>
+    <span>Согласен на обработку персональных данных</span>
+  </label>
+  <button class="btn btn-primary lead-submit" type="submit">Отправить заявку</button>
+  <p class="lead-note" data-lead-note aria-live="polite"></p>
+</form>

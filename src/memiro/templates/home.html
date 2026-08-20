@@ -11,7 +11,7 @@
     <p class="sub">Быстро и качественно изготовим и установим зеркало любой
       сложности, даже если другие компании отказались.</p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="{% url 'contacts' %}">Узнать стоимость</a>
+      <a class="btn btn-primary" href="#lead">Узнать стоимость</a>
       <a class="btn btn-ghost" href="{% url 'catalog' %}">Смотреть каталог</a>
     </div>
     <div class="hero-stats">
@@ -126,16 +126,24 @@
   </div>
 </section>
 
-<section class="wrap">
-  <div class="callout">
+<section class="wrap section" id="lead">
+  <div class="lead-block">
     <div>
-      <h2>Не нашли подходящее? Сделаем по вашему эскизу</h2>
-      <p>Напишите в мессенджер или позвоните — ответим в течение рабочего дня.</p>
+      <span class="overline bare">Заявка</span>
+      <h2 class="h-section">Не нашли подходящее?<br>Сделаем по вашему эскизу</h2>
+      <p>Оставьте контакты — менеджер уточнит размеры, сроки и стоимость.
+        Ответим в течение рабочего дня; оплаты и обязательств на сайте нет.</p>
+      <div class="lead-contacts">
+        <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
+        <a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a>
+      </div>
+      <div class="contact-links">
+        <a href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
+        <a href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+        <a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
+      </div>
     </div>
-    <div class="callout-actions">
-      <a class="btn btn-primary" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">Написать в WhatsApp</a>
-      <a class="btn btn-ghost" href="{{ contacts.telegram }}" target="_blank" rel="noopener">Написать в Telegram</a>
-    </div>
+    {% include "leads/_form.html" with source="home" %}
   </div>
 </section>
 {% endblock %}

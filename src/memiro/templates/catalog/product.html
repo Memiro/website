@@ -38,10 +38,13 @@
       <span class="price-note">цена минимальной конфигурации</span>
     </div>
 
-    {# Конфигуратор и корзина приедут тикетами 06 и 07; пока — прямая связь #}
+    {# Конфигуратор приедет тикетом 06; корзина и заявка — тикет 07 #}
     <div class="buy-row">
-      <a class="btn btn-primary" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">Узнать стоимость</a>
-      <a class="btn btn-ghost" href="{% url 'contacts' %}">Связаться с нами</a>
+      <button class="btn btn-primary" type="button" data-toggle="cart" data-product="{{ product.pk }}"
+              aria-pressed="false" data-label-on="В корзине">В корзину</button>
+      <a class="btn btn-ghost" href="#lead">Узнать стоимость</a>
+      <button class="btn btn-ghost fav-wide" type="button" data-toggle="favorites" data-product="{{ product.pk }}"
+              aria-pressed="false" data-label-on="В избранном">{% include "icons/heart.svg" %} В избранное</button>
     </div>
 
     <div class="promises">
@@ -62,6 +65,22 @@
     {% endif %}
   </div>
 </div>
+
+<section class="wrap section" id="lead">
+  <div class="lead-block">
+    <div>
+      <span class="overline bare">Заявка</span>
+      <h2 class="h-section">Узнать стоимость</h2>
+      <p>Рассчитаем цену «{{ product.name }}» под ваши размеры и опции.
+        Ответим в течение рабочего дня — оплаты и обязательств на сайте нет.</p>
+      <div class="lead-contacts">
+        <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
+        <a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a>
+      </div>
+    </div>
+    {% include "leads/_form.html" with source="product" product_id=product.pk %}
+  </div>
+</section>
 
 {% if related %}
 <section class="wrap section">
