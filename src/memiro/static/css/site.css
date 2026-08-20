@@ -400,6 +400,12 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .pager a.here { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .pager a:hover:not(.here) { border-color: var(--text); color: var(--text); }
 
+/* ---------- Посадочные (тикет 09) ---------- */
+.landing-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 26px; }
+.landing-links a { text-decoration: none; }
+.landing-text { padding: 22px 0 30px; max-width: 76ch; }
+.landing-all { padding-top: 32px; }
+
 /* ---------- Карточка товара ---------- */
 .pdp { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: start; padding-top: 22px; }
 .gallery { display: grid; grid-template-columns: 88px 1fr; gap: 12px; position: sticky; top: 104px; }

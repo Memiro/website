@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}О нас — memiro{% endblock %}
 
 {% block content %}
-<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / О нас</nav>
+{% include "seo/_crumbs.html" %}
 
 <div class="page wrap">
   <span class="overline">Собственное производство · Санкт-Петербург</span>

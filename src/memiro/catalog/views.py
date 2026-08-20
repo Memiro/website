@@ -13,8 +13,11 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 
+from memiro.seo import structured
+from memiro.seo.meta import DEFAULT_OG_IMAGE, PageMeta, clamp, title
 from .filters import CatalogFilters, FilterError
-from .models import POPULAR_ORDERING, Category, Product
+from .landings import landing_products
+from .models import POPULAR_ORDERING, Category, Landing, Product
 
 if TYPE_CHECKING:
     from django.core.paginator import Page
@@ -84,7 +87,18 @@ def catalog(request: HttpRequest) -> HttpResponse:
     return render(
         request,
         "catalog/index.html",
-        {"tiles": category_tiles(categories)},
+        {
+            "tiles": category_tiles(categories),
+            "meta": PageMeta(
+                title=title("Каталог зеркал на заказ"),
+                description=clamp(
+                    "Каталог memiro: интерьерные зеркала на заказ по вашим "
+                    "размерам. Изготовление, доставка и установка "
+                    "в Санкт-Петербурге."
+                ),
+            ),
+            "breadcrumbs": structured.home_crumbs(structured.Crumb("Каталог")),
+        },
     )
 
 
@@ -122,10 +136,12 @@ def category(request: HttpRequest, slug: str) -> HttpResponse:
             "applied": applied,
             "sort_options": _sort_options(sort_key),
             "canonical": _canonical(request, category, filters, sort, page),
-            "page_links": _page_links(request.GET, page),
-            "next_query": _query_with_page(request.GET, page.number + 1)
-            if page.has_next()
-            else "",
+            "meta": _category_meta(category, base),
+            "breadcrumbs": structured.category_crumbs(category),
+            # Ссылки на посадочные с категории (ADR-0003): иначе их
+            # некому обходить
+            "landings": category.landings.published(),
+            **_pagination(request.GET, page),
         },
     )
 
@@ -155,10 +171,83 @@ def product(
             "specs": specs,
             "related": related,
             "gallery": list(product.gallery.all()),
-            # Пустой ImageField ложный — фолбэк на малое фото
-            "main_photo": product.photo_large or product.photo_small,
             "canonical": request.build_absolute_uri(request.path),
+            "meta": _product_meta(product),
+            "breadcrumbs": structured.category_crumbs(
+                product.category, structured.Crumb(product.name)
+            ),
+            "product_jsonld": structured.product_offer(request, product),
         },
+    )
+
+
+def landing(request: HttpRequest, slug: str) -> HttpResponse:
+    """Посадочная: категория, сужённая условиями из админки (ADR-0003).
+
+    Единственная индексируемая фильтрация — со своим title/h1/текстом
+    и self-canonical.
+    """
+    landing = get_object_or_404(
+        Landing.objects.published().select_related("category"),
+        slug=slug,
+    )
+    products = landing_products(landing)
+    if not products.exists():
+        # Пустая посадочная ведёт себя как пустая комбинация фильтров;
+        # из sitemap она по той же причине выпадает
+        message = "Посадочная без товаров"
+        raise Http404(message)
+
+    page = _page(products, request.GET)
+    return render(
+        request,
+        "catalog/landing.html",
+        {
+            "landing": landing,
+            "category": landing.category,
+            "page": page,
+            "canonical": _self_canonical(
+                request, landing.get_absolute_url(), page
+            ),
+            "meta": PageMeta(
+                title=landing.title,
+                description=clamp(landing.description),
+            ),
+            "breadcrumbs": structured.category_crumbs(
+                landing.category, structured.Crumb(landing.heading)
+            ),
+            **_pagination(request.GET, page),
+        },
+    )
+
+
+def _category_meta(category: Category, base: QuerySet[Product]) -> PageMeta:
+    """Мета категории считается по всей категории, а не по фильтрам:
+    у отфильтрованных URL та же страница в индексе (ADR-0003)."""
+    cheapest = base.order_by("price").values_list("price", flat=True).first()
+    price = f" от {cheapest} ₽" if cheapest else ""
+    return PageMeta(
+        title=title(f"{category.name} на заказ в Санкт-Петербурге"),
+        description=clamp(
+            f"{category.name} на заказ по вашим размерам{price}. "
+            "Собственное производство memiro, доставка и установка "
+            "в Санкт-Петербурге."
+        ),
+    )
+
+
+def _product_meta(product: Product) -> PageMeta:
+    photo = product.main_photo
+    description = product.description or (
+        f"{product.name} — изготовление под заказ по вашим размерам. "
+        f"Цена от {product.price} ₽, доставка и установка "
+        "в Санкт-Петербурге."
+    )
+    return PageMeta(
+        title=title(f"{product.name} — купить в Санкт-Петербурге"),
+        description=clamp(description),
+        image=photo.url if photo else DEFAULT_OG_IMAGE,
+        og_type="product",
     )
 
 
@@ -179,14 +268,28 @@ def _canonical(
 ) -> str:
     """Canonical по ADR-0003: фильтры и сортировка → чистая категория,
     пагинация — self-canonical."""
-    url = request.build_absolute_uri(
-        reverse("category", kwargs={"slug": category.slug})
-    )
+    path = reverse("category", kwargs={"slug": category.slug})
     if filters.is_active or sort:
-        return url
+        return request.build_absolute_uri(path)
+    return _self_canonical(request, path, page)
+
+
+def _self_canonical(request: HttpRequest, path: str, page: Page) -> str:
+    """Страница указывает на саму себя, номер страницы сохраняется."""
+    url = request.build_absolute_uri(path)
     if page.number > 1:
         return f"{url}?page={page.number}"
     return url
+
+
+def _pagination(query: QueryDict, page: Page) -> dict[str, object]:
+    """Пагинация страницы каталога — общая для категории и посадочной."""
+    return {
+        "page_links": _page_links(query, page),
+        "next_query": _query_with_page(query, page.number + 1)
+        if page.has_next()
+        else "",
+    }
 
 
 def _query_without(query: QueryDict, slug: str, token: str) -> str:

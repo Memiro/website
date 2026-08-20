@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Наши работы — memiro{% endblock %}
 
 {% block content %}
-<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Наши работы</nav>
+{% include "seo/_crumbs.html" %}
 
 <div class="page wrap">
   <span class="overline">Фотографии установок</span>

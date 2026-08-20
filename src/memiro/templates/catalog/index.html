@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Каталог зеркал — memiro{% endblock %}
 {% block nav_catalog %}class="active"{% endblock %}
 
 {% block content %}
-<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Каталог</nav>
+{% include "seo/_crumbs.html" %}
 
 <div class="wrap">
   <div class="cat-head">

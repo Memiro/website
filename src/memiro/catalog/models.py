@@ -1,6 +1,17 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.http import QueryDict
+from django.urls import Resolver404, resolve, reverse
+
+if TYPE_CHECKING:
+    from decimal import Decimal
+
+    from django.db.models.fields.files import ImageFieldFile
 
 
 class CategoryQuerySet(models.QuerySet):
@@ -180,6 +191,15 @@ class Product(models.Model):
     def __str__(self) -> str:
         return self.name
 
+    @property
+    def main_photo(self) -> ImageFieldFile | None:
+        """Главный кадр товара: большое фото, иначе малое.
+
+        Пустой ImageField ложный, но не None — наружу отдаём None,
+        чтобы шаблон и разметка проверяли одно и то же.
+        """
+        return self.photo_large or self.photo_small or None
+
 
 class ProductImage(models.Model):
     """Кадр галереи товара."""
@@ -202,6 +222,11 @@ class ProductImage(models.Model):
         return f"Фото {self.pk} — {self.product}"
 
 
+# Токены значений атрибута «да/нет» в querystring: их пишет фильтр
+# каталога и повторяет условие посадочной
+BOOL_TOKENS = {"1": True, "0": False}
+BOOL_TOKEN_BY_FLAG = {flag: token for token, flag in BOOL_TOKENS.items()}
+
 # Какое поле ProductAttribute хранит значение атрибута каждого типа;
 # единственное место, где тип разворачивается в поле
 VALUE_FIELD_BY_KIND = {
@@ -209,6 +234,40 @@ VALUE_FIELD_BY_KIND = {
     Attribute.Kind.BOOLEAN: "value_bool",
     Attribute.Kind.NUMBER: "value_number",
 }
+
+
+def value_kind_errors(
+    attribute: Attribute,
+    *,
+    value_option: AttributeValue | None,
+    value_bool: bool | None,
+    value_number: Decimal | None,
+) -> dict[str, str]:
+    """Проверяет, что заполнено поле под тип атрибута — и только оно.
+
+    Общая проверка значений атрибута: её делят характеристики товара и
+    условия посадочной.
+    """
+    expected_field = VALUE_FIELD_BY_KIND[Attribute.Kind(attribute.kind)]
+    filled = {
+        "value_option": value_option is not None,
+        "value_bool": value_bool is not None,
+        "value_number": value_number is not None,
+    }
+    errors = {
+        field: "Не соответствует типу атрибута."
+        for field, is_set in filled.items()
+        if is_set and field != expected_field
+    }
+    if not filled[expected_field]:
+        errors[expected_field] = "Заполните значение под тип атрибута."
+    if (
+        expected_field == "value_option"
+        and value_option is not None
+        and value_option.attribute_id != attribute.pk
+    ):
+        errors["value_option"] = "Значение справочника другого атрибута."
+    return errors
 
 
 class ProductAttribute(models.Model):
@@ -278,31 +337,169 @@ class ProductAttribute(models.Model):
             self.product.category_id
         ):
             errors["attribute"] = "Атрибут принадлежит другой категории."
-        errors.update(self._kind_errors())
+        errors.update(
+            value_kind_errors(
+                self.attribute,
+                value_option=self.value_option
+                if self.value_option_id
+                else None,
+                value_bool=self.value_bool,
+                value_number=self.value_number,
+            )
+        )
         if errors:
             raise ValidationError(errors)
 
-    def _kind_errors(self) -> dict[str, str]:
-        expected_field = VALUE_FIELD_BY_KIND[
-            Attribute.Kind(self.attribute.kind)
-        ]
-        filled = {
-            "value_option": self.value_option_id is not None,
-            "value_bool": self.value_bool is not None,
-            "value_number": self.value_number is not None,
-        }
-        errors = {
-            field: "Не соответствует типу атрибута."
-            for field, is_set in filled.items()
-            if is_set and field != expected_field
-        }
-        if not filled[expected_field]:
-            errors[expected_field] = "Заполните значение под тип атрибута."
-        option = self.value_option
-        if (
-            expected_field == "value_option"
-            and option is not None
-            and option.attribute_id != self.attribute_id
+
+# Посадочная сужает категорию одним-двумя значениями (ADR-0003):
+# длинные хвосты фильтров индексировать незачем
+MAX_LANDING_CONDITIONS = 2
+
+# Имя маршрута посадочной: по нему проверяется, что слаг не перекрыл
+# уже существующую страницу сайта
+LANDING_URL_NAME = "landing"
+
+
+class LandingQuerySet(models.QuerySet):
+    def published(self) -> LandingQuerySet:
+        return self.filter(is_published=True)
+
+
+class Landing(models.Model):
+    """Индексируемая страница «категория + значения атрибутов».
+
+    Единственный индексируемый вид фильтрации (ADR-0003): владелец
+    заводит её руками под реальный спрос, со своими title/h1/текстом.
+    """
+
+    category = models.ForeignKey(
+        Category,
+        verbose_name="категория",
+        on_delete=models.PROTECT,
+        related_name="landings",
+    )
+    slug = models.SlugField("слаг", unique=True, max_length=120)
+    title = models.CharField("title страницы", max_length=200)
+    heading = models.CharField("заголовок h1", max_length=200)
+    description = models.CharField("description", max_length=300)
+    text = models.TextField("текст страницы", blank=True)
+    is_published = models.BooleanField("опубликована", default=False)
+    order = models.PositiveIntegerField("порядок", default=0)
+
+    objects = LandingQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = "посадочная"
+        verbose_name_plural = "посадочные"
+        ordering = ("order", "heading")
+
+    def __str__(self) -> str:
+        return self.heading
+
+    def get_absolute_url(self) -> str:
+        return reverse(LANDING_URL_NAME, kwargs={"slug": self.slug})
+
+    def clean(self) -> None:
+        """Слаг посадочной не должен перекрывать страницу сайта.
+
+        Посадочные живут в корне (`/zerkala-s-podsvetkoy/`), а корень
+        делят с «О нас», «Каталогом» и прочими — занятый адрес ловим
+        резолвером, чтобы список запретных слов не расходился с urls.py.
+        """
+        if not self.slug:
+            return
+        try:
+            match = resolve(self.get_absolute_url())
+        except Resolver404:
+            return
+        if match.url_name != LANDING_URL_NAME:
+            raise ValidationError(
+                {"slug": "Этот адрес уже занят страницей сайта."}
+            )
+
+    def query(self) -> QueryDict:
+        """Условия посадочной в виде querystring фильтров каталога.
+
+        Так посадочная переиспользует разбор и применение фильтров
+        категории и не заводит второй способ сужать выдачу.
+        """
+        query = QueryDict(mutable=True)
+        for condition in self.conditions.all():
+            query.appendlist(condition.attribute.slug, condition.token)
+        return query
+
+
+class LandingCondition(models.Model):
+    """Одно условие посадочной: значение атрибута её категории.
+
+    Условие — не «фильтр» глоссария: фильтр выбирает посетитель и он не
+    индексируется, а условие заводит владелец, и страница с ним как раз
+    индексируется (CONTEXT.md, ADR-0003).
+    """
+
+    landing = models.ForeignKey(
+        Landing,
+        verbose_name="посадочная",
+        on_delete=models.CASCADE,
+        related_name="conditions",
+    )
+    attribute = models.ForeignKey(
+        Attribute,
+        verbose_name="атрибут",
+        on_delete=models.PROTECT,
+        related_name="landing_conditions",
+    )
+    value_option = models.ForeignKey(
+        AttributeValue,
+        verbose_name="значение из списка",
+        on_delete=models.PROTECT,
+        related_name="landing_conditions",
+        null=True,
+        blank=True,
+    )
+    value_bool = models.BooleanField("да/нет", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "условие посадочной"
+        verbose_name_plural = "условия"
+        constraints = (
+            models.UniqueConstraint(
+                fields=("landing", "attribute"),
+                name="one_condition_per_landing_attribute",
+            ),
+        )
+
+    def __str__(self) -> str:
+        return f"{self.attribute}: {self.token}"
+
+    @property
+    def token(self) -> str:
+        """Значение так, как его пишет в querystring фильтр каталога."""
+        if self.value_option_id:
+            return str(self.value_option_id)
+        return BOOL_TOKEN_BY_FLAG[bool(self.value_bool)]
+
+    def clean(self) -> None:
+        if not self.attribute_id:
+            return
+        errors: dict[str, list[str]] = {}
+        if self.landing_id and not self.attribute.belongs_to(
+            self.landing.category_id
         ):
-            errors["value_option"] = "Значение справочника другого атрибута."
-        return errors
+            errors["attribute"] = ["Атрибут принадлежит другой категории."]
+        if self.attribute.kind == Attribute.Kind.NUMBER:
+            errors.setdefault("attribute", []).append(
+                "Числовым атрибутом посадочную не сузить."
+            )
+        else:
+            for field, message in value_kind_errors(
+                self.attribute,
+                value_option=self.value_option
+                if self.value_option_id
+                else None,
+                value_bool=self.value_bool,
+                value_number=None,
+            ).items():
+                errors.setdefault(field, []).append(message)
+        if errors:
+            raise ValidationError(errors)

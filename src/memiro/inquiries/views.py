@@ -11,13 +11,41 @@ from typing import TYPE_CHECKING
 
 from django.shortcuts import render
 
+from memiro.seo import structured
+from memiro.seo.meta import NOINDEX, PageMeta, title
+
 if TYPE_CHECKING:
     from django.http import HttpRequest, HttpResponse
 
 
 def cart(request: HttpRequest) -> HttpResponse:
-    return render(request, "inquiries/cart.html")
+    return render(
+        request,
+        "inquiries/cart.html",
+        {
+            # Личная подборка посетителя: в индексе ей делать нечего
+            "meta": PageMeta(
+                title=title("Корзина"),
+                description="Ваша подборка зеркал memiro для заявки.",
+                robots=NOINDEX,
+            ),
+            "breadcrumbs": structured.home_crumbs(structured.Crumb("Корзина")),
+        },
+    )
 
 
 def favorites(request: HttpRequest) -> HttpResponse:
-    return render(request, "inquiries/favorites.html")
+    return render(
+        request,
+        "inquiries/favorites.html",
+        {
+            "meta": PageMeta(
+                title=title("Избранное"),
+                description="Зеркала memiro, отмеченные вами как избранные.",
+                robots=NOINDEX,
+            ),
+            "breadcrumbs": structured.home_crumbs(
+                structured.Crumb("Избранное")
+            ),
+        },
+    )

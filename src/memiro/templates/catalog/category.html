@@ -1,12 +1,10 @@
 {% extends "base.html" %}
 {% load static catalog_tags %}
 
-{% block title %}{{ category.name }} — memiro{% endblock %}
-{% block head %}<link rel="canonical" href="{{ canonical }}">{% endblock %}
 {% block nav_catalog %}class="active"{% endblock %}
 
 {% block content %}
-<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / <a href="{% url 'catalog' %}">Каталог</a> / {{ category.name }}</nav>
+{% include "seo/_crumbs.html" %}
 
 <div class="cat-head wrap">
   <h1 class="h-section">{{ category.name }}</h1>
@@ -55,6 +53,13 @@
   <div class="drawer-backdrop" data-drawer-close hidden></div>
 
   <main>
+    {% if landings %}
+    {# Ссылки на посадочные: их обходят с категории (ADR-0003) #}
+    <nav class="landing-links">
+      {% for landing in landings %}<a class="chip-f" href="{{ landing.get_absolute_url }}">{{ landing.heading }}</a>{% endfor %}
+    </nav>
+    {% endif %}
+
     <div class="grid-3" data-grid>
       {% for product in page %}{% include "catalog/_card.html" %}{% endfor %}
     </div>

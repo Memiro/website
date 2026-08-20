@@ -1,11 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Корзина — memiro{% endblock %}
-{% block head %}<meta name="robots" content="noindex, follow">{% endblock %}
 
 {% block content %}
-<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Корзина</nav>
+{% include "seo/_crumbs.html" %}
 
 <section class="wrap page">
   <span class="overline">Заявка</span>

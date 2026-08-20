@@ -28,10 +28,12 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sitemaps",
     "dmr",
     "memiro.catalog",
     "memiro.content",
     "memiro.inquiries",
+    "memiro.seo",
 ]
 
 MIDDLEWARE = [
@@ -42,6 +44,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Последним: подхватывает 404 и разводит URL старого сайта
+    # по 301/410 (тикет 09)
+    "memiro.seo.middleware.LegacyUrlMiddleware",
 ]
 
 ROOT_URLCONF = "memiro.urls"
@@ -58,6 +63,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "memiro.context_processors.contacts",
                 "memiro.context_processors.inquiry_limits",
+                "memiro.seo.context_processors.defaults",
             ],
         },
     },

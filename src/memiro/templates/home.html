@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static seo_tags %}
 
-{% block title %}memiro — интерьерные зеркала на заказ в Санкт-Петербурге{% endblock %}
+
+{% block jsonld %}{% jsonld business_jsonld %}{% endblock %}
 
 {% block content %}
 <section class="wrap hero">

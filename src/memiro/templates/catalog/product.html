@@ -1,19 +1,19 @@
 {% extends "base.html" %}
-{% load static catalog_tags %}
+{% load static catalog_tags seo_tags %}
 
-{% block title %}{{ product.name }} — memiro{% endblock %}
-{% block head %}<link rel="canonical" href="{{ canonical }}">{% endblock %}
 {% block nav_catalog %}class="active"{% endblock %}
 
+{% block jsonld %}{% jsonld product_jsonld %}{% endblock %}
+
 {% block content %}
-<nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / <a href="{% url 'catalog' %}">Каталог</a> / <a href="{% url 'category' product.category.slug %}">{{ product.category.name }}</a> / {{ product.name }}</nav>
+{% include "seo/_crumbs.html" %}
 
 <div class="pdp wrap">
   <div class="gallery{% if not gallery %} solo{% endif %}">
     {% if gallery %}
     <div class="thumbs">
-      {% if main_photo %}
-      <button class="on" type="button" data-src="{{ main_photo.url }}"><img src="{{ main_photo.url }}" alt="{{ product.name }}"></button>
+      {% if product.main_photo %}
+      <button class="on" type="button" data-src="{{ product.main_photo.url }}"><img src="{{ product.main_photo.url }}" alt="{{ product.name }}"></button>
       {% endif %}
       {% for shot in gallery %}
       <button type="button" data-src="{{ shot.image.url }}"><img src="{{ shot.image.url }}" alt="{{ product.name }} — фото {{ forloop.counter }}"></button>
@@ -22,8 +22,8 @@
     {% endif %}
     <div class="main">
       {% if product.is_promo %}<span class="badge">Акция</span>{% endif %}
-      {% if main_photo %}
-      <img data-gallery-main src="{{ main_photo.url }}" alt="{{ product.name }}">
+      {% if product.main_photo %}
+      <img data-gallery-main src="{{ product.main_photo.url }}" alt="{{ product.name }}">
       {% endif %}
     </div>
   </div>

@@ -1,10 +1,23 @@
-{% load static %}<!doctype html>
+{% load static seo_tags %}<!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}memiro — интерьерные зеркала{% endblock %}</title>
+{# Мета собирается из PageMeta представления (memiro/seo/meta.py) #}
+<title>{{ meta.title }}</title>
+<meta name="description" content="{{ meta.description }}">
+{% if meta.robots %}<meta name="robots" content="{{ meta.robots }}">{% endif %}
+<link rel="canonical" href="{{ canonical }}">
+<meta property="og:site_name" content="memiro">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:type" content="{{ meta.og_type }}">
+<meta property="og:title" content="{{ meta.title }}">
+<meta property="og:description" content="{{ meta.description }}">
+<meta property="og:url" content="{{ canonical }}">
+{% absolute meta.image as og_image %}{% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
+<meta name="twitter:card" content="summary_large_image">
 {% block head %}{% endblock %}
+{% block jsonld %}{% endblock %}
 <link rel="stylesheet" href="{% static 'css/site.css' %}">
 </head>
 <body>
