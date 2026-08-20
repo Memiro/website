@@ -21,10 +21,15 @@
     </nav>
     <div class="nav-side">
       <a class="nav-phone" href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
-      <a class="nav-pill" href="#">Избранное</a>
-      <a class="nav-pill" href="#">Корзина</a>
-      <button class="nav-pill nav-menu" type="button" data-menu-toggle
-              aria-expanded="false" aria-controls="mobile-menu">Меню</button>
+      <div class="icon-row">
+        <a class="icon-btn" href="{{ contacts.telegram }}" target="_blank" rel="noopener"
+           title="Telegram" aria-label="Telegram">{% include "icons/telegram.svg" %}</a>
+        <a class="icon-btn" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener"
+           title="WhatsApp" aria-label="WhatsApp">{% include "icons/whatsapp.svg" %}</a>
+      </div>
+      {# Иконка корзины появится вместе с самой корзиной — тикет 07 #}
+      <button class="icon-btn nav-burger" type="button" data-menu-toggle
+              aria-expanded="false" aria-controls="mobile-menu" aria-label="Меню">{% include "icons/burger.svg" %}</button>
     </div>
   </div>
   <nav class="mobile-menu" id="mobile-menu" hidden>
@@ -33,7 +38,7 @@
     <a href="{% url 'about' %}">О нас</a>
     <a href="{% url 'delivery' %}">Доставка и возврат</a>
     <a href="{% url 'contacts' %}">Контакты</a>
-    <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
+    <a class="phone" href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
   </nav>
 </header>
 
@@ -43,26 +48,26 @@
   <div class="wrap footer-grid">
     <div>
       <a class="wordmark" href="{% url 'home' %}">memiro</a>
-      <p class="footer-about">Студия зеркал в Санкт-Петербурге.
-        Изготовление, доставка и установка.</p>
+      <p class="footer-about">Производство интерьерных зеркал на заказ
+        в Санкт-Петербурге: изготовление, доставка и установка.</p>
     </div>
     <div>
       <h4>Каталог</h4>
       <ul>
-        <li><a href="{% url 'catalog' %}">Все товары</a></li>
+        <li><a href="{% url 'catalog' %}">Все зеркала</a></li>
+        <li><a href="{% url 'works' %}">Наши работы</a></li>
       </ul>
     </div>
     <div>
-      <h4>Компания</h4>
+      <h4>Покупателю</h4>
       <ul>
-        <li><a href="{% url 'works' %}">Наши работы</a></li>
         <li><a href="{% url 'about' %}">О нас</a></li>
         <li><a href="{% url 'delivery' %}">Доставка и возврат</a></li>
         <li><a href="{% url 'contacts' %}">Контакты</a></li>
       </ul>
     </div>
     <div>
-      <h4>Связь</h4>
+      <h4>Контакты</h4>
       <ul>
         <li><a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a></li>
         <li><a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a></li>
@@ -72,7 +77,8 @@
   </div>
   <div class="wrap footer-bottom">
     <span>© memiro, 2026</span>
-    <a href="#">Политика обработки персональных данных</a>
+    {# Ссылка на политику ПД появится вместе с самой страницей — тикет 10 #}
+    <span>Санкт-Петербург</span>
   </div>
 </footer>
 

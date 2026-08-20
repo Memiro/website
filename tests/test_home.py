@@ -67,7 +67,7 @@ def test_home_shows_hero_and_steps(client: Client, db: None) -> None:
     """Статические блоки макета: hero и «как оформить заявку»."""
     content = client.get("/").content.decode()
 
-    assert "Зеркала, сделанные под ваш интерьер" in content
+    assert "Зеркала на заказ" in content
     assert "Как оформить заявку" in content
 
 

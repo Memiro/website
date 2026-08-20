@@ -9,12 +9,7 @@
 <nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / <a href="{% url 'catalog' %}">Каталог</a> / <a href="{% url 'category' product.category.slug %}">{{ product.category.name }}</a> / {{ product.name }}</nav>
 
 <div class="pdp wrap">
-  <div class="gallery">
-    <div class="main">
-      {% if main_photo %}
-      <img data-gallery-main src="{{ main_photo.url }}" alt="{{ product.name }}">
-      {% endif %}
-    </div>
+  <div class="gallery{% if not gallery %} solo{% endif %}">
     {% if gallery %}
     <div class="thumbs">
       {% if main_photo %}
@@ -25,43 +20,56 @@
       {% endfor %}
     </div>
     {% endif %}
+    <div class="main">
+      {% if product.is_promo %}<span class="badge">Акция</span>{% endif %}
+      {% if main_photo %}
+      <img data-gallery-main src="{{ main_photo.url }}" alt="{{ product.name }}">
+      {% endif %}
+    </div>
   </div>
 
   <div class="info">
-    {% if product.is_promo %}<span class="badge badge-sale">Акция</span>{% endif %}
+    {% if product.article %}<div class="article">Артикул {{ product.article }}</div>{% endif %}
     <h1>{{ product.name }}</h1>
-    {% if product.article %}<p class="article">Артикул {{ product.article }}</p>{% endif %}
+    {% if product.description %}<div class="desc">{{ product.description|linebreaks }}</div>{% endif %}
+
     <div class="price-row">
       <span class="price-now">от {{ product.price|rub }} ₽</span>
       <span class="price-note">цена минимальной конфигурации</span>
     </div>
 
+    {# Конфигуратор и корзина приедут тикетами 06 и 07; пока — прямая связь #}
     <div class="buy-row">
-      <button class="btn btn-primary" type="button" data-cart-add="{{ product.slug }}">В корзину</button>
-      <button class="btn btn-ghost" type="button" data-favorite-add="{{ product.slug }}">В избранное</button>
+      <a class="btn btn-primary" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">Узнать стоимость</a>
+      <a class="btn btn-ghost" href="{% url 'contacts' %}">Связаться с нами</a>
+    </div>
+
+    <div class="promises">
+      <div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div>
+      <div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div>
+      <div class="promise"><span class="n">03</span> Доставка и монтаж по Санкт-Петербургу и области</div>
     </div>
 
     {% if specs %}
     <div class="specs">
       <h2>Характеристики</h2>
-      <dl class="specs-grid">
+      <dl>
         {% for spec in specs %}
         <div class="spec"><dt>{{ spec.attribute.name }}</dt><dd>{{ spec.display_value|capfirst }}</dd></div>
         {% endfor %}
       </dl>
     </div>
     {% endif %}
-
-    {% if product.description %}
-    <div class="desc">{{ product.description|linebreaks }}</div>
-    {% endif %}
   </div>
 </div>
 
 {% if related %}
-<section class="related wrap">
-  <h2 class="h-section">Похожие товары</h2>
-  <div class="related-grid">
+<section class="wrap section">
+  <div class="section-head">
+    <h2 class="h-section">Похожие зеркала</h2>
+    <a class="link-underline" href="{% url 'category' product.category.slug %}">Весь раздел →</a>
+  </div>
+  <div class="grid-4">
     {% for product in related %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
 </section>

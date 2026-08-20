@@ -49,13 +49,13 @@
       </div>
       {% endfor %}
       <button class="btn btn-primary apply" type="submit" data-apply>Показать <span data-apply-count>{{ page.paginator.count }}</span> <span data-apply-plural>{{ page.paginator.count|ru_plural:"товар,товара,товаров" }}</span></button>
-      {% if applied %}<a class="btn btn-ghost" href="{{ request.path }}">Сбросить фильтры</a>{% endif %}
+      {% if applied %}<a class="reset-link" href="{{ request.path }}">Сбросить фильтры</a>{% endif %}
     </form>
   </aside>
   <div class="drawer-backdrop" data-drawer-close hidden></div>
 
   <main>
-    <div class="grid" data-grid>
+    <div class="grid-3" data-grid>
       {% for product in page %}{% include "catalog/_card.html" %}{% endfor %}
     </div>
 

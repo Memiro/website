@@ -4,48 +4,50 @@
 {% block title %}memiro — интерьерные зеркала на заказ в Санкт-Петербурге{% endblock %}
 
 {% block content %}
-<section class="hero wrap">
-  <div class="hero-grid">
-    <div class="hero-copy">
-      <h1 class="h-display">Зеркала, сделанные под ваш интерьер</h1>
-      <p class="sub">Проектируем и изготавливаем зеркала в Санкт-Петербурге:
-        любой размер, форма и подсветка. Устанавливают наши мастера.</p>
-      <div class="hero-cta">
-        <a class="btn btn-primary" href="{% url 'catalog' %}">Смотреть каталог</a>
-        <a class="btn btn-ghost" href="{% url 'works' %}">Наши работы</a>
-      </div>
+<section class="wrap hero">
+  <div>
+    <span class="overline">Собственное производство · Санкт-Петербург</span>
+    <h1 class="h-display">Зеркала на заказ<br><span class="lead-word">любой</span> сложности</h1>
+    <p class="sub">Быстро и качественно изготовим и установим зеркало любой
+      сложности, даже если другие компании отказались.</p>
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="{% url 'contacts' %}">Узнать стоимость</a>
+      <a class="btn btn-ghost" href="{% url 'catalog' %}">Смотреть каталог</a>
     </div>
-    <div class="hero-pic">
-      <img src="{% static 'img/hero-mir-portal.jpg' %}"
-           alt="Арочное зеркало Mir Portal с тёплой контурной подсветкой в спальне"
-           width="1200" height="1607" fetchpriority="high">
+    <div class="hero-stats">
+      <div><div class="n">2021</div><div class="c">год основания</div></div>
+      <div><div class="n">1000+</div><div class="c">довольных клиентов</div></div>
+      <div><div class="n">под ключ</div><div class="c">от замера до монтажа</div></div>
     </div>
+  </div>
+  <div class="hero-pics">
+    <img src="{% static 'img/hero-1.jpg' %}" alt="Арочное зеркало с контурной подсветкой в спальне"
+         width="1200" height="800" fetchpriority="high">
+    <img src="{% static 'img/hero-2.jpg' %}" alt="Зеркало-месяц с подсветкой" loading="lazy">
+    <img src="{% static 'img/hero-3.jpg' %}" alt="Фигурное зеркало-капля с подсветкой" loading="lazy">
   </div>
 </section>
 
-{% if sale %}
-<section class="promo">
-  <div class="wrap">
-    <div class="promo-row">
-      <strong>Акция: специальные цены на эти зеркала</strong>
-      <a href="{% url 'catalog' %}">Весь каталог</a>
-    </div>
-    <div class="promo-track">
-      {% for product in sale %}{% include "catalog/_card.html" %}{% endfor %}
-    </div>
+<section class="strip">
+  <div class="wrap strip-row">
+    <div class="strip-item"><span class="n">01</span> Своё производство — цена без посредников</div>
+    <div class="strip-item"><span class="n">02</span> Зеркало по вашему эскизу</div>
+    <div class="strip-item"><span class="n">03</span> Комплектующие проверенных производителей</div>
+    <div class="strip-item"><span class="n">04</span> Доставка и монтаж по городу</div>
   </div>
 </section>
-{% endif %}
 
 {% if categories %}
-<section class="cats wrap">
-  <h2 class="h-section">Каталог по категориям</h2>
+<section class="wrap section">
+  <div class="section-head">
+    <h2 class="h-section">Каталог</h2>
+    <a class="link-underline" href="{% url 'catalog' %}">Все зеркала →</a>
+  </div>
   <div class="cats-grid">
     {% for tile in categories %}
     <a class="cat" href="{% url 'category' tile.category.slug %}">
-      {% if tile.cover %}
-      <img src="{{ tile.cover.url }}" alt="" loading="lazy">
-      {% endif %}
+      {% if tile.cover %}<img src="{{ tile.cover.url }}" alt="" loading="lazy">{% endif %}
+      <span class="veil"></span>
       <span class="label">{{ tile.category.name }}</span>
     </a>
     {% endfor %}
@@ -53,45 +55,85 @@
 </section>
 {% endif %}
 
-{% if popular %}
-<section class="popular wrap">
-  <div class="popular-head">
-    <h2 class="h-section">Популярное</h2>
-    <a href="{% url 'catalog' %}">Весь каталог</a>
+{% if sale %}
+<section class="wrap section">
+  <div class="section-head">
+    <div>
+      <span class="overline bare">Акция</span>
+      <h2 class="h-section">Специальные цены</h2>
+    </div>
+    <div class="section-note">Подробности акции уточняйте у нашего менеджера</div>
   </div>
-  <div class="popular-track">
+  <div class="grid-4">
+    {% for product in sale %}{% include "catalog/_card.html" %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if popular %}
+<section class="wrap section">
+  <div class="section-head">
+    <h2 class="h-section">Популярные товары</h2>
+    <a class="link-underline" href="{% url 'catalog' %}">Весь каталог →</a>
+  </div>
+  <div class="grid-4">
     {% for product in popular %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
 </section>
 {% endif %}
 
-<section class="steps wrap">
+<section class="dark">
+  <div class="wrap dark-grid">
+    <img src="{% static 'img/about.jpg' %}" alt="Зеркало Grand Arc в интерьере" loading="lazy">
+    <div>
+      <span class="overline bare">О нас</span>
+      <h2 class="h-section">Выбирая нас,<br>вы выбираете качество</h2>
+      <p>Memiro — команда профессионалов, которые любят свою работу.
+        Мы используем проверенные временем комплектующие от известных
+        производителей.</p>
+      <p>Благодаря собственному производству мы предлагаем лучшую цену
+        независимо от размера и сложности зеркала.</p>
+      <div class="dark-facts">
+        <div>
+          <div class="n">с 2021 года</div>
+          <div class="c">Помогаем на всех этапах — от замера до монтажа «под ключ»</div>
+        </div>
+        <div>
+          <div class="n">более 1000</div>
+          <div class="c">довольных клиентов в Санкт-Петербурге и области</div>
+        </div>
+      </div>
+      <a class="btn btn-on-dark" href="{% url 'about' %}">Подробнее о компании</a>
+    </div>
+  </div>
+</section>
+
+<section class="wrap section">
   <h2 class="h-section">Как оформить заявку</h2>
-  <div class="steps-grid">
-    <div class="step"><span class="num">1</span><h3>Выбор</h3>
+  <div class="steps-grid" style="margin-top: 48px;">
+    <div class="step"><span class="num">01</span><h3>Выбор</h3>
       <p>Выбираете зеркало в каталоге или присылаете свой эскиз.
         Размер и опции обсуждаются под вашу задачу.</p></div>
-    <div class="step"><span class="num">2</span><h3>Согласование</h3>
+    <div class="step"><span class="num">02</span><h3>Согласование</h3>
       <p>Менеджер уточняет детали, подтверждает размеры, сроки
         и итоговую стоимость.</p></div>
-    <div class="step"><span class="num">3</span><h3>Изготовление</h3>
-      <p>Делаем зеркало в собственной мастерской. В зависимости
-        от сложности это занимает от 1 до 15 рабочих дней.</p></div>
-    <div class="step"><span class="num">4</span><h3>Доставка и установка</h3>
+    <div class="step"><span class="num">03</span><h3>Изготовление</h3>
+      <p>Делаем зеркало в собственной мастерской — от 1 рабочего дня.
+        Срок зависит от сложности, точный называет менеджер.</p></div>
+    <div class="step"><span class="num">04</span><h3>Доставка и монтаж</h3>
       <p>Привозим и вешаем сами: аккуратно, с уровнем и крепежом
         под вашу стену.</p></div>
   </div>
 </section>
 
-<section class="final wrap">
-  <div class="final-box">
+<section class="wrap">
+  <div class="callout">
     <div>
-      <h2 class="h-section">Не нашли подходящее? Сделаем по вашему эскизу</h2>
-      <p class="sub">Напишите нам в мессенджер или позвоните:
-        ответим в течение рабочего дня.</p>
+      <h2>Не нашли подходящее? Сделаем по вашему эскизу</h2>
+      <p>Напишите в мессенджер или позвоните — ответим в течение рабочего дня.</p>
     </div>
-    <div class="final-actions">
-      <a class="btn btn-accent" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">Написать в WhatsApp</a>
+    <div class="callout-actions">
+      <a class="btn btn-primary" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">Написать в WhatsApp</a>
       <a class="btn btn-ghost" href="{{ contacts.telegram }}" target="_blank" rel="noopener">Написать в Telegram</a>
     </div>
   </div>
