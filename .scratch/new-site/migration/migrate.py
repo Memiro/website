@@ -4,10 +4,11 @@
 Запуск из корня репозитория:
 
     uv run python .scratch/new-site/migration/migrate.py [--reset]
+        [--overwrite]
 
 На входе — выгрузки со старого сервера (`catalog.json`, `media.json`)
 и распакованные файлы `uploads/`. На выходе — товары-черновики в базе,
-`redirects.json` для `manage.py import_legacy_urls` и отчёт
+`legacy-map.json` для `manage.py import_legacy_urls` и отчёт
 `price-missing.md` со списком товаров без цены.
 """
 
@@ -20,7 +21,8 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import unquote
+from typing import Any
+from urllib.parse import unquote, urlsplit
 
 import django
 
@@ -33,6 +35,7 @@ django.setup()
 
 from django.core.files import File  # noqa: E402
 from django.db import transaction  # noqa: E402
+from django.db.models.fields.files import ImageFieldFile  # noqa: E402
 from django.utils.dateparse import parse_datetime  # noqa: E402
 from django.utils.timezone import make_aware  # noqa: E402
 
@@ -44,6 +47,10 @@ from memiro.catalog.models import (  # noqa: E402
     ProductAttribute,
     ProductImage,
 )
+
+# Запись выгрузки со старого сайта, как её отдал экспортёр: разбирать
+# её вслепую больше нигде не нужно — этим занят LegacyProduct
+LegacyRecord = dict[str, Any]
 
 # Категория новой модели — тип товара, а не форма или рама
 # (CONTEXT.md): все 88 зеркал старого сайта ложатся в одну.
@@ -122,26 +129,19 @@ ATTRIBUTES = (
 # черновиком и попадает в отчёт — на витрину заглушка не выходит.
 PRICE_STUB = 1
 
-# Старый сайт отдавал карточки товара по этому префиксу
-LEGACY_PRODUCT_PREFIX = "/mirrors/"
-
-# Статические страницы старого сайта: путь → маршрут нового. `/` и
-# `/catalog/` в карте не нужны: адрес не сменился, а правило на самого
-# себя стало бы петлёй, если страница когда-нибудь отдаст 404
-LEGACY_PAGES = {
+# Страницы старого сайта, у которых на новом есть свой адрес.
+# Всё остальное, что выгружено и сюда не попало, уезжает на 410:
+# лучше честное «страницы больше нет», чем молчаливый 404
+PAGE_MOVES = {
     "/privacy-policy/": "/privacy/",
     "/about-us/": "/about/",
     "/delivery-payment-and-services/": "/delivery/",
     "/contacts/": "/contacts/",
 }
 
-# Страницы, которым переезжать некуда: 410, а не 301 на главную
-LEGACY_GONE = ("/testovaya-stranicza/", "/privet-mir/")
-
-# Вопросы FAQ старого сайта жили отдельными страницами по этому
-# префиксу. Контент вопросов тикет не переносит, а на новом сайте FAQ —
-# блок главной, отдельных адресов у вопросов нет: значит 410
-LEGACY_FAQ_PREFIX = "/faq/"
+# Адреса, которые не менялись: главная и корень каталога. Правило на
+# самого себя стало бы петлёй, если страница когда-нибудь отдаст 404
+PAGES_KEPT = ("/", "/catalog/")
 
 # Демо-категории, которыми витрина жила до переноса: их сносит --reset.
 # Список явный, чтобы прогон не задел настоящую категорию, которую
@@ -156,56 +156,68 @@ DEMO_CATEGORIES = (
 )
 
 
-def acf(item: dict, key: str) -> str:
-    """Значение ACF-поля старого сайта; пустая строка, если нет.
+@dataclass(frozen=True)
+class LegacyProduct:
+    """Товар старого сайта: разбор его полей собран в одном месте.
 
-    WordPress хранит мету списком значений на ключ — у полей каталога
-    значение всегда одно.
+    Экспортёр отдаёт запись словарём как есть — знание о том, где
+    у WordPress что лежит, живёт здесь и больше нигде.
     """
-    values = item["meta"].get(key) or []
-    value = values[0] if values else ""
-    return value if isinstance(value, str) else ""
 
+    record: LegacyRecord
 
-def gallery_ids(item: dict) -> list[str]:
-    values = item["meta"].get("gallery") or []
-    ids = values[0] if values else []
-    return [str(value) for value in ids] if isinstance(ids, list) else []
+    @property
+    def slug(self) -> str:
+        return str(self.record["slug"])
 
+    @property
+    def title(self) -> str:
+        return str(self.record["title"])
 
-def old_slugs(item: dict) -> list[str]:
-    """Прежние слаги товара, которые WordPress сам отдавал 301-м.
+    def acf(self, key: str) -> str:
+        """Значение ACF-поля; пустая строка, если поля нет.
 
-    У 23 зеркал слаг когда-то был кириллическим; эти адреса сидят
-    в индексе, и без них переезд теряет их вес. В карту они идут
-    раскодированными: `request.path` в Django уже раскодирован.
-    """
-    return [
-        unquote(value)
-        for value in item["meta"].get("_wp_old_slug") or []
-        if isinstance(value, str) and value
-    ]
+        WordPress хранит мету списком значений на ключ — у полей
+        каталога значение всегда одно.
+        """
+        values = self.record["meta"].get(key) or []
+        value = values[0] if values else ""
+        return value if isinstance(value, str) else ""
 
+    @property
+    def gallery_ids(self) -> list[str]:
+        values = self.record["meta"].get("gallery") or []
+        ids = values[0] if values else []
+        return [str(value) for value in ids] if isinstance(ids, list) else []
 
-def price_of(item: dict) -> int | None:
-    """Цена старого сайта числом; None — «Цена по запросу»."""
-    raw = acf(item, "price").replace(" ", "").replace(" ", "")
-    return int(raw) if raw.isdigit() and int(raw) > 0 else None
+    def warn(self, message: str) -> str:
+        """Предупреждение прогона, подписанное слагом товара."""
+        return f"{self.slug}: {message}"
 
+    @property
+    def created_at(self) -> datetime:
+        """Дата публикации на старом сайте — по времени сервера (МСК)."""
+        stamp = parse_datetime(str(self.record["date"]))
+        if stamp is None:
+            message = self.warn(f"не разобрать дату {self.record['date']!r}")
+            raise ValueError(message)
+        return make_aware(stamp)
 
-def created_at(item: dict) -> datetime:
-    """Дата публикации на старом сайте — по времени сервера (МСК)."""
-    stamp = parse_datetime(item["date"])
-    if stamp is None:
-        message = f"{item['slug']}: не разобрать дату {item['date']!r}"
-        raise ValueError(message)
-    return make_aware(stamp)
+    @property
+    def price(self) -> int | None:
+        """Цена числом; None — на старом сайте «Цена по запросу».
+
+        Второй `replace` убирает неразрывный пробел: цены набирались
+        руками, и разряды разделены то одним пробелом, то другим.
+        """
+        raw = self.acf("price").replace(" ", "").replace(" ", "")
+        return int(raw) if raw.isdigit() and int(raw) > 0 else None
 
 
 class Media:
     """Файлы вложений старого сайта, распакованные в `uploads/`."""
 
-    def __init__(self, export: dict, root: Path) -> None:
+    def __init__(self, export: LegacyRecord, root: Path) -> None:
         self.attachments = export["attachments"]
         self.root = root
 
@@ -231,8 +243,8 @@ class Media:
         return self._path(size["file"])
 
 
-def build_taxonomy(
-    items: list[dict],
+def build_category(
+    items: list[LegacyProduct],
 ) -> tuple[Category, dict[str, Attribute]]:
     """Категория с атрибутами и справочниками значений.
 
@@ -254,7 +266,7 @@ def build_taxonomy(
                 "order": order,
             },
         )
-        used = {acf(item, spec.field) for item in items}
+        used = {item.acf(spec.field) for item in items}
         for value_order, (token, value) in enumerate(spec.choices.items()):
             if token not in used:
                 continue
@@ -267,56 +279,61 @@ def build_taxonomy(
     return category, attributes
 
 
-def attach_photos(product: Product, item: dict, media: Media) -> list[str]:
+def save_image(field: ImageFieldFile, path: Path) -> None:
+    """Кладёт файл старого сайта в поле изображения, не сохраняя запись."""
+    with path.open("rb") as handle:
+        field.save(path.name, File(handle), save=False)
+
+
+def attach_photos(
+    product: Product, item: LegacyProduct, media: Media
+) -> list[str]:
     """Главное фото в двух размерах и галерея; возвращает предупреждения."""
     warnings: list[str] = []
-    image_id = acf(item, "img")
+    image_id = item.acf("img")
     large = media.original(image_id) if image_id else None
     small = media.card(image_id) if image_id else None
     if large is None or small is None:
-        warnings.append(f"{item['slug']}: нет файла главного фото")
+        warnings.append(item.warn("нет файла главного фото"))
     # Повторный прогон иначе оставит прежние файлы сиротами:
     # ImageField.save() кладёт новый файл рядом, старый не трогает
     product.photo_large.delete(save=False)
     product.photo_small.delete(save=False)
     if large is not None:
-        with large.open("rb") as handle:
-            product.photo_large.save(large.name, File(handle), save=False)
+        save_image(product.photo_large, large)
     if small is not None:
-        with small.open("rb") as handle:
-            product.photo_small.save(small.name, File(handle), save=False)
+        save_image(product.photo_small, small)
     product.save()
 
     for image in product.gallery.all():
         image.image.delete(save=False)
         image.delete()
-    for order, attachment_id in enumerate(gallery_ids(item)):
+    for order, attachment_id in enumerate(item.gallery_ids):
         path = media.original(attachment_id)
         if path is None:
-            warnings.append(
-                f"{item['slug']}: нет файла галереи {attachment_id}"
-            )
+            warnings.append(item.warn(f"нет файла галереи {attachment_id}"))
             continue
         image = ProductImage(product=product, order=order)
-        with path.open("rb") as handle:
-            image.image.save(path.name, File(handle), save=False)
+        save_image(image.image, path)
         image.save()
     return warnings
 
 
 def attach_attributes(
-    product: Product, item: dict, attributes: dict[str, Attribute]
+    product: Product,
+    item: LegacyProduct,
+    attributes: dict[str, Attribute],
 ) -> list[str]:
     warnings: list[str] = []
     product.attribute_values.all().delete()
     for spec in ATTRIBUTES:
-        token = acf(item, spec.field)
+        token = item.acf(spec.field)
         if not token:
             continue
         label = spec.label_for(token)
         if label is None:
             warnings.append(
-                f"{item['slug']}: {spec.field}={token} нет в справочнике"
+                item.warn(f"{spec.field}={token} нет в справочнике")
             )
             continue
         attribute = attributes[spec.field]
@@ -327,62 +344,118 @@ def attach_attributes(
     return warnings
 
 
+def product_fields(
+    item: LegacyProduct, category: Category, order: int
+) -> dict[str, object]:
+    """Поля товара новой модели по записи старого сайта."""
+    return {
+        "category": category,
+        "name": item.title,
+        "price": item.price or PRICE_STUB,
+        "description": item.acf("desc"),
+        "article": item.acf("sku"),
+        "is_popular": item.acf("popular") == "1",
+        "is_promo": item.acf("akciya") == "1",
+        # Владелец публикует после вычитки — перенос не решает за него,
+        # что уже готово к витрине
+        "is_published": False,
+        # Витринный порядок задаётся порядком выгрузки: своего у старого
+        # сайта не было, а владелец перетасует товары в админке
+        "order": order,
+    }
+
+
 def import_products(
-    items: list[dict],
+    items: list[LegacyProduct],
     category: Category,
     attributes: dict[str, Attribute],
     media: Media,
-) -> tuple[list[str], list[Product]]:
+    *,
+    overwrite: bool,
+) -> tuple[list[str], list[str]]:
+    """Заводит товары-черновики.
+
+    Возвращает предупреждения прогона и слаги пропущенных товаров.
+    Уже заведённый товар по умолчанию пропускается: перенос разовый, и
+    второй прогон иначе вернул бы заглушку 1 ₽ поверх проставленной
+    владельцем цены и снял бы с витрины опубликованное. Переписать
+    заведённое — явное `--overwrite`.
+    """
     warnings: list[str] = []
-    unpriced: list[Product] = []
+    skipped: list[str] = []
     for order, item in enumerate(items):
-        price = price_of(item)
-        product, _ = Product.objects.update_or_create(
-            slug=item["slug"],
-            defaults={
-                "category": category,
-                "name": item["title"],
-                "price": price or PRICE_STUB,
-                "description": acf(item, "desc"),
-                "article": acf(item, "sku"),
-                "is_popular": acf(item, "popular") == "1",
-                "is_promo": acf(item, "akciya") == "1",
-                # Владелец публикует после вычитки — перенос не решает
-                # за него, что уже готово к витрине
-                "is_published": False,
-                "order": order,
-            },
+        fields = product_fields(item, category, order)
+        product, created = Product.objects.update_or_create(
+            slug=item.slug, create_defaults=fields, defaults={}
         )
-        if price is None:
-            unpriced.append(product)
+        if not created:
+            if not overwrite:
+                skipped.append(item.slug)
+                continue
+            for name, value in fields.items():
+                setattr(product, name, value)
+            product.save()
         warnings += attach_photos(product, item, media)
         warnings += attach_attributes(product, item, attributes)
         # `created_at` заполняется auto_now_add: без переноса даты
         # сортировка «новинки» показала бы порядок импорта. Апдейт идёт
         # последним — `save()` внутри attach_photos вернул бы дату вставки
         Product.objects.filter(pk=product.pk).update(
-            created_at=created_at(item)
+            created_at=item.created_at
         )
-    return warnings, unpriced
+    return warnings, skipped
 
 
-def build_legacy_map(items: list[dict], faq: list[dict]) -> dict:
+def legacy_paths(record: LegacyRecord) -> list[str]:
+    """Все адреса, по которым запись отдавалась на старом сайте.
+
+    Текущий адрес берётся из выгрузки, а не собирается из префикса
+    руками: экспортёр знает пермалинки точно. Следом идут прежние
+    слаги (`_wp_old_slug`) — WordPress отдавал их 301-м, и они сидят
+    в индексе. В карту всё попадает раскодированным: `request.path`
+    в Django уже раскодирован.
+    """
+    path = urlsplit(str(record["url"])).path
+    prefix = path.rsplit("/", 2)[0]
+    return [
+        path,
+        *(
+            f"{prefix}/{unquote(value)}/"
+            for value in record["meta"].get("_wp_old_slug") or []
+            if isinstance(value, str) and value
+        ),
+    ]
+
+
+def build_legacy_map(export: LegacyRecord) -> LegacyRecord:
     """Карта переезда в формате команды `import_legacy_urls`.
 
     Ключи `redirects`/`gone` диктует та команда (`CONTEXT.md`,
-    «Адрес старого сайта»).
+    «Адрес старого сайта»). Обходятся все выгруженные записи: страница,
+    которой не нашлось адреса на новом сайте, уезжает на 410 — это
+    честнее молчаливого 404.
     """
-    rules: dict[str, str] = {}
-    for item in items:
-        target = f"/catalog/{CATEGORY_SLUG}/{item['slug']}/"
-        for slug in [item["slug"], *old_slugs(item)]:
-            rules[f"{LEGACY_PRODUCT_PREFIX}{slug}/"] = target
-    rules.update(LEGACY_PAGES)
-    gone = [
-        *LEGACY_GONE,
-        *(f"{LEGACY_FAQ_PREFIX}{entry['slug']}/" for entry in faq),
-    ]
-    return {"redirects": rules, "gone": gone}
+    moved: dict[str, str] = {}
+    gone: list[str] = []
+    for item in map(LegacyProduct, export["items"]):
+        target = f"/catalog/{CATEGORY_SLUG}/{item.slug}/"
+        for path in legacy_paths(item.record):
+            moved[path] = target
+    for bucket in ("pages", "posts", "faq"):
+        for record in export[bucket]:
+            current, *previous = legacy_paths(record)
+            # У адреса, который не менялся, правило нужно только
+            # прежним слагам: на самого себя оно стало бы петлёй
+            target = PAGE_MOVES.get(
+                current, current if current in PAGES_KEPT else ""
+            )
+            paths = previous if current in PAGES_KEPT else [current, *previous]
+            for path in paths:
+                if target:
+                    moved[path] = target
+                elif path not in gone:
+                    gone.append(path)
+    return {"redirects": moved, "gone": gone}
 
 
 def price_report(unpriced: list[Product]) -> str:
@@ -426,7 +499,7 @@ def reset_demo() -> None:
     demo.delete()
 
 
-def load(name: str) -> dict:
+def load(name: str) -> LegacyRecord:
     """Выгрузка со старого сервера, лежащая рядом со скриптом."""
     return json.loads((HERE / name).read_text(encoding="utf-8"))
 
@@ -438,31 +511,48 @@ def main() -> None:
         action="store_true",
         help="удалить демо-категории и их товары перед переносом",
     )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help=(
+            "переписать уже заведённые товары выгрузкой; без флага они "
+            "пропускаются, чтобы не затереть правки владельца"
+        ),
+    )
     options = parser.parse_args()
 
     export = load("catalog.json")
     media = Media(load("media.json"), HERE / "uploads")
-    items = export["items"]
+    items = [LegacyProduct(record) for record in export["items"]]
 
     with transaction.atomic():
-        category, attributes = build_taxonomy(items)
+        category, attributes = build_category(items)
         if options.reset:
             reset_demo()
-        warnings, unpriced = import_products(
-            items, category, attributes, media
+        warnings, skipped = import_products(
+            items,
+            category,
+            attributes,
+            media,
+            overwrite=options.overwrite,
         )
 
-    legacy_map = build_legacy_map(items, export["faq"])
-    (HERE / "redirects.json").write_text(
+    legacy_map = build_legacy_map(export)
+    (HERE / "legacy-map.json").write_text(
         json.dumps(legacy_map, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
+    )
+    unpriced = list(
+        Product.objects.filter(category=category, price=PRICE_STUB)
     )
     (HERE / "price-missing.md").write_text(
         price_report(unpriced), encoding="utf-8"
     )
 
-    print(f"Товаров перенесено: {len(items)}")
-    print(f"Без цены (заглушка {PRICE_STUB} ₽): {len(unpriced)}")
+    print(f"Товаров заведено: {len(items) - len(skipped)} из {len(items)}")
+    if skipped:
+        print(f"Пропущено (уже заведены, нужен --overwrite): {len(skipped)}")
+    print(f"Без цены (заглушка {PRICE_STUB} \u20bd): {len(unpriced)}")
     print(
         f"Правил переезда: {len(legacy_map['redirects'])} на 301, "
         f"{len(legacy_map['gone'])} на 410"

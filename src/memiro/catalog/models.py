@@ -155,7 +155,10 @@ class Product(models.Model):
         related_name="products",
     )
     name = models.CharField("название", max_length=200)
-    slug = models.SlugField("слаг", unique=True)
+    # 120, а не 50 по умолчанию: у названий вроде «Зеркало с контурной
+    # подсветкой в чёрной алюминиевой раме с вырезом Matrix» слаг
+    # длиннее, и на PostgreSQL такая вставка падает
+    slug = models.SlugField("слаг", unique=True, max_length=120)
     price = models.PositiveIntegerField(
         "цена «от», ₽",
         validators=[MinValueValidator(1)],

@@ -111,14 +111,18 @@
     "/mirrors/cres/": "/catalog/zerkala/cres/",
     "/privacy-policy/": "/privacy/",
     "/about-us/": "/about/",
+    "/главная/": "/",
     "/delivery-payment-and-services/": "/delivery/",
     "/contacts/": "/contacts/"
   },
   "gone": [
     "/testovaya-stranicza/",
     "/privet-mir/",
+    "/привет-мир/",
     "/faq/chernovik/",
+    "/faq/черновик/",
     "/faq/mogu-li-ya-uvidet-obrazecz-zerkala-pere/",
+    "/faq/могу-ли-я-увидеть-образец-зеркала-пере/",
     "/faq/kak-zakazat-zerkalo/",
     "/faq/kakovy-sroki-izgotovleniya-zerkal-na-zakaz/",
     "/faq/predostavlyaete-uslugi-po-montazhu-i-ustanovke-zerkal/",
