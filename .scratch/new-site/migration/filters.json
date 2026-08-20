@@ -1,0 +1,72 @@
+[
+    {
+        "ID": 305,
+        "slug": "nalichie",
+        "title": "Наличие",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 152,
+        "slug": "framematerial",
+        "title": "Материал рамы",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 153,
+        "slug": "framecolor",
+        "title": "Цвет рамы",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 143,
+        "slug": "form",
+        "title": "Форма",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 144,
+        "slug": "location",
+        "title": "Расположение",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 145,
+        "slug": "frame",
+        "title": "Рама",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 148,
+        "slug": "backlight",
+        "title": "Подсветка",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 142,
+        "slug": "_price",
+        "title": "Цена",
+        "parent": 131,
+        "meta": []
+    },
+    {
+        "ID": 136,
+        "slug": "location2",
+        "title": "location2",
+        "parent": 133,
+        "meta": []
+    },
+    {
+        "ID": 134,
+        "slug": "location",
+        "title": "location",
+        "parent": 133,
+        "meta": []
+    }
+]
