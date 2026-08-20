@@ -37,21 +37,14 @@
   </div>
 </section>
 
-{% if categories %}
+{# Плитки набираются из посадочных (тикет 14): без них блок скрыт целиком #}
+{% if tiles %}
 <section class="wrap section">
   <div class="section-head">
     <h2 class="h-section">Каталог</h2>
     <a class="link-underline" href="{% url 'catalog' %}">Все зеркала →</a>
   </div>
-  <div class="cats-grid">
-    {% for tile in categories %}
-    <a class="cat" href="{% url 'category' tile.category.slug %}">
-      {% if tile.cover %}<img src="{{ tile.cover.url }}" alt="" loading="lazy">{% endif %}
-      <span class="veil"></span>
-      <span class="label">{{ tile.category.name }}</span>
-    </a>
-    {% endfor %}
-  </div>
+  {% include "catalog/_tiles.html" %}
 </section>
 {% endif %}
 

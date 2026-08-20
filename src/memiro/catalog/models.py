@@ -386,6 +386,13 @@ class Landing(models.Model):
     heading = models.CharField("заголовок h1", max_length=200)
     description = models.CharField("description", max_length=300)
     text = models.TextField("текст страницы", blank=True)
+    # Кадр для плитки витрины. Пустое поле — плитка берёт фото первого
+    # товара посадочной, но выбор кадра остаётся за владельцем
+    cover = models.ImageField(
+        "обложка плитки",
+        upload_to="landings/",
+        blank=True,
+    )
     is_published = models.BooleanField("опубликована", default=False)
     order = models.PositiveIntegerField("порядок", default=0)
 

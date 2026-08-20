@@ -13,6 +13,7 @@ from django.urls import reverse
 
 from memiro.catalog.landings import visible_landings
 from memiro.catalog.models import Category, Landing, Product
+from memiro.catalog.tiles import catalog_root_target
 from memiro.views import STATIC_PAGES
 
 if TYPE_CHECKING:
@@ -34,9 +35,9 @@ class StaticSitemap(Sitemap):
             *OWN_VIEW_ROUTES,
             *(page.route for page in STATIC_PAGES),
         ]
-        # Корень каталога с единственной видимой категорией отвечает
-        # редиректом — редирект в карте сайта не нужен
-        if Category.objects.visible().count() > 1:
+        # Корень каталога иногда отвечает редиректом в единственную
+        # категорию — редирект в карте сайта не нужен
+        if catalog_root_target() is None:
             routes.append("catalog")
         return routes
 

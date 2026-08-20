@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING
 
 from django.shortcuts import render
 
-from memiro.catalog.models import Category, Product
-from memiro.catalog.views import category_tiles
+from memiro.catalog.models import Product
+from memiro.catalog.tiles import landing_tiles
 from memiro.content.models import FaqEntry, Promo, Review
 from memiro.seo import structured
 from memiro.seo.context_processors import FALLBACK_META
@@ -35,7 +35,7 @@ def home(request: HttpRequest) -> HttpResponse:
         request,
         "home.html",
         {
-            "categories": category_tiles(list(Category.objects.visible())),
+            "tiles": landing_tiles(),
             "popular": published.filter(is_popular=True).order_by(
                 "order", "name"
             )[:TRACK_SIZE],

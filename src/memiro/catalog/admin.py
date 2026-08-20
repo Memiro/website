@@ -163,4 +163,9 @@ class LandingAdmin(admin.ModelAdmin):
     list_editable = ("is_published", "order")
     search_fields = ("heading", "title", "slug")
     prepopulated_fields: ClassVar = {"slug": ("heading",)}
+    readonly_fields = ("preview_cover",)
     inlines = (LandingConditionInline,)
+
+    @admin.display(description="превью обложки")
+    def preview_cover(self, obj: Landing) -> str:
+        return _preview(obj.cover)

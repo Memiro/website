@@ -13,15 +13,7 @@
 
 <div class="wrap section" style="padding-top: 40px;">
   {% if tiles %}
-  <div class="cats-grid">
-    {% for tile in tiles %}
-    <a class="cat" href="{% url 'category' tile.category.slug %}">
-      {% if tile.cover %}<img src="{{ tile.cover.url }}" alt="" loading="lazy">{% endif %}
-      <span class="veil"></span>
-      <span class="label">{{ tile.category.name }}</span>
-    </a>
-    {% endfor %}
-  </div>
+  {% include "catalog/_tiles.html" %}
   {% else %}
   <p class="sub">Каталог наполняется — загляните позже.</p>
   {% endif %}

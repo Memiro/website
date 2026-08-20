@@ -18,11 +18,11 @@ from memiro.seo.meta import DEFAULT_OG_IMAGE, PageMeta, clamp, title
 from .filters import CatalogFilters, FilterError
 from .landings import landing_products, visible_landings
 from .models import POPULAR_ORDERING, Category, Landing, Product
+from .tiles import catalog_root_target, catalog_tiles
 
 if TYPE_CHECKING:
     from django.core.paginator import Page
     from django.db.models import QuerySet
-    from django.db.models.fields.files import ImageFieldFile
     from django.http import HttpRequest, HttpResponse, QueryDict
 
 PAGE_SIZE = 12
@@ -50,45 +50,16 @@ def _sort_options(sort_key: str) -> list[dict[str, object]]:
     ]
 
 
-def category_covers(
-    categories: list[Category],
-) -> dict[int, ImageFieldFile]:
-    """Обложки плиток: по одному фото на категорию, одним запросом.
-
-    Побеждает первый по витринному порядку товар с фото — плитка
-    показывает то же, что стоит первым в самой категории.
-    """
-    covers: dict[int, ImageFieldFile] = {}
-    products = (
-        Product.objects.published()
-        .filter(category__in=categories)
-        .exclude(photo_small="")
-        .by_popularity()
-    )
-    for product in products:
-        covers.setdefault(product.category_id, product.photo_small)
-    return covers
-
-
-def category_tiles(categories: list[Category]) -> list[dict[str, object]]:
-    """Категории с обложками — плитки главной и корня каталога."""
-    covers = category_covers(categories)
-    return [
-        {"category": category, "cover": covers.get(category.pk)}
-        for category in categories
-    ]
-
-
 def catalog(request: HttpRequest) -> HttpResponse:
-    """Корень каталога: одна видимая категория — сразу в неё."""
-    categories = list(Category.objects.visible())
-    if len(categories) == 1:
-        return redirect("category", slug=categories[0].slug)
+    """Корень каталога: плитки посадочных либо редирект в категорию."""
+    target = catalog_root_target()
+    if target is not None:
+        return redirect("category", slug=target.slug)
     return render(
         request,
         "catalog/index.html",
         {
-            "tiles": category_tiles(categories),
+            "tiles": catalog_tiles(),
             "meta": PageMeta(
                 title=title("Каталог зеркал на заказ"),
                 description=clamp(
