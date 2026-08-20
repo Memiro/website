@@ -117,7 +117,7 @@ def test_home_hides_tiles_without_landings(
     """Без посадочных блок плиток исчезает целиком."""
     html = page_html(client, "/")
 
-    assert "cats-grid" not in html
+    assert "tiles-grid" not in html
     assert CATEGORY_TILE_HREF not in html
 
 
@@ -168,31 +168,26 @@ def test_home_tile_cover_falls_back_to_product_photo(
 # --- Корень каталога -------------------------------------------------
 
 
-def test_catalog_root_shows_landing_tiles(
+def test_catalog_root_redirects_despite_landings(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """С посадочными корень каталога перестаёт редиректить."""
-    landing = make_landing(shop)
+    """Единственная категория забирает корень себе и с посадочными.
 
-    html = page_html(client, "/catalog/")
+    Иначе `/catalog/` стал бы дублем главной: те же плитки, ни одного
+    товара и ни одной ссылки в саму категорию.
+    """
+    make_landing(shop)
 
-    assert f'href="{landing.get_absolute_url()}"' in html
-
-
-def test_catalog_root_redirects_without_landings(
-    client: Client, shop: SimpleNamespace
-) -> None:
-    """Пока посадочных нет, единственная категория забирает корень себе."""
     response = client.get("/catalog/")
 
     assert response.status_code == HTTPStatus.FOUND
     assert response.headers["Location"] == "/catalog/zerkala/"
 
 
-def test_catalog_root_keeps_categories_beside_landings(
+def test_catalog_root_shows_categories(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Вторая категория не теряет вход с корня из-за посадочных зеркал."""
+    """Корень каталога остаётся при категориях: это его структура."""
     make_landing(shop)
     other = Category.objects.create(name="Перегородки", slug="peregorodki")
     Product.objects.create(

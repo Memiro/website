@@ -523,10 +523,7 @@ def test_sitemap_lists_published_pages(
 def test_sitemap_skips_redirecting_catalog_root(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Без посадочных и с единственной категорией /catalog/ редиректит."""
-    shop.landing.is_published = False
-    shop.landing.save()
-
+    """С единственной категорией /catalog/ отвечает редиректом."""
     xml = client.get("/sitemap.xml").content.decode()
 
     assert "<loc>http://testserver/catalog/</loc>" not in xml
@@ -540,15 +537,6 @@ def test_sitemap_skips_redirecting_catalog_root(
         is_published=True,
     )
 
-    xml = client.get("/sitemap.xml").content.decode()
-
-    assert "<loc>http://testserver/catalog/</loc>" in xml
-
-
-def test_sitemap_lists_catalog_root_with_landings(
-    client: Client, shop: SimpleNamespace
-) -> None:
-    """С посадочными корень каталога отвечает сам — и попадает в карту."""
     xml = client.get("/sitemap.xml").content.decode()
 
     assert "<loc>http://testserver/catalog/</loc>" in xml

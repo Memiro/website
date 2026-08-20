@@ -29,7 +29,6 @@ django.setup()
 from django.db import transaction  # noqa: E402
 
 from memiro.catalog.models import (  # noqa: E402
-    Attribute,
     AttributeValue,
     Category,
     Landing,
@@ -153,19 +152,44 @@ PLANS = (
 )
 
 
+def resolve(category: Category) -> dict[str, AttributeValue]:
+    """Значения справочника под условия всех шести посадочных.
+
+    Перенос заводит только те значения, что встретились у товаров, —
+    любого из шести в базе может не оказаться. Сверяем весь список до
+    первой записи, иначе прогон падает на середине и откатывает уже
+    созданное.
+    """
+    values: dict[str, AttributeValue] = {}
+    missing: list[str] = []
+    for plan in PLANS:
+        value = AttributeValue.objects.filter(
+            attribute__category=category,
+            attribute__slug=plan.attribute,
+            value=plan.value,
+        ).first()
+        if value is None:
+            missing.append(f"{plan.attribute} = {plan.value}")
+        else:
+            values[plan.slug] = value
+    if missing:
+        listing = "\n  ".join(missing)
+        message = f"Нет значений в справочнике:\n  {listing}"
+        raise SystemExit(message)
+    return values
+
+
 def main() -> None:
-    category = Category.objects.get(slug=CATEGORY_SLUG)
+    category = Category.objects.filter(slug=CATEGORY_SLUG).first()
+    if category is None:
+        raise SystemExit(f"Нет категории «{CATEGORY_SLUG}»")
+    values = resolve(category)
     with transaction.atomic():
         for order, plan in enumerate(PLANS):
             if Landing.objects.filter(slug=plan.slug).exists():
                 print(f"= {plan.slug}: уже заведена, пропуск")
                 continue
-            attribute = Attribute.objects.get(
-                category=category, slug=plan.attribute
-            )
-            value = AttributeValue.objects.get(
-                attribute=attribute, value=plan.value
-            )
+            value = values[plan.slug]
             landing = Landing.objects.create(
                 category=category,
                 slug=plan.slug,
@@ -177,7 +201,9 @@ def main() -> None:
                 order=order,
             )
             LandingCondition.objects.create(
-                landing=landing, attribute=attribute, value_option=value
+                landing=landing,
+                attribute=value.attribute,
+                value_option=value,
             )
             print(f"+ {plan.slug}: {plan.heading}")
 
