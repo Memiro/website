@@ -18,6 +18,11 @@ CONTACTS = {
     "telegram": "https://t.me/memiro_shop",
     "whatsapp": "https://wa.me/79812304050",
     "vk": "https://vk.com/memirospb",
+    # Витрина продавца на Avito — источник отзывов студии
+    "avito": (
+        "https://www.avito.ru/brands/i213339688/all"
+        "?sellerId=390e2bdb64de6df7a4c7747af56411ba"
+    ),
     # Карта шоурума — конструктор Яндекс.Карт (перенесена со старого сайта)
     "map_embed": (
         "https://yandex.ru/map-widget/v1/?um=constructor%3A"

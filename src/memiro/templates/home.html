@@ -55,18 +55,22 @@
 </section>
 {% endif %}
 
-{% if sale %}
+{% if promo %}
 <section class="wrap section">
   <div class="section-head">
     <div>
       <span class="overline bare">Акция</span>
-      <h2 class="h-section">Специальные цены</h2>
+      <h2 class="h-section">{{ promo.title }}</h2>
     </div>
-    <div class="section-note">Подробности акции уточняйте у нашего менеджера</div>
+    {% if promo.text %}<div class="section-note">{{ promo.text }}</div>{% endif %}
+    {# Без товаров с флагом «акция» блок остаётся заголовком со ссылкой #}
+    {% if not sale %}<a class="link-underline" href="{% url 'catalog' %}">Весь каталог →</a>{% endif %}
   </div>
+  {% if sale %}
   <div class="grid-4">
     {% for product in sale %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
+  {% endif %}
 </section>
 {% endif %}
 
@@ -125,6 +129,47 @@
         под вашу стену.</p></div>
   </div>
 </section>
+
+{% if reviews %}
+<section class="wrap section">
+  <div class="section-head">
+    <h2 class="h-section">Отзывы</h2>
+    <a class="link-underline" href="{{ contacts.avito }}" target="_blank" rel="noopener">Смотреть все →</a>
+  </div>
+  <div class="grid-3 reviews-grid">
+    {% for review in reviews %}
+    <figure class="review">
+      {# role="img": иначе читалка проговаривает каждую звезду отдельно #}
+      <div class="stars" role="img" aria-label="{{ review.rating_label }}">{{ review.stars }}</div>
+      <blockquote>{{ review.text|linebreaksbr }}</blockquote>
+      <figcaption>
+        {% if review.avatar %}<img src="{{ review.avatar.url }}" alt="" width="40" height="40" loading="lazy">{% endif %}
+        <span class="who">{{ review.author }}</span>
+        {# Источник виден посетителю: отзывы переносятся с площадок вручную #}
+        <span class="src">{% if review.source_url %}<a href="{{ review.source_url }}"
+          target="_blank" rel="noopener">{{ review.source }}</a>{% else %}{{ review.source }}{% endif %}</span>
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if faq %}
+<section class="wrap section">
+  <div class="section-head">
+    <h2 class="h-section">Вопросы и ответы</h2>
+  </div>
+  <div class="faq">
+    {% for entry in faq %}
+    <details class="faq-item">
+      <summary>{{ entry.question }}</summary>
+      <p>{{ entry.answer|linebreaksbr }}</p>
+    </details>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 
 <section class="wrap section" id="inquiry">
   <div class="inquiry-block">

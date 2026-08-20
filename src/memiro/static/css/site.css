@@ -224,6 +224,38 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .step h3 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
 .step p { font-size: 15px; line-height: 1.55; color: var(--secondary); }
 
+/* ---------- Отзывы (тикет 08) ---------- */
+.reviews-grid { gap: 16px; }
+.review {
+  background: var(--bg-card); border: 1px solid var(--line-card);
+  padding: 32px 30px; display: flex; flex-direction: column; gap: 20px;
+}
+.review .stars { color: var(--accent); font-size: 15px; letter-spacing: 0.3em; }
+.review blockquote { font-size: 19px; line-height: 1.5; letter-spacing: -0.01em; text-wrap: pretty; }
+.review figcaption {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: auto; padding-top: 8px; font-size: 15px;
+}
+.review figcaption img { width: 40px; height: 40px; object-fit: cover; background: var(--bg-muted); }
+.review .who { font-weight: 600; }
+.review .src { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+/* ---------- Вопросы и ответы (тикет 08) ---------- */
+.faq { border-top: 1px solid var(--line); }
+.faq-item { border-bottom: 1px solid var(--line); }
+.faq-item summary {
+  cursor: pointer; list-style: none; padding: 24px 40px 24px 0; position: relative;
+  font-size: 21px; font-weight: 600; letter-spacing: -0.01em;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after {
+  content: "+"; position: absolute; right: 4px; top: 22px;
+  font-size: 22px; font-weight: 400; color: var(--accent);
+}
+.faq-item[open] summary::after { content: "−"; }
+.faq-item summary:hover { color: var(--accent); }
+.faq-item p { padding: 0 40px 26px 0; font-size: 16px; line-height: 1.6; color: var(--secondary); max-width: 78ch; }
+
 /* ---------- Форма заявки (тикет 07) ---------- */
 .inquiry-block {
   margin-top: 16px; background: var(--bg-muted); border: 1px solid var(--line);
@@ -497,6 +529,14 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .grid-4 > *, .grid-3 > * { scroll-snap-align: start; }
   .product-card .meta { padding: 14px 16px 18px; gap: 10px; }
   .product-card .price { font-size: 20px; }
+
+  /* Отзывы — карусель шире товарной: карточка держит цитату */
+  .reviews-grid { grid-auto-columns: 262px; gap: 16px; }
+  .review { padding: 24px 22px; gap: 16px; }
+  .review blockquote { font-size: 17px; }
+  .faq-item summary { font-size: 18px; padding: 18px 32px 18px 0; }
+  .faq-item summary::after { top: 16px; }
+  .faq-item p { padding-bottom: 20px; font-size: 15px; }
 
   .dark { margin-top: 38px; }
   .dark-grid { padding: 44px 0; gap: 26px; }

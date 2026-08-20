@@ -5,12 +5,16 @@ import pytest
 from django.test import Client
 
 from memiro.catalog.models import Category, Product
+from memiro.content.models import Promo
 
 
 @pytest.fixture
 def showcase(db: None) -> SimpleNamespace:
     """Категория с популярными, акционным и черновым товарами."""
     category = Category.objects.create(name="Зеркала", slug="zerkala")
+    # Заголовок блока акции живёт в админке (тикет 08): без него лента
+    # акционных товаров на главную не выходит
+    Promo.objects.create(title="Специальные цены", is_published=True)
     second = Product.objects.create(
         category=category,
         name="Grand Arc",
