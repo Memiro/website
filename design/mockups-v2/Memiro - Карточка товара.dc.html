@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #F0F2F3; }
+  a { color: inherit; text-decoration: none; }
+  a:hover { color: #3C5B6E; }
+  ::selection { background: #DCE0E3; }
+</style>
+</helmet>
+
+<div style="font-family: 'Golos Text', system-ui, sans-serif; color: #15181B; background: #F0F2F3; min-width: 1280px; overflow-x: hidden;">
+
+  <header style="position: sticky; top: 0; z-index: 50; background: rgba(240,242,243,0.92); backdrop-filter: blur(14px); border-bottom: 1px solid #DCE0E3;">
+    <div style="max-width: 1320px; margin: 0 auto; padding: 18px 40px; display: flex; align-items: center; gap: 40px;">
+      <a href="Memiro - Главная.dc.html" style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em;">memiro</a>
+      <nav style="display: flex; gap: 30px; font-size: 15px; font-weight: 500; margin-left: 12px;">
+        <a href="Memiro - Каталог.dc.html">Каталог</a>
+        <a href="Memiro - Главная.dc.html#about">О нас</a>
+        <a href="Memiro - Главная.dc.html#order">Доставка и услуги</a>
+        <a href="Memiro - Главная.dc.html#contacts">Контакты</a>
+      </nav>
+      <div style="flex: 1;"></div>
+      <div style="display: flex; align-items: center; gap: 20px; font-size: 15px;">
+        <a href="tel:+79812304050" style="font-weight: 600;">+7 981 230 40 50</a>
+        <a href="https://t.me/memiro_shop" aria-label="Telegram" style="width: 36px; height: 36px; border: 1px solid #D3D8DC; display: grid; place-items: center; color: #434A50;" style-hover="border-color: #15181B; color: #15181B;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square"><path d="M21 4.5 2.8 11.4l5.6 1.9"></path><path d="M21 4.5 17.9 20l-9.5-6.7"></path><path d="M8.4 13.3v5.2l3.1-3.1"></path></svg>
+        </a>
+        <a href="#" aria-label="Корзина" style="position: relative; width: 36px; height: 36px; border: 1px solid #D3D8DC; display: grid; place-items: center; color: #434A50;" style-hover="border-color: #15181B; color: #15181B;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square"><path d="M4 7h16l-1.4 12.5H5.4L4 7z"></path><path d="M8.6 7V5.2a3.4 3.4 0 0 1 6.8 0V7"></path></svg>
+          <span style="position: absolute; top: -7px; right: -7px; background: #15181B; color: #F0F2F3; min-width: 18px; height: 18px; display: grid; place-items: center; font-size: 11px; font-weight: 600; padding: 0 4px;">{{ cartCount }}</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section style="max-width: 1320px; margin: 0 auto; padding: 32px 40px 0;">
+    <div style="font-size: 13px; color: #8A9298; display: flex; gap: 8px; margin-bottom: 28px;">
+      <a href="Memiro - Главная.dc.html">Главная</a><span>/</span>
+      <a href="Memiro - Каталог.dc.html">Каталог</a><span>/</span>
+      <span style="color: #434A50;">Halo Led</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: start;">
+
+      <div style="display: grid; grid-template-columns: 88px 1fr; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ thumbs }}" as="t" hint-placeholder-count="4">
+            <button type="button" onClick="{{ t.pick }}" style="{{ t.style }}">
+              <img src="{{ t.img }}" alt="Фото товара" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            </button>
+          </sc-for>
+        </div>
+        <div style="position: relative; background: #E6E9EB; border: 1px solid #DFE3E7; aspect-ratio: 1 / 1.12;">
+          <img src="{{ mainImg }}" alt="Зеркало-полукруг с контурной подсветкой Halo Led" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
+          <span style="position: absolute; top: 0; left: 0; background: #15181B; color: #F0F2F3; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 12px;">Хит продаж</span>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #3C5B6E; margin-bottom: 14px;">Артикул MR-HL-0690</div>
+        <h1 style="font-weight: 700; font-size: 46px; line-height: 1.06; letter-spacing: -0.03em; margin: 0 0 18px;">Зеркало-полукруг с контурной подсветкой Halo Led</h1>
+        <p style="font-size: 17px; line-height: 1.6; color: #434A50; margin: 0 0 28px; max-width: 520px; text-wrap: pretty;">Мягкий контурный свет по краю и точная геометрия полукруга. Изготавливается на собственном производстве по вашим размерам.</p>
+
+        <div style="display: flex; align-items: baseline; gap: 16px; padding-bottom: 26px; border-bottom: 1px solid #DCE0E3;">
+          <span style="font-size: 44px; font-weight: 700; letter-spacing: -0.03em;">{{ totalPrice }} ₽</span>
+          <span style="font-size: 16px; color: #8A9298; text-decoration: line-through;">{{ oldPrice }} ₽</span>
+          <span style="font-size: 13px; font-weight: 600; color: #3C5B6E;">весенняя скидка</span>
+        </div>
+
+        <div style="padding: 26px 0; border-bottom: 1px solid #DCE0E3; display: flex; flex-direction: column; gap: 22px;">
+          <div style="display: flex; flex-direction: column; gap: 11px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+              <span style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #8A9298;">Размер</span>
+              <span style="font-size: 13px; color: #6A7178;">высота × ширина</span>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <sc-for list="{{ sizes }}" as="s" hint-placeholder-count="4">
+                <button type="button" onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #8A9298; margin-bottom: 11px;">Подсветка</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <sc-for list="{{ lights }}" as="l" hint-placeholder-count="3">
+                <button type="button" onClick="{{ l.pick }}" style="{{ l.style }}">{{ l.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #8A9298; margin-bottom: 11px;">Крепление</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <sc-for list="{{ mounts }}" as="m" hint-placeholder-count="2">
+                <button type="button" onClick="{{ m.pick }}" style="{{ m.style }}">{{ m.name }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 26px 0; display: flex; align-items: center; gap: 12px;">
+          <div style="display: flex; align-items: center; border: 1px solid #C4CACF;">
+            <button type="button" onClick="{{ dec }}" style="width: 48px; height: 56px; border: none; background: transparent; font-size: 20px; color: #434A50; cursor: pointer; font-family: 'Golos Text', sans-serif;">−</button>
+            <span style="width: 40px; text-align: center; font-size: 17px; font-weight: 600;">{{ qty }}</span>
+            <button type="button" onClick="{{ inc }}" style="width: 48px; height: 56px; border: none; background: transparent; font-size: 20px; color: #434A50; cursor: pointer; font-family: 'Golos Text', sans-serif;">+</button>
+          </div>
+          <button type="button" onClick="{{ addToCart }}" style="flex: 1; height: 56px; background: #15181B; color: #F0F2F3; border: none; font-size: 16px; font-weight: 600; font-family: 'Golos Text', sans-serif; cursor: pointer;" style-hover="background: #3C5B6E;">{{ cartLabel }}</button>
+          <a href="Memiro - Главная.dc.html#lead" style="height: 56px; padding: 0 26px; border: 1px solid #C4CACF; display: grid; place-items: center; font-size: 15px; font-weight: 600;" style-hover="border-color: #15181B;">Заказать замер</a>
+        </div>
+
+        <div style="border: 1px solid #DFE3E7; background: #FAFBFC;">
+          <sc-for list="{{ perks }}" as="p" hint-placeholder-count="3">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #EDF0F2; display: flex; gap: 14px; align-items: baseline; font-size: 15px;">
+              <span style="font-size: 12px; font-weight: 600; color: #3C5B6E; letter-spacing: 0.1em;">{{ p.num }}</span>
+              <span style="color: #434A50; line-height: 1.45;">{{ p.text }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="max-width: 1320px; margin: 0 auto; padding: 80px 40px 0;">
+    <div style="display: flex; gap: 0; border-bottom: 1px solid #DCE0E3;">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button type="button" onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.name }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isDesc }}" hint-placeholder-val="{{ true }}">
+      <div style="padding: 40px 0 0; display: grid; grid-template-columns: 1.2fr 1fr; gap: 64px; align-items: start;">
+        <div style="font-size: 17px; line-height: 1.7; color: #434A50; display: flex; flex-direction: column; gap: 18px; max-width: 640px;">
+          <p style="margin: 0; text-wrap: pretty;">Halo Led — зеркало в форме полукруга с контурной LED-подсветкой по внешнему краю. Свет распределяется равномерно и не даёт резких теней, поэтому зеркало подходит для ванной комнаты и зоны макияжа.</p>
+          <p style="margin: 0; text-wrap: pretty;">Полотно — флоат-стекло 5 мм с защитой от влаги по кромке. Задняя стенка усилена, светодиодная лента закрыта рассеивателем. Любой размер и радиус можно изменить под ваш проект.</p>
+          <p style="margin: 0; text-wrap: pretty;">Комплектующие — от проверенных производителей, гарантия на подсветку 24 месяца. Монтаж выполняет наша бригада, крепёж входит в комплект.</p>
+        </div>
+        <div style="border: 1px solid #DFE3E7; background: #FAFBFC; padding: 30px 32px;">
+          <div style="font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #8A9298; margin-bottom: 18px;">В комплекте</div>
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px; color: #434A50;">
+            <span>Зеркальное полотно с подсветкой</span>
+            <span>Драйвер питания и рассеиватель</span>
+            <span>Комплект скрытого крепежа</span>
+            <span>Инструкция по установке</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSpecs }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 40px 0 0; max-width: 860px;">
+        <sc-for list="{{ specs }}" as="s" hint-placeholder-count="8">
+          <div style="display: grid; grid-template-columns: 300px 1fr; gap: 24px; padding: 15px 0; border-bottom: 1px solid #E4E8EB; font-size: 16px;">
+            <span style="color: #6A7178;">{{ s.k }}</span>
+            <span style="color: #15181B;">{{ s.v }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDelivery }}" hint-placeholder-val="{{ false }}">
+      <div style="padding: 40px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+        <sc-for list="{{ delivery }}" as="d" hint-placeholder-count="3">
+          <div style="border: 1px solid #DFE3E7; background: #FAFBFC; padding: 30px 28px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; color: #3C5B6E;">{{ d.num }}</div>
+            <div style="font-size: 21px; font-weight: 600; letter-spacing: -0.02em;">{{ d.title }}</div>
+            <div style="font-size: 15px; line-height: 1.55; color: #555C62; text-wrap: pretty;">{{ d.text }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </section>
+
+  <section style="max-width: 1320px; margin: 0 auto; padding: 88px 40px 0;">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 26px;">
+      <h2 style="font-weight: 700; font-size: 44px; line-height: 1.04; letter-spacing: -0.03em; margin: 0;">Похожие зеркала</h2>
+      <a href="Memiro - Каталог.dc.html" style="font-size: 15px; font-weight: 600; border-bottom: 1px solid #C4CACF; padding-bottom: 4px;">Весь каталог →</a>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+      <sc-for list="{{ related }}" as="r" hint-placeholder-count="4">
+        <a href="#" style="display: flex; flex-direction: column; background: #FAFBFC; border: 1px solid #E1E5E8;" style-hover="border-color: #C4CACF;">
+          <div style="position: relative; aspect-ratio: 1 / 1.06; background: #E6E9EB;">
+            <img src="{{ r.img }}" alt="{{ r.name }}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;">
+          </div>
+          <div style="padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 12px; flex: 1;">
+            <div style="font-size: 16px; font-weight: 500; line-height: 1.35; text-wrap: pretty;">{{ r.name }}</div>
+            <div style="flex: 1;"></div>
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+              <span style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em;">{{ r.price }} ₽</span>
+              <span style="font-size: 13px; font-weight: 600; color: #3C5B6E;">В корзину</span>
+            </div>
+          </div>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="max-width: 1320px; margin: 88px auto 0; padding: 0 40px;">
+    <div style="background: #E6E9EB; border: 1px solid #DCE0E3; padding: 56px 60px; display: flex; align-items: center; justify-content: space-between; gap: 48px;">
+      <div>
+        <div style="font-size: 34px; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 12px;">Нужен другой размер или форма?</div>
+        <p style="font-size: 17px; color: #434A50; margin: 0; max-width: 560px; text-wrap: pretty;">Изготовим это зеркало по вашим параметрам — от эскиза до монтажа. Замер бесплатный при заказе.</p>
+      </div>
+      <a href="Memiro - Главная.dc.html#lead" style="background: #15181B; color: #F0F2F3; padding: 19px 34px; font-size: 16px; font-weight: 600; white-space: nowrap;" style-hover="background: #3C5B6E;">Рассчитать стоимость</a>
+    </div>
+  </section>
+
+  <footer style="margin-top: 96px; background: #F0F2F3; border-top: 1px solid #DCE0E3; color: #555C62;">
+    <div style="max-width: 1320px; margin: 0 auto; padding: 60px 40px 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px;">
+      <div>
+        <div style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: #15181B;">memiro</div>
+        <p style="font-size: 15px; line-height: 1.6; margin: 16px 0 0; max-width: 250px; text-wrap: pretty;">Интернет-магазин и производство зеркал в Санкт-Петербурге</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 11px; font-size: 15px;">
+        <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8A9298; margin-bottom: 4px;">Каталог</div>
+        <a href="Memiro - Каталог.dc.html">Все зеркала</a>
+        <a href="Memiro - Каталог.dc.html">Зеркала в раме</a>
+        <a href="Memiro - Каталог.dc.html">Круглые зеркала</a>
+        <a href="Memiro - Каталог.dc.html">С подсветкой</a>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 11px; font-size: 15px;">
+        <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8A9298; margin-bottom: 4px;">Покупателю</div>
+        <a href="Memiro - Главная.dc.html#about">О нас</a>
+        <a href="https://memiro.ru/delivery-payment-and-services#Delivery">Доставка</a>
+        <a href="https://memiro.ru/delivery-payment-and-services#Installation">Монтаж</a>
+        <a href="https://memiro.ru/delivery-payment-and-services#Measurer">Выезд замерщика</a>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 11px; font-size: 15px;">
+        <div style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8A9298; margin-bottom: 4px;">Контакты</div>
+        <a href="tel:+79812304050" style="color: #15181B; font-weight: 600;">+7 981 230 40 50</a>
+        <a href="mailto:memiro.ru@yandex.ru">memiro.ru@yandex.ru</a>
+        <a href="https://t.me/memiro_shop">Telegram</a>
+        <a href="https://wa.me/79812304050">WhatsApp</a>
+      </div>
+    </div>
+    <div style="max-width: 1320px; margin: 0 auto; padding: 22px 40px 44px; border-top: 1px solid #DCE0E3; display: flex; justify-content: space-between; font-size: 14px; color: #8A9298;">
+      <span>© Memiro, 2026</span>
+      <a href="https://memiro.ru/privacy-policy">Политика конфиденциальности</a>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const IMG = 'https://memiro.ru/wp-content/themes/memiro/images/';
+const GALLERY = [
+  IMG + '67f6cf0eaa7e6a5e5dd1afab_withbacklight3.avif',
+  IMG + '67f6cf2003df0c202392960b_withbacklight1.avif',
+  IMG + '67f6be6ac8cedbc0952ea9df_curly1.avif',
+  IMG + '6742bd129fd4b05339d62063_round1.avif'
+];
+const SIZES = [
+  { name: '600 × 900', add: 0 },
+  { name: '700 × 1000', add: 2400 },
+  { name: '800 × 1200', add: 4900 },
+  { name: 'Свой размер', add: 0 }
+];
+const LIGHTS = [
+  { name: 'Контурная', add: 0 },
+  { name: 'Фронтальная', add: 1800 },
+  { name: 'С сенсором', add: 2600 }
+];
+const MOUNTS = [
+  { name: 'Скрытый крепёж', add: 0 },
+  { name: 'С полкой', add: 1500 }
+];
+const fmt = (n) => n.toLocaleString('ru-RU');
+
+class Component extends DCLogic {
+  state = { img: 0, size: 0, light: 0, mount: 0, qty: 1, tab: 'Описание', cart: 0 };
+
+  pillStyle(on) {
+    return {
+      border: '1px solid ' + (on ? '#15181B' : '#C4CACF'),
+      background: on ? '#15181B' : 'transparent',
+      color: on ? '#F0F2F3' : '#434A50',
+      padding: '13px 18px', fontSize: 15, fontWeight: on ? 600 : 400,
+      fontFamily: "'Golos Text', sans-serif", cursor: 'pointer'
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const base = 10706;
+    const unit = base + SIZES[s.size].add + LIGHTS[s.light].add + MOUNTS[s.mount].add;
+    const total = unit * s.qty;
+
+    return {
+      thumbs: GALLERY.map((img, i) => ({
+        img,
+        pick: () => this.setState({ img: i }),
+        style: {
+          width: 88, height: 96, padding: 0, overflow: 'hidden', cursor: 'pointer',
+          border: '1px solid ' + (s.img === i ? '#15181B' : '#DFE3E7'),
+          background: '#E6E9EB'
+        }
+      })),
+      mainImg: GALLERY[s.img],
+      totalPrice: fmt(total),
+      oldPrice: fmt(Math.round(total * 1.18 / 10) * 10),
+      sizes: SIZES.map((x, i) => ({ name: x.name, pick: () => this.setState({ size: i }), style: this.pillStyle(s.size === i) })),
+      lights: LIGHTS.map((x, i) => ({ name: x.name, pick: () => this.setState({ light: i }), style: this.pillStyle(s.light === i) })),
+      mounts: MOUNTS.map((x, i) => ({ name: x.name, pick: () => this.setState({ mount: i }), style: this.pillStyle(s.mount === i) })),
+      qty: s.qty,
+      inc: () => this.setState({ qty: Math.min(9, s.qty + 1) }),
+      dec: () => this.setState({ qty: Math.max(1, s.qty - 1) }),
+      cartCount: s.cart,
+      cartLabel: s.cart > 0 ? 'Добавлено в корзину' : 'Добавить в корзину',
+      addToCart: () => this.setState({ cart: s.cart + s.qty }),
+      perks: [
+        { num: '01', text: 'Собственное производство — цена без посредников' },
+        { num: '02', text: 'Изготовление 5–7 рабочих дней, срочно — от 3 дней' },
+        { num: '03', text: 'Доставка и монтаж по Санкт-Петербургу и области' }
+      ],
+      tabs: ['Описание', 'Характеристики', 'Доставка и монтаж'].map(n => ({
+        name: n,
+        pick: () => this.setState({ tab: n }),
+        style: {
+          border: 'none', background: 'transparent', padding: '16px 26px 15px',
+          marginBottom: -1, fontSize: 16, fontWeight: s.tab === n ? 600 : 400,
+          color: s.tab === n ? '#15181B' : '#6A7178',
+          borderBottom: '2px solid ' + (s.tab === n ? '#15181B' : 'transparent'),
+          fontFamily: "'Golos Text', sans-serif", cursor: 'pointer'
+        }
+      })),
+      isDesc: s.tab === 'Описание',
+      isSpecs: s.tab === 'Характеристики',
+      isDelivery: s.tab === 'Доставка и монтаж',
+      specs: [
+        { k: 'Артикул', v: 'MR-HL-0690' },
+        { k: 'Форма', v: 'Полукруг' },
+        { k: 'Размер', v: SIZES[s.size].name === 'Свой размер' ? 'по вашим размерам' : SIZES[s.size].name + ' мм' },
+        { k: 'Толщина полотна', v: '5 мм, флоат-стекло' },
+        { k: 'Подсветка', v: LIGHTS[s.light].name + ', 4000 K' },
+        { k: 'Крепление', v: MOUNTS[s.mount].name },
+        { k: 'Гарантия', v: '24 месяца на подсветку' },
+        { k: 'Производство', v: 'Собственный цех, Санкт-Петербург' }
+      ],
+      delivery: [
+        { num: '01', title: 'Замер', text: 'Замерщик приезжает в удобное время, уточняет размеры и место установки. При заказе замер бесплатный.' },
+        { num: '02', title: 'Доставка', text: 'Доставляем по Санкт-Петербургу и области в жёсткой упаковке. Возможен самовывоз с производства.' },
+        { num: '03', title: 'Монтаж', text: 'Устанавливает наша бригада: сверление, крепёж и подключение подсветки входят в работу.' }
+      ],
+      related: [
+        { name: 'Зеркало с фронтальной подсветкой Lumen', price: fmt(14250), img: IMG + '67f6cf2003df0c202392960b_withbacklight1.avif' },
+        { name: 'Фигурное зеркало Arco', price: fmt(12400), img: IMG + '67f6be6ac8cedbc0952ea9df_curly1.avif' },
+        { name: 'Круглое зеркало в тонкой раме Orbis', price: fmt(7480), img: IMG + '6742bd129fd4b05339d62063_round1.avif' },
+        { name: 'Зеркало без рамы с фацетом Puro', price: fmt(4390), img: IMG + '67f6bdacfc8a9f4e7c46b9cc_withoutframe2.avif' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
