@@ -89,6 +89,11 @@
   </div>
 </footer>
 
+{# Сообщения корзины и избранного: одна живая область на страницу #}
+<p class="shop-note" data-shop-note aria-live="polite" hidden></p>
+
+{# Границы подборки приходят с сервера — копий в JS не держим #}
+{{ inquiry_limits|json_script:"inquiry-limits" }}
 <script src="{% static 'js/site.js' %}" defer></script>
 <script src="{% static 'js/shop.js' %}" defer></script>
 {% block scripts %}{% endblock %}

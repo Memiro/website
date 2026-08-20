@@ -1,6 +1,6 @@
 """Уведомление владельца о заявке.
 
-Транспорт подменяем: класс берётся из `settings.LEAD_NOTIFIER`, так что
+Транспорт подменяем: класс берётся из `settings.INQUIRY_NOTIFIER`, так что
 тесты подставляют свой, а прод — Telegram. Падение транспорта не
 отменяет заявку: она уже в журнале, уведомление — вторично.
 """
@@ -18,7 +18,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 if TYPE_CHECKING:
-    from memiro.leads.models import Lead
+    from memiro.inquiries.models import Inquiry
 
 logger = logging.getLogger(__name__)
 
@@ -26,46 +26,46 @@ TELEGRAM_API = "https://api.telegram.org"
 TIMEOUT_SECONDS = 5
 
 
-class LeadNotifier(Protocol):
+class InquiryNotifier(Protocol):
     """Транспорт уведомления о заявке."""
 
-    def send(self, lead: Lead) -> None: ...
+    def send(self, inquiry: Inquiry) -> None: ...
 
 
-def lead_message(lead: Lead) -> str:
+def inquiry_message(inquiry: Inquiry) -> str:
     """Текст уведомления: контакты, состав и комментарий одной пачкой."""
     lines = [
-        f"Заявка №{lead.pk} ({lead.get_source_display()})",
-        f"Имя: {lead.name}",
-        f"Телефон: {lead.phone}",
+        f"Заявка №{inquiry.pk} ({inquiry.get_source_display()})",
+        f"Имя: {inquiry.name}",
+        f"Телефон: {inquiry.phone}",
     ]
-    if lead.email:
-        lines.append(f"E-mail: {lead.email}")
-    items = list(lead.items.all())
+    if inquiry.email:
+        lines.append(f"E-mail: {inquiry.email}")
+    items = list(inquiry.items.all())
     if items:
         lines.append("Товары:")
         lines += [
             f"— {item.product_name}, от {item.product_price} ₽"
             for item in items
         ]
-    if lead.comment:
-        lines.append(f"Комментарий: {lead.comment}")
+    if inquiry.comment:
+        lines.append(f"Комментарий: {inquiry.comment}")
     return "\n".join(lines)
 
 
 class TelegramNotifier:
     """Отправка в Telegram; без токена и чата — только запись в лог."""
 
-    def send(self, lead: Lead) -> None:
+    def send(self, inquiry: Inquiry) -> None:
         token = settings.TELEGRAM_BOT_TOKEN
         chat_id = settings.TELEGRAM_CHAT_ID
         if not token or not chat_id:
             logger.warning(
-                "Telegram не настроен, заявка №%s без уведомления", lead.pk
+                "Telegram не настроен, заявка №%s без уведомления", inquiry.pk
             )
             return
         payload = urllib.parse.urlencode(
-            {"chat_id": chat_id, "text": lead_message(lead)}
+            {"chat_id": chat_id, "text": inquiry_message(inquiry)}
         ).encode()
         request = urllib.request.Request(  # noqa: S310
             f"{TELEGRAM_API}/bot{token}/sendMessage",
@@ -81,14 +81,14 @@ class TelegramNotifier:
             logger.error("Telegram отказал: %s", answer)
 
 
-def notify(lead: Lead) -> None:
+def notify(inquiry: Inquiry) -> None:
     """Уведомить владельца, не роняя приём заявки.
 
-    Внутри try и загрузка транспорта: опечатка в `LEAD_NOTIFIER` — тоже
+    Внутри try и загрузка транспорта: опечатка в `INQUIRY_NOTIFIER` — тоже
     сбой уведомления, а не повод отдать 500 на уже принятую заявку.
     """
     try:
-        notifier: LeadNotifier = import_string(settings.LEAD_NOTIFIER)()
-        notifier.send(lead)
+        notifier: InquiryNotifier = import_string(settings.INQUIRY_NOTIFIER)()
+        notifier.send(inquiry)
     except Exception:
-        logger.exception("Не удалось уведомить о заявке №%s", lead.pk)
+        logger.exception("Не удалось уведомить о заявке №%s", inquiry.pk)

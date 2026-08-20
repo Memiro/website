@@ -1,3 +1,4 @@
+import re
 from http import HTTPStatus
 
 import pytest
@@ -96,18 +97,36 @@ def test_shop_pages_open(client: Client, url: str) -> None:
 
 
 @pytest.mark.django_db
-def test_cart_page_has_unchecked_consent_checkbox(client: Client) -> None:
-    """Чекбокс согласия — отдельный и непредотмеченный."""
-    body = client.get("/cart/").content.decode()
+@pytest.mark.parametrize("url", ["/cart/", "/", "/catalog/zerkala/halo-moon/"])
+@pytest.mark.usefixtures("products")
+def test_consent_checkbox_is_separate_and_unchecked(
+    client: Client, url: str
+) -> None:
+    """Чекбокс согласия — отдельный и непредотмеченный на каждой форме."""
+    body = client.get(url).content.decode()
 
-    assert 'name="consent"' in body
-    assert "checked" not in body
+    checkbox = next(
+        tag
+        for tag in re.findall(r"<input[^>]*>", body)
+        if 'name="consent"' in tag
+    )
+    assert 'type="checkbox"' in checkbox
+    assert "checked" not in checkbox
 
 
 @pytest.mark.django_db
-def test_home_has_lead_form(client: Client) -> None:
+def test_home_has_inquiry_form(client: Client) -> None:
     """Форма заявки живёт и на главной."""
     body = client.get("/").content.decode()
 
-    assert 'id="lead"' in body
+    assert 'id="inquiry"' in body
     assert 'name="consent"' in body
+
+
+@pytest.mark.django_db
+def test_pages_expose_selection_limits(client: Client) -> None:
+    """Границы подборки уезжают в браузер с сервера, а не копией в JS."""
+    body = client.get("/").content.decode()
+
+    assert '"max_items": 100' in body
+    assert '"min_phone_digits": 7' in body

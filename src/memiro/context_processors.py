@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+from memiro.inquiries import limits
+
 if TYPE_CHECKING:
     from django.http import HttpRequest
 
@@ -28,3 +30,13 @@ CONTACTS = {
 # Сигнатуру с request диктует контракт context processor'а Django
 def contacts(request: HttpRequest) -> dict[str, dict[str, str]]:  # noqa: ARG001
     return {"contacts": CONTACTS}
+
+
+def inquiry_limits(request: HttpRequest) -> dict[str, dict[str, int]]:  # noqa: ARG001
+    """Границы заявки — в шаблон и оттуда в `shop.js` (см. limits.py)."""
+    return {
+        "inquiry_limits": {
+            "max_items": limits.MAX_ITEMS,
+            "min_phone_digits": limits.MIN_PHONE_DIGITS,
+        },
+    }

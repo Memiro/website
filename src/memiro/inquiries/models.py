@@ -1,11 +1,11 @@
 from django.db import models
 
 
-class Lead(models.Model):
+class Inquiry(models.Model):
     """Заявка: обращение посетителя менеджеру (CONTEXT.md).
 
     Не заказ: оплаты и резервирования нет, дальнейшая сделка живёт
-    вне сайта. Состав корзины сохраняется снимком в `LeadItem` —
+    вне сайта. Состав корзины сохраняется снимком в `InquiryItem` —
     цена и название на момент обращения важнее текущих.
     """
 
@@ -38,11 +38,11 @@ class Lead(models.Model):
         return f"Заявка №{self.pk} — {self.name}, {self.phone}"
 
 
-class LeadItem(models.Model):
+class InquiryItem(models.Model):
     """Товар в составе заявки — снимком на момент обращения."""
 
-    lead = models.ForeignKey(
-        Lead,
+    inquiry = models.ForeignKey(
+        Inquiry,
         verbose_name="заявка",
         on_delete=models.CASCADE,
         related_name="items",
@@ -54,7 +54,7 @@ class LeadItem(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="lead_items",
+        related_name="inquiry_items",
     )
     product_name = models.CharField("название", max_length=200)
     product_price = models.PositiveIntegerField("цена «от», ₽")

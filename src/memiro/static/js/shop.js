@@ -6,12 +6,16 @@
     cart: "memiro:cart",
     favorites: "memiro:favorites",
   };
-  // Столько же товаров принимают /api/products и /api/leads
-  const MAX_ITEMS = 100;
-  const LABELS = {
-    cart: { on: "В корзине", off: "В корзину" },
-    favorites: { on: "В избранном", off: "В избранное" },
-  };
+  // Границы приходят с сервера (memiro/inquiries/limits.py): вторая
+  // копия чисел разъехалась бы с валидацией эндпоинтов
+  const limits = (() => {
+    const blob = document.getElementById("inquiry-limits");
+    try {
+      return JSON.parse(blob.textContent);
+    } catch {
+      return { max_items: 100, min_phone_digits: 7 };
+    }
+  })();
 
   const read = (kind) => {
     try {
@@ -40,11 +44,26 @@
       );
       return false;
     }
-    // Потолок тот же, что у эндпоинтов: длинный список они отвергнут.
-    // Кнопка просто не переключится — состояние на экране остаётся честным
-    if (ids.length >= MAX_ITEMS) return false;
+    // Потолок тот же, что у эндпоинтов: длинный список они отвергнут
+    if (ids.length >= limits.max_items) {
+      announce(`Больше ${limits.max_items} товаров в подборку не помещается.`);
+      return false;
+    }
     write(kind, [...ids, id]);
     return true;
+  };
+
+  // Живая область под сообщения, которым негде показаться в разметке
+  let noteTimer = null;
+  const announce = (text) => {
+    const note = document.querySelector("[data-shop-note]");
+    if (!note) return;
+    note.textContent = text;
+    note.hidden = false;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => {
+      note.hidden = true;
+    }, 5000);
   };
 
   const remove = (kind, id) => {
@@ -67,23 +86,19 @@
   const paintButton = (button) => {
     const kind = button.dataset.toggle;
     const isOn = read(kind).includes(Number(button.dataset.product));
-    const labels = LABELS[kind];
+    // Подписи живут в разметке: JS их не сочиняет, а читает
+    const label = isOn ? button.dataset.labelOn : button.dataset.labelOff;
     button.setAttribute("aria-pressed", String(isOn));
     button.classList.toggle("on", isOn);
-    if (button.dataset.labelOn) {
-      // У иконочных кнопок текста нет — им хватает aria-label
-      const label = isOn ? labels.on : labels.off;
-      const text = [...button.childNodes].find(
-        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
-      );
-      if (text) {
-        text.textContent = ` ${label}`;
-      } else {
-        button.textContent = label;
-      }
-    }
-    button.setAttribute("aria-label", isOn ? labels.on : labels.off);
-    button.title = isOn ? labels.on : labels.off;
+    if (!label) return;
+    // У иконочных кнопок текста нет — правим только подпись для чтеца,
+    // иначе textContent затёр бы вложенный SVG
+    const text = [...button.childNodes].find(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
+    );
+    if (text) text.textContent = ` ${label}`;
+    button.setAttribute("aria-label", label);
+    button.title = label;
   };
 
   const paintButtons = (root = document) => {
@@ -93,6 +108,7 @@
   const paint = () => {
     paintCounters();
     paintButtons();
+    paintCartNotes();
   };
 
   document.addEventListener("click", (event) => {
@@ -159,6 +175,7 @@
     return row;
   };
 
+  // Зеркало шаблона catalog/_card.html: разметку карточки правим в обоих
   const favoriteCard = (item) => {
     const card = document.createElement("article");
     card.className = "product-card";
@@ -206,6 +223,7 @@
     cart.type = "button";
     cart.dataset.toggle = "cart";
     cart.dataset.product = String(item.id);
+    cart.dataset.labelOff = "В корзину";
     cart.dataset.labelOn = "В корзине";
     cart.textContent = "В корзину";
     buttons.append(fav, cart);
@@ -280,7 +298,6 @@
     phone: "Укажите телефон, по которому с вами можно связаться.",
     sent: "Спасибо! Мы свяжемся с вами в ближайшее время.",
     invalid: "Проверьте имя и телефон: заявку не удалось разобрать.",
-    tooMany: "Слишком много заявок подряд — попробуйте позже или позвоните.",
     failed:
       "Не удалось отправить заявку — позвоните нам или напишите в мессенджер.",
   };
@@ -289,7 +306,6 @@
   // сообщение (истёкший CSRF, исчезнувший товар) показываем как есть —
   // оба случая лечатся обновлением страницы, а не звонком
   const serverNote = async (response) => {
-    if (response.status === 429) return NOTES.tooMany;
     if (response.status === 400) return NOTES.invalid;
     try {
       const payload = await response.json();
@@ -301,17 +317,50 @@
     return NOTES.failed;
   };
 
+  const cartForm = (form) => form.dataset.source !== "product";
+
   const formItems = (form) => {
-    if (form.dataset.source === "cart") return read("cart");
+    if (cartForm(form)) return read("cart");
     return form.dataset.product ? [Number(form.dataset.product)] : [];
   };
 
+  // «товар / товара / товаров» — как фильтр ru_plural в шаблонах
+  const products = (count) => {
+    const tail = count % 10;
+    const teens = count % 100;
+    if (teens >= 11 && teens <= 14) return "товаров";
+    if (tail === 1) return "товар";
+    if (tail >= 2 && tail <= 4) return "товара";
+    return "товаров";
+  };
+
+  // Посетитель должен видеть, что к заявке уедет собранная подборка
+  const paintCartNote = (form) => {
+    const note = form.querySelector("[data-inquiry-cart-note]");
+    if (!note) return;
+    const count = cartForm(form) ? read("cart").length : 0;
+    // На странице корзины состав и так перед глазами
+    const silent = form.dataset.source === "cart";
+    note.hidden = !count || silent;
+    note.textContent = count
+      ? `К заявке приложим вашу подборку: ${count} ${products(count)}.`
+      : "";
+  };
+
+  const paintCartNotes = () => {
+    document.querySelectorAll("[data-inquiry-form]").forEach(paintCartNote);
+  };
+
   const submit = async (form) => {
-    const note = form.querySelector("[data-lead-note]");
+    const note = form.querySelector("[data-inquiry-note]");
+    const say = (text, ok = false) => {
+      note.textContent = text;
+      note.classList.toggle("error", !ok);
+    };
     const button = form.querySelector("[type=submit]");
     const data = new FormData(form);
     if (!form.querySelector("[name=consent]").checked) {
-      note.textContent = NOTES.consent;
+      say(NOTES.consent);
       return;
     }
     // Те же требования, что и на сервере, но по обрезанным значениям:
@@ -319,16 +368,16 @@
     const name = (data.get("name") || "").trim();
     const phone = (data.get("phone") || "").trim();
     if (name.length < 2) {
-      note.textContent = NOTES.name;
+      say(NOTES.name);
       return;
     }
-    if ((phone.match(/\d/g) || []).length < 7) {
-      note.textContent = NOTES.phone;
+    if ((phone.match(/\d/g) || []).length < limits.min_phone_digits) {
+      say(NOTES.phone);
       return;
     }
     button.disabled = true;
     try {
-      const response = await fetch("/api/leads", {
+      const response = await fetch("/api/inquiries", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -345,24 +394,25 @@
         }),
       });
       if (!response.ok) {
-        note.textContent = await serverNote(response);
+        say(await serverNote(response));
         return;
       }
-      note.textContent = NOTES.sent;
+      say(NOTES.sent, true);
       form.reset();
-      if (form.dataset.source === "cart") {
+      if (cartForm(form) && read("cart").length) {
+        // Подборка ушла менеджеру — держать её дальше незачем
         write("cart", []);
         paint();
         renderCollections();
       }
     } catch {
-      note.textContent = NOTES.failed;
+      say(NOTES.failed);
     } finally {
       button.disabled = false;
     }
   };
 
-  document.querySelectorAll("[data-lead-form]").forEach((form) => {
+  document.querySelectorAll("[data-inquiry-form]").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       submit(form);

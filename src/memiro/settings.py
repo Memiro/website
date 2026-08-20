@@ -31,7 +31,7 @@ INSTALLED_APPS = [
     "dmr",
     "memiro.catalog",
     "memiro.content",
-    "memiro.leads",
+    "memiro.inquiries",
 ]
 
 MIDDLEWARE = [
@@ -57,6 +57,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "memiro.context_processors.contacts",
+                "memiro.context_processors.inquiry_limits",
             ],
         },
     },
@@ -124,9 +125,9 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Уведомление владельца о заявке: транспорт подменяем (тесты ставят свой)
-LEAD_NOTIFIER = os.environ.get(
-    "LEAD_NOTIFIER",
-    "memiro.leads.notifications.TelegramNotifier",
+INQUIRY_NOTIFIER = os.environ.get(
+    "INQUIRY_NOTIFIER",
+    "memiro.inquiries.notifications.TelegramNotifier",
 )
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")

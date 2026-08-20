@@ -11,7 +11,7 @@
     <p class="sub">Быстро и качественно изготовим и установим зеркало любой
       сложности, даже если другие компании отказались.</p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#lead">Узнать стоимость</a>
+      <a class="btn btn-primary" href="#inquiry">Узнать стоимость</a>
       <a class="btn btn-ghost" href="{% url 'catalog' %}">Смотреть каталог</a>
     </div>
     <div class="hero-stats">
@@ -126,14 +126,14 @@
   </div>
 </section>
 
-<section class="wrap section" id="lead">
-  <div class="lead-block">
+<section class="wrap section" id="inquiry">
+  <div class="inquiry-block">
     <div>
       <span class="overline bare">Заявка</span>
       <h2 class="h-section">Не нашли подходящее?<br>Сделаем по вашему эскизу</h2>
       <p>Оставьте контакты — менеджер уточнит размеры, сроки и стоимость.
         Ответим в течение рабочего дня; оплаты и обязательств на сайте нет.</p>
-      <div class="lead-contacts">
+      <div class="inquiry-contacts">
         <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
         <a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a>
       </div>
@@ -143,7 +143,7 @@
         <a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
       </div>
     </div>
-    {% include "leads/_form.html" with source="home" %}
+    {% include "inquiries/_form.html" with source="home" %}
   </div>
 </section>
 {% endblock %}

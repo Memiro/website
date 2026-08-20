@@ -1,5 +1,5 @@
 {# Форма заявки (тикет 07). Состав корзины подставляет shop.js по data-source. #}
-<form class="lead-form" data-lead-form data-source="{{ source|default:'home' }}"
+<form class="inquiry-form" data-inquiry-form data-source="{{ source|default:'home' }}"
       {% if product_id %}data-product="{{ product_id }}"{% endif %}>
   {% csrf_token %}
   <label class="field">
@@ -23,6 +23,8 @@
     <input type="checkbox" name="consent" value="1" required>
     <span>Согласен на обработку персональных данных</span>
   </label>
-  <button class="btn btn-primary lead-submit" type="submit">Отправить заявку</button>
-  <p class="lead-note" data-lead-note aria-live="polite"></p>
+  {# Заполняет shop.js, когда к заявке уезжает собранная подборка #}
+  <p class="inquiry-cart-note" data-inquiry-cart-note hidden></p>
+  <button class="btn btn-primary inquiry-submit" type="submit">Отправить заявку</button>
+  <p class="inquiry-note" data-inquiry-note aria-live="polite"></p>
 </form>

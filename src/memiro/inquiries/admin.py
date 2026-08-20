@@ -2,14 +2,14 @@ from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 
-from .models import Lead, LeadItem
+from .models import Inquiry, InquiryItem
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
 
 
-class LeadItemInline(admin.TabularInline):
-    model = LeadItem
+class InquiryItemInline(admin.TabularInline):
+    model = InquiryItem
     extra = 0
     # Состав — снимок на момент обращения: правке не подлежит
     readonly_fields = ("product", "product_name", "product_price")
@@ -18,13 +18,13 @@ class LeadItemInline(admin.TabularInline):
     def has_add_permission(
         self,
         request: HttpRequest,  # noqa: ARG002
-        obj: Lead | None = None,  # noqa: ARG002
+        obj: Inquiry | None = None,  # noqa: ARG002
     ) -> bool:
         return False
 
 
-@admin.register(Lead)
-class LeadAdmin(admin.ModelAdmin):
+@admin.register(Inquiry)
+class InquiryAdmin(admin.ModelAdmin):
     """Журнал заявок: читается и отмечается обработанной, не создаётся."""
 
     list_display = (
@@ -58,7 +58,7 @@ class LeadAdmin(admin.ModelAdmin):
         "consent",
         "is_processed",
     ]
-    inlines = (LeadItemInline,)
+    inlines = (InquiryItemInline,)
 
     def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
         return False

@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 def cart(request: HttpRequest) -> HttpResponse:
-    return render(request, "leads/cart.html")
+    return render(request, "inquiries/cart.html")
 
 
 def favorites(request: HttpRequest) -> HttpResponse:
-    return render(request, "leads/favorites.html")
+    return render(request, "inquiries/favorites.html")
