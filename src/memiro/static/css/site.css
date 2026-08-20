@@ -326,6 +326,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 
 /* ---------- Статические страницы ---------- */
 .page { padding-top: 14px; }
+.page .overline { margin-bottom: 18px; }
 .page-lead { margin-top: 18px; font-size: 19px; line-height: 1.55; color: var(--body); max-width: 62ch; display: grid; gap: 14px; }
 .feature-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .feature { background: var(--bg-card); border: 1px solid var(--line-card); padding: 32px 30px; }

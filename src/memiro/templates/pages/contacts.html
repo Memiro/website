@@ -7,6 +7,7 @@
 <nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Контакты</nav>
 
 <div class="page wrap">
+  <span class="overline">Шоурум и связь</span>
   <h1 class="h-section">Контакты</h1>
 
   <div class="contacts-grid">
@@ -28,9 +29,9 @@
       <div class="contact-block">
         <h3>Мессенджеры и соцсети</h3>
         <div class="contact-links">
-          <a class="nav-pill" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
-          <a class="nav-pill" href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
-          <a class="nav-pill" href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
+          <a href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+          <a href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
+          <a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
         </div>
       </div>
     </div>

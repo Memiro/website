@@ -1,22 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}Каталог — memiro{% endblock %}
+{% block title %}Каталог зеркал — memiro{% endblock %}
 {% block nav_catalog %}class="active"{% endblock %}
 
 {% block content %}
 <nav class="crumbs wrap"><a href="{% url 'home' %}">Главная</a> / Каталог</nav>
 
-<div class="cat-head wrap">
-  <h1 class="h-section">Каталог</h1>
+<div class="wrap">
+  <div class="cat-head">
+    <h1>Каталог зеркал</h1>
+  </div>
 </div>
 
-<div class="wrap">
-  {% if categories %}
-  <ul class="category-list">
-    {% for category in categories %}
-    <li><a class="btn btn-ghost" href="{% url 'category' category.slug %}">{{ category.name }}</a></li>
+<div class="wrap section" style="padding-top: 40px;">
+  {% if tiles %}
+  <div class="cats-grid">
+    {% for tile in tiles %}
+    <a class="cat" href="{% url 'category' tile.category.slug %}">
+      {% if tile.cover %}<img src="{{ tile.cover.url }}" alt="" loading="lazy">{% endif %}
+      <span class="veil"></span>
+      <span class="label">{{ tile.category.name }}</span>
+    </a>
     {% endfor %}
-  </ul>
+  </div>
   {% else %}
   <p class="sub">Каталог наполняется — загляните позже.</p>
   {% endif %}
