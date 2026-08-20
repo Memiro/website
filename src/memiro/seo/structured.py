@@ -1,4 +1,4 @@
-"""JSON-LD страниц: BreadcrumbList, LocalBusiness, Product + Offer.
+"""JSON-LD страниц: BreadcrumbList, LocalBusiness, Product.
 
 Разметка собирается словарями на Python и печатается тегом `{% jsonld %}`
 — шаблоны не собирают JSON руками.
@@ -9,10 +9,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from django.templatetags.static import static
 from django.urls import reverse
 
 from memiro.context_processors import CONTACTS
-from .meta import SITE_NAME
+from .meta import DEFAULT_OG_IMAGE, SITE_NAME
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
     from memiro.content.models import Review
 
 
-# Шоурум открыт ежедневно (CONTACTS["hours"]) — расписание разметки
+# Шоурум работает ежедневно (CONTACTS["hours"]) — расписание разметки
 # перечисляет все семь дней
 EVERY_DAY = (
     "Monday",
@@ -106,6 +107,8 @@ def local_business(
             "изготовление, доставка и установка."
         ),
         "url": request.build_absolute_uri(reverse("home")),
+        # Кадр для локального сниппета — тот же, что уходит в OG
+        "image": request.build_absolute_uri(static(DEFAULT_OG_IMAGE)),
         "telephone": CONTACTS["phone"],
         "email": CONTACTS["email"],
         "address": {
@@ -114,24 +117,37 @@ def local_business(
             "addressLocality": CONTACTS["city"],
             "streetAddress": CONTACTS["street"],
         },
-        "openingHoursSpecification": [
-            {
-                "@type": "OpeningHoursSpecification",
-                "dayOfWeek": list(EVERY_DAY),
-                "opens": CONTACTS["opens"],
-                "closes": CONTACTS["closes"],
-            }
-        ],
         "sameAs": [
             CONTACTS["telegram"],
             CONTACTS["vk"],
             CONTACTS["avito"],
         ],
     }
+    hours = _opening_hours()
+    if hours:
+        data["openingHoursSpecification"] = hours
     rating = _aggregate_rating(reviews)
     if rating:
         data["aggregateRating"] = rating
     return data
+
+
+def _opening_hours() -> list[dict[str, Any]]:
+    """Расписание шоурума — только если часы заданы.
+
+    Незаданные часы разметка пропускает: выдуманное расписание — такое
+    же враньё поисковику, как выдуманный рейтинг.
+    """
+    if not (CONTACTS["opens"] and CONTACTS["closes"]):
+        return []
+    return [
+        {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": list(EVERY_DAY),
+            "opens": CONTACTS["opens"],
+            "closes": CONTACTS["closes"],
+        }
+    ]
 
 
 def _aggregate_rating(reviews: Iterable[Review]) -> dict[str, Any] | None:
@@ -145,8 +161,8 @@ def _aggregate_rating(reviews: Iterable[Review]) -> dict[str, Any] | None:
     }
 
 
-def product_offer(request: HttpRequest, product: Product) -> dict[str, Any]:
-    """Product + Offer карточки: цена «от» в рублях (CONTEXT.md)."""
+def product_markup(request: HttpRequest, product: Product) -> dict[str, Any]:
+    """Product карточки с AggregateOffer: цена «от» в рублях."""
     url = request.build_absolute_uri(
         reverse(
             "product",

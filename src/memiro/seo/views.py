@@ -1,6 +1,6 @@
 """robots.txt, собранный из базы (ADR-0003).
 
-Фасетные параметры — это слаги атрибутов, заведённых владельцем в
+Параметры фильтров — это слаги атрибутов, заведённых владельцем в
 админке; список запретов пересобирается сам, без правки файла руками.
 """
 
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 CLOSED_PATHS = ("/admin/", "/api/")
 
 
-def facet_params() -> list[str]:
+def filter_params() -> list[str]:
     """Параметры, порождающие дубли: сортировка и слаги атрибутов."""
     slugs = (
         Attribute.objects.filter(kind__in=FILTERABLE_KINDS)
@@ -36,10 +36,11 @@ def facet_params() -> list[str]:
 
 
 def robots(request: HttpRequest) -> HttpResponse:
-    params = facet_params()
+    params = filter_params()
     lines = ["User-agent: *"]
     lines += [f"Disallow: {path}" for path in CLOSED_PATHS]
-    # Фасетные URL закрыты, чистые страницы категорий — нет
+    # Параметрические URL фильтров закрыты, чистые страницы
+    # категорий — нет
     lines += [f"Disallow: /*?*{param}=" for param in params]
     lines.append("")
     # Clean-param — то же для Яндекса: он склеивает дубли, а не прячет

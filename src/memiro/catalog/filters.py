@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from django.db.models import Count
 
 from .models import (
+    BOOL_LABELS,
     BOOL_TOKENS,
     Attribute,
     AttributeValue,
@@ -31,10 +32,6 @@ if TYPE_CHECKING:
 class FilterError(Exception):
     """Мусорное значение фильтра в querystring — такой страницы нет."""
 
-
-# Подписи значений «да/нет»; сами токены — в моделях, их делит
-# с фильтром условие посадочной
-BOOL_LABELS = {True: "да", False: "нет"}
 
 FILTERABLE_KINDS = (Attribute.Kind.CHOICE, Attribute.Kind.BOOLEAN)
 

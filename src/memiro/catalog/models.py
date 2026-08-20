@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.http import QueryDict
 from django.urls import Resolver404, resolve, reverse
 
 if TYPE_CHECKING:
@@ -222,10 +221,11 @@ class ProductImage(models.Model):
         return f"Фото {self.pk} — {self.product}"
 
 
-# Токены значений атрибута «да/нет» в querystring: их пишет фильтр
-# каталога и повторяет условие посадочной
+# Токены значений атрибута «да/нет» в querystring фильтра каталога
 BOOL_TOKENS = {"1": True, "0": False}
-BOOL_TOKEN_BY_FLAG = {flag: token for token, flag in BOOL_TOKENS.items()}
+
+# Те же значения словами — в характеристиках товара и условиях посадочной
+BOOL_LABELS = {True: "да", False: "нет"}
 
 # Какое поле ProductAttribute хранит значение атрибута каждого типа;
 # единственное место, где тип разворачивается в поле
@@ -324,7 +324,7 @@ class ProductAttribute(models.Model):
         if self.value_option_id:
             return str(self.value_option)
         if self.value_bool is not None:
-            return "да" if self.value_bool else "нет"
+            return BOOL_LABELS[self.value_bool]
         if self.value_number is not None:
             return str(self.value_number)
         return "—"
@@ -417,17 +417,6 @@ class Landing(models.Model):
                 {"slug": "Этот адрес уже занят страницей сайта."}
             )
 
-    def query(self) -> QueryDict:
-        """Условия посадочной в виде querystring фильтров каталога.
-
-        Так посадочная переиспользует разбор и применение фильтров
-        категории и не заводит второй способ сужать выдачу.
-        """
-        query = QueryDict(mutable=True)
-        for condition in self.conditions.all():
-            query.appendlist(condition.attribute.slug, condition.token)
-        return query
-
 
 class LandingCondition(models.Model):
     """Одно условие посадочной: значение атрибута её категории.
@@ -470,14 +459,13 @@ class LandingCondition(models.Model):
         )
 
     def __str__(self) -> str:
-        return f"{self.attribute}: {self.token}"
+        return f"{self.attribute}: {self.display_value}"
 
     @property
-    def token(self) -> str:
-        """Значение так, как его пишет в querystring фильтр каталога."""
+    def display_value(self) -> str:
         if self.value_option_id:
-            return str(self.value_option_id)
-        return BOOL_TOKEN_BY_FLAG[bool(self.value_bool)]
+            return str(self.value_option)
+        return BOOL_LABELS[bool(self.value_bool)]
 
     def clean(self) -> None:
         if not self.attribute_id:

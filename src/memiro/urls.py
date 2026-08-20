@@ -11,9 +11,10 @@ from . import views
 
 urlpatterns = [
     path("", views.home, name="home"),
-    path("about/", views.about, name="about"),
-    path("delivery/", views.delivery, name="delivery"),
-    path("contacts/", views.contacts, name="contacts"),
+    *(
+        path(f"{page.route}/", views.static_page(page), name=page.route)
+        for page in views.STATIC_PAGES
+    ),
     path("admin/", admin.site.urls),
     path(
         "sitemap.xml",

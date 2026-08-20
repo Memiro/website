@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from .meta import PageMeta
+from .meta import SITE_NAME, PageMeta
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -25,6 +25,7 @@ FALLBACK_META = PageMeta(
 def defaults(request: HttpRequest) -> dict[str, Any]:
     return {
         "meta": FALLBACK_META,
+        "site_name": SITE_NAME,
         # Canonical по умолчанию — сама страница; каталог и карточка
         # перекрывают его по ADR-0003
         "canonical": request.build_absolute_uri(request.path),

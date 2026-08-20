@@ -49,6 +49,12 @@ MIDDLEWARE = [
     "memiro.seo.middleware.LegacyUrlMiddleware",
 ]
 
+# За обратным прокси с терминацией TLS Django видит http и печатает
+# такие же canonical, OG и sitemap (тикет 09). Включается там, где
+# прокси гарантированно выставляет заголовок сам
+if os.environ.get("DJANGO_TRUST_PROXY_SSL") == "1":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 ROOT_URLCONF = "memiro.urls"
 
 TEMPLATES = [

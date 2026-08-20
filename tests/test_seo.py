@@ -7,6 +7,7 @@ import re
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -24,6 +25,7 @@ from memiro.catalog.models import (
 )
 from memiro.catalog.views import PAGE_SIZE
 from memiro.content.models import Review
+from memiro.context_processors import CONTACTS
 from memiro.seo.models import LegacyUrl
 
 HALO_PRICE = 11795
@@ -242,17 +244,32 @@ def test_home_has_no_breadcrumbs(
     ]
 
 
-def test_local_business_has_address_and_hours(
+def test_local_business_has_address(
     client: Client, shop: SimpleNamespace
 ) -> None:
     business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
 
     assert business["address"]["addressLocality"] == "Санкт-Петербург"
     assert business["address"]["streetAddress"] == "ул. Тележная, 37"
+    assert business["telephone"]
+    assert business["image"].startswith("http")
+
+
+def test_hours_appear_only_when_set(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Выдуманного расписания в разметке не бывает — как и рейтинга."""
+    assert "openingHoursSpecification" not in block_of(
+        page_html(client, "/contacts/"), "LocalBusiness"
+    )
+
+    with patch.dict(CONTACTS, {"opens": "10:00", "closes": "20:00"}):
+        business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
+
     hours = business["openingHoursSpecification"][0]
     assert len(hours["dayOfWeek"]) == DAYS_IN_WEEK
-    assert hours["opens"]
-    assert hours["closes"]
+    assert hours["opens"] == "10:00"
+    assert hours["closes"] == "20:00"
 
 
 def test_rating_appears_only_with_real_reviews(
@@ -429,6 +446,17 @@ def test_category_links_to_its_landings(
     assert 'href="/zerkala-s-podsvetkoy/"' in html
 
 
+def test_category_hides_link_to_empty_landing(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Посадочная без товаров отдаёт 404 — ссылки на неё быть не должно."""
+    Product.objects.filter(pk=shop.halo.pk).update(is_published=False)
+
+    html = page_html(client, "/catalog/zerkala/")
+
+    assert "/zerkala-s-podsvetkoy/" not in html
+
+
 def test_landing_slug_cannot_shadow_existing_page(
     shop: SimpleNamespace,
 ) -> None:
@@ -492,6 +520,28 @@ def test_sitemap_lists_published_pages(
     assert "/catalog/zerkala/draft/" not in xml
 
 
+def test_sitemap_skips_redirecting_catalog_root(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """С единственной категорией /catalog/ отвечает редиректом."""
+    xml = client.get("/sitemap.xml").content.decode()
+
+    assert "<loc>http://testserver/catalog/</loc>" not in xml
+
+    other = Category.objects.create(name="Перегородки", slug="peregorodki")
+    Product.objects.create(
+        category=other,
+        name="Перегородка",
+        slug="peregorodka",
+        price=30000,
+        is_published=True,
+    )
+
+    xml = client.get("/sitemap.xml").content.decode()
+
+    assert "<loc>http://testserver/catalog/</loc>" in xml
+
+
 def test_sitemap_hides_unpublished_landing(
     client: Client, shop: SimpleNamespace
 ) -> None:
@@ -514,7 +564,7 @@ def test_sitemap_hides_landing_without_products(
     assert "/zerkala-s-podsvetkoy/" not in xml
 
 
-def test_robots_closes_facets_and_points_to_sitemap(
+def test_robots_closes_filter_params_and_points_to_sitemap(
     client: Client, shop: SimpleNamespace
 ) -> None:
     response = client.get("/robots.txt")

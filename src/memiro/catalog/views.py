@@ -16,7 +16,7 @@ from django.urls import reverse
 from memiro.seo import structured
 from memiro.seo.meta import DEFAULT_OG_IMAGE, PageMeta, clamp, title
 from .filters import CatalogFilters, FilterError
-from .landings import landing_products
+from .landings import landing_products, visible_landings
 from .models import POPULAR_ORDERING, Category, Landing, Product
 
 if TYPE_CHECKING:
@@ -139,8 +139,9 @@ def category(request: HttpRequest, slug: str) -> HttpResponse:
             "meta": _category_meta(category, base),
             "breadcrumbs": structured.category_crumbs(category),
             # Ссылки на посадочные с категории (ADR-0003): иначе их
-            # некому обходить
-            "landings": category.landings.published(),
+            # некому обходить. Пустая посадочная отдаёт 404 — ссылки
+            # на неё быть не должно
+            "landings": visible_landings(category.landings.published()),
             **_pagination(request.GET, page),
         },
     )
@@ -176,7 +177,7 @@ def product(
             "breadcrumbs": structured.category_crumbs(
                 product.category, structured.Crumb(product.name)
             ),
-            "product_jsonld": structured.product_offer(request, product),
+            "product_jsonld": structured.product_markup(request, product),
         },
     )
 

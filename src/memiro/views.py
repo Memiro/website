@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from django.shortcuts import render
@@ -11,9 +12,12 @@ from memiro.catalog.views import category_tiles
 from memiro.content.models import FaqEntry, Promo, Review
 from memiro.seo import structured
 from memiro.seo.context_processors import FALLBACK_META
-from memiro.seo.meta import PageMeta, clamp, title
+from memiro.seo.meta import PageMeta, clamp
+from memiro.seo.meta import title as meta_title
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from django.http import HttpRequest, HttpResponse
 
 # Ленты «акция» и «популярное» на главной — не длиннее одной прокрутки
@@ -47,61 +51,77 @@ def home(request: HttpRequest) -> HttpResponse:
     )
 
 
-def about(request: HttpRequest) -> HttpResponse:
-    return render(
-        request,
-        "pages/about.html",
-        {
-            "meta": PageMeta(
-                title=title("О студии"),
-                description=clamp(
-                    "Студия memiro: собственное производство интерьерных "
-                    "зеркал в Санкт-Петербурге — от резки стекла "
-                    "до установки у клиента."
-                ),
-            ),
-            "breadcrumbs": structured.home_crumbs(structured.Crumb("О нас")),
-        },
-    )
+@dataclass(frozen=True)
+class StaticPage:
+    """Страница с текстом в шаблоне: своя мета, своя крошка, без базы.
 
+    Одна запись описывает страницу целиком — из этой таблицы растут
+    и маршруты (`urls.py`), и sitemap, так что новая страница заводится
+    в одном месте.
+    """
 
-def delivery(request: HttpRequest) -> HttpResponse:
-    return render(
-        request,
-        "pages/delivery.html",
-        {
+    route: str
+    template: str
+    crumb: str
+    title: str
+    description: str
+
+    def context(self) -> dict[str, object]:
+        return {
             "meta": PageMeta(
-                title=title("Доставка и возврат"),
-                description=clamp(
-                    "Доставка и установка зеркал memiro по Санкт-Петербургу "
-                    "и области, сроки изготовления и условия возврата "
-                    "изделий по индивидуальным размерам."
-                ),
+                title=meta_title(self.title),
+                description=clamp(self.description),
             ),
             "breadcrumbs": structured.home_crumbs(
-                structured.Crumb("Доставка и возврат")
+                structured.Crumb(self.crumb)
             ),
-        },
-    )
+        }
 
 
-def contacts(request: HttpRequest) -> HttpResponse:
-    return render(
-        request,
-        "pages/contacts.html",
-        {
-            "meta": PageMeta(
-                title=title("Контакты и шоурум"),
-                description=clamp(
-                    "Шоурум memiro в Санкт-Петербурге: адрес, часы работы, "
-                    "телефон и мессенджеры для связи со студией."
-                ),
-            ),
-            "breadcrumbs": structured.home_crumbs(
-                structured.Crumb("Контакты")
-            ),
-            # Рейтинг из отзывов живёт на главной, где сами отзывы
-            # и показываются; «Контакты» остаются страницей без базы
-            "business_jsonld": structured.local_business(request),
-        },
-    )
+STATIC_PAGES = (
+    StaticPage(
+        route="about",
+        template="pages/about.html",
+        crumb="О нас",
+        title="О студии",
+        description=(
+            "Студия memiro: собственное производство интерьерных зеркал "
+            "в Санкт-Петербурге — от резки стекла до установки у клиента."
+        ),
+    ),
+    StaticPage(
+        route="delivery",
+        template="pages/delivery.html",
+        crumb="Доставка и возврат",
+        title="Доставка и возврат",
+        description=(
+            "Доставка и установка зеркал memiro по Санкт-Петербургу "
+            "и области, сроки изготовления и условия возврата изделий "
+            "по индивидуальным размерам."
+        ),
+    ),
+    StaticPage(
+        route="contacts",
+        template="pages/contacts.html",
+        crumb="Контакты",
+        title="Контакты и шоурум",
+        description=(
+            "Шоурум memiro в Санкт-Петербурге: адрес, часы работы, "
+            "телефон и мессенджеры для связи со студией."
+        ),
+    ),
+)
+
+
+def static_page(page: StaticPage) -> Callable[[HttpRequest], HttpResponse]:
+    """Представление одной статической страницы."""
+
+    def view(request: HttpRequest) -> HttpResponse:
+        context = page.context()
+        if page.route == "contacts":
+            # Разметка шоурума — на «Контактах»; рейтинг из отзывов
+            # живёт на главной, где сами отзывы и показываются
+            context["business_jsonld"] = structured.local_business(request)
+        return render(request, page.template, context)
+
+    return view

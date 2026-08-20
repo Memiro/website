@@ -32,11 +32,6 @@ class PageMeta:
     # Пусто — страница индексируется
     robots: str = ""
 
-    @property
-    def is_static_image(self) -> bool:
-        """Кадр лежит в статике, а не в медиа: {% static %} нужен ему."""
-        return not self.image.startswith("/")
-
 
 def title(text: str) -> str:
     """Заголовок страницы с общим хвостом сайта."""
