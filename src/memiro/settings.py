@@ -33,11 +33,15 @@ INSTALLED_APPS = [
     "memiro.catalog",
     "memiro.content",
     "memiro.inquiries",
+    "memiro.legal",
     "memiro.seo",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Первым в списке — значит последним видит ответ: Vary достаётся
+    # и редиректам старых адресов (memiro/legal/middleware.py)
+    "memiro.legal.middleware.consent_vary",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -146,6 +150,6 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # Единственная аналитика сайта — Яндекс.Метрика, и та за согласием
-# (memiro/legal/consent.py). Пусто — счётчика нет, cookie-баннер
+# (memiro/legal/analytics_consent.py). Пусто — счётчика нет, cookie-баннер
 # не показывается: спрашивать не о чем
 YANDEX_METRIKA_ID = os.environ.get("YANDEX_METRIKA_ID", "")

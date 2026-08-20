@@ -15,7 +15,7 @@ from pytest_django.fixtures import Settings
 
 from memiro.catalog.models import Category, Product
 from memiro.inquiries.models import Inquiry
-from memiro.legal import consent, seller
+from memiro.legal import analytics_consent, checks, seller
 from memiro.legal.privacy import PRIVACY_VERSION
 
 COUNTER = "12345678"
@@ -32,9 +32,23 @@ FOREIGN_HOSTS = (
     "cdnjs.cloudflare.com",
 )
 
-PAGES = ("/", "/catalog/zerkala/", "/catalog/zerkala/halo-moon/", "/cart/")
+PAGES = (
+    "/",
+    "/catalog/zerkala/",
+    "/catalog/zerkala/halo-moon/",
+    "/cart/",
+    "/contacts/",
+    "/privacy/",
+)
 # Страницы с формой заявки — там, где собираются персональные данные
 FORM_PAGES = ("/", "/catalog/zerkala/halo-moon/", "/cart/")
+# Страницы, показывающие цену: везде нужна оговорка про оферту
+PRICE_PAGES = (
+    "/",
+    "/catalog/zerkala/",
+    "/catalog/zerkala/halo-moon/",
+    "/cart/",
+)
 
 
 @pytest.fixture
@@ -47,6 +61,8 @@ def products(db: None) -> list[Product]:
             slug="halo-moon",
             price=11795,
             is_published=True,
+            # Популярное — чтобы на главной была лента с ценами
+            is_popular=True,
         ),
     ]
 
@@ -147,7 +163,7 @@ def test_metrika_loads_after_consent(
     client: Client, settings: Settings
 ) -> None:
     settings.YANDEX_METRIKA_ID = COUNTER
-    client.cookies[consent.COOKIE_NAME] = consent.ACCEPTED
+    client.cookies[analytics_consent.COOKIE_NAME] = analytics_consent.ACCEPTED
 
     content = client.get("/").content.decode()
 
@@ -163,7 +179,7 @@ def test_declined_choice_is_remembered(
 ) -> None:
     """«Отклонить» тоже ответ: баннер не возвращается, счётчика нет."""
     settings.YANDEX_METRIKA_ID = COUNTER
-    client.cookies[consent.COOKIE_NAME] = consent.DECLINED
+    client.cookies[analytics_consent.COOKIE_NAME] = analytics_consent.DECLINED
 
     content = client.get("/").content.decode()
 
@@ -185,7 +201,7 @@ def test_non_numeric_counter_is_ignored(
 ) -> None:
     """Номер счётчика уезжает в тело <script> — мусор туда не попадёт."""
     settings.YANDEX_METRIKA_ID = 'x");alert(1);//'
-    client.cookies[consent.COOKIE_NAME] = consent.ACCEPTED
+    client.cookies[analytics_consent.COOKIE_NAME] = analytics_consent.ACCEPTED
 
     content = client.get("/").content.decode()
 
@@ -240,13 +256,43 @@ def test_empty_requisites_are_not_invented(client: Client) -> None:
     assert "ОГРН/ОГРНИП:" not in content
 
 
+def test_missing_requisites_are_reported_by_checks() -> None:
+    """О незаполненных реквизитах молчать нельзя: политика без оператора.
+
+    Витрина пустое поле не печатает, тесты механики зелёные — гарантию
+    даёт `manage.py check`, куда смотрят перед выкладкой.
+    """
+    warnings = checks.seller_requisites_are_filled()
+
+    assert [warning.id for warning in warnings] == [checks.MISSING_REQUISITES]
+
+
+@pytest.mark.usefixtures("_requisites")
+def test_filled_requisites_pass_the_check() -> None:
+    assert checks.seller_requisites_are_filled() == []
+
+
 @pytest.mark.django_db
 @pytest.mark.usefixtures("products")
-@pytest.mark.parametrize(
-    "url", ["/catalog/zerkala/", "/catalog/zerkala/halo-moon/"]
-)
+@pytest.mark.parametrize("url", PRICE_PAGES)
 def test_prices_carry_the_offer_disclaimer(client: Client, url: str) -> None:
     """Цены витрины не связывают студию офертой (ст. 437 ГК РФ)."""
     content = client.get(url).content.decode()
 
     assert "не являются публичной офертой" in content
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("products")
+@pytest.mark.parametrize("url", PAGES)
+def test_responses_vary_on_the_consent_cookie(
+    client: Client, url: str
+) -> None:
+    """Ответ зависит от cookie — кеш обязан это видеть (ADR-0006).
+
+    Django ставит Vary только там, где потрогали сессию или CSRF,
+    а баннер и счётчик решаются по cookie на любой странице.
+    """
+    response = client.get(url)
+
+    assert "Cookie" in response.headers.get("Vary", "")

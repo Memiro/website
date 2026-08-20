@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% comment %}Текст политики и текст согласия. Правится вместе
-с PRIVACY_VERSION в memiro/legal/consent.py: версия сохраняется
+с PRIVACY_VERSION в memiro/legal/privacy.py: версия сохраняется
 с каждой заявкой, и расхождение текста с версией обесценивает
 доказательство согласия.{% endcomment %}
 
@@ -18,7 +18,9 @@
     <h2>1. Оператор</h2>
     <p>Оператором персональных данных является продавец, указанный ниже.</p>
     {% include "legal/_seller.html" %}
-    <ul class="seller-requisites">
+    {# Связь с оператором — не реквизиты продавца (CONTEXT.md их
+       разводит), но выглядит той же строчной таблицей #}
+    <ul class="legal-contacts">
       <li><span class="seller-label">Телефон:</span>
         <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a></li>
       <li><span class="seller-label">Электронная почта:</span>

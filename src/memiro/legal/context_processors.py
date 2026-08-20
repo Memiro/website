@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 
-from . import consent, seller
+from . import analytics_consent, seller
 from .privacy import PRIVACY_VERSION
 
 if TYPE_CHECKING:
@@ -30,14 +30,8 @@ def legal(request: HttpRequest) -> dict[str, Any]:
         "seller": seller.SELLER.requisites(),
         "privacy_version": PRIVACY_VERSION,
         # Разметка Метрики появляется в ответе только после согласия
-        "metrika_id": counter if consent.accepted(request) else "",
-        "cookie_choice": {
-            # Без счётчика спрашивать не о чем: сайт ставит только
-            # строго необходимые cookie (CSRF, сессия, сам выбор)
-            "needed": bool(counter) and not consent.answered(request),
-            "cookie": consent.COOKIE_NAME,
-            "accepted": consent.ACCEPTED,
-            "declined": consent.DECLINED,
-            "max_age": consent.MAX_AGE,
-        },
+        "metrika_id": counter if analytics_consent.accepted(request) else "",
+        "cookie_choice": analytics_consent.banner(
+            request, has_counter=bool(counter)
+        ),
     }

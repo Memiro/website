@@ -27,7 +27,7 @@ class Inquiry(models.Model):
     # Факт согласия на обработку ПД: без него заявка не принимается
     consent = models.BooleanField("согласие на обработку ПД", default=False)
     # Редакция текста согласия, с которой человек согласился. Ставит
-    # сервер из `legal.consent.PRIVACY_VERSION` — клиент на неё
+    # сервер из `legal.privacy.PRIVACY_VERSION` — клиент на неё
     # не влияет, иначе это не доказательство
     consent_version = models.CharField(
         "редакция согласия",

@@ -86,6 +86,11 @@
 </section>
 {% endif %}
 
+{% if promo or popular %}
+{# Ленты выше показывают цены «от X ₽» — дисклеймер идёт за ними #}
+<div class="wrap">{% include "legal/_offer_note.html" %}</div>
+{% endif %}
+
 <section class="dark">
   <div class="wrap dark-grid">
     <img src="{% static 'img/about.jpg' %}" alt="Зеркало Grand Arc в интерьере" loading="lazy">

@@ -114,7 +114,7 @@
 <script src="{% static 'js/site.js' %}" defer></script>
 <script src="{% static 'js/shop.js' %}" defer></script>
 {% block scripts %}{% endblock %}
-{# Аналитика — последней и только с согласия (memiro/legal/consent.py) #}
+{# Аналитика — последней и только с согласия (memiro/legal/analytics_consent.py) #}
 {% if metrika_id %}{% include "legal/_metrika.html" %}{% endif %}
 </body>
 </html>
