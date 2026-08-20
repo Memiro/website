@@ -70,6 +70,7 @@ TEMPLATES = [
                 "memiro.context_processors.contacts",
                 "memiro.context_processors.inquiry_limits",
                 "memiro.seo.context_processors.defaults",
+                "memiro.legal.context_processors.legal",
             ],
         },
     },
@@ -143,3 +144,8 @@ INQUIRY_NOTIFIER = os.environ.get(
 )
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+
+# Единственная аналитика сайта — Яндекс.Метрика, и та за согласием
+# (memiro/legal/consent.py). Пусто — счётчика нет, cookie-баннер
+# не показывается: спрашивать не о чем
+YANDEX_METRIKA_ID = os.environ.get("YANDEX_METRIKA_ID", "")

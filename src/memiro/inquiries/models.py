@@ -24,8 +24,16 @@ class Inquiry(models.Model):
         choices=Source.choices,
         default=Source.HOME,
     )
-    # Факт согласия на обработку ПД; механика согласий — тикет 10
+    # Факт согласия на обработку ПД: без него заявка не принимается
     consent = models.BooleanField("согласие на обработку ПД", default=False)
+    # Редакция текста согласия, с которой человек согласился. Ставит
+    # сервер из `legal.consent.PRIVACY_VERSION` — клиент на неё
+    # не влияет, иначе это не доказательство
+    consent_version = models.CharField(
+        "редакция согласия",
+        max_length=20,
+        blank=True,
+    )
     created_at = models.DateTimeField("создана", auto_now_add=True)
     is_processed = models.BooleanField("обработана", default=False)
 

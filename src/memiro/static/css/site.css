@@ -468,6 +468,40 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .work img { width: 100%; }
 .work figcaption { padding: 16px 20px 18px; font-size: 15px; font-weight: 500; }
 
+/* ---------- Юридические блоки ---------- */
+/* Реквизиты продавца: одинаково выглядят в футере и на «Контактах» */
+.seller-requisites { list-style: none; display: grid; gap: 6px; margin-top: 14px; font-size: 14px; line-height: 1.5; }
+.seller-label { color: var(--muted); }
+.footer .seller-requisites { color: var(--subtle); }
+
+.offer-note { margin-top: 40px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 80ch; }
+.info .offer-note { margin-top: 16px; }
+
+/* Политика: единственная страница с длинным текстом и списками */
+.legal-page ul { margin-top: 14px; padding-left: 22px; color: var(--body); max-width: 70ch; }
+.legal-page li { margin-top: 6px; }
+.legal-page .legal-note a { border-bottom: 1px solid var(--control); }
+.legal-page .seller-requisites { padding-left: 0; }
+.consent a { border-bottom: 1px solid var(--control); }
+
+/* Cookie-баннер: перекрывает нижний край страницы, пока не отвечен */
+.cookie-banner {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 70;
+  width: min(760px, calc(100vw - 36px));
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  background: var(--ink); color: var(--on-dark);
+  border: 1px solid var(--on-dark-line-strong); padding: 22px 26px;
+}
+.cookie-text { flex: 1 1 320px; font-size: 14px; line-height: 1.55; color: var(--on-dark-body); }
+.cookie-text a { color: var(--on-dark); border-bottom: 1px solid var(--on-dark-muted); }
+.cookie-text a:hover { color: var(--accent-light); }
+.cookie-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.cookie-banner .btn { padding: 14px 26px; font-size: 14px; }
+.cookie-banner .btn-primary { background: var(--on-dark); color: var(--ink); }
+.cookie-banner .btn-primary:hover { background: var(--accent-light); color: var(--ink); }
+.cookie-banner .btn-ghost { border-color: var(--on-dark-line-strong); color: var(--on-dark-body); }
+.cookie-banner .btn-ghost:hover { border-color: var(--on-dark); color: var(--on-dark); }
+
 /* ---------- Планшет: макета нет, правила выведены из токенов ---------- */
 @media (max-width: 1180px) {
   :root { --pad: 28px; }
@@ -583,4 +617,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .spec { grid-template-columns: 1fr; gap: 4px; }
   .btn { width: 100%; }
   .buy-row .btn-primary { min-width: 0; }
+  .cookie-banner { bottom: 0; left: 0; transform: none; width: 100%; padding: 20px 18px; gap: 16px; }
+  .cookie-actions { width: 100%; }
+  .cookie-banner .btn { flex: 1; width: auto; }
 }

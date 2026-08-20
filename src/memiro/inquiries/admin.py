@@ -46,6 +46,7 @@ class InquiryAdmin(admin.ModelAdmin):
         "comment",
         "source",
         "consent",
+        "consent_version",
         "created_at",
     )
     fields: ClassVar = [
@@ -56,6 +57,7 @@ class InquiryAdmin(admin.ModelAdmin):
         "comment",
         "source",
         "consent",
+        "consent_version",
         "is_processed",
     ]
     inlines = (InquiryItemInline,)

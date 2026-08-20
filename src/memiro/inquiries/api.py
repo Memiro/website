@@ -17,6 +17,7 @@ from memiro.catalog.models import Product
 from memiro.inquiries.limits import MAX_ITEMS, MIN_PHONE_DIGITS
 from memiro.inquiries.models import Inquiry, InquiryItem
 from memiro.inquiries.notifications import notify
+from memiro.legal.privacy import PRIVACY_VERSION
 
 # Телефон принимаем в любом человеческом написании: цифры, скобки,
 # плюс, пробелы и дефисы. Нормализацией занимается менеджер, не сайт
@@ -187,6 +188,7 @@ class InquiryController(Controller[PydanticSerializer]):
                 comment=payload.comment,
                 source=payload.source,
                 consent=payload.consent,
+                consent_version=PRIVACY_VERSION,
             )
             InquiryItem.objects.bulk_create(
                 InquiryItem(

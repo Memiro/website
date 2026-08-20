@@ -34,9 +34,18 @@
           <a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
         </div>
       </div>
+      {# Реквизиты продавца — обязательная информация о продавце
+         (п. 18 ПП РФ 2463); заполняет владелец в legal/seller.py #}
+      <div class="contact-block">
+        <h3>Реквизиты продавца</h3>
+        {% include "legal/_seller.html" %}
+        <p class="muted"><a href="{% url 'privacy' %}">Политика обработки
+          персональных данных</a></p>
+      </div>
     </div>
     {% comment %}Карта грузится по клику: виджет Яндекса ставит куки,
-    а согласия до нажатия нет (механика согласий — тикет 10){% endcomment %}
+    а согласия до нажатия нет. Своё локальное согласие, не cookie-баннер:
+    карта нужна не всем, баннер — про аналитику (ADR-0006){% endcomment %}
     <div class="contacts-map" data-map data-map-src="{{ contacts.map_embed }}"
          data-map-title="Шоурум memiro на карте: {{ contacts.address }}">
       <div class="map-placeholder">

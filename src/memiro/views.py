@@ -101,6 +101,17 @@ STATIC_PAGES = (
         ),
     ),
     StaticPage(
+        route="privacy",
+        template="pages/privacy.html",
+        crumb="Политика обработки персональных данных",
+        title="Политика обработки персональных данных",
+        description=(
+            "Как студия memiro обрабатывает персональные данные "
+            "посетителей сайта: состав данных, цели и сроки хранения, "
+            "cookie и Яндекс.Метрика, права субъекта и отзыв согласия."
+        ),
+    ),
+    StaticPage(
         route="contacts",
         template="pages/contacts.html",
         crumb="Контакты",

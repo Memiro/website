@@ -30,6 +30,8 @@
     {% endif %}
 
     <p class="landing-all"><a class="link-underline" href="{% url 'category' category.slug %}">Весь раздел «{{ category.name }}» →</a></p>
+
+    {% include "legal/_offer_note.html" %}
   </main>
 </div>
 {% endblock %}

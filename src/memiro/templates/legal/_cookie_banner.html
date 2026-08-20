@@ -1,0 +1,22 @@
+{% load static %}
+{# Cookie-баннер с активным действием: пассивный «продолжая пользоваться»
+   по практике РКН 2025 не защищает. Выбор уезжает в cookie, а решение
+   о загрузке Метрики принимает сервер (memiro/legal/consent.py) #}
+<div class="cookie-banner" data-cookie-banner role="dialog"
+     aria-label="Файлы cookie и аналитика"
+     data-cookie="{{ cookie_choice.cookie }}"
+     data-accepted="{{ cookie_choice.accepted }}"
+     data-declined="{{ cookie_choice.declined }}"
+     data-max-age="{{ cookie_choice.max_age }}">
+  <p class="cookie-text">Мы хотим подключить Яндекс.Метрику, чтобы видеть,
+    как посетители пользуются сайтом. Она сохраняет файлы cookie и передаёт
+    обезличенную статистику. Без вашего согласия аналитика не загружается —
+    подробности в <a href="{% url 'privacy' %}#cookie">политике обработки
+    персональных данных</a>.</p>
+  <div class="cookie-actions">
+    <button class="btn btn-primary" type="button" data-cookie-accept>Принять</button>
+    <button class="btn btn-ghost" type="button" data-cookie-decline>Отклонить</button>
+  </div>
+</div>
+{# Скрипт нужен ровно там, где есть баннер, — поэтому едет вместе с ним #}
+<script src="{% static 'js/cookies.js' %}" defer></script>

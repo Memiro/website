@@ -38,6 +38,10 @@
       <span class="price-note">цена минимальной конфигурации</span>
     </div>
 
+    {# Дисклеймер у цены — и у результата калькулятора, когда он приедет
+       тикетом 06: расчёт покажется в этом же блоке #}
+    {% include "legal/_offer_note.html" %}
+
     {# Конфигуратор приедет тикетом 06; корзина и заявка — тикет 07 #}
     <div class="buy-row">
       <button class="btn btn-primary" type="button" data-toggle="cart" data-product="{{ product.pk }}"

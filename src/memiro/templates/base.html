@@ -93,14 +93,18 @@
         <li><a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a></li>
         <li>{{ contacts.address }}</li>
       </ul>
+      {# Реквизиты продавца обязаны быть на витрине (п. 18 ПП РФ 2463) #}
+      {% include "legal/_seller.html" %}
     </div>
   </div>
   <div class="wrap footer-bottom">
     <span>© memiro, 2026</span>
-    {# Ссылка на политику ПД появится вместе с самой страницей — тикет 10 #}
+    <a href="{% url 'privacy' %}">Политика обработки персональных данных</a>
     <span>Санкт-Петербург</span>
   </div>
 </footer>
+
+{% if cookie_choice.needed %}{% include "legal/_cookie_banner.html" %}{% endif %}
 
 {# Сообщения корзины и избранного: одна живая область на страницу #}
 <p class="shop-note" data-shop-note aria-live="polite" hidden></p>
@@ -110,5 +114,7 @@
 <script src="{% static 'js/site.js' %}" defer></script>
 <script src="{% static 'js/shop.js' %}" defer></script>
 {% block scripts %}{% endblock %}
+{# Аналитика — последней и только с согласия (memiro/legal/consent.py) #}
+{% if metrika_id %}{% include "legal/_metrika.html" %}{% endif %}
 </body>
 </html>
