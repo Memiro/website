@@ -24,8 +24,11 @@ uv run python .scratch/new-site/visual/publish.py     # временно пуб�
 uv run python manage.py runserver 127.0.0.1:8009 --noreload &
 uv run --with playwright python .scratch/new-site/visual/shots.py /tmp/shots
 uv run --with playwright python .scratch/new-site/visual/measure.py
+uv run --with playwright python .scratch/new-site/visual/tiles.py /tmp/tiles
 cp /tmp/db.bak db.sqlite3                             # вернуть черновики
 ```
+
+`shots.py` снимает двенадцать адресов на трёх ширинах, `measure.py` ищет горизонтальное переполнение и потерянные боковые поля, `tiles.py` разбирает блок плиток главной (порядок, адреса, обложки — тикет 14).
 
 ## Чего не делать
 
