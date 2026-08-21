@@ -10,74 +10,87 @@ import pytest
 
 from memiro.pricing import (
     Configuration,
+    Price,
     PriceEngine,
     PriceLine,
-    Tariff,
+    PricingThresholds,
+    SelectedValue,
     Unit,
     calculate_price,
 )
 
+# Ожидаемые числа отдельных тестов: у таблицы они приходят параметром
+ROUNDED_TOTAL = 8400
+SQUARE_METRE_OF_GLASS = 4000
+FLAT_RATE = 9900
 
-def money(value: str | int) -> Decimal:
-    return Decimal(value)
-
-
-NO_MINIMUM = money(0)
-MIN_AREA = money("0.25")
+NO_THRESHOLDS = PricingThresholds()
+MIN_AREA = PricingThresholds(min_area_m2=Decimal("0.25"))
+MIN_ORDER = PricingThresholds(
+    min_area_m2=Decimal("0.25"), min_order_total=15000
+)
 
 # Полотно и кромка режутся по контуру — их и умножает коэффициент формы
-GLASS = Tariff(
+GLASS = SelectedValue(
     label="Полотно",
     unit=Unit.SQUARE_METER,
-    rate=money(4000),
+    rate=Decimal(4000),
     scaled_by_shape=True,
 )
-EDGE = Tariff(
+EDGE = SelectedValue(
     label="Обработка кромки",
     unit=Unit.LINEAR_METER,
-    rate=money(700),
+    rate=Decimal(700),
     scaled_by_shape=True,
 )
-CONTOUR = Tariff(
+CONTOUR = SelectedValue(
     label="Контурная подсветка",
     unit=Unit.LINEAR_METER,
-    rate=money(2500),
+    rate=Decimal(2500),
 )
-FRONTAL = Tariff(
+FRONTAL = SelectedValue(
     label="Фронтальная подсветка",
     unit=Unit.SQUARE_METER,
-    rate=money(1200),
+    rate=Decimal(1200),
 )
-SWITCH = Tariff(label="Выключатель", unit=Unit.PIECE, rate=money(1500))
-HEATING = Tariff(label="Подогрев", unit=Unit.PIECE, rate=money(3500))
-THREE_IN_ONE = Tariff(label="3 в 1", unit=Unit.PIECE, rate=money(900))
-CUTOUTS = Tariff(label="Вырез", unit=Unit.PIECE, rate=money(500), quantity=2)
-ROUND_SHAPE = Tariff(label="Круглое", unit=Unit.FACTOR, rate=money("1.5"))
+SWITCH = SelectedValue(
+    label="Выключатель", unit=Unit.PIECE, rate=Decimal(1500)
+)
+HEATING = SelectedValue(label="Подогрев", unit=Unit.PIECE, rate=Decimal(3500))
+THREE_IN_ONE = SelectedValue(label="3 в 1", unit=Unit.PIECE, rate=Decimal(900))
+CUTOUTS = SelectedValue(
+    label="Вырез", unit=Unit.PIECE, rate=Decimal(500), quantity=2
+)
+ROUND_SHAPE = SelectedValue(
+    label="Круглое", unit=Unit.FACTOR, rate=Decimal("1.5")
+)
 # Значение справочника без тарифа: описывает изделие, но денег не стоит
-COLD_LIGHT = Tariff(label="Холодный свет")
+COLD_LIGHT = SelectedValue(label="Холодный свет")
+
+
+def charged(price: Price) -> Decimal:
+    """Сумма статей до округления итога."""
+    return sum((line.amount for line in price.lines), Decimal(0))
 
 
 @pytest.mark.parametrize(
-    ("configuration", "min_area_m2", "min_order_total", "expected"),
+    ("configuration", "thresholds", "expected"),
     [
         pytest.param(
             Configuration(1900, 400, (GLASS, EDGE)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             6300,
             id="напольное 0,76 м² — 4,60 пог. м кромки",
         ),
         pytest.param(
             Configuration(870, 870, (GLASS, EDGE)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             5500,
             id="квадратное 0,76 м² — 3,48 пог. м кромки",
         ),
         pytest.param(
             Configuration(870, 870, (GLASS, EDGE, CONTOUR, SWITCH)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             15700,
             id="прямой рез",
         ),
@@ -85,36 +98,31 @@ COLD_LIGHT = Tariff(label="Холодный свет")
             Configuration(
                 870, 870, (GLASS, EDGE, CONTOUR, SWITCH, ROUND_SHAPE)
             ),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             18400,
             id="криволинейный рез — плюс половина стекла с кромкой",
         ),
         pytest.param(
             Configuration(400, 400, (GLASS,)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             700,
             id="без порога площади считается 0,16 м²",
         ),
         pytest.param(
             Configuration(400, 400, (GLASS,)),
             MIN_AREA,
-            0,
             1000,
             id="маленькое зеркало считается по минимальной площади",
         ),
         pytest.param(
             Configuration(400, 400, (GLASS,)),
-            MIN_AREA,
-            15000,
+            MIN_ORDER,
             15000,
             id="итог поднят до минимальной суммы заказа",
         ),
         pytest.param(
             Configuration(500, 500, (GLASS,)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             1000,
             id="кратный сотне итог округление не трогает",
         ),
@@ -123,50 +131,44 @@ COLD_LIGHT = Tariff(label="Холодный свет")
                 500,
                 500,
                 (
-                    Tariff(
+                    SelectedValue(
                         label="Полотно",
                         unit=Unit.SQUARE_METER,
-                        rate=money(4001),
+                        rate=Decimal(4001),
                     ),
                 ),
             ),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             1100,
             id="1 000,25 ₽ — вверх до сотни, а не к ближайшей",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, COLD_LIGHT)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             4000,
             id="значение без тарифа бесплатно",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, THREE_IN_ONE)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             4900,
             id="температура стоит денег только у «3 в 1»",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, CONTOUR, HEATING)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             17500,
             id="не выбранная кнопка не оплачивается",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, CONTOUR, HEATING, SWITCH)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             19000,
             id="выбранная кнопка оплачивается",
         ),
         pytest.param(
             Configuration(1000, 1000, (CUTOUTS,)),
-            NO_MINIMUM,
-            0,
+            NO_THRESHOLDS,
             1000,
             id="два выреза стоят вдвое",
         ),
@@ -174,24 +176,19 @@ COLD_LIGHT = Tariff(label="Холодный свет")
 )
 def test_price_of_a_configuration(
     configuration: Configuration,
-    min_area_m2: Decimal,
-    min_order_total: int,
+    thresholds: PricingThresholds,
     expected: int,
 ) -> None:
-    priced = calculate_price(
-        configuration,
-        min_area_m2=min_area_m2,
-        min_order_total=min_order_total,
-    )
+    priced = calculate_price(configuration, thresholds=thresholds)
 
     assert priced.total == expected
 
 
 def test_shape_factor_spares_illumination_and_pieces() -> None:
     """Коэффициент формы умножает стекло и кромку — и только их."""
-    tariffs = (GLASS, EDGE, CONTOUR, SWITCH)
-    straight = calculate_price(Configuration(870, 870, tariffs))
-    curved = calculate_price(Configuration(870, 870, (*tariffs, ROUND_SHAPE)))
+    values = (GLASS, EDGE, CONTOUR, SWITCH)
+    straight = calculate_price(Configuration(870, 870, values))
+    curved = calculate_price(Configuration(870, 870, (*values, ROUND_SHAPE)))
 
     untouched = {CONTOUR.label, SWITCH.label}
     assert [line for line in curved.lines if line.label in untouched] == [
@@ -200,12 +197,24 @@ def test_shape_factor_spares_illumination_and_pieces() -> None:
 
 
 def test_combined_illumination_is_contour_plus_frontal() -> None:
-    """Комбинированная — обе строки сразу, без собственного тарифа."""
-    contour = calculate_price(Configuration(1000, 1000, (CONTOUR,)))
-    frontal = calculate_price(Configuration(1000, 1000, (FRONTAL,)))
-    combined = calculate_price(Configuration(1000, 1000, (CONTOUR, FRONTAL)))
+    """Комбинированная — обе строки сразу, без собственного тарифа.
 
-    assert combined.total == contour.total + frontal.total
+    Сравниваются статьи, а не итоги: округление вверх до сотни трижды
+    сделало бы равенство случайным.
+    """
+    contour = calculate_price(Configuration(1370, 940, (CONTOUR,)))
+    frontal = calculate_price(Configuration(1370, 940, (FRONTAL,)))
+    combined = calculate_price(Configuration(1370, 940, (CONTOUR, FRONTAL)))
+
+    assert charged(combined) == charged(contour) + charged(frontal)
+
+
+def test_lines_are_exact_and_only_the_total_is_rounded() -> None:
+    """ADR округляет итог, а не статьи: копейки складываются как есть."""
+    priced = calculate_price(Configuration(1370, 940, (GLASS, EDGE)))
+
+    assert charged(priced) == Decimal("8385.20")
+    assert priced.total == ROUNDED_TOTAL
 
 
 def test_breakdown_labels_every_charged_line() -> None:
@@ -219,17 +228,34 @@ def test_breakdown_labels_every_charged_line() -> None:
     )
 
     assert priced.lines == (
-        PriceLine(label="Полотно", amount=money(6000)),
-        PriceLine(label="Контурная подсветка", amount=money(10000)),
+        PriceLine(label="Полотно", amount=Decimal(6000)),
+        PriceLine(label="Контурная подсветка", amount=Decimal(10000)),
     )
 
 
 @pytest.mark.parametrize(("width", "height"), [(0, 600), (600, 0), (-1, 600)])
 def test_a_mirror_without_size_is_not_a_price(width: int, height: int) -> None:
     with pytest.raises(ValueError, match="размер"):
-        calculate_price(Configuration(width, height, (GLASS,)))
+        Configuration(width, height, (GLASS,))
 
 
 def test_the_engine_is_replaceable() -> None:
-    """Формула подменяема: витрина зовёт роль, а не реализацию."""
-    assert isinstance(calculate_price, PriceEngine)
+    """Формула подменяема: вызывающий зовёт роль, а не реализацию.
+
+    Подпись держит mypy — обе функции присвоены переменной роли;
+    вызов показывает, что вызывающему хватает протокола.
+    """
+
+    def flat_rate(
+        configuration: Configuration,
+        *,
+        thresholds: PricingThresholds = NO_THRESHOLDS,
+    ) -> Price:
+        return Price(total=FLAT_RATE, lines=())
+
+    canonical: PriceEngine = calculate_price
+    replacement: PriceEngine = flat_rate
+    square = Configuration(1000, 1000, (GLASS,))
+
+    assert canonical(square).total == SQUARE_METRE_OF_GLASS
+    assert replacement(square).total == FLAT_RATE
