@@ -91,8 +91,10 @@ fix = true
 select = ["ALL"]
 ignore = ["D", "CPY001", "A005", "COM812"]
 # Russian text in string literals (product and test data): Cyrillic that
-# looks like Latin is just Russian letters, not a layout typo
+# looks like Latin is just Russian letters, not a layout typo. `×` is the
+# multiplication sign in mirror sizes («800 × 600 мм») — typography, not `x`
 allowed-confusables = [
+    "×",
     "а", "б", "г", "е", "з", "к", "о", "р", "с", "у", "х",
     "А", "В", "Е", "З", "К", "М", "Н", "О", "Р", "С", "Т", "У", "Х",
 ]

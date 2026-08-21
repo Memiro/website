@@ -42,6 +42,23 @@
        тикетом 06: расчёт покажется в этом же блоке{% endcomment %}
     {% include "legal/_offer_note.html" %}
 
+    {% if variants %}
+    <div class="variants">
+      <h2>Типовые размеры</h2>
+      <table>
+        <tbody>
+          {% for variant in variants %}
+          <tr>
+            <th scope="row">{{ variant.size_label }}</th>
+            <td>{{ variant.values_label }}</td>
+            <td class="variant-price">{{ variant.price|rub }} ₽</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
     {# Конфигуратор приедет тикетом 06; корзина и заявка — тикет 07 #}
     <div class="buy-row">
       <button class="btn btn-primary" type="button" data-toggle="cart" data-product="{{ product.pk }}"

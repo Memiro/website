@@ -2,7 +2,11 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.forms import BaseInlineFormSet, ModelForm
+from django.forms import (
+    BaseInlineFormSet,
+    ModelForm,
+    ModelMultipleChoiceField,
+)
 from django.utils.html import format_html
 
 if TYPE_CHECKING:
@@ -10,6 +14,7 @@ if TYPE_CHECKING:
     from django.db.models.fields.files import ImageFieldFile
     from django.http import HttpRequest
 
+from .formatting import rub
 from .models import (
     MAX_LANDING_CONDITIONS,
     Attribute,
@@ -21,6 +26,7 @@ from .models import (
     Product,
     ProductAttribute,
     ProductImage,
+    ProductVariant,
 )
 
 
@@ -179,6 +185,90 @@ class ProductAttributeInline(admin.TabularInline):
     extra = 1
 
 
+def _check_one_value_per_attribute(values: list[AttributeValue]) -> None:
+    """Два значения одного атрибута — не вариант, а два варианта."""
+    seen: set[int] = set()
+    for value in values:
+        if value.attribute_id in seen:
+            message = "«%(name)s» у варианта один — заведите второй вариант."
+            raise ValidationError(
+                message, params={"name": value.attribute.name}
+            )
+        seen.add(value.attribute_id)
+
+
+class ProductVariantFormSet(BaseInlineFormSet):
+    def clean(self) -> None:
+        super().clean()
+        for row in _kept_rows(self):
+            values = list(row.get("values") or ())
+            attributes = [value.attribute for value in values]
+            _check_own_category(attributes, self.instance.category_id)
+            _check_one_value_per_attribute(values)
+
+
+class AttributeValueChoiceField(ModelMultipleChoiceField):
+    """Значения справочника с названием атрибута в подписи.
+
+    В списке варианта значения всех атрибутов категории лежат
+    вперемешку, и `__str__` там читается двусмысленно.
+    """
+
+    def label_from_instance(self, obj: AttributeValue) -> str:
+        return obj.full_label
+
+
+def _category_values(category_id: int | None) -> QuerySet[AttributeValue]:
+    """Значения справочника одной категории, сгруппированные атрибутом."""
+    values = AttributeValue.objects.select_related("attribute").order_by(
+        "attribute__order", "attribute__name", "order", "value"
+    )
+    if category_id is None:
+        return values
+    return values.filter(attribute__category_id=category_id)
+
+
+class ProductVariantInline(admin.TabularInline):
+    """Предпосчитанные варианты правятся в карточке товара.
+
+    Цены среди полей нет: её считает движок из справочника, и вторая
+    правда о цене товару не нужна (тикет 17).
+    """
+
+    model = ProductVariant
+    formset = ProductVariantFormSet
+    extra = 1
+    readonly_fields = ("computed_price",)
+
+    def get_formset(
+        self,
+        request: HttpRequest,
+        obj: Product | None = None,
+        **kwargs: object,
+    ) -> type[BaseInlineFormSet]:
+        """Выбирать вариант можно только из атрибутов своей категории.
+
+        У ещё не заведённого товара категории нет — там список полный,
+        а чужое значение отвергает формсет.
+        """
+        formset = super().get_formset(request, obj, **kwargs)
+        values = formset.form.base_fields["values"]
+        formset.form.base_fields["values"] = AttributeValueChoiceField(
+            queryset=_category_values(obj.category_id if obj else None),
+            required=False,
+            label=values.label,
+            widget=values.widget,
+        )
+        return formset
+
+    @admin.display(description="цена (считается по тарифам)")
+    def computed_price(self, obj: ProductVariant) -> str:
+        # Пустая строка инлайна ещё не сохранена — считать нечего
+        if not obj.pk:
+            return "—"
+        return f"{rub(obj.price)} ₽"
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -195,7 +285,11 @@ class ProductAdmin(admin.ModelAdmin):
     search_fields = ("name", "article")
     prepopulated_fields: ClassVar = {"slug": ("name",)}
     readonly_fields = ("preview_small", "preview_large")
-    inlines = (ProductImageInline, ProductAttributeInline)
+    inlines = (
+        ProductImageInline,
+        ProductAttributeInline,
+        ProductVariantInline,
+    )
 
     @admin.display(description="превью малого фото")
     def preview_small(self, obj: Product) -> str:

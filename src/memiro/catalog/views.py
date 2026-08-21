@@ -142,6 +142,9 @@ def product(
         {
             "product": product,
             "specs": specs,
+            # Предпосчитанные варианты в порядке, заданном владельцем;
+            # цена у них уже посчитана (тикет 17)
+            "variants": product.variants.prefetch_related("values"),
             "related": related,
             "gallery": list(product.gallery.all()),
             "canonical": request.build_absolute_uri(request.path),

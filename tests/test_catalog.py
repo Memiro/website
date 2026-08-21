@@ -38,6 +38,8 @@ def product_payload(category: Category, **extra: object) -> dict[str, object]:
         "gallery-INITIAL_FORMS": "0",
         "attribute_values-TOTAL_FORMS": "0",
         "attribute_values-INITIAL_FORMS": "0",
+        "variants-TOTAL_FORMS": "0",
+        "variants-INITIAL_FORMS": "0",
         "_save": "",
     }
     payload.update(extra)

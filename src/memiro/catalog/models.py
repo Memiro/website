@@ -199,6 +199,14 @@ class AttributeValue(models.Model):
         validators=[MinValueValidator(Decimal(0))],
         help_text="Рубли за единицу; для коэффициента — множитель.",
     )
+    # Коэффициент формы умножает то, что режется по контуру, — полотно и
+    # обработку кромки. Контурная лента меряется тем же погонным метром,
+    # но на криволинейном резе дороже не становится, и одной единицей
+    # расхода эти два случая не различить (ADR-0007, тикет 16)
+    scaled_by_shape = models.BooleanField(
+        "умножается коэффициентом формы",
+        default=False,
+    )
     order = models.PositiveIntegerField("порядок", default=0)
 
     class Meta:
@@ -215,8 +223,25 @@ class AttributeValue(models.Model):
     def __str__(self) -> str:
         return self.value
 
+    @property
+    def full_label(self) -> str:
+        """Значение с названием атрибута: «Тип полотна: Серебро».
+
+        Одним словом «Серебро» не понять, полотно это или рама. Так
+        значение подписано и в списке варианта в админке, и в строке
+        разложения цены, из которой эндпоинт расчёта соберёт подписи
+        доплат покупателю.
+        """
+        return f"{self.attribute.name}: {self.value}"
+
     def clean(self) -> None:
         """Тариф — пара: половина ставки молча считалась бы нулём."""
+        if self.scaled_by_shape and self.unit in {"", self.Unit.FACTOR}:
+            message = (
+                "Коэффициент формы умножает статью расхода — "
+                "у бесплатного значения и у самого коэффициента её нет."
+            )
+            raise ValidationError({"scaled_by_shape": message})
         if bool(self.unit) == (self.rate is not None):
             return
         field, message = (
@@ -483,6 +508,74 @@ class ProductAttribute(models.Model):
         )
         if errors:
             raise ValidationError(errors)
+
+
+# Габариты варианта в подписи: «800 × 600 мм»
+SIZE_SEPARATOR = " × "
+
+
+class ProductVariant(models.Model):
+    """Предпосчитанный вариант: размеры плюс значения атрибутов.
+
+    Точка расчёта, а не товар (CONTEXT.md): своего адреса, фото и места
+    в каталоге у варианта нет, в sitemap он не попадает.
+
+    Цену владелец не вводит — её считает движок из тех же тарифов, что
+    и калькулятор (`catalog.repricing`), иначе таблица на карточке и
+    расчёт разошлись бы на одних и тех же параметрах.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        verbose_name="товар",
+        on_delete=models.CASCADE,
+        related_name="variants",
+    )
+    width_mm = models.PositiveIntegerField(
+        "ширина, мм",
+        validators=[MinValueValidator(1)],
+    )
+    height_mm = models.PositiveIntegerField(
+        "высота, мм",
+        validators=[MinValueValidator(1)],
+    )
+    # Чем вариант отличается от умолчаний товара: полотно, крепление,
+    # подогрев. Значения атрибутов, которых здесь нет, вариант берёт
+    # у товара. Через-модели у связи нет намеренно: вложенный инлайн
+    # админка не умеет, а варианты правятся в карточке товара
+    values = models.ManyToManyField(
+        AttributeValue,
+        verbose_name="значения атрибутов",
+        related_name="variant_selections",
+        blank=True,
+    )
+    # editable=False: поле не попадает ни в одну форму — ни в админскую,
+    # ни в чью-либо ещё. Пересчёт живёт в `catalog.repricing`
+    price = models.PositiveIntegerField("цена, ₽", default=0, editable=False)
+    order = models.PositiveIntegerField("порядок", default=0)
+
+    class Meta:
+        verbose_name = "предпосчитанный вариант"
+        verbose_name_plural = "предпосчитанные варианты"
+        ordering = ("order", "pk")
+
+    def __str__(self) -> str:
+        return f"{self.size_label} — {self.product}"
+
+    @property
+    def size_label(self) -> str:
+        """Габариты строкой — так размер и печатается на карточке."""
+        return f"{self.width_mm}{SIZE_SEPARATOR}{self.height_mm} мм"
+
+    @property
+    def values_label(self) -> str:
+        """Чем вариант отличается от умолчаний товара — одной строкой.
+
+        Без названий атрибутов, в отличие от `AttributeValue.full_label`:
+        покупатель смотрит на зеркало и читает «Серебро», а не
+        «Тип полотна: Серебро».
+        """
+        return ", ".join(str(value) for value in self.values.all())
 
 
 # Посадочная сужает категорию одним-двумя значениями (ADR-0003):
