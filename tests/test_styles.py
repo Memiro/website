@@ -14,27 +14,31 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
-import memiro
+from django.conf import settings as django_settings
 
-TEMPLATES = Path(memiro.__file__).parent / "templates"
-SITE_CSS = Path(memiro.__file__).parent / "static" / "css" / "site.css"
-
-# `class="wrap footer-grid"` и прочие соседи по одному атрибуту
-CLASS_ATTR = re.compile(r'class="([^"]*\bwrap\b[^"]*)"')
-# `.footer-grid { ... }` — правило одного класса без комбинаторов
-RULE = re.compile(r"\.([a-z0-9-]+)\s*\{([^}]*)\}", re.IGNORECASE)
+# `class="wrap footer-grid"` и прочие соседи по одному атрибуту.
+# Кавычки любые: Django-шаблоны допускают и одинарные
+CLASS_ATTR = re.compile(r"""class=["']([^"']*\bwrap\b[^"']*)["']""")
+# Селектор правила целиком: `.footer-grid {` и `.grid-4, .grid-3 {`.
+# Классы вынимаются из всего списка — иначе проверялся бы только
+# последний перед скобкой, и правило на два селектора прошло бы молча
+RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+CLASS_IN_SELECTOR = re.compile(r"\.([a-z0-9-]+)", re.IGNORECASE)
 # `padding: 26px 0` — шорткат; `padding-top` под него не подходит
 PADDING_SHORTHAND = re.compile(r"(?<!-)\bpadding\s*:")
 
 
 def wrap_companions() -> set[str]:
     """Классы, которые в разметке стоят в одном атрибуте с `wrap`."""
+    # Каталог шаблонов берётся рядом со статикой: `settings.TEMPLATES`
+    # типизирован как `object` и mypy его не индексирует, а `STATICFILES_DIRS`
+    # — тот же `PACKAGE_DIR`, что и `DIRS` у движка шаблонов
+    templates = django_settings.STATICFILES_DIRS[0].parent / "templates"
     return {
         name
-        for path in TEMPLATES.rglob("*.html")
-        for attr in CLASS_ATTR.findall(path.read_text())
+        for path in templates.rglob("*.html")
+        for attr in CLASS_ATTR.findall(path.read_text(encoding="utf-8"))
         for name in attr.split()
         if name != "wrap"
     }
@@ -42,12 +46,14 @@ def wrap_companions() -> set[str]:
 
 def test_wrap_companions_keep_side_padding() -> None:
     companions = wrap_companions()
-    css = SITE_CSS.read_text()
+    stylesheet = django_settings.STATICFILES_DIRS[0] / "css" / "site.css"
+    css = stylesheet.read_text(encoding="utf-8")
 
     offenders = [
-        f".{selector} {{{body.strip()[:60]}…}}"
+        f"{selector.strip()} {{{body.strip()[:60]}…}}"
         for selector, body in RULE.findall(css)
-        if selector in companions and PADDING_SHORTHAND.search(body)
+        if PADDING_SHORTHAND.search(body)
+        and companions & set(CLASS_IN_SELECTOR.findall(selector))
     ]
 
     assert not offenders, (

@@ -654,11 +654,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .cart-row { grid-template-columns: 72px 1fr; gap: 8px 16px; padding: 16px; }
   .cart-pic { width: 72px; height: 80px; }
   .cart-price, .cart-drop { grid-column: 2; justify-self: start; }
-  /* Избранное — сетка, а не карусель: это страница подборки, а не лента */
-  .favorites-grid {
-    grid-auto-flow: row; grid-template-columns: 1fr 1fr; overflow: visible;
-    margin: 40px 0 0; padding: 0;
-  }
   .card-actions { padding: 0 16px 18px; }
   .footer { margin-top: 38px; }
   .footer-grid { grid-template-columns: 1fr; gap: 30px; padding-top: 44px; padding-bottom: 28px; }
