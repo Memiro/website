@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.core.exceptions import ValidationError
@@ -8,8 +9,6 @@ from django.db import models
 from django.urls import Resolver404, resolve, reverse
 
 if TYPE_CHECKING:
-    from decimal import Decimal
-
     from django.db.models.fields.files import ImageFieldFile
 
 
@@ -59,6 +58,23 @@ class Attribute(models.Model):
         choices=Kind.choices,
         default=Kind.CHOICE,
     )
+    # Кнопки не бывает без подсветки или подогрева (ADR-0007). Родителей
+    # несколько именно поэтому: условие «или», а не «и» — товару хватает
+    # одного из них. Пусто — атрибут самостоятелен
+    parents = models.ManyToManyField(
+        "self",
+        verbose_name="существует только при",
+        symmetrical=False,
+        related_name="children",
+        blank=True,
+    )
+    # Тип полотна, подогрев и крепление покупатель меняет в калькуляторе;
+    # подсветка, рама и форма описывают модель. В расчёт входят и те,
+    # и другие — признак говорит лишь, кто их выбирает
+    is_customer_editable = models.BooleanField(
+        "меняет покупатель",
+        default=False,
+    )
     order = models.PositiveIntegerField("порядок", default=0)
 
     class Meta:
@@ -77,6 +93,40 @@ class Attribute(models.Model):
 
     def belongs_to(self, category_id: int | None) -> bool:
         return self.category_id == category_id
+
+    def depends_on(self, other: Attribute) -> bool:
+        """Атрибут опирается на другой — прямо или через цепочку."""
+        seen: set[int] = set()
+        queue = list(self.parents.all())
+        while queue:
+            parent = queue.pop()
+            if parent.pk == other.pk:
+                return True
+            if parent.pk in seen:
+                continue
+            seen.add(parent.pk)
+            queue.extend(parent.parents.all())
+        return False
+
+    def missing_parent_error(
+        self, present_attribute_ids: set[int]
+    ) -> str | None:
+        """Объясняет, почему атрибут здесь осиротел, — или молчит.
+
+        Набор атрибутов товара известен целиком только там, где
+        сохраняется товар: родителя и ребёнка владелец заводит одним
+        сохранением, и по одной строке судить нельзя.
+        """
+        parents = list(self.parents.all())
+        if not parents:
+            return None
+        if {parent.pk for parent in parents} & present_attribute_ids:
+            return None
+        names = ", ".join(f"«{parent.name}»" for parent in parents)
+        return (
+            f"«{self.name}» существует только при: {names} — "
+            "задайте у товара хотя бы один из них."
+        )
 
     def clean(self) -> None:
         """Категорию и тип атрибута, уже назначенного товарам, не сменить.
@@ -107,7 +157,18 @@ class Attribute(models.Model):
 
 
 class AttributeValue(models.Model):
-    """Значение из справочника атрибута типа «выбор из списка»."""
+    """Значение из справочника атрибута типа «выбор из списка».
+
+    Оно же — строка тарифа (ADR-0007): единица, в которой значение
+    расходуется, и ставка. Отдельной модели тарифов нет, чтобы владелец
+    не заводил подсветку дважды.
+    """
+
+    class Unit(models.TextChoices):
+        PIECE = "piece", "за штуку"
+        LINEAR_METER = "linear_meter", "за погонный метр"
+        SQUARE_METER = "square_meter", "за квадратный метр"
+        FACTOR = "factor", "коэффициент"
 
     attribute = models.ForeignKey(
         Attribute,
@@ -116,6 +177,24 @@ class AttributeValue(models.Model):
         related_name="values",
     )
     value = models.CharField("значение", max_length=100)
+    # Пустая единица со ставкой None — «бесплатно»: значение описывает
+    # товар, но денег не стоит (цвет рамы). Так же выглядят 425 значений,
+    # переехавших со старого сайта до заведения тарифов
+    unit = models.CharField(
+        "единица расхода",
+        max_length=12,
+        choices=Unit.choices,
+        blank=True,
+    )
+    rate = models.DecimalField(
+        "тариф",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal(0))],
+        help_text="Рубли за единицу; для коэффициента — множитель.",
+    )
     order = models.PositiveIntegerField("порядок", default=0)
 
     class Meta:
@@ -131,6 +210,62 @@ class AttributeValue(models.Model):
 
     def __str__(self) -> str:
         return self.value
+
+    def clean(self) -> None:
+        """Тариф — пара: половина ставки молча считалась бы нулём."""
+        if bool(self.unit) == (self.rate is not None):
+            return
+        field, message = (
+            ("rate", "Укажите ставку — с единицей расхода она обязательна.")
+            if self.unit
+            else ("unit", "Укажите единицу расхода: ставка без неё не тариф.")
+        )
+        raise ValidationError({field: message})
+
+
+class PricingSettings(models.Model):
+    """Параметры расчёта: минимальная площадь и минимальная сумма заказа.
+
+    Данные, а не константы в коде (ADR-0007): маленькое зеркало считается
+    по минимальной площади, а итог не опускается ниже минимальной суммы —
+    оба порога владелец меняет сам. Строка одна на сайт.
+    """
+
+    SINGLETON_PK = 1
+
+    # 0,25 м² — обычная минимальная площадь обработки у стекольных
+    # производств; владелец правит под свою
+    min_area_m2 = models.DecimalField(
+        "минимальная площадь расчёта, м²",
+        max_digits=5,
+        decimal_places=3,
+        default=Decimal("0.250"),
+        validators=[MinValueValidator(Decimal(0))],
+    )
+    min_order_total = models.PositiveIntegerField(
+        "минимальная сумма заказа, ₽",
+        default=0,
+    )
+
+    class Meta:
+        verbose_name = "параметры расчёта"
+        verbose_name_plural = "параметры расчёта"
+
+    def __str__(self) -> str:
+        return "Параметры расчёта"
+
+    def save(self, *args: object, **kwargs: object) -> None:
+        """Строка всегда одна: второй набор порогов — вторая правда."""
+        self.pk = self.SINGLETON_PK
+        super().save(*args, **kwargs)  # type: ignore[arg-type]
+
+    @classmethod
+    def load(cls) -> PricingSettings:
+        """Пороги расчёта; при первом обращении заводятся со значениями
+        по умолчанию.
+        """
+        settings, _ = cls.objects.get_or_create(pk=cls.SINGLETON_PK)
+        return settings
 
 
 # Витринный порядок «сначала популярные»: один кортеж на весь проект

@@ -2,11 +2,13 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.forms import BaseInlineFormSet
+from django.forms import BaseInlineFormSet, ModelForm
 from django.utils.html import format_html
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
     from django.db.models.fields.files import ImageFieldFile
+    from django.http import HttpRequest
 
 from .models import (
     MAX_LANDING_CONDITIONS,
@@ -15,6 +17,7 @@ from .models import (
     Category,
     Landing,
     LandingCondition,
+    PricingSettings,
     Product,
     ProductAttribute,
     ProductImage,
@@ -42,12 +45,45 @@ class AttributeValueInline(admin.TabularInline):
     extra = 1
 
 
+class AttributeForm(ModelForm):
+    """Форма атрибута: родители — только свои по категории.
+
+    `parents` — связь многие-ко-многим, до сохранения модели её не
+    видно, поэтому проверка живёт здесь, а не в `Model.clean`.
+    """
+
+    def clean_parents(self) -> QuerySet[Attribute]:
+        parents: QuerySet[Attribute] = self.cleaned_data["parents"]
+        category = self.cleaned_data.get("category")
+        for parent in parents:
+            if parent.pk == self.instance.pk:
+                message = "Атрибут не зависит сам от себя."
+                raise ValidationError(message)
+            if category and not parent.belongs_to(category.pk):
+                message = "«%(name)s» — атрибут другой категории."
+                raise ValidationError(message, params={"name": parent.name})
+            # В кольце зависимостей не сохранить ни одного из атрибутов:
+            # каждому вечно не хватает другого
+            if self.instance.pk and parent.depends_on(self.instance):
+                message = "«%(name)s» уже опирается на этот атрибут."
+                raise ValidationError(message, params={"name": parent.name})
+        return parents
+
+
 @admin.register(Attribute)
 class AttributeAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "kind", "order")
-    list_filter = ("category", "kind")
+    form = AttributeForm
+    list_display = (
+        "name",
+        "category",
+        "kind",
+        "is_customer_editable",
+        "order",
+    )
+    list_filter = ("category", "kind", "is_customer_editable")
     list_editable = ("order",)
     prepopulated_fields: ClassVar = {"slug": ("name",)}
+    filter_horizontal = ("parents",)
     inlines = (AttributeValueInline,)
 
 
@@ -74,8 +110,13 @@ def _kept_rows(formset: BaseInlineFormSet) -> list[dict[str, Any]]:
     ]
 
 
+def _attributes(rows: list[dict[str, Any]]) -> list[Attribute]:
+    """Атрибуты оставшихся строк инлайна; незаполненные пропускаем."""
+    return [row["attribute"] for row in rows if row.get("attribute")]
+
+
 def _check_own_category(
-    rows: list[dict[str, Any]], category_id: int | None
+    attributes: list[Attribute], category_id: int | None
 ) -> None:
     """Атрибуты чужой категории в инлайне — ошибка.
 
@@ -84,17 +125,31 @@ def _check_own_category(
     """
     if not category_id:
         return
-    for row in rows:
-        attribute = row.get("attribute")
-        if attribute and not attribute.belongs_to(category_id):
+    for attribute in attributes:
+        if not attribute.belongs_to(category_id):
             message = "Атрибут «%(name)s» принадлежит другой категории."
             raise ValidationError(message, params={"name": attribute.name})
+
+
+def _check_parents(attributes: list[Attribute]) -> None:
+    """Значение атрибута-ребёнка без родителя — ошибка с объяснением.
+
+    Формсет знает весь набор атрибутов товара, поэтому родителя и
+    ребёнка владелец заводит одним сохранением.
+    """
+    present = {attribute.pk for attribute in attributes}
+    for attribute in attributes:
+        message = attribute.missing_parent_error(present)
+        if message:
+            raise ValidationError(message)
 
 
 class ProductAttributeFormSet(BaseInlineFormSet):
     def clean(self) -> None:
         super().clean()
-        _check_own_category(_kept_rows(self), self.instance.category_id)
+        attributes = _attributes(_kept_rows(self))
+        _check_own_category(attributes, self.instance.category_id)
+        _check_parents(attributes)
 
 
 class ProductAttributeInline(admin.TabularInline):
@@ -130,6 +185,26 @@ class ProductAdmin(admin.ModelAdmin):
         return _preview(obj.photo_large)
 
 
+@admin.register(PricingSettings)
+class PricingSettingsAdmin(admin.ModelAdmin):
+    """Пороги расчёта: одна строка на сайт, её правят, а не заводят."""
+
+    list_display = ("min_area_m2", "min_order_total")
+
+    def has_add_permission(
+        self,
+        request: HttpRequest,  # noqa: ARG002
+    ) -> bool:
+        return not PricingSettings.objects.exists()
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,  # noqa: ARG002
+        obj: PricingSettings | None = None,  # noqa: ARG002
+    ) -> bool:
+        return False
+
+
 class LandingConditionFormSet(BaseInlineFormSet):
     def clean(self) -> None:
         """Посадочная — категория и одно-два условия (ADR-0003).
@@ -147,7 +222,7 @@ class LandingConditionFormSet(BaseInlineFormSet):
             raise ValidationError(
                 message, params={"limit": MAX_LANDING_CONDITIONS}
             )
-        _check_own_category(kept, self.instance.category_id)
+        _check_own_category(_attributes(kept), self.instance.category_id)
 
 
 class LandingConditionInline(admin.TabularInline):

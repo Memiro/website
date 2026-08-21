@@ -1,3 +1,4 @@
+from decimal import Decimal
 from http import HTTPStatus
 
 import pytest
@@ -9,6 +10,7 @@ from memiro.catalog.models import (
     Attribute,
     AttributeValue,
     Category,
+    PricingSettings,
     Product,
     ProductAttribute,
 )
@@ -344,3 +346,273 @@ def test_assigned_attribute_is_protected_until_unassigned(
     assigned_attribute.delete()
 
     assert not AttributeValue.objects.exists()
+
+
+# --- Тарифы справочника (ADR-0007) ---
+
+LED_RATE = Decimal("2500.00")
+BUTTON_RATE = Decimal("1500.00")
+MIN_ORDER_TOTAL = 9000
+# «Подсветка» и «Кнопка», сохранённые одним submit
+PAIR = 2
+
+
+@pytest.fixture
+def lighting(category: Category) -> Attribute:
+    """Атрибут «Подсветка» с тарифицированным значением."""
+    attribute = Attribute.objects.create(
+        category=category,
+        name="Подсветка",
+        slug="podsvetka",
+        kind=Attribute.Kind.CHOICE,
+    )
+    AttributeValue.objects.create(
+        attribute=attribute,
+        value="Контурная",
+        unit=AttributeValue.Unit.LINEAR_METER,
+        rate=LED_RATE,
+    )
+    return attribute
+
+
+@pytest.fixture
+def button(category: Category, lighting: Attribute) -> Attribute:
+    """Атрибут «Кнопка»: без подсветки его не бывает."""
+    attribute = Attribute.objects.create(
+        category=category,
+        name="Кнопка",
+        slug="knopka",
+        kind=Attribute.Kind.CHOICE,
+    )
+    attribute.parents.add(lighting)
+    AttributeValue.objects.create(
+        attribute=attribute,
+        value="Сенсорная",
+        unit=AttributeValue.Unit.PIECE,
+        rate=BUTTON_RATE,
+    )
+    return attribute
+
+
+@pytest.mark.django_db
+def test_tariff_entered_in_admin(
+    admin_client: Client, category: Category
+) -> None:
+    """Владелец заводит тариф строкой справочника, и он читается обратно.
+
+    «Контурная подсветка — 2 500 ₽ за погонный метр»: ставка и единица
+    расхода вводятся там же, где значение, — отдельной модели нет.
+    """
+    attribute = Attribute.objects.create(
+        category=category,
+        name="Подсветка",
+        slug="podsvetka",
+        kind=Attribute.Kind.CHOICE,
+    )
+
+    response = admin_client.post(
+        f"/admin/catalog/attribute/{attribute.pk}/change/",
+        attribute_payload(
+            attribute,
+            **{
+                "values-TOTAL_FORMS": "1",
+                "values-0-value": "Контурная",
+                "values-0-unit": AttributeValue.Unit.LINEAR_METER.value,
+                "values-0-rate": str(LED_RATE),
+                "values-0-order": "0",
+            },
+        ),
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    value = AttributeValue.objects.get(attribute=attribute)
+    assert value.unit == AttributeValue.Unit.LINEAR_METER
+    assert value.rate == LED_RATE
+
+
+@pytest.mark.django_db
+def test_value_without_tariff_is_free(category: Category) -> None:
+    """Незаполненный тариф — «бесплатно», а не ошибка.
+
+    Иначе 425 значений перенесённых товаров не пережили бы миграцию.
+    """
+    attribute = Attribute.objects.create(
+        category=category,
+        name="Цвет рамы",
+        slug="cvet-ramy",
+        kind=Attribute.Kind.CHOICE,
+    )
+    value = AttributeValue(attribute=attribute, value="Чёрный")
+    value.full_clean()
+    value.save()
+
+    assert not value.unit
+    assert value.rate is None
+
+
+@pytest.mark.django_db
+def test_tariff_needs_unit_and_rate_together(category: Category) -> None:
+    """Ставка без единицы (и наоборот) — половина тарифа, её не сохранить."""
+    attribute = Attribute.objects.create(
+        category=category,
+        name="Форма",
+        slug="forma",
+        kind=Attribute.Kind.CHOICE,
+    )
+
+    with pytest.raises(ValidationError):
+        AttributeValue(
+            attribute=attribute, value="Круглое", rate=Decimal("1.5")
+        ).full_clean()
+    with pytest.raises(ValidationError):
+        AttributeValue(
+            attribute=attribute,
+            value="Круглое",
+            unit=AttributeValue.Unit.FACTOR,
+        ).full_clean()
+
+
+@pytest.mark.django_db
+def test_orphan_child_value_is_rejected(
+    admin_client: Client, category: Category, button: Attribute
+) -> None:
+    """Кнопка без подсветки не сохраняется, и админка объясняет почему."""
+    value = button.values.get()
+
+    response = admin_client.post(
+        "/admin/catalog/product/add/",
+        product_payload(
+            category,
+            **{
+                "attribute_values-TOTAL_FORMS": "1",
+                "attribute_values-0-attribute": str(button.pk),
+                "attribute_values-0-value_option": str(value.pk),
+            },
+        ),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert not Product.objects.exists()
+    assert "Подсветка" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_child_saved_together_with_parent(
+    admin_client: Client,
+    category: Category,
+    lighting: Attribute,
+    button: Attribute,
+) -> None:
+    """Родителя и ребёнка владелец заводит одним сохранением."""
+    response = admin_client.post(
+        "/admin/catalog/product/add/",
+        product_payload(
+            category,
+            **{
+                "attribute_values-TOTAL_FORMS": "2",
+                "attribute_values-0-attribute": str(lighting.pk),
+                "attribute_values-0-value_option": str(
+                    lighting.values.get().pk
+                ),
+                "attribute_values-1-attribute": str(button.pk),
+                "attribute_values-1-value_option": str(button.values.get().pk),
+            },
+        ),
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    saved = Product.objects.get(slug="luna")
+    assert saved.attribute_values.count() == PAIR
+
+
+@pytest.mark.django_db
+def test_foreign_category_parent_rejected(
+    admin_client: Client, lighting: Attribute, button: Attribute
+) -> None:
+    """Родитель из чужой категории у атрибута не заводится:
+
+    товару такого родителя не назначить, и кнопка осталась бы
+    несохраняемой навсегда.
+    """
+    other = Category.objects.create(name="Перегородки", slug="peregorodki")
+    foreign = Attribute.objects.create(
+        category=other,
+        name="Профиль",
+        slug="profil",
+        kind=Attribute.Kind.CHOICE,
+    )
+
+    response = admin_client.post(
+        f"/admin/catalog/attribute/{button.pk}/change/",
+        attribute_payload(button, parents=[str(foreign.pk)]),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "другой категории" in response.content.decode()
+    assert list(button.parents.all()) == [lighting]
+
+
+@pytest.mark.django_db
+def test_parent_cycle_rejected(
+    admin_client: Client, lighting: Attribute, button: Attribute
+) -> None:
+    """Кольцо зависимостей не завести: в нём не сохранить ни одного из.
+
+    Кнопка уже зависит от подсветки; подсветка, зависящая от кнопки,
+    сделала бы оба атрибута неназначаемыми.
+    """
+    response = admin_client.post(
+        f"/admin/catalog/attribute/{lighting.pk}/change/",
+        attribute_payload(lighting, parents=[str(button.pk)]),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert not lighting.parents.exists()
+
+
+@pytest.mark.django_db
+def test_customer_editable_flag_stored(
+    admin_client: Client, lighting: Attribute
+) -> None:
+    """Признак «меняет покупатель» владелец ставит в админке."""
+    assert not lighting.is_customer_editable
+
+    response = admin_client.post(
+        f"/admin/catalog/attribute/{lighting.pk}/change/",
+        attribute_payload(lighting, is_customer_editable="on"),
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    lighting.refresh_from_db()
+    assert lighting.is_customer_editable
+
+
+@pytest.mark.django_db
+def test_pricing_limits_are_data(admin_client: Client) -> None:
+    """Минимальная площадь и минимальная сумма правятся в админке."""
+    settings = PricingSettings.load()
+
+    response = admin_client.post(
+        f"/admin/catalog/pricingsettings/{settings.pk}/change/",
+        {
+            "min_area_m2": "0.400",
+            "min_order_total": str(MIN_ORDER_TOTAL),
+            "_save": "",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    reloaded = PricingSettings.load()
+    assert reloaded.min_area_m2 == Decimal("0.400")
+    assert reloaded.min_order_total == MIN_ORDER_TOTAL
+
+
+@pytest.mark.django_db
+def test_pricing_limits_stay_single_row(admin_client: Client) -> None:
+    """Параметры расчёта одни на сайт — второй строки не завести."""
+    PricingSettings.load()
+
+    response = admin_client.get("/admin/catalog/pricingsettings/add/")
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert PricingSettings.objects.count() == 1
