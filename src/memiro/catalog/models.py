@@ -259,14 +259,6 @@ class PricingSettings(models.Model):
         self.pk = self.SINGLETON_PK
         super().save(*args, **kwargs)  # type: ignore[arg-type]
 
-    @classmethod
-    def load(cls) -> PricingSettings:
-        """Пороги расчёта; при первом обращении заводятся со значениями
-        по умолчанию.
-        """
-        settings, _ = cls.objects.get_or_create(pk=cls.SINGLETON_PK)
-        return settings
-
 
 # Витринный порядок «сначала популярные»: один кортеж на весь проект
 POPULAR_ORDERING = ("-is_popular", "order", "name")

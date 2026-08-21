@@ -353,8 +353,9 @@ def test_assigned_attribute_is_protected_until_unassigned(
 LED_RATE = Decimal("2500.00")
 BUTTON_RATE = Decimal("1500.00")
 MIN_ORDER_TOTAL = 9000
+MIN_AREA = Decimal("0.400")
 # «Подсветка» и «Кнопка», сохранённые одним submit
-PAIR = 2
+EXPECTED_ATTRIBUTES = 2
 
 
 @pytest.fixture
@@ -497,6 +498,38 @@ def test_orphan_child_value_is_rejected(
 
 
 @pytest.mark.django_db
+def test_parent_answered_no_is_not_a_parent(
+    admin_client: Client, category: Category, button: Attribute
+) -> None:
+    """«Подогрев: нет» — отсутствие признака, кнопке он не родитель."""
+    heating = Attribute.objects.create(
+        category=category,
+        name="Подогрев",
+        slug="podogrev",
+        kind=Attribute.Kind.BOOLEAN,
+    )
+    button.parents.set([heating])
+
+    response = admin_client.post(
+        "/admin/catalog/product/add/",
+        product_payload(
+            category,
+            **{
+                "attribute_values-TOTAL_FORMS": "2",
+                "attribute_values-0-attribute": str(heating.pk),
+                "attribute_values-0-value_bool": "false",
+                "attribute_values-1-attribute": str(button.pk),
+                "attribute_values-1-value_option": str(button.values.get().pk),
+            },
+        ),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert not Product.objects.exists()
+    assert "Подогрев" in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_child_saved_together_with_parent(
     admin_client: Client,
     category: Category,
@@ -522,7 +555,7 @@ def test_child_saved_together_with_parent(
 
     assert response.status_code == HTTPStatus.FOUND
     saved = Product.objects.get(slug="luna")
-    assert saved.attribute_values.count() == PAIR
+    assert saved.attribute_values.count() == EXPECTED_ATTRIBUTES
 
 
 @pytest.mark.django_db
@@ -567,6 +600,7 @@ def test_parent_cycle_rejected(
     )
 
     assert response.status_code == HTTPStatus.OK
+    assert "уже опирается на этот атрибут" in response.content.decode()
     assert not lighting.parents.exists()
 
 
@@ -589,28 +623,28 @@ def test_customer_editable_flag_stored(
 
 @pytest.mark.django_db
 def test_pricing_limits_are_data(admin_client: Client) -> None:
-    """Минимальная площадь и минимальная сумма правятся в админке."""
-    settings = PricingSettings.load()
-
+    """Минимальная площадь и минимальная сумма заводятся в админке."""
     response = admin_client.post(
-        f"/admin/catalog/pricingsettings/{settings.pk}/change/",
+        "/admin/catalog/pricingsettings/add/",
         {
-            "min_area_m2": "0.400",
+            "min_area_m2": str(MIN_AREA),
             "min_order_total": str(MIN_ORDER_TOTAL),
             "_save": "",
         },
     )
 
     assert response.status_code == HTTPStatus.FOUND
-    reloaded = PricingSettings.load()
-    assert reloaded.min_area_m2 == Decimal("0.400")
-    assert reloaded.min_order_total == MIN_ORDER_TOTAL
+    saved = PricingSettings.objects.get()
+    assert saved.min_area_m2 == MIN_AREA
+    assert saved.min_order_total == MIN_ORDER_TOTAL
 
 
 @pytest.mark.django_db
 def test_pricing_limits_stay_single_row(admin_client: Client) -> None:
     """Параметры расчёта одни на сайт — второй строки не завести."""
-    PricingSettings.load()
+    PricingSettings.objects.create(
+        min_area_m2=MIN_AREA, min_order_total=MIN_ORDER_TOTAL
+    )
 
     response = admin_client.get("/admin/catalog/pricingsettings/add/")
 

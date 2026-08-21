@@ -45,6 +45,11 @@ class AttributeValueInline(admin.TabularInline):
     extra = 1
 
 
+# Одно правило — одна формулировка: атрибут чужой категории отвергают
+# и товар, и родитель, и владелец читает об этом одно и то же
+FOREIGN_CATEGORY = "«%(name)s» — атрибут другой категории."
+
+
 class AttributeForm(ModelForm):
     """Форма атрибута: родители — только свои по категории.
 
@@ -60,8 +65,9 @@ class AttributeForm(ModelForm):
                 message = "Атрибут не зависит сам от себя."
                 raise ValidationError(message)
             if category and not parent.belongs_to(category.pk):
-                message = "«%(name)s» — атрибут другой категории."
-                raise ValidationError(message, params={"name": parent.name})
+                raise ValidationError(
+                    FOREIGN_CATEGORY, params={"name": parent.name}
+                )
             # В кольце зависимостей не сохранить ни одного из атрибутов:
             # каждому вечно не хватает другого
             if self.instance.pk and parent.depends_on(self.instance):
@@ -127,18 +133,33 @@ def _check_own_category(
         return
     for attribute in attributes:
         if not attribute.belongs_to(category_id):
-            message = "Атрибут «%(name)s» принадлежит другой категории."
-            raise ValidationError(message, params={"name": attribute.name})
+            raise ValidationError(
+                FOREIGN_CATEGORY, params={"name": attribute.name}
+            )
 
 
-def _check_parents(attributes: list[Attribute]) -> None:
+def _present_attribute_ids(rows: list[dict[str, Any]]) -> set[int]:
+    """Атрибуты, признак которых у товара есть.
+
+    «Да/нет» со значением «нет» — это отсутствие признака, а не его
+    наличие: кнопки не бывает при «подогрев: нет» ровно так же, как
+    при незаведённом подогреве (CONTEXT.md, тикет 22).
+    """
+    return {
+        row["attribute"].pk
+        for row in rows
+        if row.get("attribute") and row.get("value_bool") is not False
+    }
+
+
+def _check_parents(rows: list[dict[str, Any]]) -> None:
     """Значение атрибута-ребёнка без родителя — ошибка с объяснением.
 
     Формсет знает весь набор атрибутов товара, поэтому родителя и
     ребёнка владелец заводит одним сохранением.
     """
-    present = {attribute.pk for attribute in attributes}
-    for attribute in attributes:
+    present = _present_attribute_ids(rows)
+    for attribute in _attributes(rows):
         message = attribute.missing_parent_error(present)
         if message:
             raise ValidationError(message)
@@ -147,9 +168,9 @@ def _check_parents(attributes: list[Attribute]) -> None:
 class ProductAttributeFormSet(BaseInlineFormSet):
     def clean(self) -> None:
         super().clean()
-        attributes = _attributes(_kept_rows(self))
-        _check_own_category(attributes, self.instance.category_id)
-        _check_parents(attributes)
+        rows = _kept_rows(self)
+        _check_own_category(_attributes(rows), self.instance.category_id)
+        _check_parents(rows)
 
 
 class ProductAttributeInline(admin.TabularInline):
