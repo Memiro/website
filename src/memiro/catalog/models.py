@@ -8,6 +8,8 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import Resolver404, resolve, reverse
 
+from memiro import pricing
+
 if TYPE_CHECKING:
     from django.db.models.fields.files import ImageFieldFile
 
@@ -164,11 +166,13 @@ class AttributeValue(models.Model):
     не заводил подсветку дважды.
     """
 
+    # Значения — из движка цены: разошедшись, админка и расчёт молча
+    # перестали бы понимать друг друга
     class Unit(models.TextChoices):
-        PIECE = "piece", "за штуку"
-        LINEAR_METER = "linear_meter", "за погонный метр"
-        SQUARE_METER = "square_meter", "за квадратный метр"
-        FACTOR = "factor", "коэффициент"
+        PIECE = pricing.Unit.PIECE.value, "за штуку"
+        LINEAR_METER = pricing.Unit.LINEAR_METER.value, "за погонный метр"
+        SQUARE_METER = pricing.Unit.SQUARE_METER.value, "за квадратный метр"
+        FACTOR = pricing.Unit.FACTOR.value, "коэффициент"
 
     attribute = models.ForeignKey(
         Attribute,
