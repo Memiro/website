@@ -50,11 +50,11 @@
       {# Границы категории — подсказкой в placeholder, а не в min/max:
          за них можно выйти, и запретить это значит запереть форму на
          странице, куда пришли по старой ссылке с чужой ценой #}
-      <div class="fgroup fprice">
+      <div class="fgroup fprice" data-price>
         <h3>Цена, ₽</h3>
         <div class="price-pair">
-          <label>от <input type="number" inputmode="numeric" min="0" name="price_min" value="{{ price.selected.minimum|default_if_none:'' }}" placeholder="{{ price.lowest }}" aria-label="Цена от, ₽"></label>
-          <label>до <input type="number" inputmode="numeric" min="0" name="price_max" value="{{ price.selected.maximum|default_if_none:'' }}" placeholder="{{ price.highest }}" aria-label="Цена до, ₽"></label>
+          <label>от <input type="number" inputmode="numeric" name="price_min" value="{{ price.selected.minimum|default_if_none:'' }}" placeholder="{{ price.lowest }}" aria-label="Цена от, ₽"></label>
+          <label>до <input type="number" inputmode="numeric" name="price_max" value="{{ price.selected.maximum|default_if_none:'' }}" placeholder="{{ price.highest }}" aria-label="Цена до, ₽"></label>
         </div>
       </div>
       {% endif %}

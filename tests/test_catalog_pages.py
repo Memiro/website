@@ -295,10 +295,21 @@ def test_empty_price_combination_404(
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-@pytest.mark.parametrize("query", ["price_min=abc", "price_max=-5"])
+@pytest.mark.parametrize(
+    "query",
+    [
+        "price_min=abc",
+        "price_max=-5",
+        # Незначащий ноль и второй такой же параметр дали бы чип,
+        # крестик которого снимает не ту границу
+        "price_min=08352",
+        "price_min=1000&price_min=9000",
+    ],
+)
 def test_garbage_price_404(
     client: Client, shop: SimpleNamespace, query: str
 ) -> None:
+    """Цена, записанная не одним каноничным числом, — страницы нет."""
     response = client.get(f"/catalog/zerkala/?{query}")
 
     assert response.status_code == HTTPStatus.NOT_FOUND

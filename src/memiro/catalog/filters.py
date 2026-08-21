@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from django.db.models import Count, Max, Min
 
+from .formatting import rub
 from .models import (
     BOOL_LABELS,
     BOOL_TOKENS,
@@ -25,7 +26,6 @@ from .models import (
     AttributeValue,
     ProductAttribute,
 )
-from .templatetags.catalog_tags import rub
 
 if TYPE_CHECKING:
     from django.db.models import QuerySet
@@ -66,10 +66,14 @@ class FilterGroup:
 
 @dataclass(frozen=True)
 class AppliedFilter:
-    """Применённое значение для чипса с крестиком."""
+    """Применённое значение для чипса с крестиком.
+
+    `param` — имя параметра в querystring: у атрибута это его слаг,
+    у цены — `price_min`/`price_max`.
+    """
 
     label: str
-    slug: str
+    param: str
     token: str
 
 
@@ -84,18 +88,27 @@ class PriceRange:
     def parse(cls, query: QueryDict) -> PriceRange:
         """Разбирает границы из querystring; мусор — FilterError."""
         return cls(
-            minimum=cls._parse_bound(query.get(PRICE_MIN_PARAM)),
-            maximum=cls._parse_bound(query.get(PRICE_MAX_PARAM)),
+            minimum=cls._parse_bound(query, PRICE_MIN_PARAM),
+            maximum=cls._parse_bound(query, PRICE_MAX_PARAM),
         )
 
     @staticmethod
-    def _parse_bound(raw: str | None) -> int | None:
-        # Не int(): тот принял бы «1_000», «+900» и арабские цифры —
-        # ценой такое не является, а страница по такому URL отвечала бы
-        # 200 с чипом, которого посетитель не набирал
-        if not raw:
+    def _parse_bound(query: QueryDict, param: str) -> int | None:
+        """Одно каноничное число — иначе страницы нет.
+
+        Строгость тут не придирчивость: крестик чипа снимает границу,
+        сравнивая своё значение со строкой в querystring, и `08352`
+        или второй такой же параметр дали бы чип, который не снимается.
+        """
+        values = query.getlist(param)
+        if not values or values == [""]:
             return None
-        if not (raw.isascii() and raw.isdigit()):
+        raw = values[0]
+        if len(values) > 1:
+            message = f"Граница «{param}» задана дважды"
+            raise FilterError(message)
+        # Не int(): тот принял бы «1_000», «+900» и арабские цифры
+        if not (raw.isascii() and raw.isdigit()) or str(int(raw)) != raw:
             message = f"Цена «{raw}» не число"
             raise FilterError(message)
         return int(raw)
@@ -121,23 +134,12 @@ class PriceRange:
         return [
             AppliedFilter(
                 label=f"Цена {preposition} {rub(value)} ₽",
-                slug=param,
+                param=param,
                 token=str(value),
             )
             for preposition, param, value in bounds
             if value is not None
         ]
-
-    def control(self, products: QuerySet[Product]) -> PriceControl | None:
-        """Поля «от» и «до» с границами по данным категории.
-
-        None — сужать нечем: все товары категории стоят одинаково.
-        """
-        bounds = products.aggregate(low=Min("price"), high=Max("price"))
-        low, high = bounds["low"], bounds["high"]
-        if low is None or low == high:
-            return None
-        return PriceControl(lowest=low, highest=high, selected=self)
 
 
 @dataclass(frozen=True)
@@ -153,6 +155,20 @@ class PriceControl:
     highest: int
     selected: PriceRange
 
+    @classmethod
+    def build(
+        cls, products: QuerySet[Product], selected: PriceRange
+    ) -> PriceControl | None:
+        """Границы по опубликованным товарам категории.
+
+        None — сужать нечем: все товары категории стоят одинаково.
+        """
+        bounds = products.aggregate(low=Min("price"), high=Max("price"))
+        low, high = bounds["low"], bounds["high"]
+        if low is None or low == high:
+            return None
+        return cls(lowest=low, highest=high, selected=selected)
+
 
 class CatalogFilters:
     """Разобранный набор фильтров одной категории."""
@@ -167,7 +183,7 @@ class CatalogFilters:
         self._attributes = attributes
         self._choice = choice_selected
         self._bool = bool_selected
-        self.price = price or PriceRange()
+        self._price = price or PriceRange()
 
     @classmethod
     def parse(cls, category: Category, query: QueryDict) -> CatalogFilters:
@@ -223,7 +239,7 @@ class CatalogFilters:
 
     @property
     def is_active(self) -> bool:
-        return bool(self._choice or self._bool) or self.price.is_active
+        return bool(self._choice or self._bool) or self._price.is_active
 
     def apply(
         self,
@@ -236,7 +252,7 @@ class CatalogFilters:
         `exclude` снимает одну группу — цены это не касается: группой
         она не является и из счётчиков не выпадает.
         """
-        products = self.price.apply(products)
+        products = self._price.apply(products)
         for attribute, values in self._choice.items():
             if attribute == exclude:
                 continue
@@ -265,6 +281,10 @@ class CatalogFilters:
             )
             for attribute in self._attributes
         ]
+
+    def price_control(self, base: QuerySet[Product]) -> PriceControl | None:
+        """Поля «от» и «до» для сайдбара — рядом с группами атрибутов."""
+        return PriceControl.build(base, self._price)
 
     def _options(
         self, attribute: Attribute, base: QuerySet[Product]
@@ -325,7 +345,7 @@ class CatalogFilters:
             chips.extend(
                 AppliedFilter(
                     label=f"{attribute.name}: {value.value}",
-                    slug=attribute.slug,
+                    param=attribute.slug,
                     token=str(value.pk),
                 )
                 for value in self._choice.get(attribute, ())
@@ -333,10 +353,10 @@ class CatalogFilters:
             chips.extend(
                 AppliedFilter(
                     label=f"{attribute.name}: {BOOL_LABELS[flag]}",
-                    slug=attribute.slug,
+                    param=attribute.slug,
                     token="1" if flag else "0",
                 )
                 for flag in self._bool.get(attribute, ())
             )
-        chips.extend(self.price.chips())
+        chips.extend(self._price.chips())
         return chips

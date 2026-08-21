@@ -65,12 +65,27 @@
     }
   };
 
-  form.addEventListener("change", () => {
-    if (desktop.matches) {
-      window.location.assign(formUrl());
-    } else {
+  const apply = () => {
+    if (!desktop.matches) {
       refreshCount();
+    } else if (formUrl() !== window.location.href) {
+      window.location.assign(formUrl());
     }
+  };
+
+  // Поля цены применяются, только когда фокус ушёл из блока целиком:
+  // change у input[type=number] случается на blur, и Tab из «от» в «до»
+  // иначе перезагружал бы страницу на полузаполненном диапазоне
+  const price = form.querySelector("[data-price]");
+  const inPrice = (node) => Boolean(price && price.contains(node));
+  if (price) {
+    price.addEventListener("focusout", (event) => {
+      if (!inPrice(event.relatedTarget)) apply();
+    });
+  }
+
+  form.addEventListener("change", (event) => {
+    if (!inPrice(event.target)) apply();
   });
   form.addEventListener("submit", (event) => {
     event.preventDefault();

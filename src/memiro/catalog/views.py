@@ -93,7 +93,7 @@ def category(request: HttpRequest, slug: str) -> HttpResponse:
     applied = [
         {
             "label": chip.label,
-            "query": _query_without(request.GET, chip.slug, chip.token),
+            "query": _query_without(request.GET, chip.param, chip.token),
         }
         for chip in filters.applied()
     ]
@@ -104,7 +104,7 @@ def category(request: HttpRequest, slug: str) -> HttpResponse:
             "category": category,
             "page": page,
             "groups": filters.groups(base),
-            "price": filters.price.control(base),
+            "price": filters.price_control(base),
             "applied": applied,
             "sort_options": _sort_options(sort_key),
             "canonical": _canonical(request, category, filters, sort, page),
@@ -265,11 +265,11 @@ def _pagination(query: QueryDict, page: Page) -> dict[str, object]:
     }
 
 
-def _query_without(query: QueryDict, slug: str, token: str) -> str:
+def _query_without(query: QueryDict, param: str, token: str) -> str:
     """Querystring без одного значения фильтра и без номера страницы."""
     result = query.copy()
     result.setlist(
-        slug, [value for value in result.getlist(slug) if value != token]
+        param, [value for value in result.getlist(param) if value != token]
     )
     result.pop("page", None)
     return result.urlencode()
