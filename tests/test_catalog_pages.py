@@ -501,9 +501,8 @@ def test_gallery_thumb_announces_selected_frame(
     client: Client, shop: SimpleNamespace
 ) -> None:
     """Выбранный кадр отмечен не только классом: читалке нужен aria-pressed."""
-    Product.objects.filter(pk=shop.halo.pk).update(
-        photo_large="products/large/halo.jpg"
-    )
+    shop.halo.photo_large = "products/large/halo.jpg"
+    shop.halo.save()
     ProductImage.objects.create(
         product=shop.halo, image="products/gallery/halo-2.jpg"
     )
@@ -513,10 +512,9 @@ def test_gallery_thumb_announces_selected_frame(
     thumbs = [tag for tag in buttons(html) if "data-src=" in tag]
     pressed = [tag for tag in thumbs if 'aria-pressed="true"' in tag]
 
-    # Главный кадр плюс один кадр галереи
     assert len(thumbs) == MAIN_PHOTO_AND_ONE_SHOT
-    # Нажата ровно одна миниатюра, и это тот кадр, что стоит в главном окне
     assert len(pressed) == 1
+    # Нажат тот кадр, что стоит в главном окне, а не первый попавшийся
     assert "halo.jpg" in pressed[0]
 
 
