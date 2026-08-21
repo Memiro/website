@@ -1,3 +1,4 @@
+import re
 from http import HTTPStatus
 from types import SimpleNamespace
 
@@ -12,6 +13,7 @@ from memiro.catalog.models import (
     Category,
     Product,
     ProductAttribute,
+    ProductImage,
 )
 from memiro.catalog.views import PAGE_SIZE
 
@@ -87,6 +89,14 @@ def page_html(client: Client, url: str) -> str:
     response = client.get(url)
     assert response.status_code == HTTPStatus.OK
     return response.content.decode()
+
+
+MAIN_PHOTO_AND_ONE_SHOT = 2
+
+
+def buttons(html: str) -> list[str]:
+    """Открывающие теги кнопок: нужную ищем по атрибуту, а не по позиции."""
+    return re.findall(r"<button[^>]*>", html)
 
 
 def test_catalog_root_redirects_to_only_category(
@@ -485,6 +495,42 @@ def test_product_page_has_no_stock_state(
     html = page_html(client, "/catalog/zerkala/halo-moon/")
 
     assert "в наличии" not in html
+
+
+def test_gallery_thumb_announces_selected_frame(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Выбранный кадр отмечен не только классом: читалке нужен aria-pressed."""
+    Product.objects.filter(pk=shop.halo.pk).update(
+        photo_large="products/large/halo.jpg"
+    )
+    ProductImage.objects.create(
+        product=shop.halo, image="products/gallery/halo-2.jpg"
+    )
+
+    html = page_html(client, "/catalog/zerkala/halo-moon/")
+
+    thumbs = [tag for tag in buttons(html) if "data-src=" in tag]
+    pressed = [tag for tag in thumbs if 'aria-pressed="true"' in tag]
+
+    # Главный кадр плюс один кадр галереи
+    assert len(thumbs) == MAIN_PHOTO_AND_ONE_SHOT
+    # Нажата ровно одна миниатюра, и это тот кадр, что стоит в главном окне
+    assert len(pressed) == 1
+    assert "halo.jpg" in pressed[0]
+
+
+def test_filters_drawer_opener_announces_its_state(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Кнопка мобильного drawer — раскрывающая, её состояние объявляется."""
+    html = page_html(client, "/catalog/zerkala/")
+
+    opener = next(tag for tag in buttons(html) if "data-drawer-open" in tag)
+
+    assert 'aria-expanded="false"' in opener
+    assert 'aria-controls="filters-drawer"' in opener
+    assert 'id="filters-drawer"' in html
 
 
 def test_draft_product_404(client: Client, shop: SimpleNamespace) -> None:

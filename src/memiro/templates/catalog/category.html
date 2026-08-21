@@ -13,7 +13,8 @@
 
 <div class="toolbar wrap">
   <div class="chips">
-    <button class="chip-f only-mobile" type="button" data-drawer-open>Фильтры{% if applied %} · {{ applied|length }}{% endif %}</button>
+    <button class="chip-f only-mobile" type="button" data-drawer-open
+            aria-expanded="false" aria-controls="filters-drawer">Фильтры{% if applied %} · {{ applied|length }}{% endif %}</button>
     {% for chip in applied %}
     <a class="chip-f on" href="{% if chip.query %}?{{ chip.query }}{% else %}{{ request.path }}{% endif %}" title="Убрать фильтр">{{ chip.label }} ✕</a>
     {% endfor %}
@@ -29,7 +30,7 @@
 </div>
 
 <div class="layout wrap">
-  <aside class="filters" data-drawer>
+  <aside class="filters" id="filters-drawer" data-drawer>
     <div class="drawer-head only-mobile">
       <span class="drawer-title">Фильтры</span>
       <button class="drawer-close" type="button" data-drawer-close aria-label="Закрыть фильтры">✕</button>

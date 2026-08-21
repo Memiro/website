@@ -13,10 +13,10 @@
     {% if gallery %}
     <div class="thumbs">
       {% if product.main_photo %}
-      <button class="on" type="button" data-src="{{ product.main_photo.url }}"><img src="{{ product.main_photo.url }}" alt="{{ product.name }}"></button>
+      <button class="on" type="button" aria-pressed="true" data-src="{{ product.main_photo.url }}"><img src="{{ product.main_photo.url }}" alt="{{ product.name }}"></button>
       {% endif %}
       {% for shot in gallery %}
-      <button type="button" data-src="{{ shot.image.url }}"><img src="{{ shot.image.url }}" alt="{{ product.name }} — фото {{ forloop.counter }}"></button>
+      <button type="button" aria-pressed="false" data-src="{{ shot.image.url }}"><img src="{{ shot.image.url }}" alt="{{ product.name }} — фото {{ forloop.counter }}"></button>
       {% endfor %}
     </div>
     {% endif %}

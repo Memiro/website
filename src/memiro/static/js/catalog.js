@@ -19,11 +19,13 @@
   // --- Drawer мобильных фильтров ---
   const drawer = document.querySelector("[data-drawer]");
   const backdrop = document.querySelector(".drawer-backdrop");
+  const openers = document.querySelectorAll("[data-drawer-open]");
   const setDrawer = (open) => {
     drawer.classList.toggle("open", open);
     if (backdrop) backdrop.hidden = !open;
+    openers.forEach((button) => button.setAttribute("aria-expanded", String(open)));
   };
-  document.querySelectorAll("[data-drawer-open]").forEach((button) =>
+  openers.forEach((button) =>
     button.addEventListener("click", () => setDrawer(true)),
   );
   document.querySelectorAll("[data-drawer-close]").forEach((element) =>

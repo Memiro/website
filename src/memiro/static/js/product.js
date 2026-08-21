@@ -5,8 +5,12 @@
   if (!main || !thumbs.length) return;
   thumbs.forEach((thumb) => {
     thumb.addEventListener("click", () => {
-      thumbs.forEach((other) => other.classList.remove("on"));
+      thumbs.forEach((other) => {
+        other.classList.remove("on");
+        other.setAttribute("aria-pressed", "false");
+      });
       thumb.classList.add("on");
+      thumb.setAttribute("aria-pressed", "true");
       main.src = thumb.dataset.src;
     });
   });
