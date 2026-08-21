@@ -1,5 +1,5 @@
-{# Реквизиты продавца (п. 18 ПП РФ 2463). Пустые поля не печатаются —
-   таблицу заполняет владелец в memiro/legal/seller.py #}
+{% comment %}Реквизиты продавца (п. 18 ПП РФ 2463). Пустые поля не печатаются —
+   таблицу заполняет владелец в memiro/legal/seller.py{% endcomment %}
 {% if seller %}
 <ul class="seller-requisites">
   {% for label, value in seller %}

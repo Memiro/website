@@ -38,8 +38,8 @@
       <span class="price-note">цена минимальной конфигурации</span>
     </div>
 
-    {# Дисклеймер у цены — и у результата калькулятора, когда он приедет
-       тикетом 06: расчёт покажется в этом же блоке #}
+    {% comment %}Дисклеймер у цены — и у результата калькулятора, когда он приедет
+       тикетом 06: расчёт покажется в этом же блоке{% endcomment %}
     {% include "legal/_offer_note.html" %}
 
     {# Конфигуратор приедет тикетом 06; корзина и заявка — тикет 07 #}
@@ -92,7 +92,7 @@
     <h2 class="h-section">Похожие зеркала</h2>
     <a class="link-underline" href="{% url 'category' product.category.slug %}">Весь раздел →</a>
   </div>
-  <div class="grid-4">
+  <div class="carousel grid-4">
     {% for product in related %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
 </section>

@@ -11,8 +11,8 @@
       <div class="name">{{ product.name }}</div>
     </div>
   </a>
-  {# Ту же карточку строит shop.js для страницы избранного (favoriteCard) —
-     разметку правим в обоих местах #}
+  {% comment %}Ту же карточку строит shop.js для страницы избранного (favoriteCard) —
+     разметку правим в обоих местах{% endcomment %}
   <div class="card-actions">
     <span class="price">от {{ product.price|rub }} ₽</span>
     <div class="card-buttons">

@@ -18,8 +18,8 @@
     <span>Комментарий</span>
     <textarea name="comment" rows="3" maxlength="2000"></textarea>
   </label>
-  {# Чекбокс намеренно непредотмечен: предотмеченное согласие РКН
-     не принимает (ст. 9 152-ФЗ). Сервер отвергает заявку без него #}
+  {% comment %}Чекбокс намеренно непредотмечен: предотмеченное согласие РКН
+     не принимает (ст. 9 152-ФЗ). Сервер отвергает заявку без него{% endcomment %}
   <label class="consent">
     <input type="checkbox" name="consent" value="1" required>
     <span>Я даю <a href="{% url 'privacy' %}#consent" target="_blank" rel="noopener">согласие

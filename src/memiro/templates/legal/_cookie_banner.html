@@ -1,7 +1,7 @@
 {% load static %}
-{# Cookie-баннер с активным действием: пассивный «продолжая пользоваться»
+{% comment %}Cookie-баннер с активным действием: пассивный «продолжая пользоваться»
    по практике РКН 2025 не защищает. Выбор уезжает в cookie, а решение
-   о загрузке Метрики принимает сервер (memiro/legal/analytics_consent.py) #}
+   о загрузке Метрики принимает сервер (memiro/legal/analytics_consent.py){% endcomment %}
 <div class="cookie-banner" data-cookie-banner role="dialog"
      aria-label="Файлы cookie и аналитика"
      data-cookie="{{ cookie_choice.cookie }}"

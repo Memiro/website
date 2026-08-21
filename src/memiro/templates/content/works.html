@@ -13,7 +13,9 @@
   <div class="works-grid">
     {% for work in works %}
     <figure class="work">
-      <img src="{{ work.image.url }}" alt="{{ work.title }}" loading="lazy">
+      <div class="pic">
+        <img src="{{ work.image.url }}" alt="{{ work.title }}" loading="lazy">
+      </div>
       <figcaption>{{ work.title }}</figcaption>
     </figure>
     {% endfor %}

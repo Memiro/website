@@ -60,7 +60,7 @@
     {% if not sale %}<a class="link-underline" href="{% url 'catalog' %}">Весь каталог →</a>{% endif %}
   </div>
   {% if sale %}
-  <div class="grid-4">
+  <div class="carousel grid-4">
     {% for product in sale %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
   {% endif %}
@@ -73,7 +73,7 @@
     <h2 class="h-section">Популярные товары</h2>
     <a class="link-underline" href="{% url 'catalog' %}">Весь каталог →</a>
   </div>
-  <div class="grid-4">
+  <div class="carousel grid-4">
     {% for product in popular %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
 </section>
@@ -134,7 +134,7 @@
     <h2 class="h-section">Отзывы</h2>
     <a class="link-underline" href="{{ contacts.avito }}" target="_blank" rel="noopener">Смотреть все →</a>
   </div>
-  <div class="grid-3 reviews-grid">
+  <div class="carousel grid-3 reviews-grid">
     {% for review in reviews %}
     <figure class="review">
       {# role="img": иначе читалка проговаривает каждую звезду отдельно #}

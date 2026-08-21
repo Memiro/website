@@ -18,8 +18,8 @@
     <h2>1. Оператор</h2>
     <p>Оператором персональных данных является продавец, указанный ниже.</p>
     {% include "legal/_seller.html" %}
-    {# Связь с оператором — не реквизиты продавца (CONTEXT.md их
-       разводит), но выглядит той же строчной таблицей #}
+    {% comment %}Связь с оператором — не реквизиты продавца (CONTEXT.md их
+       разводит), но выглядит той же строчной таблицей{% endcomment %}
     <ul class="legal-contacts">
       <li><span class="seller-label">Телефон:</span>
         <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a></li>

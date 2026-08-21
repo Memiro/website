@@ -189,7 +189,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 
 /* ---------- Полоса преимуществ ---------- */
 .strip { margin-top: 96px; background: var(--bg-muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.strip-row { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 26px 0; font-size: 15px; color: var(--body); }
+.strip-row { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding-top: 26px; padding-bottom: 26px; font-size: 15px; color: var(--body); }
 .strip-item { display: flex; align-items: center; gap: 12px; }
 .strip-item .n { font-size: 22px; color: var(--accent); }
 
@@ -230,7 +230,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 
 /* ---------- Тёмный блок «О нас» ---------- */
 .dark { margin-top: 112px; background: var(--ink); color: var(--on-dark); }
-.dark-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 72px; align-items: center; padding: 96px 0; }
+.dark-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 72px; align-items: center; padding-top: 96px; padding-bottom: 96px; }
 .dark-grid > img { width: 100%; height: 560px; object-fit: cover; background: var(--on-dark-line); }
 .dark .overline { color: var(--accent-light); margin-bottom: 22px; }
 .dark h2 { margin-bottom: 32px; line-height: 1.06; }
@@ -370,12 +370,14 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 
 /* ---------- Подвал ---------- */
 .footer { margin-top: 112px; background: var(--bg); color: var(--secondary); border-top: 1px solid var(--line); }
-.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; padding: 80px 0 40px; }
+/* Боковые поля берутся из .wrap — здесь только вертикальные:
+   шорткат `padding` затёр бы их, и футер лёг бы вплотную к краю экрана */
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; padding-top: 80px; padding-bottom: 40px; }
 .footer .wordmark { font-size: 34px; color: var(--text); font-weight: 700; }
 .footer-about { font-size: 15px; line-height: 1.6; margin-top: 18px; max-width: 260px; }
 .footer h4 { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
 .footer ul { list-style: none; display: grid; gap: 12px; font-size: 15px; }
-.footer-bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 20px 0 28px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.footer-bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 
 /* ---------- Хлебные крошки ---------- */
 .crumbs { padding-top: 26px; font-size: 13px; color: var(--muted); }
@@ -383,11 +385,11 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .crumbs a:hover { color: var(--text); }
 
 /* ---------- Каталог ---------- */
-.cat-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; flex-wrap: wrap; padding: 14px 0 24px; border-bottom: 1px solid var(--line); }
+.cat-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; flex-wrap: wrap; padding-top: 14px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
 .cat-head h1 { font-size: clamp(34px, 4.4vw, 62px); line-height: 1; letter-spacing: -0.035em; }
 .cat-head .count { font-size: 15px; font-weight: 500; color: var(--muted); }
 
-.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0 26px; flex-wrap: wrap; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 22px; padding-bottom: 26px; flex-wrap: wrap; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .chip-f {
   font-size: 13px; font-weight: 600; padding: 8px 12px;
@@ -434,7 +436,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 /* ---------- Посадочные (тикет 09) ---------- */
 .landing-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 26px; }
 .landing-links a { text-decoration: none; }
-.landing-text { padding: 22px 0 30px; max-width: 76ch; }
+.landing-text { padding-top: 22px; padding-bottom: 30px; max-width: 76ch; }
 .landing-all { padding-top: 32px; }
 
 /* ---------- Карточка товара ---------- */
@@ -494,9 +496,14 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .map-placeholder { height: 460px; display: grid; align-content: center; justify-items: center; gap: 18px; padding: 32px; text-align: center; }
 .map-placeholder p { color: var(--secondary); font-size: 15px; max-width: 40ch; }
 
-.works-grid { margin-top: 40px; columns: 3 300px; column-gap: 16px; }
-.work { break-inside: avoid; margin-bottom: 16px; background: var(--bg-card); border: 1px solid var(--line-card); }
-.work img { width: 100%; }
+/* Сетка, а не `columns`: многоколоночный поток заполняет колонку сверху
+   вниз, и ручной порядок владельца читался бы по строкам как 1-3-5 */
+.works-grid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.work { background: var(--bg-card); border: 1px solid var(--line-card); }
+/* Кадры установок приходят разного размера — режем в общее отношение,
+   как плитки и карточки товара, иначе строка идёт лесенкой */
+.work .pic { position: relative; aspect-ratio: 4 / 3.2; background: var(--bg-muted); }
+.work img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .work figcaption { padding: 16px 20px 18px; font-size: 15px; font-weight: 500; }
 
 /* ---------- Юридические блоки ---------- */
@@ -536,12 +543,20 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 /* ---------- Планшет: макета нет, правила выведены из токенов ---------- */
 @media (max-width: 1180px) {
   :root { --pad: 28px; }
+  /* Пять пунктов, телефон и иконки в одну строку ниже 1180 не помещаются:
+     ссылки начинали переноситься внутри себя, и шапка росла в две строки.
+     Телефон убираем — он остаётся иконкой связи рядом, в футере
+     и на «Контактах»; сами пункты уплотняем и запрещаем им перенос */
+  .nav-row { gap: 24px; }
+  .nav-links { gap: 20px; margin-left: 0; }
+  .nav-links a { white-space: nowrap; }
+  .nav-phone { display: none; }
   .hero { grid-template-columns: 1fr; gap: 40px; }
   .hero-pics { grid-template-rows: 300px 240px; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .tiles-grid { grid-template-columns: repeat(2, 1fr); }
   .steps-grid { grid-template-columns: repeat(2, 1fr); }
-  .dark-grid { grid-template-columns: 1fr; gap: 40px; padding: 64px 0; }
+  .dark-grid { grid-template-columns: 1fr; gap: 40px; padding-top: 64px; padding-bottom: 64px; }
   .dark-grid > img { height: 320px; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
   .strip-row { flex-wrap: wrap; gap: 18px 32px; }
@@ -551,9 +566,13 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .gallery { position: static; }
   .spec { grid-template-columns: 1fr 1fr; gap: 16px; }
   .contacts-grid { grid-template-columns: 1fr; gap: 28px; }
+  .works-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 960px) {
+  /* Даже уплотнённые пункты сюда уже не помещаются — меню уходит в бургер */
+  .nav-links { display: none; }
+  .nav-burger { display: grid; }
   .layout { grid-template-columns: 1fr; }
   .only-mobile { display: flex; }
   .filters {
@@ -572,8 +591,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 /* ---------- Мобильная: правила из макета «Мобильная» ---------- */
 @media (max-width: 640px) {
   :root { --pad: 18px; }
-  .nav-links, .nav-phone, .nav-side .icon-row { display: none; }
-  .nav-burger { display: grid; }
+  .nav-side .icon-row { display: none; }
   .nav-row { gap: 12px; padding-top: 14px; padding-bottom: 14px; }
   .wordmark { font-size: 22px; }
   .icon-btn { width: 34px; height: 34px; }
@@ -587,7 +605,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .hero-pics { grid-template-rows: 200px 140px; gap: 8px; }
 
   .strip { margin-top: 38px; }
-  .strip-row { flex-direction: column; align-items: flex-start; gap: 14px; padding: 22px 0; }
+  .strip-row { flex-direction: column; align-items: flex-start; gap: 14px; padding-top: 22px; padding-bottom: 22px; }
 
   .section { padding-top: 38px; }
   .section-head { margin-bottom: 22px; gap: 14px; }
@@ -598,18 +616,22 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
      иначе вуаль съела бы почти всю невысокую плитку */
   :root { --veil-shelf: 60px; }
 
-  /* Товары и отзывы — карусели вместо сеток */
-  .grid-4, .grid-3 {
-    display: grid; grid-auto-flow: column; grid-auto-columns: 208px;
+  /* Подборки на главной и в карточке едут каруселью; каталог и избранное
+     остаются списком — иначе выдача уезжает вбок и утаскивает за собой
+     ширину страницы. Поэтому карусель — отдельный класс, а не все сетки */
+  .grid-4, .grid-3 { grid-template-columns: 1fr; gap: 8px; }
+  .carousel {
+    display: grid; grid-template-columns: none;
+    grid-auto-flow: column; grid-auto-columns: 208px;
     gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory;
     margin: 0 calc(-1 * var(--pad)); padding: 0 var(--pad) 6px;
   }
-  .grid-4 > *, .grid-3 > * { scroll-snap-align: start; }
+  .carousel > * { scroll-snap-align: start; }
   .product-card .meta { padding: 14px 16px 18px; gap: 10px; }
   .product-card .price { font-size: 20px; }
 
   /* Отзывы — карусель шире товарной: карточка держит цитату */
-  .reviews-grid { grid-auto-columns: 262px; gap: 16px; }
+  .reviews-grid.carousel { grid-auto-columns: 262px; gap: 16px; }
   .review { padding: 24px 22px; gap: 16px; }
   .review blockquote { font-size: 17px; }
   .faq-item summary { font-size: 18px; padding: 18px 32px 18px 0; }
@@ -617,7 +639,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .faq-item p { padding-bottom: 20px; font-size: 15px; }
 
   .dark { margin-top: 38px; }
-  .dark-grid { padding: 44px 0; gap: 26px; }
+  .dark-grid { padding-top: 44px; padding-bottom: 44px; gap: 26px; }
   .dark-grid > img { height: 220px; }
   .dark p { font-size: 16px; }
   .dark-facts { grid-template-columns: 1fr; gap: 20px; margin-top: 32px; padding-top: 26px; }
@@ -639,7 +661,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   }
   .card-actions { padding: 0 16px 18px; }
   .footer { margin-top: 38px; }
-  .footer-grid { grid-template-columns: 1fr; gap: 30px; padding: 44px 0 28px; }
+  .footer-grid { grid-template-columns: 1fr; gap: 30px; padding-top: 44px; padding-bottom: 28px; }
   .footer .wordmark { font-size: 26px; }
   .footer ul { gap: 11px; }
 
@@ -648,7 +670,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .feature { padding: 24px 22px; }
   .legal-note { padding: 26px 22px; }
   .contacts-map iframe, .map-placeholder { height: 320px; }
-  .works-grid { columns: 1; }
+  .works-grid { grid-template-columns: 1fr; gap: 8px; }
   .gallery { grid-template-columns: 1fr; }
   .thumbs { grid-auto-flow: column; grid-auto-columns: 64px; overflow-x: auto; }
   .thumbs button { width: 64px; height: 70px; }
