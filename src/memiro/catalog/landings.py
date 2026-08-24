@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .filters import FILTERABLE_KINDS, CatalogFilters
+from .filters import CatalogFilters, filterable_attributes
 from .models import POPULAR_ORDERING, Attribute, Product
 
 if TYPE_CHECKING:
@@ -46,11 +46,7 @@ def _filters_of(landing: Landing) -> CatalogFilters | None:
     None — условие ссылается на атрибут, который сменил категорию или
     тип: сузить им категорию нечем, товаров у такой посадочной нет.
     """
-    attributes = list(
-        landing.category.attributes.filter(
-            kind__in=FILTERABLE_KINDS
-        ).prefetch_related("values")
-    )
+    attributes = filterable_attributes(landing.category)
     by_id = {attribute.pk: attribute for attribute in attributes}
     choice: dict[Attribute, tuple[AttributeValue, ...]] = {}
     flags: dict[Attribute, tuple[bool, ...]] = {}

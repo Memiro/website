@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from django.db.models.fields.files import ImageFieldFile
     from django.http import HttpRequest
 
+from . import calculator, tariffs
 from .formatting import rub
 from .models import (
     MAX_LANDING_CONDITIONS,
@@ -91,9 +92,15 @@ class AttributeAdmin(admin.ModelAdmin):
         "category",
         "kind",
         "is_customer_editable",
+        "is_filterable",
         "order",
     )
-    list_filter = ("category", "kind", "is_customer_editable")
+    list_filter = (
+        "category",
+        "kind",
+        "is_customer_editable",
+        "is_filterable",
+    )
     list_editable = ("order",)
     prepopulated_fields: ClassVar = {"slug": ("name",)}
     filter_horizontal = ("parents",)
@@ -150,13 +157,18 @@ def _present_attribute_ids(rows: list[dict[str, Any]]) -> set[int]:
 
     «Да/нет» со значением «нет» — это отсутствие признака, а не его
     наличие: кнопки не бывает при «подогрев: нет» ровно так же, как
-    при незаведённом подогреве (CONTEXT.md, тикет 22).
+    при незаведённом подогреве. Выбор из списка говорит о том же
+    своим значением — «без рамы», «без подсветки» (CONTEXT.md,
+    тикет 22).
     """
     return {
         row["attribute"].pk
         for row in rows
         if row.get("attribute")
-        and marks_presence(value_bool=row.get("value_bool"))
+        and marks_presence(
+            value_bool=row.get("value_bool"),
+            value_option=row.get("value_option"),
+        )
     }
 
 
@@ -277,6 +289,7 @@ class ProductAdmin(admin.ModelAdmin):
         "name",
         "category",
         "price",
+        "calculator_state",
         "is_published",
         "is_popular",
         "is_promo",
@@ -286,12 +299,31 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable = ("is_published", "is_popular", "is_promo", "order")
     search_fields = ("name", "article")
     prepopulated_fields: ClassVar = {"slug": ("name",)}
-    readonly_fields = ("price_explained", "preview_small", "preview_large")
+    readonly_fields = (
+        "price_explained",
+        "calculator_state",
+        "preview_small",
+        "preview_large",
+    )
     inlines = (
         ProductImageInline,
         ProductAttributeInline,
         ProductVariantInline,
     )
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Product]:
+        """Значения атрибутов — одним запросом на список.
+
+        Их читает колонка расчёта, и без префетча каждая строка
+        ходила бы за ними сама. Справочник категории она всё равно
+        спрашивает построчно: он у товаров общий, но знает об этом
+        только гейт, а не список.
+        """
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related(tariffs.product_values())
+        )
 
     @admin.display(description="цена «от»")
     def price_explained(self, obj: Product) -> str:
@@ -309,6 +341,24 @@ class ProductAdmin(admin.ModelAdmin):
                 "предпосчитанный вариант"
             )
         return f"{rub(obj.price)} ₽  — по самому дешёвому варианту"
+
+    @admin.display(description="калькулятор")
+    def calculator_state(self, obj: Product) -> str:
+        """Что мешает товару считаться — списком, а не молчанием.
+
+        После переразметки справочника у 88 перенесённых зеркал не
+        хватает вида подсветки, температуры и типа полотна, и владелец
+        проставляет их по одному (тикет 22). Без этой строки он видел
+        бы только отсутствие калькулятора на карточке и гадал, чего
+        именно недостаёт.
+        """
+        # Товар в списке не сохранён — считать нечего
+        if not obj.pk:
+            return "—"
+        missing = calculator.missing_for_calculation(obj)
+        if not missing:
+            return "включён"
+        return "не включается: " + ", ".join(missing)
 
     @admin.display(description="превью малого фото")
     def preview_small(self, obj: Product) -> str:

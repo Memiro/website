@@ -77,6 +77,18 @@ class Attribute(models.Model):
         "меняет покупатель",
         default=False,
     )
+    # Фильтр сужает выдачу тем, чем товары друг от друга отличаются.
+    # Тип полотна не таков: любое зеркало делают из любого полотна, и
+    # покупатель выбирает его тут же, в калькуляторе. Группа «серебро /
+    # графит» спрятала бы товары, которые на самом деле подходят
+    # (тикет 22). Признак отдельный от «меняет покупатель»: подогрев и
+    # крепление покупатель тоже меняет, а сузить по ним каталог осмысленно
+    is_filterable = models.BooleanField(
+        "строит фильтр",
+        default=True,
+        help_text="Снятый признак убирает атрибут из фильтров каталога; "
+        "посадочную по нему тоже не завести.",
+    )
     order = models.PositiveIntegerField("порядок", default=0)
 
     class Meta:
@@ -207,6 +219,17 @@ class AttributeValue(models.Model):
         "умножается коэффициентом формы",
         default=False,
     )
+    # «Без рамы», «без подсветки» — это отсутствие признака, а не его
+    # разновидность: строка у товара стоит, но кнопке опереться на неё
+    # нельзя, и температуре свечения тоже (тикет 22). Пустотой строки
+    # такое не выразить — незаполненный атрибут значит «владелец ещё
+    # не дошёл», и на нём калькулятор молчит
+    marks_absence = models.BooleanField(
+        "означает отсутствие признака",
+        default=False,
+        help_text="«Без рамы», «без подсветки»: зависящие атрибуты "
+        "такое значение родителем не считают.",
+    )
     order = models.PositiveIntegerField("порядок", default=0)
 
     class Meta:
@@ -249,6 +272,15 @@ class AttributeValue(models.Model):
 
     def clean(self) -> None:
         """Тариф — пара: половина ставки молча считалась бы нулём."""
+        if self.marks_absence and self.is_charged:
+            message = "Отсутствие признака не расходуется и не стоит денег."
+            raise ValidationError({"marks_absence": message})
+        if self.attribute_id and self._has_another_tariff_row():
+            message = (
+                "У числового атрибута строка справочника одна — "
+                "тариф за единицу; сколько их, говорит число у товара."
+            )
+            raise ValidationError({"value": message})
         if self.scaled_by_shape and self.unit in {"", self.Unit.FACTOR}:
             message = (
                 "Коэффициент формы умножает статью расхода — "
@@ -263,6 +295,20 @@ class AttributeValue(models.Model):
             else ("unit", "Укажите единицу расхода: ставка без неё не тариф.")
         )
         raise ValidationError({field: message})
+
+    def _has_another_tariff_row(self) -> bool:
+        """Второе значение у числового атрибута — чей тариф считать?
+
+        У «выреза» справочник не список на выбор, а одна ставка за
+        штуку: количество приходит числом у товара (тикет 22).
+        """
+        if self.attribute.kind != Attribute.Kind.NUMBER:
+            return False
+        return (
+            self.attribute.values.exclude(pk=self.pk).exists()
+            if self.pk
+            else self.attribute.values.exists()
+        )
 
 
 class PricingSettings(models.Model):
@@ -330,15 +376,24 @@ class PricingSettings(models.Model):
             raise ValidationError({"max_short_side_mm": message})
 
 
-def marks_presence(*, value_bool: bool | None) -> bool:
-    """Говорит ли значение «да/нет», что признак у товара есть.
+def marks_presence(
+    *,
+    value_bool: bool | None,
+    value_option: AttributeValue | None,
+) -> bool:
+    """Говорит ли значение товара, что признак у него есть.
 
     «Нет» — это отсутствие признака, а не его наличие: кнопки не бывает
     при «подогрев: нет» ровно так же, как при незаведённом подогреве
-    (CONTEXT.md, тикет 22). Правило одно на проверку ввода владельца
-    в админке и на гейт калькулятора.
+    (CONTEXT.md, тикет 22). У выбора из списка отсутствие называется
+    своим значением справочника — «без рамы», «без подсветки», — и
+    признаком `marks_absence` отличается от разновидности признака.
+    Правило одно на проверку ввода владельца в админке и на гейт
+    калькулятора.
     """
-    return value_bool is not False
+    if value_bool is False:
+        return False
+    return not (value_option is not None and value_option.marks_absence)
 
 
 # Витринный порядок «сначала популярные»: один кортеж на весь проект
@@ -783,6 +838,11 @@ class LandingCondition(models.Model):
             self.landing.category_id
         ):
             errors["attribute"] = ["Атрибут принадлежит другой категории."]
+        if not self.attribute.is_filterable:
+            errors.setdefault("attribute", []).append(
+                "По этому атрибуту фильтр не строится — "
+                "и посадочная по нему тоже."
+            )
         if self.attribute.kind == Attribute.Kind.NUMBER:
             errors.setdefault("attribute", []).append(
                 "Числовым атрибутом посадочную не сузить."

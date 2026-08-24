@@ -44,6 +44,11 @@ if TYPE_CHECKING:
 # бы то, что эндпоинт заведомо отвергнет
 MAX_INPUT_SIDE_MM = 100_000
 
+# Изделие, у которого не набралось ни одной платной статьи: итогом был
+# бы ноль или минимальная сумма заказа — число, за которым ничего не
+# стоит. Причина не про конкретный атрибут, и потому названа словами
+NO_TARIFFS = "ни одно значение товара не тарифицировано"
+
 
 @dataclass(frozen=True, slots=True)
 class Value:
@@ -115,7 +120,20 @@ def for_product(
 
 def is_calculable(product: Product) -> bool:
     """Укладывается ли изделие в считаемый набор целиком."""
-    return _has_a_charged_value(product) and _is_described_fully(product)
+    return not missing_for_calculation(product)
+
+
+def missing_for_calculation(product: Product) -> tuple[str, ...]:
+    """Чего товару не хватает до расчёта — пусто, если хватает всего.
+
+    Тот же гейт, что и `is_calculable()`, только вслух: владельцу в
+    админке нужно не «нельзя», а «чего именно» — иначе догадываться
+    о причине приходится по всему справочнику (тикет 22).
+    """
+    unfilled = _unfilled_attributes(product)
+    if unfilled:
+        return unfilled
+    return () if _has_a_charged_value(product) else (NO_TARIFFS,)
 
 
 def _has_a_charged_value(product: Product) -> bool:
@@ -124,15 +142,14 @@ def _has_a_charged_value(product: Product) -> bool:
     )
 
 
-def _is_described_fully(product: Product) -> bool:
-    """Названы ли товаром все тарифицируемые атрибуты, ему полагающиеся.
+def _unfilled_attributes(product: Product) -> tuple[str, ...]:
+    """Тарифицируемые атрибуты, которых товар не назвал.
 
-    Спрашивается только о выборе из списка: тариф живёт у значения
-    справочника, а у «да/нет» и числовых значения справочника нет, и
-    их пустота цену не укорачивает. Незаполненный вес — не повод
-    молчать о цене изделия, которое считается целиком. Появится у
-    числового атрибута роль в расчёте (количество вырезов, тикет 22) —
-    правило расширится вместе с `tariffs.configuration`.
+    Спрашивается только о выборе из списка: у «да/нет» и числовых
+    значения справочника нет, и их пустота цену не укорачивает.
+    Незаполненный вес — не повод молчать о цене изделия, которое
+    считается целиком; незаполненное количество вырезов значит, что
+    вырезов нет, а не что цена неполна.
 
     «Полагаются» — с поправкой на зависимость: кнопки не бывает без
     подсветки или подогрева, и её отсутствие у товара без них не
@@ -144,14 +161,17 @@ def _is_described_fully(product: Product) -> bool:
     present = {
         row.attribute_id
         for row in rows
-        if marks_presence(value_bool=row.value_bool)
+        if marks_presence(
+            value_bool=row.value_bool, value_option=row.value_option
+        )
     }
-    return not any(
-        attribute.pk not in filled
-        and attribute.missing_parent_error(present) is None
+    return tuple(
+        attribute.name
         for attribute in Attribute.objects.filter(
             category_id=product.category_id, kind=Attribute.Kind.CHOICE
         ).prefetch_related("parents")
+        if attribute.pk not in filled
+        and attribute.missing_parent_error(present) is None
     )
 
 

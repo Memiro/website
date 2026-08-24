@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from django.db.models import Prefetch
@@ -36,22 +37,45 @@ def product_values(prefix: str = "") -> Prefetch:
         f"{prefix}attribute_values",
         queryset=ProductAttribute.objects.select_related(
             "attribute", "value_option__attribute"
-        ),
+        ).prefetch_related("attribute__values"),
     )
 
 
 def declared_values(product: Product) -> dict[int, AttributeValue]:
     """Значения справочника, названные товаром, — по атрибуту.
 
-    Атрибуты «да/нет» и числовые сюда не попадают: тариф живёт у
-    значения справочника, а у них значения справочника нет. Берётся
-    `all()`, чтобы попадать в кэш `product_values()`.
+    Атрибуты «да/нет» и числовые сюда не попадают: у товара они стоят
+    не строкой справочника. Числовые приходят в расчёт своим путём —
+    `counted_values()`. Берётся `all()`, чтобы попадать в кэш
+    `product_values()`.
     """
     return {
         row.value_option.attribute_id: row.value_option
         for row in product.attribute_values.all()
         if row.value_option is not None
     }
+
+
+def counted_values(
+    product: Product,
+) -> list[tuple[AttributeValue, Decimal]]:
+    """Числовые значения товара со ставкой, которую они умножают.
+
+    Число у товара говорит не «что выбрано», а «сколько раз»: два
+    выреза стоят вдвое (тикет 22). Ставка при этом остаётся там же,
+    где у всех остальных, — в справочнике; у числового атрибута его
+    единственная строка и есть тариф за единицу.
+
+    Ноль и пустое — не признак: вырезов нет, статьи тоже.
+    """
+    counted: list[tuple[AttributeValue, Decimal]] = []
+    for row in product.attribute_values.all():
+        if row.value_number is None or row.value_number <= 0:
+            continue
+        tariff = next(iter(row.attribute.values.all()), None)
+        if tariff is not None:
+            counted.append((tariff, row.value_number))
+    return counted
 
 
 def limits_from_settings() -> pricing.PricingLimits:
@@ -84,16 +108,23 @@ def configuration(
     return pricing.Configuration(
         width_mm=width_mm,
         height_mm=height_mm,
-        values=tuple(_selected(value) for value in values.values()),
+        values=tuple(_selected(value) for value in values.values())
+        + tuple(
+            _selected(tariff, quantity=quantity)
+            for tariff, quantity in counted_values(product)
+        ),
     )
 
 
-def _selected(value: AttributeValue) -> pricing.SelectedValue:
+def _selected(
+    value: AttributeValue, *, quantity: Decimal = Decimal(1)
+) -> pricing.SelectedValue:
     """Строка справочника глазами движка."""
     return pricing.SelectedValue(
         label=value.full_label,
         unit=pricing.Unit(value.unit) if value.unit else None,
         rate=value.rate,
+        quantity=quantity,
         scaled_by_shape=value.scaled_by_shape,
     )
 

@@ -40,6 +40,25 @@ class FilterError(Exception):
 
 FILTERABLE_KINDS = (Attribute.Kind.CHOICE, Attribute.Kind.BOOLEAN)
 
+
+def filterable_attributes(category: Category) -> list[Attribute]:
+    """Атрибуты категории, из которых строится сужение выдачи.
+
+    Одно определение на пользовательский фильтр и на условие
+    посадочной: разойдясь, они дали бы индексируемую страницу с
+    сужением, которого в сайдбаре нет (ADR-0003).
+
+    Числовые фильтров не дают вовсе, а снятый признак «строит фильтр»
+    убирает и выбор из списка: по типу полотна выдачу не сужают —
+    любое зеркало делают из любого полотна (тикет 22).
+    """
+    return list(
+        category.attributes.filter(
+            kind__in=FILTERABLE_KINDS, is_filterable=True
+        ).prefetch_related("values")
+    )
+
+
 PRICE_MIN_PARAM = "price_min"
 PRICE_MAX_PARAM = "price_max"
 # Параметры цены закрываются от индексации наравне с прочими (ADR-0003)
@@ -192,11 +211,7 @@ class CatalogFilters:
         Параметры, не совпадающие со слагами атрибутов категории
         (page, sort, utm и прочие), игнорируются.
         """
-        attributes = list(
-            category.attributes.filter(
-                kind__in=FILTERABLE_KINDS
-            ).prefetch_related("values")
-        )
+        attributes = filterable_attributes(category)
         choice_selected: dict[Attribute, tuple[AttributeValue, ...]] = {}
         bool_selected: dict[Attribute, tuple[bool, ...]] = {}
         for attribute in attributes:

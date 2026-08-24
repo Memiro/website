@@ -57,7 +57,7 @@ SWITCH = SelectedValue(
 HEATING = SelectedValue(label="Подогрев", unit=Unit.PIECE, rate=Decimal(3500))
 THREE_IN_ONE = SelectedValue(label="3 в 1", unit=Unit.PIECE, rate=Decimal(900))
 CUTOUTS = SelectedValue(
-    label="Вырез", unit=Unit.PIECE, rate=Decimal(500), quantity=2
+    label="Вырез", unit=Unit.PIECE, rate=Decimal(500), quantity=Decimal(2)
 )
 ROUND_SHAPE = SelectedValue(
     label="Круглое", unit=Unit.FACTOR, rate=Decimal("1.5")
