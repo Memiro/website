@@ -48,8 +48,8 @@ CONTOUR = SelectedValue(
 )
 FRONTAL = SelectedValue(
     label="Фронтальная подсветка",
-    unit=Unit.SQUARE_METER,
-    rate=Decimal(1200),
+    unit=Unit.LINEAR_METER,
+    rate=Decimal(3200),
 )
 SWITCH = SelectedValue(
     label="Выключатель", unit=Unit.PIECE, rate=Decimal(1500)
