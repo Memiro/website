@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 from memiro.catalog.models import Category, Product
 from memiro.inquiries.models import Inquiry
+from memiro.inquiries.notifications import inquiry_message
 from tests.notifiers import RecordingNotifier
 
 RECORDING = "tests.notifiers.RecordingNotifier"
@@ -105,6 +106,24 @@ def test_inquiry_from_product_page_needs_no_items(
     inquiry = Inquiry.objects.get()
     assert inquiry.source == Inquiry.Source.PRODUCT
     assert inquiry.items.count() == 1
+
+
+@pytest.mark.django_db
+def test_inquiry_of_a_product_without_a_price_says_so(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Товару без вариантов цены не завели (ADR-0007).
+
+    Менеджеру важно прочитать это в заявке, а не «от None ₽».
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+    Product.objects.filter(pk=products[0].pk).update(price=None)
+
+    post_inquiry(client, items=[products[0].pk])
+    message = inquiry_message(Inquiry.objects.get())
+
+    assert "Halo Moon, цена не рассчитана" in message
+    assert "None" not in message
 
 
 @pytest.mark.django_db

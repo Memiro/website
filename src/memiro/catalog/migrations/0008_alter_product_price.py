@@ -13,11 +13,7 @@ class Migration(migrations.Migration):
             model_name="product",
             name="price",
             field=models.PositiveIntegerField(
-                blank=True,
-                default=None,
-                editable=False,
-                null=True,
-                verbose_name="цена «от», ₽",
+                editable=False, null=True, verbose_name="цена «от», ₽"
             ),
         ),
     ]

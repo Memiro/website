@@ -225,10 +225,12 @@ def _category_meta(category: Category, base: QuerySet[Product]) -> PageMeta:
 def _product_meta(product: Product) -> PageMeta:
     photo = product.main_photo
     # Товар без вариантов цены не имеет — в описании её тогда нет
-    price = f"Цена от {product.price} ₽. " if product.has_price else ""
+    price_sentence = (
+        f"Цена от {product.price} ₽. " if product.has_price else ""
+    )
     description = product.description or (
         f"{product.name} — изготовление под заказ по вашим размерам. "
-        f"{price}Доставка и установка в Санкт-Петербурге."
+        f"{price_sentence}Доставка и установка в Санкт-Петербурге."
     )
     return PageMeta(
         title=title(f"{product.name} — купить в Санкт-Петербурге"),

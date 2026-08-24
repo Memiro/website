@@ -131,6 +131,9 @@
   const price = (value) =>
     `от ${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F")} ₽`;
 
+  // Пропущенные узлы отсеиваются на сборке, а не у каждого append
+  const present = (...nodes) => nodes.filter(Boolean);
+
   // null — товару не завели предпосчитанных вариантов, цены нет вовсе
   // (ADR-0007). Шаблоны в таком случае не печатают и самого элемента —
   // здесь так же, иначе разметка карточек разойдётся с серверной
@@ -180,7 +183,7 @@
       renderCollections();
     });
 
-    row.append(link, meta, ...(cost ? [cost] : []), drop);
+    row.append(...present(link, meta, cost, drop));
     return row;
   };
 
@@ -234,7 +237,7 @@
     cart.dataset.labelOn = "В корзине";
     cart.textContent = "В корзину";
     buttons.append(fav, cart);
-    actions.append(...(cost ? [cost] : []), buttons);
+    actions.append(...present(cost, buttons));
 
     card.append(link, actions);
     return card;

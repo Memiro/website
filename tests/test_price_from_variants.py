@@ -73,7 +73,7 @@ def shop(db: None) -> SimpleNamespace:
     )
 
 
-def add_variant(
+def add_variant_to(
     product: Product,
     width_mm: int,
     height_mm: int,
@@ -107,26 +107,18 @@ def product_page(client: Client, product: Product) -> str:
 
 
 @pytest.mark.django_db
-def test_product_price_is_the_price_of_its_cheapest_variant(
+def test_a_new_cheaper_variant_becomes_the_price_of_the_product(
     shop: SimpleNamespace,
 ) -> None:
-    add_variant(shop.priced, 1200, 800, shop.silver)
-    add_variant(shop.priced, 600, 400, shop.silver)
+    """Цена товара — минимум по вариантам, и он же за ними следует."""
+    add_variant_to(shop.priced, 1200, 800, shop.silver)
+    shop.priced.refresh_from_db()
+    alone = shop.priced.price
 
+    add_variant_to(shop.priced, 600, 400, shop.silver)
     shop.priced.refresh_from_db()
 
-    assert shop.priced.price == SMALL_600_400
-
-
-@pytest.mark.django_db
-def test_a_new_cheaper_variant_lowers_the_product_price(
-    shop: SimpleNamespace,
-) -> None:
-    add_variant(shop.priced, 1200, 800, shop.silver)
-
-    add_variant(shop.priced, 600, 400, shop.silver)
-    shop.priced.refresh_from_db()
-
+    assert alone == LARGE_1200_800
     assert shop.priced.price == SMALL_600_400
 
 
@@ -134,7 +126,7 @@ def test_a_new_cheaper_variant_lowers_the_product_price(
 def test_editing_the_cheapest_variant_reaches_the_product_price(
     shop: SimpleNamespace,
 ) -> None:
-    variant = add_variant(shop.priced, 600, 400, shop.silver)
+    variant = add_variant_to(shop.priced, 600, 400, shop.silver)
 
     variant.width_mm, variant.height_mm = 1200, 800
     variant.save()
@@ -147,8 +139,8 @@ def test_editing_the_cheapest_variant_reaches_the_product_price(
 def test_deleting_the_cheapest_variant_raises_the_product_price(
     shop: SimpleNamespace,
 ) -> None:
-    cheapest = add_variant(shop.priced, 600, 400, shop.silver)
-    add_variant(shop.priced, 1200, 800, shop.silver)
+    cheapest = add_variant_to(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 1200, 800, shop.silver)
 
     cheapest.delete()
     shop.priced.refresh_from_db()
@@ -161,7 +153,7 @@ def test_deleting_the_last_variant_leaves_the_product_without_a_price(
     shop: SimpleNamespace,
 ) -> None:
     """Заглушки на месте цены не остаётся — остаётся пусто."""
-    variant = add_variant(shop.priced, 600, 400, shop.silver)
+    variant = add_variant_to(shop.priced, 600, 400, shop.silver)
 
     variant.delete()
     shop.priced.refresh_from_db()
@@ -174,7 +166,7 @@ def test_a_tariff_change_reaches_the_product_price(
     shop: SimpleNamespace,
 ) -> None:
     """Тариф правят в справочнике — витрина не отстаёт."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     shop.silver.rate = Decimal(8000)
     shop.silver.save()
@@ -187,7 +179,7 @@ def test_a_tariff_change_reaches_the_product_price(
 def test_a_product_without_variants_has_no_price(
     shop: SimpleNamespace,
 ) -> None:
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     shop.bare.refresh_from_db()
 
@@ -201,8 +193,8 @@ def test_a_product_without_variants_has_no_price(
 def test_catalog_card_shows_the_cheapest_variant_price(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    add_variant(shop.priced, 1200, 800, shop.silver)
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 1200, 800, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     html = category_page(client, shop)
 
@@ -215,7 +207,7 @@ def test_a_product_without_variants_shows_no_price(
     client: Client, shop: SimpleNamespace
 ) -> None:
     """Ни на плитке, ни на карточке — молчание, а не «от 1 ₽»."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     card = category_page(client, shop)
     detail = product_page(client, shop.bare)
@@ -250,11 +242,11 @@ def test_a_product_without_a_price_stays_out_of_the_price_bounds(
     client: Client, shop: SimpleNamespace
 ) -> None:
     """Подсказки «от» и «до» считаются по товарам, у которых цена есть."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
     third = Product.objects.create(
         category=shop.category, name="Loft", slug="loft", is_published=True
     )
-    add_variant(third, 1200, 800, shop.silver)
+    add_variant_to(third, 1200, 800, shop.silver)
 
     html = category_page(client, shop)
 
@@ -267,7 +259,7 @@ def test_a_product_without_a_price_is_not_first_when_sorting_by_price(
     client: Client, shop: SimpleNamespace
 ) -> None:
     """«Дешевле» — не про то, что цена неизвестна."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     html = category_page(client, shop, "?sort=price")
 
@@ -278,7 +270,7 @@ def test_a_product_without_a_price_is_not_first_when_sorting_by_price(
 def test_a_product_without_a_price_is_not_first_when_sorting_by_price_desc(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     html = category_page(client, shop, "?sort=-price")
 
@@ -289,7 +281,7 @@ def test_a_product_without_a_price_is_not_first_when_sorting_by_price_desc(
 def test_a_product_without_a_price_drops_out_of_the_price_range(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     html = category_page(client, shop, "?price_min=1")
 
@@ -310,8 +302,8 @@ def test_the_storefront_reads_the_product_price_field(
     показали именно его, значит фильтр, сортировка и разметка остались
     на том же шве — и правка цены не расползлась по проекту (ADR-0007).
     """
-    add_variant(shop.priced, 600, 400, shop.silver)
-    add_variant(shop.bare, 1200, 800, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.bare, 1200, 800, shop.silver)
     Product.objects.filter(pk=shop.priced.pk).update(price=SEAM_PRICE)
 
     html = category_page(client, shop)
@@ -325,7 +317,7 @@ def test_the_price_snapshot_of_an_inquiry_reads_the_same_field(
     client: Client, shop: SimpleNamespace
 ) -> None:
     """Снимок цены в заявке и в корзине — то же поле товара."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
     Product.objects.filter(pk=shop.priced.pk).update(price=SEAM_PRICE)
 
     response = client.get(f"/api/products?ids={shop.priced.pk},{shop.bare.pk}")
@@ -345,7 +337,7 @@ def test_owner_never_types_a_product_price(
     admin_client: Client, shop: SimpleNamespace
 ) -> None:
     """Поля цены в форме нет, а на его месте — объяснение."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
 
     html = page(
         admin_client, f"/admin/catalog/product/{shop.priced.pk}/change/"
@@ -374,8 +366,8 @@ def test_wiping_the_variants_at_once_leaves_the_product_without_a_price(
     shop: SimpleNamespace,
 ) -> None:
     """Удаление пачкой сигнал по варианту тоже шлёт."""
-    add_variant(shop.priced, 600, 400, shop.silver)
-    add_variant(shop.priced, 1200, 800, shop.silver)
+    add_variant_to(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.priced, 1200, 800, shop.silver)
 
     shop.priced.variants.all().delete()
     shop.priced.refresh_from_db()
@@ -384,15 +376,20 @@ def test_wiping_the_variants_at_once_leaves_the_product_without_a_price(
 
 
 @pytest.mark.django_db
-def test_deleting_the_product_takes_its_variants_with_it(
+def test_deleting_the_product_does_not_trip_the_price_sweep(
     shop: SimpleNamespace,
 ) -> None:
-    """Каскад сносит варианты — сводить цену уже некому и незачем."""
-    add_variant(shop.priced, 600, 400, shop.silver)
+    """Каскад сносит варианты, и сведение цены зовётся по исчезающему
+    товару — упасть на этом оно не должно, а цены соседа не касается."""
+    add_variant_to(shop.priced, 600, 400, shop.silver)
+    add_variant_to(shop.bare, 1200, 800, shop.silver)
+    doomed = shop.priced.pk
 
     shop.priced.delete()
+    shop.bare.refresh_from_db()
 
-    assert not ProductVariant.objects.exists()
+    assert not ProductVariant.objects.filter(product_id=doomed).exists()
+    assert shop.bare.price == LARGE_1200_800
 
 
 @pytest.mark.django_db
@@ -404,7 +401,7 @@ def test_taking_a_value_off_the_dictionary_side_reaches_the_price(
     Без полотна остаётся изделие без единой платной статьи: ноль —
     это цена, а не её отсутствие, и товар о ней не молчит.
     """
-    variant = add_variant(shop.priced, 600, 400, shop.silver)
+    variant = add_variant_to(shop.priced, 600, 400, shop.silver)
 
     shop.silver.variant_selections.remove(variant)
     shop.priced.refresh_from_db()

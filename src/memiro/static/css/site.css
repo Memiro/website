@@ -333,7 +333,11 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .cart-name { font-size: 17px; font-weight: 500; }
 .cart-category { font-size: 13px; color: var(--muted); margin-top: 4px; }
 .cart-price { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+/* grid-column: 4 — у товара без вариантов цены нет вовсе (ADR-0007), и её
+   ячейка пустует; без явной колонки «Убрать» съехала бы на её место, и в
+   смешанной корзине ссылки перестали бы стоять в столбик */
 .cart-drop {
+  grid-column: 4;
   background: none; border: none; padding: 6px 0; cursor: pointer;
   font-family: inherit; font-size: 14px; color: var(--muted); text-decoration: underline;
 }
