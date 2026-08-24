@@ -17,6 +17,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.test import Client
 
 from memiro.catalog import calculator, tariffs
@@ -476,6 +477,20 @@ def test_landing_listing_every_value_narrows_nothing(
     assert "перечислены все значения" in response.content.decode()
 
 
+def test_one_value_per_attribute_on_a_product(shop: SimpleNamespace) -> None:
+    """Кнопка у изделия одна: второй выключатель — личное пожелание.
+
+    Правило тикета 22 держится ключом в базе, а не проверкой формы, —
+    пачечная правка мимо админки его тоже не обойдёт.
+    """
+    with pytest.raises(IntegrityError):
+        ProductAttribute.objects.create(
+            product=shop.product,
+            attribute=shop.frame,
+            value_option=shop.no_frame,
+        )
+
+
 @pytest.fixture
 def legacy(db: None) -> SimpleNamespace:
     """Справочник и разметка старого сайта — то, что застаёт скрипт."""
@@ -698,6 +713,47 @@ def test_remap_keeps_a_stray_value_that_products_hold(
 
     assert AttributeValue.objects.filter(pk=wood.pk).exists()
     assert report.strays["Цвет рамы: Дерево"] == [legacy.baguette.slug]
+
+
+def test_remap_unpublishes_a_landing_that_would_stop_narrowing(
+    legacy: SimpleNamespace, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Пересборка не выпускает дубль категории: скрипт идёт мимо формы.
+
+    Если преемники покрывают весь справочник атрибута, условие
+    перестаёт спрашивать у товара хоть что-нибудь. Такую страницу
+    честнее снять с публикации, чем отдать в индекс дублем каталога.
+    """
+    remap = load_remap()
+    landing = Landing.objects.create(
+        category=legacy.category,
+        slug="zerkala-v-rame",
+        title="Зеркала в раме",
+        heading="Зеркала в раме",
+        description="",
+        is_published=True,
+    )
+    frame = Attribute.objects.get(category=legacy.category, slug="frame")
+    LandingCondition.objects.create(
+        landing=landing,
+        attribute=frame,
+        value_option=frame.values.get(value="В раме"),
+    )
+    # Рама владельца — алюминий, багет и «без рамы»: преемниками станут
+    # все три, и сужать условию будет нечего. Модуль скрипта живёт в
+    # `sys.modules` между тестами, поэтому правка — только через
+    # monkeypatch, который вернёт всё на место
+    monkeypatch.setitem(
+        remap.SUCCESSORS,
+        ("frame", "В раме"),
+        ("Алюминий", "Багет", "Без рамы"),
+    )
+
+    report = remap.run()
+
+    landing.refresh_from_db()
+    assert not landing.is_published
+    assert landing.slug in report.unpublished_landings
 
 
 def test_remap_repeats_without_damage(legacy: SimpleNamespace) -> None:

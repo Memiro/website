@@ -50,8 +50,10 @@ from memiro.catalog.models import (  # noqa: E402
     Attribute,
     AttributeValue,
     Category,
+    Landing,
     LandingCondition,
     ProductAttribute,
+    exhausts_dictionary,
 )
 
 CATEGORY_SLUG = "zerkala"
@@ -307,8 +309,9 @@ def run(*, category_slug: str = CATEGORY_SLUG) -> Report:
         category = Category.objects.get(slug=category_slug)
         attributes = _bring_dictionary(category)
         report = Report()
-        _carry_over(category, attributes, report)
-        _repoint_landings(attributes)
+        moves = _moves(attributes)
+        _carry_over(category, moves, report)
+        _repoint_landings(moves)
         _drop_ambiguous(attributes, report)
         _retire(category)
         _prune_strays(attributes, report)
@@ -353,24 +356,46 @@ def _bring_dictionary(category: Category) -> dict[str, Attribute]:
     return attributes
 
 
+def _moves(
+    attributes: dict[str, Attribute],
+) -> list[tuple[str, str, AttributeValue]]:
+    """Переносы с разрешёнными адресатами: слаг, значение, куда.
+
+    Справочник спрашивается один раз на прогон: тот же список обходят
+    и разметка товаров, и условия посадочных.
+    """
+    return [
+        (
+            old_slug,
+            old_value,
+            attributes[new_slug].values.get(value=new_value),
+        )
+        for (old_slug, old_value), (
+            new_slug,
+            new_value,
+        ) in CARRIED_OVER.items()
+    ]
+
+
 def _carry_over(
-    category: Category, attributes: dict[str, Attribute], report: Report
+    category: Category,
+    moves: list[tuple[str, str, AttributeValue]],
+    report: Report,
 ) -> None:
     """Переносит разметку, у которой новый ответ однозначен."""
-    for (old_slug, old_value), (new_slug, new_value) in CARRIED_OVER.items():
+    for old_slug, old_value, target in moves:
         rows = ProductAttribute.objects.filter(
             product__category=category,
             attribute__slug=old_slug,
             value_option__value=old_value,
         ).select_related("product")
-        target = attributes[new_slug].values.get(value=new_value)
         for row in rows:
             # Владелец мог проставить своё раньше прогона — не спорим.
             # Спорим только с выбывшим значением: «Рама: В раме» на
             # месте алюминия и есть та разметка, которую мы переносим
             existing, created = ProductAttribute.objects.get_or_create(
                 product=row.product,
-                attribute=attributes[new_slug],
+                attribute=target.attribute,
                 defaults={"value_option": target},
             )
             if not created and _is_dropped(existing):
@@ -387,17 +412,18 @@ def _is_dropped(row: ProductAttribute) -> bool:
     return (row.attribute.slug, row.value_option.value) in DROPPED
 
 
-def _repoint_landings(attributes: dict[str, Attribute]) -> None:
+def _repoint_landings(
+    moves: list[tuple[str, str, AttributeValue]],
+) -> None:
     """Ведёт условия посадочных за переехавшей разметкой.
 
     «Зеркала напольные» сужают категорию тем же признаком, что и
     раньше, — он просто зовётся теперь «Крепление: На ножке».
     """
-    for (old_slug, old_value), (new_slug, new_value) in CARRIED_OVER.items():
-        target = attributes[new_slug].values.get(value=new_value)
+    for old_slug, old_value, target in moves:
         LandingCondition.objects.filter(
             attribute__slug=old_slug, value_option__value=old_value
-        ).update(attribute=attributes[new_slug], value_option=target)
+        ).update(attribute=target.attribute, value_option=target)
 
 
 def _rebuild_landings_on(
@@ -418,7 +444,7 @@ def _rebuild_landings_on(
     ).select_related("landing")
     for condition in conditions:
         landing = condition.landing
-        if successors:
+        if successors and not _would_stop_narrowing(landing, successors):
             report.widened_landings.append(landing.slug)
             for successor in successors:
                 LandingCondition.objects.get_or_create(
@@ -431,6 +457,28 @@ def _rebuild_landings_on(
             landing.is_published = False
             landing.save(update_fields=["is_published"])
     conditions.delete()
+
+
+def _would_stop_narrowing(
+    landing: Landing, successors: tuple[AttributeValue, ...]
+) -> bool:
+    """Не выйдет ли из пересборки дубль категории.
+
+    Скрипт заводит условия мимо формы, а значит, и мимо её проверки.
+    Правило берётся то же самое (`exhausts_dictionary`): перечислив все
+    значения атрибута, посадочная перестаёт сужать что бы то ни было, и
+    такую страницу лучше снять с публикации, чем выпустить в индекс
+    дублем каталога (ADR-0003).
+    """
+    attribute = successors[0].attribute
+    values = {value.pk for value in successors}
+    values |= {
+        condition.value_option_id
+        for condition in landing.conditions.all()
+        if condition.attribute_id == attribute.pk
+        and condition.value_option_id is not None
+    }
+    return exhausts_dictionary(attribute, values)
 
 
 def _drop_ambiguous(attributes: dict[str, Attribute], report: Report) -> None:
@@ -524,7 +572,22 @@ def _collect_unfilled(category: Category, report: Report) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument(
+        "--overwrite-report",
+        action="store_true",
+        help="Переписать существующий отчёт.",
+    )
     arguments = parser.parse_args()
+    # Отчёт — не побочный вывод, а результат прогона: только он помнит,
+    # у каких товаров разметку сняли и какие посадочные пересобрали.
+    # Второму прогону вспомнить это неоткуда, и молча затерев файл, он
+    # унёс бы единственный список работ владельца
+    if arguments.report.exists() and not arguments.overwrite_report:
+        parser.error(
+            f"Отчёт {arguments.report} уже есть — его писал прогон, "
+            "который переносил разметку. Возьмите --report с другим "
+            "именем или --overwrite-report, если тот отчёт не нужен."
+        )
     report = run()
     arguments.report.write_text(report.as_markdown(), encoding="utf-8")
     print(f"Перенесено строк разметки: {report.carried}")

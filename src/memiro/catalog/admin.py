@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 from . import calculator, tariffs
 from .formatting import rub
 from .models import (
-    BOOL_TOKENS,
     MAX_LANDING_ATTRIBUTES,
     Attribute,
     AttributeValue,
@@ -29,6 +28,7 @@ from .models import (
     ProductAttribute,
     ProductImage,
     ProductVariant,
+    exhausts_dictionary,
     marks_presence,
 )
 
@@ -390,44 +390,37 @@ class PricingSettingsAdmin(admin.ModelAdmin):
         return False
 
 
-def _condition_key(row: dict[str, Any]) -> tuple[int, object]:
-    """Что именно условие спрашивает у товара: атрибут и значение."""
-    return (
-        row["attribute"].pk,
-        row["value_option"].pk
-        if row.get("value_option")
-        else row.get("value_bool"),
-    )
+def _condition_value(row: dict[str, Any]) -> object:
+    """Значение, которое условие спрашивает у товара."""
+    value_option = row.get("value_option")
+    return value_option.pk if value_option else row.get("value_bool")
+
+
+def _values_by_attribute(
+    rows: list[dict[str, Any]],
+) -> dict[Attribute, set[object]]:
+    """Что условия спрашивают — по атрибуту, значения в кучу."""
+    chosen: dict[Attribute, set[object]] = {}
+    for row in rows:
+        attribute = row.get("attribute")
+        if attribute:
+            chosen.setdefault(attribute, set()).add(_condition_value(row))
+    return chosen
 
 
 def _check_no_repeated_values(rows: list[dict[str, Any]]) -> None:
     """Одно значение дважды сужением не становится — это опечатка."""
-    keys = [_condition_key(row) for row in rows if row.get("attribute")]
-    if len(keys) != len(set(keys)):
+    named = [row for row in rows if row.get("attribute")]
+    chosen = _values_by_attribute(named)
+    if sum(len(values) for values in chosen.values()) != len(named):
         message = "Одно и то же значение указано дважды."
         raise ValidationError(message)
 
 
 def _check_narrows_something(rows: list[dict[str, Any]]) -> None:
-    """Все значения атрибута разом — не сужение, а дубль категории.
-
-    Значения одного атрибута объединяются по ИЛИ, и перечислив их все,
-    владелец получил бы под своим адресом весь каталог категории —
-    ровно тот индексируемый дубль, ради которого ADR-0003 и завёл
-    ручной список посадочных.
-    """
-    chosen: dict[Attribute, set[object]] = {}
-    for row in rows:
-        attribute = row.get("attribute")
-        if attribute:
-            chosen.setdefault(attribute, set()).add(_condition_key(row)[1])
-    for attribute, values in chosen.items():
-        available = (
-            attribute.values.count()
-            if attribute.kind == Attribute.Kind.CHOICE
-            else len(BOOL_TOKENS)
-        )
-        if len(values) >= available:
+    """Все значения атрибута разом — не сужение, а дубль категории."""
+    for attribute, values in _values_by_attribute(rows).items():
+        if exhausts_dictionary(attribute, values):
             message = (
                 "«%(name)s»: перечислены все значения — "
                 "такая страница ничего не сужает."
