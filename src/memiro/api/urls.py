@@ -4,6 +4,7 @@ from dmr.openapi.views.json import OpenAPIJsonView
 from dmr.routing import Router, path
 
 from memiro.api.ping import PingController
+from memiro.catalog.api import PriceController
 from memiro.inquiries.api import InquiryController, ProductSummariesController
 
 router = Router(
@@ -15,6 +16,7 @@ router = Router(
             ProductSummariesController.as_view(),
             name="product-summaries",
         ),
+        path("price", PriceController.as_view(), name="price"),
         path("inquiries", InquiryController.as_view(), name="inquiries"),
     ],
 )

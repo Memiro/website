@@ -48,7 +48,7 @@ M2M_DONE = frozenset({"post_add", "post_remove", "post_clear"})
 
 def reprice(variants: Iterable[ProductVariant]) -> None:
     """Считает цену каждого варианта пачки — и цену их товаров следом."""
-    limits = tariffs.thresholds()
+    limits = tariffs.limits_from_settings()
     touched: set[int] = set()
     for variant in variants:
         total = tariffs.price(

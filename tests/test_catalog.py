@@ -328,6 +328,9 @@ LED_RATE = Decimal("2500.00")
 BUTTON_RATE = Decimal("1500.00")
 MIN_ORDER_TOTAL = 9000
 MIN_AREA = Decimal("0.400")
+# Пределы производства: лист, из которого режут
+MAX_LONG_SIDE_MM = 2400
+MAX_SHORT_SIDE_MM = 1500
 # «Подсветка» и «Кнопка», сохранённые одним submit
 EXPECTED_ATTRIBUTES = 2
 
@@ -597,12 +600,14 @@ def test_customer_editable_flag_stored(
 
 @pytest.mark.django_db
 def test_pricing_limits_are_data(admin_client: Client) -> None:
-    """Минимальная площадь и минимальная сумма заводятся в админке."""
+    """Пороги расчёта и пределы производства заводятся в админке."""
     response = admin_client.post(
         "/admin/catalog/pricingsettings/add/",
         {
             "min_area_m2": str(MIN_AREA),
             "min_order_total": str(MIN_ORDER_TOTAL),
+            "max_long_side_mm": str(MAX_LONG_SIDE_MM),
+            "max_short_side_mm": str(MAX_SHORT_SIDE_MM),
             "_save": "",
         },
     )
@@ -611,6 +616,28 @@ def test_pricing_limits_are_data(admin_client: Client) -> None:
     saved = PricingSettings.objects.get()
     assert saved.min_area_m2 == MIN_AREA
     assert saved.min_order_total == MIN_ORDER_TOTAL
+    assert saved.max_long_side_mm == MAX_LONG_SIDE_MM
+    assert saved.max_short_side_mm == MAX_SHORT_SIDE_MM
+
+
+@pytest.mark.django_db
+def test_a_second_side_longer_than_the_first_is_refused(
+    admin_client: Client,
+) -> None:
+    """Сверка идёт длинной стороной — вторая крупнее первой недосягаема."""
+    response = admin_client.post(
+        "/admin/catalog/pricingsettings/add/",
+        {
+            "min_area_m2": str(MIN_AREA),
+            "min_order_total": str(MIN_ORDER_TOTAL),
+            "max_long_side_mm": str(MAX_SHORT_SIDE_MM),
+            "max_short_side_mm": str(MAX_LONG_SIDE_MM),
+            "_save": "",
+        },
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert not PricingSettings.objects.exists()
 
 
 @pytest.mark.django_db

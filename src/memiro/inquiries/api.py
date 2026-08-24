@@ -8,11 +8,12 @@ from typing import Annotated, ClassVar, Literal
 import pydantic
 from django.db import transaction
 from django.urls import reverse
-from dmr import APIError, Body, Controller, Query, ResponseSpec, modify
-from dmr.errors import ErrorModel, ErrorType
+from dmr import Body, Controller, Query, modify
 from dmr.plugins.pydantic import PydanticSerializer
 
 from memiro.api.csrf import csrf_protect_json
+from memiro.api.errors import UNPROCESSABLE, reject
+from memiro.api.ids import IDS_PATTERN, MAX_IDS_LENGTH, parse_ids
 from memiro.catalog.models import Product
 from memiro.inquiries.limits import MAX_ITEMS, MIN_PHONE_DIGITS
 from memiro.inquiries.models import Inquiry, InquiryItem
@@ -24,16 +25,8 @@ from memiro.legal.privacy import PRIVACY_VERSION
 PHONE_PATTERN = r"^[\d\s()+\-]{6,32}$"
 # Пустая строка — «не указан»; иначе минимальная форма адреса
 EMAIL_PATTERN = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]{2,}$"
-# Список id через запятую либо пусто: «пустая корзина» — не ошибка
-IDS_PATTERN = r"^(\d+(,\d+)*)?$"
-
 # Обрезка пробелов до проверки длины: «   » — пустое имя, а не двухсимвольное
 Trimmed = pydantic.StringConstraints(strip_whitespace=True)
-
-UNPROCESSABLE = ResponseSpec(
-    return_type=ErrorModel,
-    status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-)
 
 
 class ProductSummary(pydantic.BaseModel):
@@ -56,11 +49,12 @@ class ProductSummaries(pydantic.BaseModel):
 
 
 class SummariesQuery(pydantic.BaseModel):
-    # Длины хватает на MAX_ITEMS девятизначных id с запятыми
-    ids: Annotated[str, pydantic.Field(pattern=IDS_PATTERN, max_length=1000)]
+    ids: Annotated[
+        str, pydantic.Field(pattern=IDS_PATTERN, max_length=MAX_IDS_LENGTH)
+    ]
 
     def parsed_ids(self) -> list[int]:
-        return [int(chunk) for chunk in self.ids.split(",") if chunk]
+        return parse_ids(self.ids)
 
     @pydantic.field_validator("ids")
     @classmethod
@@ -170,13 +164,9 @@ class InquiryController(Controller[PydanticSerializer]):
     def _products(self, ids: list[int]) -> list[Product]:
         products, missing = _published(ids)
         if missing:
-            raise APIError(
-                self.format_error(
-                    "Товара из подборки больше нет в каталоге, "
-                    "обновите страницу.",
-                    error_type=ErrorType.user_msg,
-                ),
-                status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            reject(
+                self,
+                "Товара из подборки больше нет в каталоге, обновите страницу.",
             )
         return products
 

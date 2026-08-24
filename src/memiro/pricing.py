@@ -8,10 +8,10 @@ Django сюда не импортируется. Значения приходя
 реализация по ADR-0007. Заменить формулу — значит подставить другую
 функцию того же протокола, не трогая тех, кто её зовёт.
 
-Разложение отдаётся строкой на каждую платную статью — из него
-эндпоинт собирает подписи выбранных добавок. Что показать покупателю,
-решает вызывающий: ставки за метр, коэффициенты и разбор на стекло с
-кромкой в браузер не уезжают.
+Разложение отдаётся строкой на каждую платную статью — по нему видно,
+набралась ли у изделия хоть одна. Что показать покупателю, решает
+вызывающий, и показывает он не статьи: ставки за метр, коэффициенты и
+разбор на стекло с кромкой в браузер не уезжают.
 """
 
 from __future__ import annotations
@@ -106,18 +106,43 @@ class Configuration:
 
 
 @dataclass(frozen=True, slots=True)
-class PricingThresholds:
-    """Пороги расчёта — «Параметры расчёта» админки глазами движка.
+class PricingLimits:
+    """Границы расчёта — «Параметры расчёта» админки глазами движка.
 
-    Нули по умолчанию означают «без порога», а не цифры владельца: его
-    живут строкой `catalog.PricingSettings` и приезжают сборкой.
+    Снизу пороги, ниже которых расчёт не опускается; сверху пределы
+    производства, за которыми цены нет вовсе. Нули по умолчанию
+    означают «границы нет», а не цифры владельца: его живут строкой
+    `catalog.PricingSettings` и приезжают сборкой.
     """
 
     min_area_m2: Decimal = field(default_factory=lambda: Decimal(0))
     min_order_total: int = 0
+    # Пределы производства: что крупнее — личное пожелание, и цены ему
+    # сайт не называет (ADR-0007). Сторонами, а не площадью: режут из
+    # листа, и полоса 3000×200 в лист 2000×1500 не ложится, хотя её
+    # 0,6 м² меньше листовых трёх
+    max_long_side_mm: int = 0
+    max_short_side_mm: int = 0
+
+    def fits(self, configuration: Configuration) -> bool:
+        """Помещается ли изделие в пределы производства.
+
+        Зеркало поворачивают: 1900×400 и 400×1900 — одно и то же
+        изделие. Поэтому длинная сторона сверяется с длинным пределом,
+        короткая — с коротким, а не ширина с шириной.
+        """
+        sides = (configuration.width_mm, configuration.height_mm)
+        return _within(max(sides), self.max_long_side_mm) and _within(
+            min(sides), self.max_short_side_mm
+        )
 
 
-NO_THRESHOLDS = PricingThresholds()
+def _within(side_mm: int, limit_mm: int) -> bool:
+    """Нулевой предел — не запрет нулевой стороны, а его отсутствие."""
+    return limit_mm == 0 or side_mm <= limit_mm
+
+
+NO_LIMITS = PricingLimits()
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,23 +162,23 @@ class Price:
 
 
 class PriceEngine(Protocol):
-    """Роль движка: конфигурация и пороги → цена."""
+    """Роль движка: конфигурация и границы расчёта → цена."""
 
     def __call__(
         self,
         configuration: Configuration,
         *,
-        thresholds: PricingThresholds = ...,
+        limits: PricingLimits = ...,
     ) -> Price: ...
 
 
 def calculate_price(
     configuration: Configuration,
     *,
-    thresholds: PricingThresholds = NO_THRESHOLDS,
+    limits: PricingLimits = NO_LIMITS,
 ) -> Price:
     """Цена конфигурации по единицам расхода (ADR-0007)."""
-    area_m2 = max(configuration.area_m2, thresholds.min_area_m2)
+    area_m2 = max(configuration.area_m2, limits.min_area_m2)
     shape_factor, charged = _split_off_shape_factors(configuration.values)
     lines = tuple(
         PriceLine(label=value.label, amount=amount)
@@ -169,7 +194,7 @@ def calculate_price(
     )
     total = max(
         sum((line.amount for line in lines), Decimal(0)),
-        Decimal(thresholds.min_order_total),
+        Decimal(limits.min_order_total),
     )
     return Price(total=_round_up(total), lines=lines)
 

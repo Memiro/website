@@ -40,14 +40,16 @@ def product_values(prefix: str = "") -> Prefetch:
     )
 
 
-def thresholds() -> pricing.PricingThresholds:
-    """Пороги расчёта из админки; без строки порогов их нет."""
+def limits_from_settings() -> pricing.PricingLimits:
+    """Границы расчёта из админки; без строки параметров их нет."""
     settings = PricingSettings.objects.first()
     if settings is None:
-        return pricing.NO_THRESHOLDS
-    return pricing.PricingThresholds(
+        return pricing.NO_LIMITS
+    return pricing.PricingLimits(
         min_area_m2=settings.min_area_m2,
         min_order_total=settings.min_order_total,
+        max_long_side_mm=settings.max_long_side_mm,
+        max_short_side_mm=settings.max_short_side_mm,
     )
 
 
@@ -91,14 +93,14 @@ def _selected(value: AttributeValue) -> pricing.SelectedValue:
 def price(
     configuration: pricing.Configuration,
     *,
-    limits: pricing.PricingThresholds | None = None,
+    limits: pricing.PricingLimits | None = None,
 ) -> pricing.Price:
     """Цена конфигурации — итог и статьи, из которых он сложился.
 
-    Пороги готовыми принимаются ради пересчёта пачки вариантов: они
+    Границы готовыми принимаются ради пересчёта пачки вариантов: они
     одни на сайт, и читать их на каждый вариант незачем.
     """
     return pricing.calculate_price(
         configuration,
-        thresholds=thresholds() if limits is None else limits,
+        limits=limits_from_settings() if limits is None else limits,
     )

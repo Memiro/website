@@ -13,7 +13,7 @@ from memiro.pricing import (
     Price,
     PriceEngine,
     PriceLine,
-    PricingThresholds,
+    PricingLimits,
     SelectedValue,
     Unit,
     calculate_price,
@@ -24,11 +24,9 @@ ROUNDED_TOTAL = 8400
 SQUARE_METRE_OF_GLASS = 4000
 FLAT_RATE = 9900
 
-NO_THRESHOLDS = PricingThresholds()
-MIN_AREA = PricingThresholds(min_area_m2=Decimal("0.25"))
-MIN_ORDER = PricingThresholds(
-    min_area_m2=Decimal("0.25"), min_order_total=15000
-)
+NO_LIMITS = PricingLimits()
+MIN_AREA = PricingLimits(min_area_m2=Decimal("0.25"))
+MIN_ORDER = PricingLimits(min_area_m2=Decimal("0.25"), min_order_total=15000)
 
 # Полотно и кромка режутся по контуру — их и умножает коэффициент формы
 GLASS = SelectedValue(
@@ -74,23 +72,23 @@ def charged(price: Price) -> Decimal:
 
 
 @pytest.mark.parametrize(
-    ("configuration", "thresholds", "expected"),
+    ("configuration", "limits", "expected"),
     [
         pytest.param(
             Configuration(1900, 400, (GLASS, EDGE)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             6300,
             id="напольное 0,76 м² — 4,60 пог. м кромки",
         ),
         pytest.param(
             Configuration(870, 870, (GLASS, EDGE)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             5500,
             id="квадратное 0,76 м² — 3,48 пог. м кромки",
         ),
         pytest.param(
             Configuration(870, 870, (GLASS, EDGE, CONTOUR, SWITCH)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             15700,
             id="прямой рез",
         ),
@@ -98,13 +96,13 @@ def charged(price: Price) -> Decimal:
             Configuration(
                 870, 870, (GLASS, EDGE, CONTOUR, SWITCH, ROUND_SHAPE)
             ),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             18400,
             id="криволинейный рез — плюс половина стекла с кромкой",
         ),
         pytest.param(
             Configuration(400, 400, (GLASS,)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             700,
             id="без порога площади считается 0,16 м²",
         ),
@@ -122,7 +120,7 @@ def charged(price: Price) -> Decimal:
         ),
         pytest.param(
             Configuration(500, 500, (GLASS,)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             1000,
             id="кратный сотне итог округление не трогает",
         ),
@@ -138,37 +136,37 @@ def charged(price: Price) -> Decimal:
                     ),
                 ),
             ),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             1100,
             id="1 000,25 ₽ — вверх до сотни, а не к ближайшей",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, COLD_LIGHT)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             4000,
             id="значение без тарифа бесплатно",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, THREE_IN_ONE)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             4900,
             id="температура стоит денег только у «3 в 1»",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, CONTOUR, HEATING)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             17500,
             id="не выбранная кнопка не оплачивается",
         ),
         pytest.param(
             Configuration(1000, 1000, (GLASS, CONTOUR, HEATING, SWITCH)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             19000,
             id="выбранная кнопка оплачивается",
         ),
         pytest.param(
             Configuration(1000, 1000, (CUTOUTS,)),
-            NO_THRESHOLDS,
+            NO_LIMITS,
             1000,
             id="два выреза стоят вдвое",
         ),
@@ -176,10 +174,10 @@ def charged(price: Price) -> Decimal:
 )
 def test_price_of_a_configuration(
     configuration: Configuration,
-    thresholds: PricingThresholds,
+    limits: PricingLimits,
     expected: int,
 ) -> None:
-    priced = calculate_price(configuration, thresholds=thresholds)
+    priced = calculate_price(configuration, limits=limits)
 
     assert priced.total == expected
 
@@ -249,7 +247,7 @@ def test_the_engine_is_replaceable() -> None:
     def flat_rate(
         configuration: Configuration,
         *,
-        thresholds: PricingThresholds = NO_THRESHOLDS,
+        limits: PricingLimits = NO_LIMITS,
     ) -> Price:
         return Price(total=FLAT_RATE, lines=())
 
@@ -259,3 +257,32 @@ def test_the_engine_is_replaceable() -> None:
 
     assert canonical(square).total == SQUARE_METRE_OF_GLASS
     assert replacement(square).total == FLAT_RATE
+
+
+LIMITED = PricingLimits(max_long_side_mm=2000, max_short_side_mm=1500)
+
+
+@pytest.mark.parametrize(
+    ("width", "height", "expected"),
+    [
+        (2000, 1500, True),
+        (1500, 2000, True),
+        (2001, 1500, False),
+        (400, 1900, True),
+        (1900, 1600, False),
+    ],
+)
+def test_production_limits_are_read_side_by_side(
+    width: int, height: int, *, expected: bool
+) -> None:
+    """Изделие поворачивают: пределы сверяются длинной и короткой стороной."""
+    assert LIMITED.fits(Configuration(width_mm=width, height_mm=height)) is (
+        expected
+    )
+
+
+def test_without_limits_no_size_is_out_of_range() -> None:
+    """Нулевой предел — его отсутствие, а не запрет любого размера."""
+    huge = Configuration(width_mm=9000, height_mm=9000)
+
+    assert NO_LIMITS.fits(huge)
