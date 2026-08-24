@@ -299,7 +299,12 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   background: none; border: none; border-bottom: 1px solid var(--control);
   padding: 10px 0; outline: none; resize: vertical; width: 100%;
 }
-.field input:focus, .field textarea:focus { border-bottom-color: var(--accent); }
+.field select {
+  font-family: inherit; font-size: 17px; color: var(--text);
+  background: none; border: none; border-bottom: 1px solid var(--control);
+  padding: 10px 0; outline: none; width: 100%;
+}
+.field input:focus, .field textarea:focus, .field select:focus { border-bottom-color: var(--accent); }
 .field input::placeholder { color: var(--muted); }
 .consent { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--secondary); cursor: pointer; }
 .consent input { accent-color: var(--accent); width: 18px; height: 18px; margin-top: 2px; flex: none; }
@@ -478,6 +483,17 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .variants td { padding: 13px 0 13px 24px; color: var(--muted); }
 .variants .variant-price { text-align: right; font-weight: 600; color: var(--text); white-space: nowrap; }
 
+/* Калькулятор карточки (тикет 20) */
+.calc { margin-top: 26px; padding-top: 26px; border-top: 1px solid var(--line); }
+.calc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; }
+.calc-fields { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
+.calc-result { margin-top: 22px; display: grid; gap: 12px; justify-items: start; }
+.calc-total { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; }
+.calc-note { font-size: 15px; line-height: 1.55; color: var(--body); max-width: 46ch; }
+.calc-additions { list-style: none; display: grid; gap: 8px; width: 100%; font-size: 15px; }
+.calc-additions li { display: flex; justify-content: space-between; gap: 24px; color: var(--muted); }
+.calc-additions b { font-weight: 600; color: var(--text); white-space: nowrap; }
+
 .specs { margin-top: 56px; }
 .specs h2 { font-size: 21px; font-weight: 600; margin-bottom: 8px; }
 .spec { display: grid; grid-template-columns: 300px 1fr; gap: 24px; padding: 15px 0; border-bottom: 1px solid var(--line-spec); font-size: 16px; }
@@ -575,6 +591,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 36px; }
   .strip-row { flex-wrap: wrap; gap: 18px 32px; }
   .pdp { grid-template-columns: 1fr; gap: 36px; }
+  .calc-fields { grid-template-columns: 1fr; }
   .inquiry-block { grid-template-columns: 1fr; gap: 40px; padding: 48px 40px; }
   .collection-grid { grid-template-columns: 1fr; gap: 28px; }
   .gallery { position: static; }

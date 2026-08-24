@@ -40,6 +40,14 @@ class Unit(StrEnum):
     FACTOR = "factor"
 
 
+# Единицы, которые изделие расходует, и потому дающие платную статью
+# итога. Коэффициента формы среди них нет: он множитель у того, что
+# режется по контуру, а не статья. Набор один на движок и на витрину —
+# по нему справочник решает, дорос ли товар до расчёта
+# (`AttributeValue.is_charged`)
+CHARGED_UNITS = frozenset({Unit.PIECE, Unit.LINEAR_METER, Unit.SQUARE_METER})
+
+
 @dataclass(frozen=True, slots=True)
 class SelectedValue:
     """Выбранное значение атрибута со своим тарифом.

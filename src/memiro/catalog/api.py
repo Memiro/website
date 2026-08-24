@@ -41,7 +41,7 @@ from dmr.plugins.pydantic import PydanticSerializer
 
 from memiro.api.errors import UNPROCESSABLE, reject
 from memiro.api.ids import IDS_PATTERN, MAX_IDS_LENGTH, parse_ids
-from . import tariffs
+from . import calculator, tariffs
 from .models import AttributeValue, Product
 
 if TYPE_CHECKING:
@@ -49,12 +49,7 @@ if TYPE_CHECKING:
 
     from memiro import pricing
 
-# Верхняя граница ввода — защита разбора, а не предел производства:
-# тот живёт в «Параметрах расчёта» и отвечает приглашением к заявке,
-# а не ошибкой. Здесь отсекается разве что число в километр
-MAX_INPUT_SIDE_MM = 100_000
-
-Side = Annotated[int, pydantic.Field(ge=1, le=MAX_INPUT_SIDE_MM)]
+Side = Annotated[int, pydantic.Field(ge=1, le=calculator.MAX_INPUT_SIDE_MM)]
 
 # Один ответ на всё, что расчёту не по зубам: какая именно строка
 # справочника не подошла, покупателю не объяснить, а конкуренту
@@ -157,9 +152,11 @@ class PriceController(Controller[PydanticSerializer]):
             return PriceQuote(total=None, additions=[], needs_inquiry=True)
         price = quote.price(chosen)
         if not price.lines:
-            # Ни одна статья изделия не набралась: тарифы этому товару
-            # ещё не завели. Итог был бы нулём или минимальной суммой
-            # заказа — числом, за которым ничего не стоит
+            # Гейт товара смотрит на его умолчания, и выбор покупателя
+            # ещё может обнулить единственную платную статью: полотно
+            # без тарифа вместо тарифицированного. Итогом стал бы ноль
+            # или минимальная сумма заказа — число, за которым ничего
+            # не стоит, и заявка честнее (тикет 19)
             reject(self, UNCALCULABLE)
         return PriceQuote(
             total=price.total,
@@ -168,6 +165,13 @@ class PriceController(Controller[PydanticSerializer]):
         )
 
     def _product(self, product_id: int) -> Product:
+        """Товар, которому карточка и правда предлагает калькулятор.
+
+        Гейт тот же, что решает судьбу блока на карточке
+        (`catalog.calculator`): адрес эндпоинта открыт всякому, и
+        разойдись они — сайт называл бы цену там, где витрина честно
+        молчит.
+        """
         product: Product | None = (
             Product.objects.published()
             .filter(pk=product_id)
@@ -178,6 +182,8 @@ class PriceController(Controller[PydanticSerializer]):
             reject(
                 self, "Такого товара больше нет в каталоге, обновите страницу."
             )
+        if not calculator.is_calculable(product):
+            reject(self, UNCALCULABLE)
         return product
 
     def _chosen(

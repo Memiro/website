@@ -127,9 +127,7 @@
 
   // ---------- Корзина и избранное: строки подборки ----------
 
-  // Разбивка тысяч узким неразрывным пробелом — как фильтр `rub` в шаблонах
-  const price = (value) =>
-    `от ${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F")} ₽`;
+  const price = (value) => `от ${window.memiro.rub(value)} ₽`;
 
   // Пропущенные узлы отсеиваются на сборке, а не у каждого append
   const present = (...nodes) => nodes.filter(Boolean);

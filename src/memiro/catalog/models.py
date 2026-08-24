@@ -224,6 +224,17 @@ class AttributeValue(models.Model):
         return self.value
 
     @property
+    def is_charged(self) -> bool:
+        """Даёт ли значение платную статью итога.
+
+        Спрашивается у движка: что считать платным, знает он, и второй
+        копией правила витрина однажды разошлась бы с расчётом.
+        Бесплатное значение (цвет рамы, холодный свет) описывает
+        изделие и денег не стоит.
+        """
+        return self.unit in pricing.CHARGED_UNITS
+
+    @property
     def full_label(self) -> str:
         """Значение с названием атрибута: «Тип полотна: Серебро».
 

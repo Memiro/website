@@ -16,6 +16,7 @@ from django.urls import reverse
 
 from memiro.seo import structured
 from memiro.seo.meta import DEFAULT_OG_IMAGE, PageMeta, clamp, title
+from . import calculator, tariffs
 from .filters import CatalogFilters, FilterError
 from .landings import landing_products, visible_landings
 from .models import POPULAR_ORDERING, Category, Landing, Product
@@ -131,7 +132,9 @@ def product(
     request: HttpRequest, category_slug: str, slug: str
 ) -> HttpResponse:
     product = get_object_or_404(
-        Product.objects.published().select_related("category"),
+        Product.objects.published()
+        .select_related("category")
+        .prefetch_related(tariffs.product_values()),
         category__slug=category_slug,
         slug=slug,
     )
@@ -144,17 +147,25 @@ def product(
         .select_related("category")
         .by_popularity()[:4]
     )
+    # Предпосчитанные варианты в порядке, заданном владельцем; цена у
+    # них уже посчитана (тикет 17). Список, а не запрос: на одном из
+    # них открывается калькулятор, и второй раз за ними в базу ходить
+    # незачем. Атрибут значения нужен ему же — решить, какой вариант
+    # он способен показать
+    variants = list(product.variants.prefetch_related("values__attribute"))
     return render(
         request,
         "catalog/product.html",
         {
             "product": product,
             "specs": specs,
-            # Предпосчитанные варианты в порядке, заданном владельцем;
-            # цена у них уже посчитана (тикет 17)
-            "variants": product.variants.prefetch_related("values"),
+            "variants": variants,
             "related": related,
             "gallery": list(product.gallery.all()),
+            # Есть у товара калькулятор или нет, решают его данные:
+            # изделие вне считаемого набора обходится вариантами и
+            # заявкой, а числа не выдумывает (тикет 20)
+            "calculator": calculator.for_product(product, variants=variants),
             "canonical": request.build_absolute_uri(request.path),
             "meta": _product_meta(product),
             "breadcrumbs": structured.category_crumbs(
