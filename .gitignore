@@ -32,3 +32,6 @@ htmlcov/
 # IDE
 .idea/
 .vscode/
+
+# Отчёт демо-прогона цен — состояние локальной базы, не код
+.scratch/new-site/demo/seeded.json
