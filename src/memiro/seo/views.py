@@ -17,9 +17,9 @@ from memiro.catalog.models import Attribute
 if TYPE_CHECKING:
     from django.http import HttpRequest
 
-# Служебные разделы: индексировать нечего. Корзины и избранного тут
-# нет намеренно — они закрыты `noindex, follow` (ADR-0005), а запрет
-# обхода помешал бы роботу этот `noindex` прочитать
+# Служебные разделы: индексировать нечего. Корзины тут нет намеренно —
+# она закрыта `noindex, follow` (ADR-0005), а запрет обхода помешал бы
+# роботу этот `noindex` прочитать
 CLOSED_PATHS = ("/admin/", "/api/")
 
 

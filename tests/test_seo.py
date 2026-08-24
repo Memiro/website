@@ -184,13 +184,10 @@ def test_product_og_image_is_its_own_photo(
     )
 
 
-def test_cart_and_favorites_are_noindex(
-    client: Client, shop: SimpleNamespace
-) -> None:
-    for url in ("/cart/", "/favorites/"):
-        assert meta_content(page_html(client, url), "robots") == (
-            "noindex, follow"
-        )
+def test_cart_is_noindex(client: Client, shop: SimpleNamespace) -> None:
+    assert meta_content(page_html(client, "/cart/"), "robots") == (
+        "noindex, follow"
+    )
 
 
 # --- JSON-LD ---------------------------------------------------------

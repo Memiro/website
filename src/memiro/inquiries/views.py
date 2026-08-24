@@ -1,4 +1,4 @@
-"""Корзина и избранное: страницы-оболочки, наполняет их клиент.
+"""Корзина: страница-оболочка, наполняет её клиент.
 
 Подборка живёт в localStorage браузера (тикет 07), поэтому сервер
 отдаёт только каркас; названия и цены страница забирает у
@@ -30,22 +30,5 @@ def cart(request: HttpRequest) -> HttpResponse:
                 robots=NOINDEX,
             ),
             "breadcrumbs": structured.home_crumbs(structured.Crumb("Корзина")),
-        },
-    )
-
-
-def favorites(request: HttpRequest) -> HttpResponse:
-    return render(
-        request,
-        "inquiries/favorites.html",
-        {
-            "meta": PageMeta(
-                title=title("Избранное"),
-                description="Зеркала memiro, отмеченные вами как избранные.",
-                robots=NOINDEX,
-            ),
-            "breadcrumbs": structured.home_crumbs(
-                structured.Crumb("Избранное")
-            ),
         },
     )

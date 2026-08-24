@@ -315,7 +315,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .inquiry-note.error { color: var(--text); font-weight: 600; }
 .inquiry-cart-note { font-size: 14px; color: var(--muted); }
 
-/* Сообщения корзины и избранного поверх страницы */
+/* Сообщения корзины поверх страницы */
 .shop-note {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
   background: var(--ink); color: var(--bg); padding: 14px 22px; font-size: 14px;
@@ -325,7 +325,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .inquiry-panel h2 { font-size: 21px; font-weight: 600; }
 .inquiry-panel > .muted { font-size: 15px; margin: 10px 0 24px; }
 
-/* ---------- Корзина и избранное ---------- */
+/* ---------- Корзина ---------- */
 .collection-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 400px; gap: 40px; align-items: start; }
 .cart-list { border: 1px solid var(--line-card); background: var(--bg-card); }
 .cart-row {
@@ -348,7 +348,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 }
 .cart-drop:hover { color: var(--accent); }
 .collection-empty { margin-top: 40px; font-size: 17px; color: var(--body); }
-.favorites-grid { margin-top: 40px; }
 
 /* ---------- Действия карточки товара ---------- */
 .card-link { display: flex; flex-direction: column; flex: 1; }
@@ -365,13 +364,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 }
 .cart-btn:hover { color: var(--text); }
 .cart-btn.on { color: var(--muted); }
-.fav-btn {
-  width: 34px; height: 34px; border: 1px solid var(--control); background: none;
-  display: grid; place-items: center; color: var(--body); cursor: pointer;
-}
-.fav-btn:hover { border-color: var(--text); color: var(--text); }
-.fav-btn.on { border-color: var(--accent); color: var(--accent); background: var(--bg-muted); }
-.fav-wide.on { border-color: var(--accent); color: var(--accent); }
 .counter-btn { position: relative; }
 .counter {
   position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px;
@@ -647,8 +639,8 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
      иначе вуаль съела бы почти всю невысокую плитку */
   :root { --veil-shelf: 60px; }
 
-  /* Подборки на главной и в карточке едут каруселью; каталог и избранное
-     остаются списком — иначе выдача уезжает вбок и утаскивает за собой
+  /* Подборки на главной и в карточке едут каруселью; каталог
+     остаётся списком — иначе выдача уезжает вбок и утаскивает за собой
      ширину страницы. Поэтому карусель — отдельный класс, а не все сетки */
   .grid-4, .grid-3 { grid-template-columns: 1fr; gap: 8px; }
   .carousel {

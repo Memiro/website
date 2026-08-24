@@ -41,9 +41,6 @@
         {% if contacts.whatsapp %}<a class="icon-btn" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener"
            title="WhatsApp" aria-label="WhatsApp">{% include "icons/whatsapp.svg" %}</a>{% endif %}
       </div>
-      <a class="icon-btn counter-btn" href="{% url 'favorites' %}"
-         title="Избранное" aria-label="Избранное">{% include "icons/heart.svg" %}<span
-         class="counter" data-count="favorites" hidden>0</span></a>
       <a class="icon-btn counter-btn" href="{% url 'cart' %}"
          title="Корзина" aria-label="Корзина">{% include "icons/cart.svg" %}<span
          class="counter" data-count="cart" hidden>0</span></a>
@@ -57,7 +54,6 @@
     <a href="{% url 'about' %}">О нас</a>
     <a href="{% url 'delivery' %}">Доставка и возврат</a>
     <a href="{% url 'contacts' %}">Контакты</a>
-    <a href="{% url 'favorites' %}">Избранное</a>
     <a href="{% url 'cart' %}">Корзина</a>
     <a class="phone" href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
   </nav>
@@ -107,7 +103,7 @@
 
 {% if cookie_choice.needed %}{% include "legal/_cookie_banner.html" %}{% endif %}
 
-{# Сообщения корзины и избранного: одна живая область на страницу #}
+{# Сообщения корзины: одна живая область на страницу #}
 <p class="shop-note" data-shop-note aria-live="polite" hidden></p>
 
 {# Границы подборки приходят с сервера — копий в JS не держим #}

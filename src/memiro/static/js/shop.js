@@ -1,10 +1,15 @@
-// Избранное, корзина и отправка заявки (тикет 07).
-// Подборки живут в localStorage: регистрации нет, сервер о них не знает.
+// Корзина и отправка заявки (тикет 07).
+// Подборка живёт в localStorage: регистрации нет, сервер о ней не знает.
 // Названия и цены всегда берутся с сервера — цена остаётся его правдой.
+// Подборка осталась одна: избранное снято целиком (тикет 04). Вид её
+// по-прежнему ездит параметром `kind` — не про запас, а потому что
+// приходит из разметки (`data-toggle`, `data-count`, `data-collection`).
+// Заинлайнить его до `"cart"` стоит вместе с тикетом 13, который эту
+// корзину переделывает в заявку, — отдельной правкой вслепую это
+// перебор: автотестов у витринного JS нет
 (() => {
   const KEYS = {
     cart: "memiro:cart",
-    favorites: "memiro:favorites",
   };
   // Границы приходят с сервера (memiro/inquiries/limits.py): вторая
   // копия чисел разъехалась бы с валидацией эндпоинтов
@@ -101,8 +106,10 @@
     button.title = label;
   };
 
-  const paintButtons = (root = document) => {
-    root.querySelectorAll("[data-toggle][data-product]").forEach(paintButton);
+  const paintButtons = () => {
+    document
+      .querySelectorAll("[data-toggle][data-product]")
+      .forEach(paintButton);
   };
 
   const paint = () => {
@@ -125,7 +132,7 @@
     renderCollections();
   });
 
-  // ---------- Корзина и избранное: строки подборки ----------
+  // ---------- Корзина: строки подборки ----------
 
   const price = (value) => `от ${window.memiro.rub(value)} ₽`;
 
@@ -135,10 +142,10 @@
   // null — товару не завели предпосчитанных вариантов, цены нет вовсе
   // (ADR-0007). Шаблоны в таком случае не печатают и самого элемента —
   // здесь так же, иначе разметка карточек разойдётся с серверной
-  const priceNode = (value, tag, className) => {
+  const priceNode = (value) => {
     if (value == null) return null;
-    const node = document.createElement(tag);
-    node.className = className;
+    const node = document.createElement("div");
+    node.className = "cart-price";
     node.textContent = price(value);
     return node;
   };
@@ -169,7 +176,7 @@
     category.textContent = item.category;
     meta.append(title, category);
 
-    const cost = priceNode(item.price, "div", "cart-price");
+    const cost = priceNode(item.price);
 
     const drop = document.createElement("button");
     drop.className = "cart-drop";
@@ -183,62 +190,6 @@
 
     row.append(...present(link, meta, cost, drop));
     return row;
-  };
-
-  // Зеркало шаблона catalog/_card.html: разметку карточки правим в обоих
-  const favoriteCard = (item) => {
-    const card = document.createElement("article");
-    card.className = "product-card";
-
-    const link = document.createElement("a");
-    link.className = "card-link";
-    link.href = item.url;
-    const pic = document.createElement("div");
-    pic.className = "pic";
-    if (item.photo) {
-      const img = document.createElement("img");
-      img.src = item.photo;
-      img.alt = item.name;
-      img.loading = "lazy";
-      pic.append(img);
-    }
-    const meta = document.createElement("div");
-    meta.className = "meta";
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = item.name;
-    meta.append(name);
-    link.append(pic, meta);
-
-    const actions = document.createElement("div");
-    actions.className = "card-actions";
-    const cost = priceNode(item.price, "span", "price");
-
-    const buttons = document.createElement("div");
-    buttons.className = "card-buttons";
-    // На странице избранного сердце избыточно: кнопка прямо убирает товар
-    const fav = document.createElement("button");
-    fav.className = "cart-drop";
-    fav.type = "button";
-    fav.textContent = "Убрать";
-    fav.addEventListener("click", () => {
-      remove("favorites", item.id);
-      paint();
-      renderCollections();
-    });
-    const cart = document.createElement("button");
-    cart.className = "cart-btn";
-    cart.type = "button";
-    cart.dataset.toggle = "cart";
-    cart.dataset.product = String(item.id);
-    cart.dataset.labelOff = "В корзину";
-    cart.dataset.labelOn = "В корзине";
-    cart.textContent = "В корзину";
-    buttons.append(fav, cart);
-    actions.append(...present(cost, buttons));
-
-    card.append(link, actions);
-    return card;
   };
 
   const showState = (kind, state) => {
@@ -289,9 +240,7 @@
     }
     mount.hidden = false;
     showState(kind, "filled");
-    const build = kind === "cart" ? cartRow : favoriteCard;
-    items.forEach((item) => mount.append(build(item)));
-    paintButtons(mount);
+    items.forEach((item) => mount.append(cartRow(item)));
   };
 
   const renderCollections = () => {

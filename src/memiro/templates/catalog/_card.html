@@ -11,16 +11,11 @@
       <div class="name">{{ product.name }}</div>
     </div>
   </a>
-  {% comment %}Ту же карточку строит shop.js для страницы избранного (favoriteCard) —
-     разметку правим в обоих местах{% endcomment %}
   <div class="card-actions">
     {% comment %}Товар без предпосчитанных вариантов цены не показывает вовсе (ADR-0007):
        заглушка на её месте была бы неправдой, а строчка «уточняйте» — той же заглушкой{% endcomment %}
     {% if product.has_price %}<span class="price">от {{ product.price|rub }} ₽</span>{% endif %}
     <div class="card-buttons">
-      <button class="fav-btn" type="button" data-toggle="favorites" data-product="{{ product.pk }}"
-              aria-pressed="false" data-label-off="В избранное" data-label-on="В избранном"
-              title="В избранное" aria-label="В избранное">{% include "icons/heart.svg" %}</button>
       <button class="cart-btn" type="button" data-toggle="cart" data-product="{{ product.pk }}"
               aria-pressed="false" data-label-off="В корзину" data-label-on="В корзине">В корзину</button>
     </div>
