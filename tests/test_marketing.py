@@ -10,12 +10,10 @@ from importlib import import_module
 
 import pytest
 from django.apps import apps
-from django.contrib.admin.sites import AdminSite
 from django.forms.models import fields_for_model
-from django.test import Client, RequestFactory
+from django.test import Client
 
 from memiro.catalog.models import Category, Product
-from memiro.content.admin import ReviewAdmin
 from memiro.content.models import FaqEntry, Promo, Review
 
 # Имя модуля миграции начинается с цифры — обычным import не взять
@@ -168,13 +166,25 @@ def test_admin_sections_registered(admin_client: Client, url: str) -> None:
     assert admin_client.get(url).status_code == HTTPStatus.OK
 
 
-def test_review_form_covers_every_editable_field(rf: RequestFactory) -> None:
+def test_review_renders_its_own_rating() -> None:
+    """`stars` и `rating_label` носителя сейчас не имеют — они ждут
+    возвращения блока. Пусть дождутся рабочими.
+    """
+    review = Review(author="Мария", text="Спасибо", source="Avito", rating=4)
+
+    assert review.stars == "★★★★☆"
+    assert review.rating_label == "Оценка: 4 из 5"
+
+
+def test_review_form_covers_every_editable_field(
+    admin_client: Client,
+) -> None:
     """Явный `fieldsets` молча теряет новое поле — а симптом у владельца
     тот же, ради которого подсказку и добавляли: заведённое ушло в никуда.
     """
-    form = ReviewAdmin(Review, AdminSite()).get_form(rf.get("/"))()
+    html = admin_client.get("/admin/content/review/add/").content.decode()
 
-    assert set(form.fields) == set(fields_for_model(Review))
+    assert all(f'name="{name}"' in html for name in fields_for_model(Review))
 
 
 def test_review_created_through_admin_stays_off_the_site(

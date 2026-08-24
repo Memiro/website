@@ -256,7 +256,7 @@ def test_local_business_has_address(
 def test_hours_appear_only_when_set(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Выдуманного расписания в разметке не бывает — как и рейтинга."""
+    """Выдуманного расписания в разметке не бывает — как и пустого контакта."""
     assert "openingHoursSpecification" not in block_of(
         page_html(client, "/contacts/"), "LocalBusiness"
     )
