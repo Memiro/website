@@ -293,14 +293,14 @@ def test_empty_contact_is_not_named_in_markup(
     assert "sameAs" not in business
 
 
-def test_rating_appears_only_with_real_reviews(
+def test_rating_never_appears_while_reviews_are_hidden(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Выдуманных оценок в разметке не бывает (CONTEXT.md)."""
-    assert "aggregateRating" not in block_of(
-        page_html(client, "/"), "LocalBusiness"
-    )
+    """Тикет 06: разметка и блок отзывов ездят только вместе.
 
+    Заявленный рейтинг на странице без отзывов — нарушение правил
+    и Яндекса, и Google, и стоит оно расширенного сниппета целиком.
+    """
     Review.objects.create(
         author="Анна",
         text="Отличное зеркало",
@@ -308,21 +308,12 @@ def test_rating_appears_only_with_real_reviews(
         rating=5,
         is_published=True,
     )
-    Review.objects.create(
-        author="Пётр",
-        text="Быстро сделали",
-        source="Avito",
-        rating=4,
-        is_published=True,
-    )
 
-    rating = block_of(page_html(client, "/"), "LocalBusiness")[
-        "aggregateRating"
-    ]
-
-    # Средняя двух настоящих оценок, 5 и 4
-    assert rating["ratingValue"] == (5 + 4) / 2
-    assert rating["reviewCount"] == len(["Анна", "Пётр"])
+    # Разметка шоурума печатается на обеих страницах — рейтинга нет нигде
+    for route in ("/", "/contacts/"):
+        assert "aggregateRating" not in block_of(
+            page_html(client, route), "LocalBusiness"
+        )
 
 
 def test_jsonld_cannot_break_out_of_script(

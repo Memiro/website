@@ -1,13 +1,21 @@
-"""Тикет 08: отзывы, FAQ и акции — из админки на витрину."""
+"""Отзывы, FAQ и акции: что из админки выходит на витрину, а что нет.
+
+FAQ выходит (тикет 08). Акции (тикет 05) и отзывы (тикет 06 набора
+`owner-revision`) — нет: разделы админки живы, и тесты стерегут именно
+это — заведённое сохраняется и на сайте не всплывает.
+"""
 
 from http import HTTPStatus
 from importlib import import_module
 
 import pytest
 from django.apps import apps
-from django.test import Client
+from django.contrib.admin.sites import AdminSite
+from django.forms.models import fields_for_model
+from django.test import Client, RequestFactory
 
 from memiro.catalog.models import Category, Product
+from memiro.content.admin import ReviewAdmin
 from memiro.content.models import FaqEntry, Promo, Review
 
 # Имя модуля миграции начинается с цифры — обычным import не взять
@@ -21,7 +29,8 @@ pytestmark = pytest.mark.django_db
 # ---------- Отзывы ----------
 
 
-def test_home_shows_published_review(client: Client) -> None:
+def test_home_hides_published_review(client: Client) -> None:
+    """Тикет 06: отзыв публикуется в админке и на витрину не выходит."""
     Review.objects.create(
         author="Мария",
         text="Зеркало сделали за три дня, повесили аккуратно.",
@@ -31,70 +40,10 @@ def test_home_shows_published_review(client: Client) -> None:
 
     content = client.get("/").content.decode()
 
-    assert "Отзывы" in content
-    assert "Мария" in content
-    assert "повесили аккуратно" in content
-
-
-def test_home_hides_unpublished_review(client: Client) -> None:
-    Review.objects.create(
-        author="Скрытый автор",
-        text="Черновой отзыв",
-        source="Avito",
-    )
-
-    content = client.get("/").content.decode()
-
-    assert "Скрытый автор" not in content
-    assert "Черновой отзыв" not in content
-
-
-def test_home_hides_reviews_section_without_reviews(client: Client) -> None:
-    """Проверяем по разметке секции: слово «отзывы» переживёт ссылку в меню."""
-    content = client.get("/").content.decode()
-
+    assert "Мария" not in content
+    assert "повесили аккуратно" not in content
+    # Разметка секции, а не слово «отзывы»: оно переживёт ссылку в меню
     assert "reviews-grid" not in content
-
-
-def test_home_shows_every_published_review(client: Client) -> None:
-    """Потолка на главной нет: опубликовал — увидел."""
-    published_count = 5
-    for number in range(published_count):
-        Review.objects.create(
-            author=f"Автор {number}",
-            text="Спасибо",
-            source="Avito",
-            is_published=True,
-            order=number,
-        )
-
-    content = client.get("/").content.decode()
-
-    assert content.count('class="review"') == published_count
-
-
-def test_reviews_ordered_manually(client: Client) -> None:
-    Review.objects.create(
-        author="Вторая", text="Б", source="Avito", is_published=True, order=2
-    )
-    Review.objects.create(
-        author="Первая", text="А", source="Avito", is_published=True, order=1
-    )
-
-    content = client.get("/").content.decode()
-
-    assert content.index("Первая") < content.index("Вторая")
-
-
-def test_review_shows_source(client: Client) -> None:
-    """Отзыв заносится вручную — источник виден посетителю."""
-    Review.objects.create(
-        author="Мария", text="Отлично", source="Avito", is_published=True
-    )
-
-    content = client.get("/").content.decode()
-
-    assert "Avito" in content
 
 
 # ---------- FAQ ----------
@@ -219,10 +168,19 @@ def test_admin_sections_registered(admin_client: Client, url: str) -> None:
     assert admin_client.get(url).status_code == HTTPStatus.OK
 
 
-def test_review_created_through_admin_appears_on_site(
+def test_review_form_covers_every_editable_field(rf: RequestFactory) -> None:
+    """Явный `fieldsets` молча теряет новое поле — а симптом у владельца
+    тот же, ради которого подсказку и добавляли: заведённое ушло в никуда.
+    """
+    form = ReviewAdmin(Review, AdminSite()).get_form(rf.get("/"))()
+
+    assert set(form.fields) == set(fields_for_model(Review))
+
+
+def test_review_created_through_admin_stays_off_the_site(
     admin_client: Client, client: Client
 ) -> None:
-    """Путь владельца целиком: форма админки → отзыв на главной."""
+    """Путь владельца целиком: форма админки принимает, витрина молчит."""
     response = admin_client.post(
         "/admin/content/review/add/",
         {
@@ -237,7 +195,8 @@ def test_review_created_through_admin_appears_on_site(
     )
 
     assert response.status_code == HTTPStatus.FOUND
-    assert "Ольга" in client.get("/").content.decode()
+    assert Review.objects.filter(author="Ольга").exists()
+    assert "Ольга" not in client.get("/").content.decode()
 
 
 def test_promo_edited_in_admin_stays_off_the_site(

@@ -9,7 +9,7 @@ from django.shortcuts import render
 
 from memiro.catalog.models import Product
 from memiro.catalog.tiles import landing_tiles
-from memiro.content.models import FaqEntry, Review
+from memiro.content.models import FaqEntry
 from memiro.seo import structured
 from memiro.seo.context_processors import FALLBACK_META
 from memiro.seo.meta import PageMeta, clamp
@@ -28,8 +28,9 @@ def home(request: HttpRequest) -> HttpResponse:
     published = Product.objects.published().select_related("category")
     # Акции с витрины сняты (тикет 05): модель и флаг товара живут
     # в админке, но на главную ни заголовок акции, ни её лента не идут
-    # Опубликованный отзыв обязан быть виден: потолка на главной нет
-    reviews = Review.objects.published()
+    # Отзывы сняты следом (тикет 06 набора `owner-revision`) — вместе
+    # с рейтингом в разметке: заявленный рейтинг на странице, где
+    # отзывов не видно, поисковики наказывают
     return render(
         request,
         "home.html",
@@ -38,10 +39,9 @@ def home(request: HttpRequest) -> HttpResponse:
             "popular": published.filter(is_popular=True).order_by(
                 "order", "name"
             )[:TRACK_SIZE],
-            "reviews": reviews,
             "faq": FaqEntry.objects.published(),
             "meta": FALLBACK_META,
-            "business_jsonld": structured.local_business(request, reviews),
+            "business_jsonld": structured.local_business(request),
         },
     )
 
@@ -125,8 +125,8 @@ def static_page(page: StaticPage) -> Callable[[HttpRequest], HttpResponse]:
     def view(request: HttpRequest) -> HttpResponse:
         context = page.context()
         if page.route == "contacts":
-            # Разметка шоурума — на «Контактах»; рейтинг из отзывов
-            # живёт на главной, где сами отзывы и показываются
+            # Разметка шоурума нужна и здесь: адрес с часами живут
+            # на «Контактах», а не только на главной
             context["business_jsonld"] = structured.local_business(request)
         return render(request, page.template, context)
 

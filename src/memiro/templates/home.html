@@ -106,31 +106,6 @@
   </div>
 </section>
 
-{% if reviews %}
-<section class="wrap section">
-  <div class="section-head">
-    <h2 class="h-section">Отзывы</h2>
-    {% if contacts.avito %}<a class="link-underline" href="{{ contacts.avito }}" target="_blank" rel="noopener">Смотреть все →</a>{% endif %}
-  </div>
-  <div class="carousel grid-3 reviews-grid">
-    {% for review in reviews %}
-    <figure class="review">
-      {# role="img": иначе читалка проговаривает каждую звезду отдельно #}
-      <div class="stars" role="img" aria-label="{{ review.rating_label }}">{{ review.stars }}</div>
-      <blockquote>{{ review.text|linebreaksbr }}</blockquote>
-      <figcaption>
-        {% if review.avatar %}<img src="{{ review.avatar.url }}" alt="" width="40" height="40" loading="lazy">{% endif %}
-        <span class="who">{{ review.author }}</span>
-        {# Источник виден посетителю: отзывы переносятся с площадок вручную #}
-        <span class="src">{% if review.source_url %}<a href="{{ review.source_url }}"
-          target="_blank" rel="noopener">{{ review.source }}</a>{% else %}{{ review.source }}{% endif %}</span>
-      </figcaption>
-    </figure>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
-
 {% if faq %}
 <section class="wrap section">
   <div class="section-head">

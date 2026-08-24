@@ -24,6 +24,31 @@ class ReviewAdmin(PublishedAdmin):
     list_display = ("author", "source", "rating", "is_published", "order")
     list_filter = ("is_published", "source")
     search_fields = ("author", "text")
+    # Раздел жив, витрина — нет: без этой строки владелец публикует
+    # отзыв и не находит его на сайте (тикет 06 набора `owner-revision`)
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "author",
+                    "text",
+                    "source",
+                    "source_url",
+                    "rating",
+                    "avatar",
+                    "is_published",
+                    "order",
+                ),
+                "description": (
+                    "Отзывы пока не показываются на сайте: блок снят "
+                    "с главной, а вместе с ним и оценка для поисковиков. "
+                    "Заведённое здесь сохраняется и выйдет на витрину, "
+                    "когда отзывы вернутся."
+                ),
+            },
+        ),
+    )
 
 
 @admin.register(FaqEntry)
@@ -78,7 +103,9 @@ class SiteContactsAdmin(SingletonAdmin):
                 "fields": ("telegram", "whatsapp", "vk", "avito"),
                 "description": (
                     "Пустая ссылка значит «не показывать»: витрина "
-                    "не рисует иконку в никуда."
+                    "не рисует иконку в никуда. Ссылка на Avito сейчас "
+                    "видна только поисковикам: блок отзывов, из которого "
+                    "вела «Смотреть все», с главной снят."
                 ),
             },
         ),
@@ -89,7 +116,8 @@ class SiteContactsAdmin(SingletonAdmin):
                 "description": (
                     "Часы для разметки. Пока не заданы оба поля, "
                     "сайт о расписании молчит: выдуманное расписание "
-                    "поисковику — такое же враньё, как выдуманный рейтинг."
+                    "поисковику — такое же враньё, как незаполненный "
+                    "контакт."
                 ),
             },
         ),

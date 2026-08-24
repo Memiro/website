@@ -16,13 +16,13 @@ from memiro.context_processors import site_contacts
 from .meta import DEFAULT_OG_IMAGE, SITE_NAME
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
     from datetime import time
 
     from django.http import HttpRequest
 
     from memiro.catalog.models import Category, Product
-    from memiro.content.models import Review, SiteContacts
+    from memiro.content.models import SiteContacts
 
 
 # Шоурум работает ежедневно (часы студии) — расписание разметки
@@ -90,13 +90,14 @@ def _crumb_item(
     return item
 
 
-def local_business(
-    request: HttpRequest, reviews: Iterable[Review] = ()
-) -> dict[str, Any]:
+def local_business(request: HttpRequest) -> dict[str, Any]:
     """Шоурум в Санкт-Петербурге: адрес, часы, связь.
 
-    Рейтинг добавляется только из настоящих отзывов, занесённых в
-    админку (CONTEXT.md): выдуманных оценок в разметке не бывает.
+    Рейтинга здесь нет: отзывы сняты с витрины (тикет 06 набора
+    `owner-revision`), а рейтинг на странице, где отзывов не видно,
+    поисковики считают враньём — и снимают расширенный сниппет
+    целиком. Разметка вернётся тем же тикетом, что и блок отзывов,
+    порознь они не ездят.
     """
     contacts = site_contacts(request)
     data: dict[str, Any] = {
@@ -136,9 +137,6 @@ def local_business(
     hours = _opening_hours(contacts)
     if hours:
         data["openingHoursSpecification"] = hours
-    rating = _aggregate_rating(reviews)
-    if rating:
-        data["aggregateRating"] = rating
     return data
 
 
@@ -146,7 +144,7 @@ def _opening_hours(contacts: SiteContacts) -> list[dict[str, Any]]:
     """Расписание шоурума — только если часы заданы.
 
     Незаданные часы разметка пропускает: выдуманное расписание — такое
-    же враньё поисковику, как выдуманный рейтинг.
+    же враньё поисковику, как незаполненный контакт выше.
     """
     if not contacts.has_schedule:
         return []
@@ -163,17 +161,6 @@ def _opening_hours(contacts: SiteContacts) -> list[dict[str, Any]]:
 def _hhmm(moment: time | None) -> str:
     """Время так, как его читает schema.org: ЧЧ:ММ."""
     return moment.strftime("%H:%M") if moment else ""
-
-
-def _aggregate_rating(reviews: Iterable[Review]) -> dict[str, Any] | None:
-    ratings = [review.rating for review in reviews]
-    if not ratings:
-        return None
-    return {
-        "@type": "AggregateRating",
-        "ratingValue": round(sum(ratings) / len(ratings), 1),
-        "reviewCount": len(ratings),
-    }
 
 
 def product_markup(request: HttpRequest, product: Product) -> dict[str, Any]:
