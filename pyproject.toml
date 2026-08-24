@@ -24,6 +24,10 @@ dependencies = [
     "python-dotenv==1.2.3",
     # ImageField (фото товаров и галерея)
     "pillow==12.1.0",
+    # Книга расчёта из живых данных (`just manage pricing_workbook`).
+    # В основных зависимостях, а не в группе: собирать её нужно там,
+    # где живёт база, а туда группы разработки не едут
+    "openpyxl==3.1.5",
 ]
 
 [dependency-groups]
