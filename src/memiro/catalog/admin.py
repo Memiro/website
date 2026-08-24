@@ -318,15 +318,30 @@ class ProductVariantFormSet(BaseInlineFormSet):
             _check_one_value_per_attribute(values)
 
 
+# Что владелец выбирает у варианта — и, главное, чего не выбирает.
+# Пустое поле здесь норма, а не недозаполненность, и сказать об этом
+# больше негде: в списке вариантов подписи нет
+VARIANT_VALUES_HELP = (
+    "Чем вариант отличается от товара. Пусто — берёт значения товара "
+    "целиком. Значение заменяет умолчание товара, а не добавляется "
+    "к нему; двух значений одного атрибута у варианта не бывает — "
+    "это второй вариант. Несколько — щелчок с Ctrl."
+)
+
+
 class AttributeValueChoiceField(ModelMultipleChoiceField):
-    """Значения справочника с названием атрибута в подписи.
+    """Значения справочника, разложенные по атрибутам.
 
     В списке варианта значения всех атрибутов категории лежат
-    вперемешку, и `__str__` там читается двусмысленно.
+    вперемешку, и `__str__` там читается двусмысленно: «Серебро» —
+    и тип полотна, и цвет рамы. Атрибут называет группа, поэтому из
+    подписи он убран.
     """
 
+    iterator = GroupedByAttributeIterator
+
     def label_from_instance(self, obj: AttributeValue) -> str:
-        return obj.full_label
+        return obj.value
 
 
 def _category_values(category_id: int | None) -> QuerySet[AttributeValue]:
@@ -368,6 +383,7 @@ class ProductVariantInline(admin.TabularInline):
             queryset=_category_values(obj.category_id if obj else None),
             required=False,
             label=values.label,
+            help_text=VARIANT_VALUES_HELP,
             widget=values.widget,
         )
         return formset

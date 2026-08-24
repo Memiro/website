@@ -425,3 +425,16 @@ def test_shape_factor_needs_something_to_multiply(
             rate=Decimal("1.5"),
             scaled_by_shape=True,
         ).full_clean()
+
+
+@pytest.mark.django_db
+def test_variant_values_are_grouped_and_explained(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Владелец видит, чем заполнять поле и что пустое — это норма."""
+    page = admin_client.get(
+        f"/admin/catalog/product/{shop.product.pk}/change/"
+    ).content.decode()
+
+    assert '<optgroup label="Тип полотна">' in page
+    assert "Пусто — берёт значения товара целиком" in page
