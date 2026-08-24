@@ -43,14 +43,22 @@ def visible_landings(landings: Iterable[Landing]) -> list[Landing]:
 def _filters_of(landing: Landing) -> CatalogFilters | None:
     """Условия посадочной как готовый набор фильтров категории.
 
-    None — условие ссылается на атрибут, который сменил категорию или
-    тип: сузить им категорию нечем, товаров у такой посадочной нет.
+    None — сузить категорию нечем: условие ссылается на атрибут,
+    который сменил категорию или тип, либо условий не осталось вовсе.
+    Товаров у такой посадочной нет.
     """
     attributes = filterable_attributes(landing.category)
     by_id = {attribute.pk: attribute for attribute in attributes}
     choice: dict[Attribute, tuple[AttributeValue, ...]] = {}
     flags: dict[Attribute, tuple[bool, ...]] = {}
     conditions = landing.conditions.select_related("attribute", "value_option")
+    # Посадочная без условий — дубль категории, а не страница: без
+    # сужения выборка возвращает всю категорию целиком. Форма условий
+    # такого не сохранит, но переразметка справочника условие у
+    # посадочной снять может (тикет 22), а публикация переключается и
+    # прямо в списке, мимо формы
+    if not conditions:
+        return None
     for condition in conditions:
         attribute = by_id.get(condition.attribute_id)
         if attribute is None:

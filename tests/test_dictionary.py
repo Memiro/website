@@ -20,6 +20,7 @@ from django.core.exceptions import ValidationError
 from django.test import Client
 
 from memiro.catalog import calculator, tariffs
+from memiro.catalog.landings import landing_products
 from memiro.catalog.models import (
     Attribute,
     AttributeValue,
@@ -373,6 +374,30 @@ def test_new_category_needs_no_developer(db: None) -> None:
         price_of(partition, width_mm=1000, height_mm=2000) == PARTITION_PRICE
     )
     assert calculator.is_calculable(partition)
+
+
+def test_landing_without_conditions_shows_nothing(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Посадочная без условий — дубль категории, и её страницы нет.
+
+    Условие снимает переразметка справочника, а публикация
+    переключается прямо в списке админки, мимо формы с её проверкой.
+    Без этого страница отдала бы всю категорию под своим адресом —
+    ровно тот индексируемый дубль, ради которого ADR-0003 и завёл
+    ручной список посадочных.
+    """
+    landing = Landing.objects.create(
+        category=shop.category,
+        slug="zerkala-lyubye",
+        title="Зеркала",
+        heading="Зеркала",
+        description="",
+        is_published=True,
+    )
+
+    assert not landing_products(landing).exists()
+    assert client.get("/zerkala-lyubye/").status_code == HTTPStatus.NOT_FOUND
 
 
 @pytest.fixture
