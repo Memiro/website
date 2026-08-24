@@ -44,15 +44,14 @@ from dmr.plugins.pydantic import PydanticSerializer
 from memiro.api.errors import UNPROCESSABLE, reject
 from memiro.api.ids import IDS_PATTERN, MAX_IDS_LENGTH, parse_ids
 from . import quoting
-from .quoting import Quote, Side, UncalculableError
 
 
 class PriceQuery(pydantic.BaseModel):
     """Что считать: товар, габариты и выбранные покупателем значения."""
 
     product: Annotated[int, pydantic.Field(ge=1)]
-    width_mm: Side
-    height_mm: Side
+    width_mm: quoting.Side
+    height_mm: quoting.Side
     values: Annotated[
         str, pydantic.Field(pattern=IDS_PATTERN, max_length=MAX_IDS_LENGTH)
     ] = ""
@@ -95,7 +94,7 @@ class PriceController(Controller[PydanticSerializer]):
                 height_mm=parsed_query.height_mm,
                 value_ids=parse_ids(parsed_query.values),
             )
-        except UncalculableError as refusal:
+        except quoting.UncalculableError as refusal:
             reject(self, str(refusal))
         if not quote.fits():
             return PriceQuote(total=None, additions=[], needs_inquiry=True)
@@ -111,7 +110,7 @@ class PriceController(Controller[PydanticSerializer]):
         )
 
 
-def _additions(quote: Quote) -> list[PriceAddition]:
+def _additions(quote: quoting.Quote) -> list[PriceAddition]:
     """Во сколько обошёлся каждый выбор покупателя.
 
     Разница точных статей: изделие с этим выбором минус то же изделие

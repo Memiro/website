@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from http import HTTPStatus
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, ClassVar, Literal, NamedTuple
 
 import pydantic
 from django.db import transaction
@@ -16,7 +16,6 @@ from memiro.api.errors import UNPROCESSABLE, reject
 from memiro.api.ids import IDS_PATTERN, MAX_IDS_LENGTH, parse_ids
 from memiro.catalog import quoting
 from memiro.catalog.models import Product
-from memiro.catalog.quoting import MAX_VALUES, Side, UncalculableError
 from memiro.inquiries.limits import MAX_ITEMS, MIN_PHONE_DIGITS
 from memiro.inquiries.models import Inquiry, InquiryItem
 from memiro.inquiries.notifications import notify
@@ -73,11 +72,13 @@ class ConfigurationInput(pydantic.BaseModel):
     о цене не было бы (тикет 21).
     """
 
-    width_mm: Side
-    height_mm: Side
+    width_mm: quoting.Side
+    height_mm: quoting.Side
     # Потолок — число органов управления, а не товаров подборки:
     # столько значений расчёт возьмёт и от эндпоинта цены
-    values: Annotated[list[int], pydantic.Field(max_length=MAX_VALUES)] = []
+    values: Annotated[
+        list[int], pydantic.Field(max_length=quoting.MAX_VALUES)
+    ] = []
 
 
 class InquiryInput(pydantic.BaseModel):
@@ -150,6 +151,60 @@ def _summary(product: Product) -> ProductSummary:
     )
 
 
+class Snapshot(NamedTuple):
+    """Расчёт заявки, каким он ложится в журнал: строка и цена.
+
+    Цены может не быть при самой конфигурации, и почему — сказано
+    в строке: сайт не называет цену ни за пределом производства, ни
+    там, где считать нечего.
+    """
+
+    configuration: str
+    price: int | None
+
+
+NO_CALCULATION = Snapshot(configuration="", price=None)
+
+# Конфигурация, которой расчёт не поверил: значение исчезло из
+# справочника, товар вышел из считаемого набора, заявка не об одном
+# изделии. Габариты в снимке всё равно остаются — их прислал
+# покупатель, и менеджеру они нужны
+UNRECOGNISED_NOTE = "конфигурацию сайт не распознал"
+
+
+def _snapshot(payload: InquiryInput, products: list[Product]) -> Snapshot:
+    """Расчёт заявки — пересчитанный здесь, а не принятый на слово.
+
+    Считается тем же `catalog.quoting`, что и витрина: разойдись они,
+    в заявке оказалась бы цена, которой карточка не показывала, — а
+    спор о цене решается именно ею.
+
+    Не посчиталось — заявка всё равно принимается. Лид дороже снимка:
+    заявку на личное пожелание менеджер должен получить, «чтобы не
+    терять заказ, который сайт посчитать не умеет» (спека расчёта,
+    история 32). Габариты покупателя остаются в снимке и в этом
+    случае — гадать о них менеджеру не приходится.
+    """
+    sent = payload.configuration
+    if sent is None:
+        return NO_CALCULATION
+    size = quoting.size_label(sent.width_mm, sent.height_mm)
+    # Расчёт бывает только у заявки об одном изделии: конфигурация
+    # без него не о чем
+    if len(products) != 1:
+        return Snapshot(f"{size}; {UNRECOGNISED_NOTE}", None)
+    try:
+        quote = quoting.quote(
+            product_id=products[0].pk,
+            width_mm=sent.width_mm,
+            height_mm=sent.height_mm,
+            value_ids=sent.values,
+        )
+    except quoting.UncalculableError:
+        return Snapshot(f"{size}; {UNRECOGNISED_NOTE}", None)
+    return Snapshot(quote.label, quote.total)
+
+
 class ProductSummariesController(Controller[PydanticSerializer]):
     """Товары подборки по их id — цены и названия берутся с сервера."""
 
@@ -176,40 +231,10 @@ class InquiryController(Controller[PydanticSerializer]):
     def post(self, parsed_body: Body[InquiryInput]) -> InquiryCreated:
         products = self._products(parsed_body.items)
         inquiry = self._store(
-            parsed_body, products, self._quote(parsed_body, products)
+            parsed_body, products, _snapshot(parsed_body, products)
         )
         notify(inquiry)
         return InquiryCreated(id=inquiry.pk)
-
-    def _quote(
-        self, payload: InquiryInput, products: list[Product]
-    ) -> quoting.Quote | None:
-        """Расчёт заявки — пересчитанный здесь, а не принятый на слово.
-
-        Считается тем же `catalog.quoting`, что и витрина: разойдись
-        они, в заявке оказалась бы цена, которой карточка не
-        показывала, — а спор о цене решается именно ею.
-
-        Расчёт бывает только у заявки об одном товаре: конфигурация
-        без единственного изделия не о чем. Отвергнутая конфигурация
-        (значение исчезло из справочника, товар вышел из считаемого
-        набора) заявку отклоняет со словами про обновление страницы —
-        принять её, молча выбросив расчёт, значило бы отдать менеджеру
-        заявку без того, ради чего её отправляли.
-        """
-        if payload.configuration is None:
-            return None
-        if len(products) != 1:
-            reject(self, quoting.UNCALCULABLE)
-        try:
-            return quoting.quote(
-                product_id=products[0].pk,
-                width_mm=payload.configuration.width_mm,
-                height_mm=payload.configuration.height_mm,
-                value_ids=payload.configuration.values,
-            )
-        except UncalculableError as refusal:
-            reject(self, str(refusal))
 
     def _products(self, ids: list[int]) -> list[Product]:
         products, missing = _published(ids)
@@ -224,7 +249,7 @@ class InquiryController(Controller[PydanticSerializer]):
         self,
         payload: InquiryInput,
         products: list[Product],
-        quote: quoting.Quote | None,
+        snapshot: Snapshot,
     ) -> Inquiry:
         with transaction.atomic():
             # Поля уже обрезаны валидацией (Trimmed)
@@ -237,8 +262,8 @@ class InquiryController(Controller[PydanticSerializer]):
                 consent=payload.consent,
                 consent_version=PRIVACY_VERSION,
                 # Снимок ставит сервер — как и редакцию согласия
-                configuration=quote.label if quote else "",
-                calculated_price=quote.total if quote else None,
+                configuration=snapshot.configuration,
+                calculated_price=snapshot.price,
             )
             InquiryItem.objects.bulk_create(
                 InquiryItem(

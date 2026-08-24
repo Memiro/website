@@ -84,21 +84,35 @@
   // запрошенный, иначе цена мигала бы на предыдущий размер
   let latest = 0;
 
+  // Что сейчас стоит в полях — один ответ на оба вопроса: что считать
+  // сейчас и что приложить к заявке. Пусто, пока размеры не введены:
+  // своего размера у товара нет, и до них считать нечего
+  const configuration = () => {
+    const width_mm = Number(width.value);
+    const height_mm = Number(height.value);
+    if (!(width_mm > 0 && height_mm > 0)) return null;
+    return {
+      width_mm,
+      height_mm,
+      values: selects.map((select) => Number(select.value)),
+    };
+  };
+
   const recalculate = async () => {
     // Номер берётся до всякого выхода: стерев ширину, покупатель
     // отменяет и запрос, что уже в полёте, — иначе ответ на прежний
     // размер напечатал бы цену над опустевшим полем
     const ticket = ++latest;
-    const sizes = { width_mm: Number(width.value), height_mm: Number(height.value) };
-    if (!(sizes.width_mm > 0 && sizes.height_mm > 0)) {
+    const sent = configuration();
+    if (!sent) {
       say(NOTES.sizes);
       return;
     }
     const query = new URLSearchParams({
       product: root.dataset.product,
-      width_mm: sizes.width_mm,
-      height_mm: sizes.height_mm,
-      values: selects.map((select) => select.value).join(","),
+      width_mm: sent.width_mm,
+      height_mm: sent.height_mm,
+      values: sent.values.join(","),
     });
     let quote = null;
     try {
@@ -137,21 +151,12 @@
     select.addEventListener("change", recalculate),
   );
 
-  // Заявку отправляет shop.js — конфигурацию он берёт отсюда, и она
-  // уезжает вместе с контактами (тикет 21). Цены в ней нет: её сервер
-  // пересчитывает сам, число из браузера доказательством не было бы.
-  // Размеры отдаются и за пределом производства: там цены не будет,
-  // а менеджеру важно знать, какой размер человек хотел
-  window.memiro.configuration = () => {
-    const width_mm = Number(width.value);
-    const height_mm = Number(height.value);
-    if (!(width_mm > 0 && height_mm > 0)) return null;
-    return {
-      width_mm,
-      height_mm,
-      values: selects.map((select) => Number(select.value)),
-    };
-  };
+  // Заявку отправляет shop.js — ту же конфигурацию он берёт отсюда,
+  // и она уезжает вместе с контактами (тикет 21). Цены в ней нет: её
+  // сервер пересчитывает сам, число из браузера доказательством не
+  // было бы. Размеры отдаются и за пределом производства: там цены не
+  // будет, а менеджеру важно знать, какой размер человек хотел
+  window.memiro.configuration = configuration;
 
   recalculate();
 })();

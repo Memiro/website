@@ -47,9 +47,21 @@ UNCALCULABLE = (
 )
 GONE = "Такого товара больше нет в каталоге, обновите страницу."
 
+# Почему у конфигурации нет цены — в самом снимке, а не догадкой
+# менеджера по размеру. Причины разные: за пределом производства сайт
+# цены не называет никому, а неcчитаемую конфигурацию не взял бы и
+# калькулятор
+BEYOND_LIMITS_NOTE = "размер за пределом производства"
+NOT_COUNTED_NOTE = "эту конфигурацию сайт не считает"
+
 
 class UncalculableError(Exception):
     """Присланное не считается — с текстом, обращённым к посетителю."""
+
+
+def size_label(width_mm: int, height_mm: int) -> str:
+    """Габариты строкой — как их печатает и предпосчитанный вариант."""
+    return f"{width_mm}{SIZE_SEPARATOR}{height_mm} мм"
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,9 +128,21 @@ class Quote:
         товар и читается в самом товаре. Значения подписаны атрибутом
         (`full_label`): «Осветлённое» одним словом не говорит, полотно
         это или рама.
+
+        Отсутствие цены строка объясняет сама: без этого «цена не
+        рассчитана» у размера за пределом производства и у конфигурации,
+        которую не взял бы и калькулятор, читались бы одинаково, а
+        разговор с покупателем у них разный.
         """
-        size = f"{self.width_mm}{SIZE_SEPARATOR}{self.height_mm} мм"
-        return "; ".join([size, *(value.full_label for value in self.chosen)])
+        parts = [
+            size_label(self.width_mm, self.height_mm),
+            *(value.full_label for value in self.chosen),
+        ]
+        if not self.fits():
+            parts.append(BEYOND_LIMITS_NOTE)
+        elif self.total is None:
+            parts.append(NOT_COUNTED_NOTE)
+        return "; ".join(parts)
 
 
 def quote(
