@@ -111,30 +111,23 @@ class PriceController(Controller[PydanticSerializer]):
 
 
 def _additions(quote: quoting.Quote) -> list[PriceAddition]:
-    """Во сколько обошёлся каждый выбор покупателя.
+    """Доплаты покупателю: подпись и целые рубли.
 
-    Разница точных статей: изделие с этим выбором минус то же изделие
-    без него, где место выбора занимает умолчание товара. Не разница
-    итогов: итог поднят до минимальной суммы заказа и округлён, и на
-    пороге вычитание двух итогов дало бы доплату, которой нет
-    объяснения.
+    Сами разницы считает `Quote.surcharges()` — там же, где всё
+    остальное про цену изделия. Эндпоинту остаётся то, что его и
+    касается: округлить и подписать.
 
     Выбор, ничего не изменивший, молчит — строка «0 ₽» покупателю
     ничего не объясняет.
-
-    Расчёт зовётся заново на каждое значение, но в базу не ходит:
-    и товар, и справочник уже в памяти, а движок — чистая функция.
     """
-    full = quote.cost(quote.chosen)
-    additions = []
-    for value in quote.chosen:
-        rest = [other for other in quote.chosen if other.pk != value.pk]
-        difference = _whole_rubles(full - quote.cost(rest))
-        if difference:
-            additions.append(
-                PriceAddition(label=value.full_label, amount=difference)
-            )
-    return additions
+    return [
+        PriceAddition(label=value.full_label, amount=amount)
+        for value, amount in (
+            (value, _whole_rubles(difference))
+            for value, difference in quote.surcharges()
+        )
+        if amount
+    ]
 
 
 def _whole_rubles(amount: Decimal) -> int:

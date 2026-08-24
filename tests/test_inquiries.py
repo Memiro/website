@@ -375,7 +375,7 @@ def calculable(db: None) -> SimpleNamespace:
 
 def post_calculated(
     client: Client,
-    shop: SimpleNamespace,
+    calculable: SimpleNamespace,
     *,
     width_mm: int = 800,
     height_mm: int = 600,
@@ -385,11 +385,11 @@ def post_calculated(
     return post_inquiry(
         client,
         source="product",
-        items=[shop.product.pk],
+        items=[calculable.product.pk],
         configuration={
             "width_mm": width_mm,
             "height_mm": height_mm,
-            "values": [shop.silver.pk] if values is None else values,
+            "values": [calculable.silver.pk] if values is None else values,
         },
         **overrides,
     )
@@ -420,18 +420,32 @@ def test_calculated_inquiry_keeps_configuration_and_total(
 def test_the_stored_price_is_the_servers_own(
     client: Client, calculable: SimpleNamespace, settings: Settings
 ) -> None:
-    """Цену ставит сервер: присланная браузером не была бы доказательством.
+    """В журнале — ровно то число, что витрина и показывала.
 
-    Заявка присылает конфигурацию, а не число: цену эндпоинт считает
-    сам, теми же тарифами, что и витрина. Приписанная к заявке цена
-    в журнал не попадает — там та, что сайт и правда показывал.
+    Заявка присылает конфигурацию, а не цену. Сверяется снимок не с
+    константой, а с ответом эндпоинта расчёта на ту же конфигурацию:
+    разойдись эти двое, спор о цене решался бы снимком, которого
+    покупатель не видел.
     """
     settings.INQUIRY_NOTIFIER = RECORDING
+    shown = client.get(
+        "/api/price",
+        {
+            "product": calculable.product.pk,
+            "width_mm": 800,
+            "height_mm": 600,
+            "values": f"{calculable.silver.pk},{calculable.heating.pk}",
+        },
+    ).json()["total"]
 
-    response = post_calculated(client, calculable, calculated_price=1)
+    post_calculated(
+        client,
+        calculable,
+        values=[calculable.silver.pk, calculable.heating.pk],
+    )
 
-    assert response.status_code == HTTPStatus.CREATED
-    assert Inquiry.objects.get().calculated_price == SILVER_TOTAL
+    assert shown == SILVER_WITH_HEATING
+    assert Inquiry.objects.get().calculated_price == shown
 
 
 @pytest.mark.django_db
@@ -571,3 +585,45 @@ def test_the_manager_reads_the_calculation_in_the_journal(
 
     assert "800 × 600 мм; Тип полотна: Серебро" in page
     assert "2\u202f000 ₽" in page
+
+
+@pytest.mark.django_db
+def test_an_absurd_size_does_not_cost_the_lead(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Опечатка в поле размера не отменяет заявку.
+
+    За не тем числом стоят настоящие имя и телефон. Расчёт такого
+    размера не берёт — но теряется снимок, а не заказ (спека
+    расчёта, 32).
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_calculated(client, calculable, width_mm=900_000)
+
+    assert response.status_code == HTTPStatus.CREATED
+    inquiry = Inquiry.objects.get()
+    assert inquiry.configuration.endswith("конфигурацию сайт не распознал")
+    assert inquiry.calculated_price is None
+
+
+@pytest.mark.django_db
+def test_a_cart_inquiry_carries_no_configuration(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Конфигурации нет у заявки из корзины — и решает это сервер.
+
+    Браузер её оттуда и не шлёт, но снимок ставит не он (CONTEXT.md,
+    «Расчёт в заявке»).
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(
+        client,
+        source="cart",
+        items=[calculable.product.pk],
+        configuration={"width_mm": 800, "height_mm": 600, "values": []},
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    assert Inquiry.objects.get().configuration == ""

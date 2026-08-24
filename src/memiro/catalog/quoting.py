@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from functools import cached_property
 from typing import TYPE_CHECKING, Annotated
 
 import pydantic
@@ -53,6 +54,7 @@ GONE = "Такого товара больше нет в каталоге, об�
 # калькулятор
 BEYOND_LIMITS_NOTE = "размер за пределом производства"
 NOT_COUNTED_NOTE = "эту конфигурацию сайт не считает"
+UNRECOGNISED_NOTE = "конфигурацию сайт не распознал"
 
 
 class UncalculableError(Exception):
@@ -64,7 +66,10 @@ def size_label(width_mm: int, height_mm: int) -> str:
     return f"{width_mm}{SIZE_SEPARATOR}{height_mm} мм"
 
 
-@dataclass(frozen=True, slots=True)
+# slots нет намеренно: `total` кэшируется, а кэшу нужен __dict__.
+# Цена — чистая функция от полей, и считать её трижды за запрос
+# (fits, total, доплаты) незачем
+@dataclass(frozen=True)
 class Quote:
     """Изделие, у которого спрашивают цену: товар, габариты, выбор.
 
@@ -103,7 +108,32 @@ class Quote:
             (line.amount for line in self.price(chosen).lines), Decimal(0)
         )
 
-    @property
+    def surcharges(self) -> list[tuple[AttributeValue, Decimal]]:
+        """Во сколько обошёлся каждый выбор покупателя.
+
+        Разница точных статей: изделие с этим выбором минус то же
+        изделие без него, где место выбора занимает умолчание товара.
+        Не разница итогов: итог поднят до минимальной суммы заказа и
+        округлён, и на пороге вычитание двух итогов дало бы доплату,
+        которой нет объяснения.
+
+        Расчёт зовётся заново на каждое значение, но в базу не ходит:
+        и товар, и справочник уже в памяти, а движок — чистая функция.
+        Округление и подпись — дело того, кто показывает.
+        """
+        full = self.cost(self.chosen)
+        return [
+            (
+                value,
+                full
+                - self.cost(
+                    [other for other in self.chosen if other.pk != value.pk]
+                ),
+            )
+            for value in self.chosen
+        ]
+
+    @cached_property
     def total(self) -> int | None:
         """Итог — или ничего, когда честного числа у конфигурации нет.
 
@@ -145,6 +175,17 @@ class Quote:
         return "; ".join(parts)
 
 
+def unrecognised_label(width_mm: int, height_mm: int) -> str:
+    """Снимок конфигурации, которой расчёт не поверил.
+
+    Габариты покупателя в нём остаются — их прислал он сам, и
+    менеджеру они нужны; за них же не ручается ничего, кроме них.
+    Формат общий с `Quote.label`: снимок в журнале читается одинаково,
+    посчитался он или нет.
+    """
+    return f"{size_label(width_mm, height_mm)}; {UNRECOGNISED_NOTE}"
+
+
 def quote(
     *,
     product_id: int,
@@ -157,6 +198,7 @@ def quote(
     Товар берётся заново вместе со справочником: и эндпоинту, и заявке
     нужны его умолчания, а гейт спрашивается один и тот же.
     """
+    _measurable(width_mm, height_mm)
     product = _calculable_product(product_id)
     return Quote(
         product=product,
@@ -165,6 +207,22 @@ def quote(
         chosen=_chosen(product, value_ids),
         limits=tariffs.limits_from_settings(),
     )
+
+
+def _measurable(width_mm: int, height_mm: int) -> None:
+    """Габариты, которые расчёт вообще берёт в руки.
+
+    Это защита разбора, а не предел производства: тот живёт в
+    «Параметрах расчёта» и отвечает приглашением к заявке. Здесь
+    отсекается разве что число в километр — но отсекается тут, а не
+    схемой запроса, чтобы заявке было что делать с таким числом,
+    кроме как потерять её вместе с контактами.
+    """
+    if not all(
+        1 <= side <= calculator.MAX_INPUT_SIDE_MM
+        for side in (width_mm, height_mm)
+    ):
+        raise UncalculableError(UNCALCULABLE)
 
 
 def _calculable_product(product_id: int) -> Product:
@@ -205,7 +263,12 @@ def _chosen(
 
     Порядок — тот же, в котором органы управления стоят на карточке:
     снимок конфигурации в заявке читается рядом с ней.
+
+    Потолок длины списка стоит здесь же: он один на эндпоинт цены и
+    на заявку, а разойдись они — «одна дверь» осталась бы словами.
     """
+    if len(value_ids) > MAX_VALUES:
+        raise UncalculableError(UNCALCULABLE)
     values = list(
         AttributeValue.objects.filter(pk__in=value_ids).select_related(
             "attribute"

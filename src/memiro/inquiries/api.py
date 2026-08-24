@@ -29,6 +29,14 @@ EMAIL_PATTERN = r"^$|^[^@\s]+@[^@\s]+\.[^@\s]{2,}$"
 # Обрезка пробелов до проверки длины: «   » — пустое имя, а не двухсимвольное
 Trimmed = pydantic.StringConstraints(strip_whitespace=True)
 
+# Потолки присланного расчёта — не правила расчёта, а границы того,
+# что не жалко записать в журнал: миллиметр в десятизначном числе и
+# список значений вчетверо длиннее любого справочника. Всё, что
+# расчёту не годится, отсеет он сам, не отменяя заявки
+MAX_STORED_SIDE_MM = 1_000_000_000
+MAX_STORED_VALUES = 200
+StoredSide = Annotated[int, pydantic.Field(ge=1, le=MAX_STORED_SIDE_MM)]
+
 
 class ProductSummary(pydantic.BaseModel):
     """Товар в корзине и избранном: имени и цены хватает для строки.
@@ -72,12 +80,16 @@ class ConfigurationInput(pydantic.BaseModel):
     о цене не было бы (тикет 21).
     """
 
-    width_mm: quoting.Side
-    height_mm: quoting.Side
-    # Потолок — число органов управления, а не товаров подборки:
-    # столько значений расчёт возьмёт и от эндпоинта цены
+    # Границы здесь шире, чем у расчёта, намеренно: за не тем числом
+    # в поле размера стоят настоящие имя и телефон, и разбор, отвергший
+    # заявку целиком, потерял бы их. Что расчёт возьмёт, а что нет,
+    # решает `catalog.quoting` — и негодное становится снимком без
+    # цены, а не 422-м. Здесь остаётся защита хранилища: столько
+    # цифр не бывает и у опечатки
+    width_mm: StoredSide
+    height_mm: StoredSide
     values: Annotated[
-        list[int], pydantic.Field(max_length=quoting.MAX_VALUES)
+        list[int], pydantic.Field(max_length=MAX_STORED_VALUES)
     ] = []
 
 
@@ -160,16 +172,10 @@ class Snapshot(NamedTuple):
     """
 
     configuration: str
-    price: int | None
+    calculated_price: int | None
 
 
-NO_CALCULATION = Snapshot(configuration="", price=None)
-
-# Конфигурация, которой расчёт не поверил: значение исчезло из
-# справочника, товар вышел из считаемого набора, заявка не об одном
-# изделии. Габариты в снимке всё равно остаются — их прислал
-# покупатель, и менеджеру они нужны
-UNRECOGNISED_NOTE = "конфигурацию сайт не распознал"
+NO_CALCULATION = Snapshot(configuration="", calculated_price=None)
 
 
 def _snapshot(payload: InquiryInput, products: list[Product]) -> Snapshot:
@@ -186,13 +192,17 @@ def _snapshot(payload: InquiryInput, products: list[Product]) -> Snapshot:
     случае — гадать о них менеджеру не приходится.
     """
     sent = payload.configuration
-    if sent is None:
+    # Расчёт бывает только у заявки с карточки об одном изделии:
+    # у корзины и свободной формы конфигурации нет вовсе (CONTEXT.md,
+    # «Расчёт в заявке»), и решает это сервер, а не то, что прислал
+    # браузер
+    if sent is None or payload.source != Inquiry.Source.PRODUCT:
         return NO_CALCULATION
-    size = quoting.size_label(sent.width_mm, sent.height_mm)
-    # Расчёт бывает только у заявки об одном изделии: конфигурация
-    # без него не о чем
+    unrecognised = Snapshot(
+        quoting.unrecognised_label(sent.width_mm, sent.height_mm), None
+    )
     if len(products) != 1:
-        return Snapshot(f"{size}; {UNRECOGNISED_NOTE}", None)
+        return unrecognised
     try:
         quote = quoting.quote(
             product_id=products[0].pk,
@@ -201,7 +211,7 @@ def _snapshot(payload: InquiryInput, products: list[Product]) -> Snapshot:
             value_ids=sent.values,
         )
     except quoting.UncalculableError:
-        return Snapshot(f"{size}; {UNRECOGNISED_NOTE}", None)
+        return unrecognised
     return Snapshot(quote.label, quote.total)
 
 
@@ -263,7 +273,7 @@ class InquiryController(Controller[PydanticSerializer]):
                 consent_version=PRIVACY_VERSION,
                 # Снимок ставит сервер — как и редакцию согласия
                 configuration=snapshot.configuration,
-                calculated_price=snapshot.price,
+                calculated_price=snapshot.calculated_price,
             )
             InquiryItem.objects.bulk_create(
                 InquiryItem(
