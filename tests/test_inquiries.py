@@ -1,7 +1,10 @@
+from decimal import Decimal
 from http import HTTPStatus
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.test import Client
 from pytest_django.fixtures import Settings
 
@@ -11,7 +14,14 @@ if TYPE_CHECKING:
         _MonkeyPatchedWSGIResponse as TestResponse,
     )
 
-from memiro.catalog.models import Category, Product
+from memiro.catalog.models import (
+    Attribute,
+    AttributeValue,
+    Category,
+    PricingSettings,
+    Product,
+    ProductAttribute,
+)
 from memiro.inquiries.models import Inquiry
 from memiro.inquiries.notifications import inquiry_message
 from tests.notifiers import RecordingNotifier
@@ -290,3 +300,248 @@ def test_inquirys_endpoint_is_in_openapi_schema(client: Client) -> None:
     schema = client.get("/api/openapi/schema.json").json()
 
     assert "post" in schema["paths"]["/api/inquiries"]
+
+
+# --- Заявка с расчётом (тикет 21) -----------------------------------
+
+# Условные тарифы: полотно 4 000 ₽/м², подогрев 3 500 ₽/шт
+GLASS_RATE = Decimal(4000)
+HEATING_RATE = Decimal(3500)
+# Зеркало 800 × 600 — 0,48 м²: 1 920 ₽ полотна, с подогревом 5 420 ₽,
+# итог округляется вверх до сотни
+SILVER_TOTAL = 2000
+WITH_HEATING = 5500
+# Предел производства: длинная сторона до 2 500 мм, короткая до 1 500
+MAX_LONG_SIDE_MM = 2500
+MAX_SHORT_SIDE_MM = 1500
+
+
+@pytest.fixture
+def calculable(db: None) -> SimpleNamespace:
+    """Зеркало в считаемом наборе: полотно и подогрев меняет покупатель."""
+    PricingSettings.objects.create(
+        max_long_side_mm=MAX_LONG_SIDE_MM,
+        max_short_side_mm=MAX_SHORT_SIDE_MM,
+    )
+    category = Category.objects.create(name="Зеркала", slug="zerkala")
+    blade = Attribute.objects.create(
+        category=category,
+        name="Тип полотна",
+        slug="tip-polotna",
+        is_customer_editable=True,
+    )
+    silver = AttributeValue.objects.create(
+        attribute=blade,
+        value="Серебро",
+        unit=AttributeValue.Unit.SQUARE_METER,
+        rate=GLASS_RATE,
+    )
+    heating_attribute = Attribute.objects.create(
+        category=category,
+        name="Подогрев",
+        slug="podogrev",
+        is_customer_editable=True,
+        order=1,
+    )
+    heating = AttributeValue.objects.create(
+        attribute=heating_attribute,
+        value="Есть",
+        unit=AttributeValue.Unit.PIECE,
+        rate=HEATING_RATE,
+    )
+    # Умолчание товара: бесплатное «нет» — покупатель его и заменяет
+    no_heating = AttributeValue.objects.create(
+        attribute=heating_attribute, value="Нет", order=1
+    )
+    product = Product.objects.create(
+        category=category,
+        name="Halo Moon",
+        slug="halo-moon",
+        is_published=True,
+    )
+    ProductAttribute.objects.create(
+        product=product, attribute=blade, value_option=silver
+    )
+    ProductAttribute.objects.create(
+        product=product, attribute=heating_attribute, value_option=no_heating
+    )
+    return SimpleNamespace(
+        product=product,
+        silver=silver,
+        heating=heating,
+        no_heating=no_heating,
+    )
+
+
+def post_calculated(
+    client: Client,
+    shop: SimpleNamespace,
+    *,
+    width_mm: int = 800,
+    height_mm: int = 600,
+    values: list[int] | None = None,
+    **overrides: object,
+) -> TestResponse:
+    return post_inquiry(
+        client,
+        source="product",
+        items=[shop.product.pk],
+        configuration={
+            "width_mm": width_mm,
+            "height_mm": height_mm,
+            "values": [shop.silver.pk] if values is None else values,
+        },
+        **overrides,
+    )
+
+
+@pytest.mark.django_db
+def test_calculated_inquiry_keeps_configuration_and_total(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Заявка с расчётом сохраняет конфигурацию и посчитанный итог."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_calculated(
+        client,
+        calculable,
+        values=[calculable.silver.pk, calculable.heating.pk],
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    inquiry = Inquiry.objects.get()
+    assert inquiry.configuration == (
+        "800 × 600 мм; Тип полотна: Серебро; Подогрев: Есть"
+    )
+    assert inquiry.calculated_price == WITH_HEATING
+
+
+@pytest.mark.django_db
+def test_the_stored_price_is_the_servers_own(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Цену ставит сервер: присланная браузером не была бы доказательством.
+
+    Заявка присылает конфигурацию, а не число: цену эндпоинт считает
+    сам, теми же тарифами, что и витрина. Приписанная к заявке цена
+    в журнал не попадает — там та, что сайт и правда показывал.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_calculated(client, calculable, calculated_price=1)
+
+    assert response.status_code == HTTPStatus.CREATED
+    assert Inquiry.objects.get().calculated_price == SILVER_TOTAL
+
+
+@pytest.mark.django_db
+def test_a_size_beyond_the_limit_is_kept_without_a_price(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Личное пожелание: размер менеджеру нужен, цены у него нет.
+
+    Сайт такого размера не считает и не называет цену — но чего именно
+    хотел покупатель, менеджер должен прочитать в заявке.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_calculated(
+        client, calculable, width_mm=MAX_LONG_SIDE_MM + 100, height_mm=400
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    inquiry = Inquiry.objects.get()
+    assert inquiry.configuration.startswith(f"{MAX_LONG_SIDE_MM + 100} × 400")
+    assert inquiry.calculated_price is None
+
+
+@pytest.mark.django_db
+def test_a_configuration_the_site_does_not_count_is_rejected(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Заявка с чужим значением не принимается молча.
+
+    Принять её, выбросив расчёт, значило бы отдать менеджеру заявку
+    без того, ради чего её отправляли.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+    alien = AttributeValue.objects.create(
+        attribute=Attribute.objects.create(
+            category=Category.objects.create(name="Двери", slug="dveri"),
+            name="Стекло",
+            slug="steklo",
+            is_customer_editable=True,
+        ),
+        value="Матовое",
+    )
+
+    response = post_calculated(client, calculable, values=[alien.pk])
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert not Inquiry.objects.exists()
+
+
+@pytest.mark.django_db
+def test_a_configuration_needs_a_single_product(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Расчёт без единственного изделия не о чем — заявка отклоняется."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(
+        client,
+        source="product",
+        items=[],
+        configuration={"width_mm": 800, "height_mm": 600, "values": []},
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert not Inquiry.objects.exists()
+
+
+@pytest.mark.django_db
+def test_an_inquiry_without_a_calculation_is_unchanged(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Заявка из корзины и свободной формой работает как раньше."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(client, items=[p.pk for p in products])
+
+    assert response.status_code == HTTPStatus.CREATED
+    inquiry = Inquiry.objects.get()
+    assert inquiry.configuration == ""
+    assert inquiry.calculated_price is None
+    assert "Расчёт:" not in inquiry_message(inquiry)
+
+
+@pytest.mark.django_db
+def test_the_manager_reads_the_calculation_in_the_notification(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Конфигурация и цена уезжают менеджеру вместе с контактами."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_calculated(client, calculable)
+    message = inquiry_message(Inquiry.objects.get())
+
+    assert "Расчёт: 800 × 600 мм; Тип полотна: Серебро" in message
+    assert f"Показанная цена: {SILVER_TOTAL} ₽" in message
+
+
+@pytest.mark.django_db
+def test_the_manager_reads_the_calculation_in_the_journal(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Конфигурация и цена видны в списке заявок, без открытия товара."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+    post_calculated(client, calculable)
+    get_user_model().objects.create_superuser(
+        username="owner", email="owner@example.com", password="owner-password"
+    )
+    client.login(username="owner", password="owner-password")
+
+    page = client.get("/admin/inquiries/inquiry/").content.decode()
+
+    assert "800 × 600 мм; Тип полотна: Серебро" in page
+    assert "2\u202f000 ₽" in page

@@ -14,7 +14,9 @@ from dmr.plugins.pydantic import PydanticSerializer
 from memiro.api.csrf import csrf_protect_json
 from memiro.api.errors import UNPROCESSABLE, reject
 from memiro.api.ids import IDS_PATTERN, MAX_IDS_LENGTH, parse_ids
+from memiro.catalog import quoting
 from memiro.catalog.models import Product
+from memiro.catalog.quoting import MAX_VALUES, Side, UncalculableError
 from memiro.inquiries.limits import MAX_ITEMS, MIN_PHONE_DIGITS
 from memiro.inquiries.models import Inquiry, InquiryItem
 from memiro.inquiries.notifications import notify
@@ -62,6 +64,22 @@ class SummariesQuery(pydantic.BaseModel):
         return value
 
 
+class ConfigurationInput(pydantic.BaseModel):
+    """Что покупатель считал калькулятором, отправляя заявку.
+
+    Здесь только присланное: габариты и выбранные значения. Цены в
+    заявке нет намеренно — её ставит сервер, пересчитывая это же
+    теми же тарифами. Число из браузера доказательством в споре
+    о цене не было бы (тикет 21).
+    """
+
+    width_mm: Side
+    height_mm: Side
+    # Потолок — число органов управления, а не товаров подборки:
+    # столько значений расчёт возьмёт и от эндпоинта цены
+    values: Annotated[list[int], pydantic.Field(max_length=MAX_VALUES)] = []
+
+
 class InquiryInput(pydantic.BaseModel):
     """Заявка с витрины; согласие обязательно — иначе не заявка."""
 
@@ -79,6 +97,9 @@ class InquiryInput(pydantic.BaseModel):
     # а не заявка без согласия
     consent: Literal[True]
     items: Annotated[list[int], pydantic.Field(max_length=MAX_ITEMS)] = []
+    # Расчёт есть не у всякой заявки: из корзины, свободной формой и
+    # с карточки вне считаемого набора он не приходит вовсе
+    configuration: ConfigurationInput | None = None
 
     @pydantic.field_validator("phone")
     @classmethod
@@ -154,9 +175,41 @@ class InquiryController(Controller[PydanticSerializer]):
     )
     def post(self, parsed_body: Body[InquiryInput]) -> InquiryCreated:
         products = self._products(parsed_body.items)
-        inquiry = self._store(parsed_body, products)
+        inquiry = self._store(
+            parsed_body, products, self._quote(parsed_body, products)
+        )
         notify(inquiry)
         return InquiryCreated(id=inquiry.pk)
+
+    def _quote(
+        self, payload: InquiryInput, products: list[Product]
+    ) -> quoting.Quote | None:
+        """Расчёт заявки — пересчитанный здесь, а не принятый на слово.
+
+        Считается тем же `catalog.quoting`, что и витрина: разойдись
+        они, в заявке оказалась бы цена, которой карточка не
+        показывала, — а спор о цене решается именно ею.
+
+        Расчёт бывает только у заявки об одном товаре: конфигурация
+        без единственного изделия не о чем. Отвергнутая конфигурация
+        (значение исчезло из справочника, товар вышел из считаемого
+        набора) заявку отклоняет со словами про обновление страницы —
+        принять её, молча выбросив расчёт, значило бы отдать менеджеру
+        заявку без того, ради чего её отправляли.
+        """
+        if payload.configuration is None:
+            return None
+        if len(products) != 1:
+            reject(self, quoting.UNCALCULABLE)
+        try:
+            return quoting.quote(
+                product_id=products[0].pk,
+                width_mm=payload.configuration.width_mm,
+                height_mm=payload.configuration.height_mm,
+                value_ids=payload.configuration.values,
+            )
+        except UncalculableError as refusal:
+            reject(self, str(refusal))
 
     def _products(self, ids: list[int]) -> list[Product]:
         products, missing = _published(ids)
@@ -168,7 +221,10 @@ class InquiryController(Controller[PydanticSerializer]):
         return products
 
     def _store(
-        self, payload: InquiryInput, products: list[Product]
+        self,
+        payload: InquiryInput,
+        products: list[Product],
+        quote: quoting.Quote | None,
     ) -> Inquiry:
         with transaction.atomic():
             # Поля уже обрезаны валидацией (Trimmed)
@@ -180,6 +236,9 @@ class InquiryController(Controller[PydanticSerializer]):
                 source=payload.source,
                 consent=payload.consent,
                 consent_version=PRIVACY_VERSION,
+                # Снимок ставит сервер — как и редакцию согласия
+                configuration=quote.label if quote else "",
+                calculated_price=quote.total if quote else None,
             )
             InquiryItem.objects.bulk_create(
                 InquiryItem(

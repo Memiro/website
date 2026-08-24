@@ -137,5 +137,21 @@
     select.addEventListener("change", recalculate),
   );
 
+  // Заявку отправляет shop.js — конфигурацию он берёт отсюда, и она
+  // уезжает вместе с контактами (тикет 21). Цены в ней нет: её сервер
+  // пересчитывает сам, число из браузера доказательством не было бы.
+  // Размеры отдаются и за пределом производства: там цены не будет,
+  // а менеджеру важно знать, какой размер человек хотел
+  window.memiro.configuration = () => {
+    const width_mm = Number(width.value);
+    const height_mm = Number(height.value);
+    if (!(width_mm > 0 && height_mm > 0)) return null;
+    return {
+      width_mm,
+      height_mm,
+      values: selects.map((select) => Number(select.value)),
+    };
+  };
+
   recalculate();
 })();

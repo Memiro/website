@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 
+from memiro.catalog.formatting import rub
 from .models import Inquiry, InquiryItem
 
 if TYPE_CHECKING:
@@ -32,6 +33,7 @@ class InquiryAdmin(admin.ModelAdmin):
         "name",
         "phone",
         "source",
+        "calculation",
         "consent",
         "is_processed",
     )
@@ -47,6 +49,8 @@ class InquiryAdmin(admin.ModelAdmin):
         "source",
         "consent",
         "consent_version",
+        "configuration",
+        "calculated_price",
         "created_at",
     )
     fields: ClassVar = [
@@ -56,11 +60,31 @@ class InquiryAdmin(admin.ModelAdmin):
         "email",
         "comment",
         "source",
+        "configuration",
+        "calculated_price",
         "consent",
         "consent_version",
         "is_processed",
     ]
     inlines = (InquiryItemInline,)
+
+    @admin.display(description="расчёт")
+    def calculation(self, obj: Inquiry) -> str:
+        """Что покупатель считал и какую цену увидел — прямо в журнале.
+
+        Менеджер перезванивает, не открывая товар: конфигурация в
+        заявке и есть весь предмет разговора. Цены может не быть при
+        конфигурации — размеру за пределом производства сайт цены не
+        называет, и это личное пожелание, а не пробел.
+        """
+        if not obj.configuration:
+            return "—"
+        price = (
+            f"{rub(obj.calculated_price)} ₽"
+            if obj.calculated_price is not None
+            else "цена не рассчитана"
+        )
+        return f"{obj.configuration} — {price}"
 
     def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
         return False

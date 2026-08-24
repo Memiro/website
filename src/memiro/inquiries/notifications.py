@@ -51,6 +51,17 @@ def inquiry_message(inquiry: Inquiry) -> str:
             else f"— {item.product_name}, цена не рассчитана"
             for item in items
         ]
+    if inquiry.configuration:
+        # То, что покупатель считал на карточке, — менеджер звонит
+        # со знанием дела, а не переспрашивает размеры
+        lines.append(f"Расчёт: {inquiry.configuration}")
+        lines.append(
+            f"Показанная цена: {inquiry.calculated_price} ₽"
+            if inquiry.calculated_price is not None
+            # Размер за пределом производства цены не получает: это
+            # личное пожелание, и цену называет менеджер
+            else "Показанная цена: не рассчитана"
+        )
     if inquiry.comment:
         lines.append(f"Комментарий: {inquiry.comment}")
     return "\n".join(lines)

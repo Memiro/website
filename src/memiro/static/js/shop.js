@@ -332,6 +332,15 @@
     return form.dataset.product ? [Number(form.dataset.product)] : [];
   };
 
+  // Посчитанное калькулятором карточки уезжает вместе с заявкой:
+  // менеджер видит, что человек считал, а не расспрашивает его заново
+  // (тикет 21). Калькулятор публикует это в window.memiro (product.js);
+  // на странице без него функции нет — и конфигурации тоже
+  const formConfiguration = (form) => {
+    if (cartForm(form)) return null;
+    return window.memiro.configuration ? window.memiro.configuration() : null;
+  };
+
   // «товар / товара / товаров» — как фильтр ru_plural в шаблонах
   const products = (count) => {
     const tail = count % 10;
@@ -399,6 +408,7 @@
           source: form.dataset.source,
           consent: true,
           items: formItems(form),
+          configuration: formConfiguration(form),
         }),
       });
       if (!response.ok) {
