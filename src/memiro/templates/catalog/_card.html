@@ -15,9 +15,7 @@
     {% comment %}Товар без предпосчитанных вариантов цены не показывает вовсе (ADR-0007):
        заглушка на её месте была бы неправдой, а строчка «уточняйте» — той же заглушкой{% endcomment %}
     {% if product.has_price %}<span class="price">от {{ product.price|rub }} ₽</span>{% endif %}
-    <div class="card-buttons">
-      <button class="cart-btn" type="button" data-toggle="cart" data-product="{{ product.pk }}"
-              aria-pressed="false" data-label-off="В корзину" data-label-on="В корзине">В корзину</button>
-    </div>
+    <button class="cart-btn" type="button" data-toggle="cart" data-product="{{ product.pk }}"
+            aria-pressed="false" data-label-off="В корзину" data-label-on="В корзине">В корзину</button>
   </div>
 </article>

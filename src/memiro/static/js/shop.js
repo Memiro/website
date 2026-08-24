@@ -1,12 +1,8 @@
 // Корзина и отправка заявки (тикет 07).
 // Подборка живёт в localStorage: регистрации нет, сервер о ней не знает.
 // Названия и цены всегда берутся с сервера — цена остаётся его правдой.
-// Подборка осталась одна: избранное снято целиком (тикет 04). Вид её
-// по-прежнему ездит параметром `kind` — не про запас, а потому что
-// приходит из разметки (`data-toggle`, `data-count`, `data-collection`).
-// Заинлайнить его до `"cart"` стоит вместе с тикетом 13, который эту
-// корзину переделывает в заявку, — отдельной правкой вслепую это
-// перебор: автотестов у витринного JS нет
+// Вид подборки (`kind`) ездит параметром не про запас, а потому что
+// приходит из разметки: `data-toggle`, `data-count`, `data-collection`.
 (() => {
   const KEYS = {
     cart: "memiro:cart",
@@ -91,19 +87,14 @@
   const paintButton = (button) => {
     const kind = button.dataset.toggle;
     const isOn = read(kind).includes(Number(button.dataset.product));
-    // Подписи живут в разметке: JS их не сочиняет, а читает
-    const label = isOn ? button.dataset.labelOn : button.dataset.labelOff;
     button.setAttribute("aria-pressed", String(isOn));
     button.classList.toggle("on", isOn);
-    if (!label) return;
-    // У иконочных кнопок текста нет — правим только подпись для чтеца,
-    // иначе textContent затёр бы вложенный SVG
-    const text = [...button.childNodes].find(
-      (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim(),
-    );
-    if (text) text.textContent = ` ${label}`;
-    button.setAttribute("aria-label", label);
-    button.title = label;
+    // Подписи живут в разметке: JS их не сочиняет, а читает. Подпись же
+    // и служит кнопке именем для чтеца — второго имени в `aria-label`
+    // быть не должно, оно бы с ней разошлось
+    button.textContent = isOn
+      ? button.dataset.labelOn
+      : button.dataset.labelOff;
   };
 
   const paintButtons = () => {
@@ -136,12 +127,9 @@
 
   const price = (value) => `от ${window.memiro.rub(value)} ₽`;
 
-  // Пропущенные узлы отсеиваются на сборке, а не у каждого append
-  const present = (...nodes) => nodes.filter(Boolean);
-
   // null — товару не завели предпосчитанных вариантов, цены нет вовсе
-  // (ADR-0007). Шаблоны в таком случае не печатают и самого элемента —
-  // здесь так же, иначе разметка карточек разойдётся с серверной
+  // (ADR-0007). Заглушку на её месте не ставим и здесь: пустая ячейка
+  // строки честнее «уточняйте», а колонку «Убрать» держит `grid-column`
   const priceNode = (value) => {
     if (value == null) return null;
     const node = document.createElement("div");
@@ -188,7 +176,8 @@
       renderCollections();
     });
 
-    row.append(...present(link, meta, cost, drop));
+    // Цены может не быть — тогда её ячейка просто пустует
+    row.append(...[link, meta, cost, drop].filter(Boolean));
     return row;
   };
 
