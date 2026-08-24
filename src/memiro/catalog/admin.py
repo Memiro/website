@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 from . import calculator, tariffs
 from .formatting import rub
 from .models import (
-    MAX_LANDING_CONDITIONS,
+    BOOL_TOKENS,
+    MAX_LANDING_ATTRIBUTES,
     Attribute,
     AttributeValue,
     Category,
@@ -389,24 +390,74 @@ class PricingSettingsAdmin(admin.ModelAdmin):
         return False
 
 
+def _condition_key(row: dict[str, Any]) -> tuple[int, object]:
+    """Что именно условие спрашивает у товара: атрибут и значение."""
+    return (
+        row["attribute"].pk,
+        row["value_option"].pk
+        if row.get("value_option")
+        else row.get("value_bool"),
+    )
+
+
+def _check_no_repeated_values(rows: list[dict[str, Any]]) -> None:
+    """Одно значение дважды сужением не становится — это опечатка."""
+    keys = [_condition_key(row) for row in rows if row.get("attribute")]
+    if len(keys) != len(set(keys)):
+        message = "Одно и то же значение указано дважды."
+        raise ValidationError(message)
+
+
+def _check_narrows_something(rows: list[dict[str, Any]]) -> None:
+    """Все значения атрибута разом — не сужение, а дубль категории.
+
+    Значения одного атрибута объединяются по ИЛИ, и перечислив их все,
+    владелец получил бы под своим адресом весь каталог категории —
+    ровно тот индексируемый дубль, ради которого ADR-0003 и завёл
+    ручной список посадочных.
+    """
+    chosen: dict[Attribute, set[object]] = {}
+    for row in rows:
+        attribute = row.get("attribute")
+        if attribute:
+            chosen.setdefault(attribute, set()).add(_condition_key(row)[1])
+    for attribute, values in chosen.items():
+        available = (
+            attribute.values.count()
+            if attribute.kind == Attribute.Kind.CHOICE
+            else len(BOOL_TOKENS)
+        )
+        if len(values) >= available:
+            message = (
+                "«%(name)s»: перечислены все значения — "
+                "такая страница ничего не сужает."
+            )
+            raise ValidationError(message, params={"name": attribute.name})
+
+
 class LandingConditionFormSet(BaseInlineFormSet):
     def clean(self) -> None:
-        """Посадочная — категория и одно-два условия (ADR-0003).
+        """Посадочная — категория и один-два сужающих атрибута (ADR-0003).
 
         Без условий это дубль категории, с длинным хвостом — мусор
-        в индексе.
+        в индексе. Значений у атрибута бывает несколько: они
+        объединяются по ИЛИ и хвоста не удлиняют.
         """
         super().clean()
         kept = _kept_rows(self)
         if not kept:
             message = "Добавьте хотя бы одно условие."
             raise ValidationError(message)
-        if len(kept) > MAX_LANDING_CONDITIONS:
-            message = "Условий не больше %(limit)s."
+        attributes = _attributes(kept)
+        narrowing = {attribute.pk for attribute in attributes}
+        if len(narrowing) > MAX_LANDING_ATTRIBUTES:
+            message = "Сужайте не больше чем %(limit)s атрибутами."
             raise ValidationError(
-                message, params={"limit": MAX_LANDING_CONDITIONS}
+                message, params={"limit": MAX_LANDING_ATTRIBUTES}
             )
-        _check_own_category(_attributes(kept), self.instance.category_id)
+        _check_own_category(attributes, self.instance.category_id)
+        _check_no_repeated_values(kept)
+        _check_narrows_something(kept)
 
 
 class LandingConditionInline(admin.TabularInline):

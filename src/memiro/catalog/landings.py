@@ -43,6 +43,10 @@ def visible_landings(landings: Iterable[Landing]) -> list[Landing]:
 def _filters_of(landing: Landing) -> CatalogFilters | None:
     """Условия посадочной как готовый набор фильтров категории.
 
+    Тот же аппарат, что и у пользовательских фильтров, и то же
+    правило: значения одного атрибута объединяются по ИЛИ, разные
+    атрибуты — по И.
+
     None — сузить категорию нечем: условие ссылается на атрибут,
     который сменил категорию или тип, либо условий не осталось вовсе.
     Товаров у такой посадочной нет.
@@ -66,7 +70,16 @@ def _filters_of(landing: Landing) -> CatalogFilters | None:
         if attribute.kind == Attribute.Kind.CHOICE:
             if condition.value_option is None:
                 return None
-            choice[attribute] = (condition.value_option,)
+            # Значения одного атрибута копятся, а не вытесняют друг
+            # друга: между собой они по ИЛИ — «в раме» это и алюминий,
+            # и багет (CONTEXT.md, «Условие посадочной»)
+            choice[attribute] = (
+                *choice.get(attribute, ()),
+                condition.value_option,
+            )
         else:
-            flags[attribute] = (bool(condition.value_bool),)
+            flags[attribute] = (
+                *flags.get(attribute, ()),
+                bool(condition.value_bool),
+            )
     return CatalogFilters(attributes, choice, flags)

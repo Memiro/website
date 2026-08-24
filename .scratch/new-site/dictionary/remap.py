@@ -203,6 +203,20 @@ CARRIED_OVER = {
     ("location", "Напольное"): ("mount", "На ножке"),
 }
 
+# Во что выбывшее значение разошлось. Разметку товара им не заменить —
+# зеркало сделано либо из алюминия, либо из багета, и «либо» тут не
+# ответ. А условию посадочной ровно это и нужно: значения одного
+# атрибута объединяются по ИЛИ, и «зеркала в раме» — это по-прежнему
+# одна страница про обе рамы (ADR-0003)
+SUCCESSORS = {
+    ("frame", "В раме"): ("Алюминий", "Багет"),
+    ("backlight", "С подсветкой"): (
+        "Контурная",
+        "Фронтальная",
+        "Комбинированная",
+    ),
+}
+
 # Старые атрибуты, которых в наборе владельца нет: после переноса они
 # уходят вместе со своим справочником
 RETIRED = ("location", "frame-material")
@@ -222,6 +236,7 @@ class Report:
 
     carried: int = 0
     strays: dict[str, list[str]] = field(default_factory=dict)
+    widened_landings: list[str] = field(default_factory=list)
     cleared: dict[str, list[str]] = field(default_factory=dict)
     unfilled: dict[str, list[str]] = field(default_factory=dict)
     unpublished_landings: list[str] = field(default_factory=list)
@@ -247,6 +262,18 @@ class Report:
         if self.cleared:
             lines += ["## Снято как двусмысленное", ""]
             lines += _sections(self.cleared)
+        if self.widened_landings:
+            lines += [
+                "## Посадочные пересобраны на новые значения",
+                "",
+                "Условие такой страницы ссылалось на значение, которое "
+                "разошлось на несколько. Страница осталась про то же: "
+                "значения одного атрибута объединяются по ИЛИ. Тексты "
+                "стоит перечитать — они писались про прежний набор.",
+                "",
+                *(f"- {slug}" for slug in sorted(self.widened_landings)),
+                "",
+            ]
         if self.unpublished_landings:
             lines += [
                 "## Посадочные сняты с публикации",
@@ -373,20 +400,36 @@ def _repoint_landings(attributes: dict[str, Attribute]) -> None:
         ).update(attribute=attributes[new_slug], value_option=target)
 
 
-def _unpublish_landings_on(value: AttributeValue, report: Report) -> None:
-    """Снимает с публикации посадочные, оставшиеся без условия.
+def _rebuild_landings_on(
+    value: AttributeValue,
+    successors: tuple[AttributeValue, ...],
+    report: Report,
+) -> None:
+    """Пересобирает условия посадочных, стоявшие на выбывшем значении.
 
-    Одним значением «с подсветкой» больше не выразить — их три, а
-    условия объединяются по И. Выбрать за владельца, какую страницу он
-    хочет вместо прежней, нельзя: это его спрос и его тексты.
+    Значение разошлось на несколько — условие расходится вслед за ним
+    и спрашивает их все: «зеркала в раме» это и алюминий, и багет.
+    Преемников нет — страницу не на что поставить, и она уходит с
+    публикации целой: адрес, заголовок и текст владельца на месте, ему
+    остаётся выбрать новое условие.
     """
     conditions = LandingCondition.objects.filter(
         value_option=value
     ).select_related("landing")
     for condition in conditions:
-        report.unpublished_landings.append(condition.landing.slug)
-        condition.landing.is_published = False
-        condition.landing.save(update_fields=["is_published"])
+        landing = condition.landing
+        if successors:
+            report.widened_landings.append(landing.slug)
+            for successor in successors:
+                LandingCondition.objects.get_or_create(
+                    landing=landing,
+                    attribute=successor.attribute,
+                    value_option=successor,
+                )
+        else:
+            report.unpublished_landings.append(landing.slug)
+            landing.is_published = False
+            landing.save(update_fields=["is_published"])
     conditions.delete()
 
 
@@ -409,7 +452,11 @@ def _drop_ambiguous(attributes: dict[str, Attribute], report: Report) -> None:
         if slugs:
             report.cleared.setdefault(attribute.name, []).extend(slugs)
         ProductAttribute.objects.filter(value_option=dropped).delete()
-        _unpublish_landings_on(dropped, report)
+        successors = tuple(
+            attribute.values.get(value=name)
+            for name in SUCCESSORS.get((attribute_slug, value), ())
+        )
+        _rebuild_landings_on(dropped, successors, report)
         dropped.delete()
 
 

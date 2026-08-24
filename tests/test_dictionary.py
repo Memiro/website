@@ -400,6 +400,82 @@ def test_landing_without_conditions_shows_nothing(
     assert client.get("/zerkala-lyubye/").status_code == HTTPStatus.NOT_FOUND
 
 
+def test_landing_ors_several_values_of_one_attribute(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """«Зеркала в раме» — это и алюминий, и багет: внутри атрибута ИЛИ.
+
+    То же правило, что и у фильтра каталога; посадочная просто им до
+    сих пор не пользовалась.
+    """
+    baguette = AttributeValue.objects.create(
+        attribute=shop.frame, value="Багет", order=2
+    )
+    framed = Product.objects.create(
+        category=shop.category,
+        name="Багетное",
+        slug="bagetnoe",
+        price=7000,
+        is_published=True,
+    )
+    ProductAttribute.objects.create(
+        product=framed, attribute=shop.frame, value_option=baguette
+    )
+    landing = Landing.objects.create(
+        category=shop.category,
+        slug="zerkala-v-rame",
+        title="Зеркала в раме",
+        heading="Зеркала в раме",
+        description="",
+        is_published=True,
+    )
+    for value in (shop.aluminium, baguette):
+        LandingCondition.objects.create(
+            landing=landing, attribute=shop.frame, value_option=value
+        )
+
+    html = page_html(client, "/zerkala-v-rame/")
+
+    assert "Halo Moon" in html
+    assert "Багетное" in html
+
+
+def test_landing_listing_every_value_narrows_nothing(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Все значения атрибута разом — дубль категории, а не страница."""
+    landing = Landing.objects.create(
+        category=shop.category,
+        slug="zerkala-lyubye",
+        title="Зеркала",
+        heading="Зеркала",
+        description="",
+    )
+    payload = {
+        "category": shop.category.pk,
+        "slug": landing.slug,
+        "title": landing.title,
+        "heading": landing.heading,
+        "description": "",
+        "text": "",
+        "order": "0",
+        "conditions-TOTAL_FORMS": "2",
+        "conditions-INITIAL_FORMS": "0",
+        "_save": "",
+    }
+    for index, value in enumerate((shop.aluminium, shop.no_frame)):
+        payload[f"conditions-{index}-attribute"] = str(shop.frame.pk)
+        payload[f"conditions-{index}-value_option"] = str(value.pk)
+        payload[f"conditions-{index}-landing"] = str(landing.pk)
+
+    response = admin_client.post(
+        f"/admin/catalog/landing/{landing.pk}/change/", payload
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert "перечислены все значения" in response.content.decode()
+
+
 @pytest.fixture
 def legacy(db: None) -> SimpleNamespace:
     """Справочник и разметка старого сайта — то, что застаёт скрипт."""
@@ -528,6 +604,41 @@ def test_remap_clears_the_ambiguous(legacy: SimpleNamespace) -> None:
     assert legacy.aluminium.slug in report.cleared["Подсветка"]
     assert legacy.baguette.slug in report.cleared["Рама"]
     assert legacy.aluminium.slug in report.unfilled["Подсветка"]
+
+
+def test_remap_widens_landings_onto_successors(
+    legacy: SimpleNamespace,
+) -> None:
+    """Посадочная переезжает на значения, на которые её условие разошлось.
+
+    «Зеркала в раме» остаются страницей про обе рамы, а не снимаются
+    с публикации: значения одного атрибута объединяются по ИЛИ.
+    """
+    landing = Landing.objects.create(
+        category=legacy.category,
+        slug="zerkala-v-rame",
+        title="Зеркала в раме",
+        heading="Зеркала в раме",
+        description="",
+        is_published=True,
+    )
+    frame = Attribute.objects.get(category=legacy.category, slug="frame")
+    LandingCondition.objects.create(
+        landing=landing,
+        attribute=frame,
+        value_option=frame.values.get(value="В раме"),
+    )
+    remap = load_remap()
+
+    report = remap.run()
+
+    landing.refresh_from_db()
+    assert landing.is_published
+    assert landing.slug in report.widened_landings
+    assert {
+        condition.display_value
+        for condition in landing.conditions.select_related("value_option")
+    } == {"Алюминий", "Багет"}
 
 
 def test_remap_leaves_no_calculator_on(legacy: SimpleNamespace) -> None:
