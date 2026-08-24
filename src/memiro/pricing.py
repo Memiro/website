@@ -124,14 +124,18 @@ class PricingLimits:
     max_long_side_mm: int = 0
     max_short_side_mm: int = 0
 
-    def fits(self, configuration: Configuration) -> bool:
+    def fits(self, *, width_mm: int, height_mm: int) -> bool:
         """Помещается ли изделие в пределы производства.
+
+        Спрашивается размером, а не конфигурацией: что выбрано внутри
+        изделия, производственному пределу безразлично, и собирать
+        значения ради двух чисел незачем.
 
         Зеркало поворачивают: 1900×400 и 400×1900 — одно и то же
         изделие. Поэтому длинная сторона сверяется с длинным пределом,
         короткая — с коротким, а не ширина с шириной.
         """
-        sides = (configuration.width_mm, configuration.height_mm)
+        sides = (width_mm, height_mm)
         return _within(max(sides), self.max_long_side_mm) and _within(
             min(sides), self.max_short_side_mm
         )

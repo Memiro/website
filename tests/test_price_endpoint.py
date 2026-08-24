@@ -41,10 +41,12 @@ HEATING_RATE = Decimal(3500)
 SILVER_WITH_CONTOUR = 9000
 GRAPHITE_WITH_CONTOUR = 9400
 WITH_HEATING = 12500
-# Доплата — разница с тем же изделием без этого выбора, а не цена
-# статьи: графит стоит 2 400 ₽ против 1 920 ₽ серебра у товара
-GRAPHITE_SURCHARGE = 400
+# Доплата — разница точных статей с умолчанием товара, а не цена
+# статьи: графит стоит 2 400 ₽ против 1 920 ₽ серебра у товара.
+# Считается до порога заказа и до округления итога
+GRAPHITE_SURCHARGE = 480
 HEATING_SURCHARGE = 3500
+MIN_ORDER_TOTAL = 15000
 
 # Чего в ответе быть не должно: ставки справочника, стоимости статей,
 # из которых ставка делится обратно на известном размере, единицы
@@ -102,6 +104,11 @@ def shop(db: None) -> SimpleNamespace:
         unit=AttributeValue.Unit.PIECE,
         rate=HEATING_RATE,
     )
+    # Умолчание товара по подогреву: бесплатное «нет». Покупатель
+    # заменяет умолчание, а не заводит настройку, которой у товара нет
+    no_heating = AttributeValue.objects.create(
+        attribute=heating_attribute, value="Нет", order=1
+    )
     illumination = Attribute.objects.create(
         category=category,
         name="Подсветка",
@@ -124,6 +131,9 @@ def shop(db: None) -> SimpleNamespace:
         product=product, attribute=blade, value_option=silver
     )
     ProductAttribute.objects.create(
+        product=product, attribute=heating_attribute, value_option=no_heating
+    )
+    ProductAttribute.objects.create(
         product=product, attribute=illumination, value_option=contour
     )
     return SimpleNamespace(
@@ -133,6 +143,8 @@ def shop(db: None) -> SimpleNamespace:
         silver=silver,
         graphite=graphite,
         heating=heating,
+        heating_attribute=heating_attribute,
+        no_heating=no_heating,
         illumination=illumination,
         contour=contour,
     )
@@ -385,3 +397,65 @@ def test_price_is_in_openapi_schema(client: Client) -> None:
 
     schema = response.json()
     assert "get" in schema["paths"]["/api/price"]
+
+
+def test_the_minimum_order_does_not_distort_what_a_choice_costs(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Доплата считается статьями, а не вычитанием двух итогов.
+
+    На изделии, упёршемся в минимальную сумму заказа, разница итогов
+    показала бы подогрев за 3 500 ₽ доплатой в 1 000 ₽ — числом, за
+    которым не стоит ни одна ставка. Итог и доплата отвечают на разные
+    вопросы: сколько платить и во сколько обошёлся выбор.
+    """
+    PricingSettings.objects.create(min_order_total=MIN_ORDER_TOTAL)
+
+    response = ask(
+        client, shop, values=f"{shop.graphite.pk},{shop.heating.pk}"
+    )
+
+    body = response.json()
+    assert body["total"] == MIN_ORDER_TOTAL
+    assert body["additions"] == [
+        {"label": "Тип полотна: Графит", "amount": GRAPHITE_SURCHARGE},
+        {"label": "Подогрев: Есть", "amount": HEATING_SURCHARGE},
+    ]
+
+
+def test_a_cheaper_choice_shows_as_a_discount(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Полотно дешевле умолчания — доплата отрицательная, а не спрятанная.
+
+    Прятать её значило бы объяснять цену только тогда, когда она растёт.
+    """
+    default = ProductAttribute.objects.get(
+        product=shop.product, attribute=shop.blade
+    )
+    default.value_option = shop.graphite
+    default.save()
+
+    response = ask(client, shop, values=str(shop.silver.pk))
+
+    assert response.json()["additions"] == [
+        {"label": "Тип полотна: Серебро", "amount": -GRAPHITE_SURCHARGE}
+    ]
+
+
+def test_a_setting_the_product_never_declared_is_rejected(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Покупатель заменяет умолчание товара, а не заводит своё.
+
+    Заменять нечего — значит, товар до расчёта не дорос; посчитай его,
+    и доплата за выбор оказалась бы полной стоимостью статьи, из
+    которой на известном размере делится ставка.
+    """
+    ProductAttribute.objects.filter(
+        product=shop.product, attribute=shop.heating_attribute
+    ).delete()
+
+    response = ask(client, shop, values=str(shop.heating.pk))
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY

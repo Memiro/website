@@ -276,13 +276,9 @@ def test_production_limits_are_read_side_by_side(
     width: int, height: int, *, expected: bool
 ) -> None:
     """Изделие поворачивают: пределы сверяются длинной и короткой стороной."""
-    assert LIMITED.fits(Configuration(width_mm=width, height_mm=height)) is (
-        expected
-    )
+    assert LIMITED.fits(width_mm=width, height_mm=height) is expected
 
 
 def test_without_limits_no_size_is_out_of_range() -> None:
     """Нулевой предел — его отсутствие, а не запрет любого размера."""
-    huge = Configuration(width_mm=9000, height_mm=9000)
-
-    assert NO_LIMITS.fits(huge)
+    assert NO_LIMITS.fits(width_mm=9000, height_mm=9000)

@@ -6,10 +6,19 @@
 это лежало открытым JavaScript, и повторять это нельзя (ADR-0007).
 
 Доплата — не стоимость статьи, а разница: во сколько обошёлся сам
-выбор. Убери его — и цена станет такой; на столько он и дороже. Так
-«за что доплата» и читается покупателем, и так из ответа не
-восстановить ставку: разность двух ставок ею не является, а стоимость
-статьи при известном размере — является.
+выбор против того, что у товара стоит по умолчанию. Так «за что
+доплата» и читается покупателем, и так из ответа не восстановить
+ставку: разность двух ставок ею не является, а стоимость статьи при
+известном размере — является. Поэтому покупатель и вправе только
+заменять умолчание товара, а не вводить настройку, которой у товара
+нет: замена бесплатного платным — единственный случай, когда доплата
+всё-таки равна ставке, и его ADR-0007 оговаривает отдельно.
+
+Считается разница по точным статьям, до порога минимальной суммы
+заказа и до округления итога. Иначе на изделии, упёршемся в порог,
+подогрев за 3 500 ₽ показался бы доплатой в 1 000 ₽ — числом, которому
+нет объяснения. Итог и доплаты отвечают на разные вопросы: сколько
+платить и во сколько обошёлся выбор; на пороге они и расходятся.
 
 Размер за пределом производства цены не получает вовсе: это личное
 пожелание, и вместо числа эндпоинт зовёт оставить заявку. Предпосчитанные
@@ -23,6 +32,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING, Annotated
 
 import pydantic
@@ -67,7 +77,13 @@ class PriceQuery(pydantic.BaseModel):
 
 
 class PriceAddition(pydantic.BaseModel):
-    """Подпись выбранного с его доплатой — без ставки, из которой она."""
+    """Подпись выбранного с его доплатой — без ставки, из которой она.
+
+    Доплата бывает отрицательной: покупатель вправе выбрать полотно
+    дешевле того, что у товара по умолчанию, и это скидка с показанной
+    цены, а не ошибка. Прятать её значило бы объяснять цену только
+    тогда, когда она растёт.
+    """
 
     label: str
     amount: int
@@ -113,7 +129,15 @@ class _Quote:
 
     def fits(self) -> bool:
         """Берётся ли производство за такой размер вообще."""
-        return self.limits.fits(self.configuration(()))
+        return self.limits.fits(
+            width_mm=self.width_mm, height_mm=self.height_mm
+        )
+
+    def cost(self, chosen: Sequence[AttributeValue]) -> Decimal:
+        """Сумма точных статей — до порога заказа и до округления."""
+        return sum(
+            (line.amount for line in self.price(chosen).lines), Decimal(0)
+        )
 
 
 class PriceController(Controller[PydanticSerializer]):
@@ -139,7 +163,7 @@ class PriceController(Controller[PydanticSerializer]):
             reject(self, UNCALCULABLE)
         return PriceQuote(
             total=price.total,
-            additions=_additions(quote, chosen, total=price.total),
+            additions=_additions(quote, chosen),
             needs_inquiry=False,
         )
 
@@ -161,6 +185,12 @@ class PriceController(Controller[PydanticSerializer]):
     ) -> list[AttributeValue]:
         """Выбранное покупателем — и только то, что он вправе выбирать.
 
+        Покупатель заменяет умолчание товара, а не заводит настройку,
+        которой у товара нет, — как и предпосчитанный вариант
+        (CONTEXT.md, «Предпосчитанный вариант»). Товар, не назвавший
+        атрибут вовсе, до расчёта не дорос: заменять нечего, и доплата
+        за выбор оказалась бы полной стоимостью статьи.
+
         Чужой категории, неизвестное справочнику или неменяемое
         значение считать молча нельзя: посчитается не то, что показано.
         Два значения одного атрибута — тоже отказ: какое из них
@@ -176,35 +206,56 @@ class PriceController(Controller[PydanticSerializer]):
             values
         ):
             reject(self, UNCALCULABLE)
+        declared = {
+            row.attribute_id
+            for row in product.attribute_values.all()
+            if row.value_option is not None
+        }
         for value in values:
             attribute = value.attribute
             if (
                 not attribute.belongs_to(product.category_id)
                 or not attribute.is_customer_editable
+                or attribute.pk not in declared
             ):
                 reject(self, UNCALCULABLE)
         return values
 
 
 def _additions(
-    quote: _Quote, chosen: list[AttributeValue], *, total: int
+    quote: _Quote, chosen: list[AttributeValue]
 ) -> list[PriceAddition]:
-    """На сколько каждый выбор покупателя изменил итог.
+    """Во сколько обошёлся каждый выбор покупателя.
 
-    Не стоимость статьи, а её разница с ценой того же изделия без
-    этого выбора: там, где у товара стоит умолчание, доплачивается
-    только разница с ним. Выбор, ничего не изменивший, молчит —
-    строка «0 ₽» покупателю ничего не объясняет.
+    Разница точных статей: изделие с этим выбором минус то же изделие
+    без него, где место выбора занимает умолчание товара. Не разница
+    итогов: итог поднят до минимальной суммы заказа и округлён, и на
+    пороге вычитание двух итогов дало бы доплату, которой нет
+    объяснения.
+
+    Выбор, ничего не изменивший, молчит — строка «0 ₽» покупателю
+    ничего не объясняет.
 
     Расчёт зовётся заново на каждое значение, но в базу не ходит:
     и товар, и справочник уже в памяти, а движок — чистая функция.
     """
+    full = quote.cost(chosen)
     additions = []
     for value in chosen:
         rest = [other for other in chosen if other.pk != value.pk]
-        difference = total - quote.price(rest).total
+        difference = _whole_rubles(full - quote.cost(rest))
         if difference:
             additions.append(
                 PriceAddition(label=value.full_label, amount=difference)
             )
     return additions
+
+
+def _whole_rubles(amount: Decimal) -> int:
+    """Копейки покупателю не показывают.
+
+    До ближайшего рубля, а не вверх, как итог: итог — то, что платят,
+    и округлять его в свою пользу студия вправе; доплата же объясняет
+    выбор, и врать в любую сторону ей незачем.
+    """
+    return int(amount.to_integral_value(rounding=ROUND_HALF_UP))

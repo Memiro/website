@@ -53,9 +53,6 @@ class SummariesQuery(pydantic.BaseModel):
         str, pydantic.Field(pattern=IDS_PATTERN, max_length=MAX_IDS_LENGTH)
     ]
 
-    def parsed_ids(self) -> list[int]:
-        return parse_ids(self.ids)
-
     @pydantic.field_validator("ids")
     @classmethod
     def _within_limit(cls, value: str) -> str:
@@ -137,7 +134,7 @@ class ProductSummariesController(Controller[PydanticSerializer]):
 
     def get(self, parsed_query: Query[SummariesQuery]) -> ProductSummaries:
         # Исчезнувшие товары просто выпадают из подборки
-        products, _missing = _published(parsed_query.parsed_ids())
+        products, _missing = _published(parse_ids(parsed_query.ids))
         return ProductSummaries(items=[_summary(item) for item in products])
 
 
