@@ -1,15 +1,21 @@
+from itertools import groupby
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import (
     BaseInlineFormSet,
+    ModelChoiceField,
     ModelForm,
     ModelMultipleChoiceField,
+    Select,
 )
+from django.forms.models import ModelChoiceIterator
 from django.utils.html import format_html
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from django.db.models import QuerySet
     from django.db.models.fields.files import ImageFieldFile
     from django.http import HttpRequest
@@ -194,10 +200,100 @@ class ProductAttributeFormSet(BaseInlineFormSet):
         _check_parents(rows)
 
 
+class AttributeValueSelect(Select):
+    """Список значений, помнящий, какому атрибуту каждое принадлежит.
+
+    Номер атрибута нужен скрипту админки: выбрав в строке «Форму»,
+    владелец должен видеть три её значения, а не весь справочник
+    категории. Без скрипта разметка безвредна — список остаётся полным
+    и разложенным по группам.
+    """
+
+    def create_option(
+        self,
+        name: str,
+        value: object,
+        *args: object,
+        **kwargs: object,
+    ) -> dict[str, Any]:
+        option = super().create_option(name, value, *args, **kwargs)  # type: ignore[arg-type]
+        # У пустого выбора модели за спиной нет — метить нечего
+        instance = getattr(value, "instance", None)
+        if instance is not None:
+            option["attrs"]["data-attribute"] = instance.attribute_id
+        return option
+
+
+class GroupedByAttributeIterator(ModelChoiceIterator):
+    """Значения справочника, разложенные по атрибутам.
+
+    Без групп список двусмыслен: «Серебро» в нём и тип полотна, и цвет
+    рамы, и по подписи их не различить. Группа называет атрибут один
+    раз, поэтому в самих подписях его нет.
+    """
+
+    def __iter__(self) -> Iterator[tuple[Any, Any]]:
+        if self.field.empty_label is not None:
+            yield ("", self.field.empty_label)
+        for attribute, values in groupby(
+            self.queryset, key=lambda value: value.attribute
+        ):
+            yield (attribute.name, [self.choice(value) for value in values])
+
+
+class AttributeValueField(ModelChoiceField):
+    """Значение справочника: группа называет атрибут, подпись — значение."""
+
+    iterator = GroupedByAttributeIterator
+
+    def label_from_instance(self, obj: AttributeValue) -> str:
+        return obj.value
+
+
 class ProductAttributeInline(admin.TabularInline):
+    """Характеристики товара: атрибут и его значение построчно.
+
+    Оба списка сужены до категории товара — чужого атрибута ему всё
+    равно не назначить (`_check_own_category`), и держать его в выборе
+    значит предлагать заведомо отвергаемое.
+    """
+
     model = ProductAttribute
     formset = ProductAttributeFormSet
     extra = 1
+
+    class Media:
+        js = ("js/admin-attribute-values.js",)
+
+    def get_formset(
+        self,
+        request: HttpRequest,
+        obj: Product | None = None,
+        **kwargs: object,
+    ) -> type[BaseInlineFormSet]:
+        formset = super().get_formset(request, obj, **kwargs)
+        category_id = obj.category_id if obj else None
+        fields = formset.form.base_fields
+        attribute = fields["attribute"]
+        if isinstance(attribute, ModelChoiceField):
+            attribute.queryset = _category_attributes(category_id)
+        value_option = fields["value_option"]
+        fields["value_option"] = AttributeValueField(
+            queryset=_category_values(category_id),
+            required=False,
+            label=value_option.label,
+            help_text=value_option.help_text,
+            widget=AttributeValueSelect,
+        )
+        return formset
+
+
+def _category_attributes(category_id: int | None) -> QuerySet[Attribute]:
+    """Атрибуты одной категории — в порядке, заданном владельцем."""
+    attributes = Attribute.objects.order_by("order", "name")
+    if category_id is None:
+        return attributes
+    return attributes.filter(category_id=category_id)
 
 
 def _check_one_value_per_attribute(values: list[AttributeValue]) -> None:

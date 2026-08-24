@@ -651,3 +651,84 @@ def test_pricing_limits_stay_single_row(admin_client: Client) -> None:
 
     assert response.status_code == HTTPStatus.FORBIDDEN
     assert PricingSettings.objects.count() == 1
+
+
+# --- Выбор значения в характеристиках товара ---
+
+
+@pytest.mark.django_db
+def test_value_choices_are_grouped_by_attribute(
+    admin_client: Client, category: Category
+) -> None:
+    """Группа называет атрибут: «Серебро» бывает и полотном, и цветом.
+
+    Проверяется отданная разметка, а не устройство поля: владелец
+    видит именно её.
+    """
+    glass = Attribute.objects.create(
+        category=category, name="Тип полотна", slug="tip-polotna"
+    )
+    AttributeValue.objects.create(attribute=glass, value="Серебро")
+    frame_color = Attribute.objects.create(
+        category=category, name="Цвет рамы", slug="cvet-ramy"
+    )
+    AttributeValue.objects.create(attribute=frame_color, value="Серебро")
+    product = Product.objects.create(
+        category=category, name="Зеркало «Луна»", slug="luna"
+    )
+
+    page = admin_client.get(
+        f"/admin/catalog/product/{product.pk}/change/"
+    ).content.decode()
+
+    assert '<optgroup label="Тип полотна">' in page
+    assert '<optgroup label="Цвет рамы">' in page
+
+
+@pytest.mark.django_db
+def test_value_choices_exclude_other_categories(
+    admin_client: Client, category: Category
+) -> None:
+    """Чужого значения в выборе нет — назначить его всё равно нельзя."""
+    partitions = Category.objects.create(
+        name="Перегородки", slug="peregorodki"
+    )
+    alien = Attribute.objects.create(
+        category=partitions, name="Профиль", slug="profil"
+    )
+    AttributeValue.objects.create(attribute=alien, value="Хром")
+    own = Attribute.objects.create(
+        category=category, name="Форма", slug="forma"
+    )
+    AttributeValue.objects.create(attribute=own, value="Круглое")
+    product = Product.objects.create(
+        category=category, name="Зеркало «Луна»", slug="luna"
+    )
+
+    page = admin_client.get(
+        f"/admin/catalog/product/{product.pk}/change/"
+    ).content.decode()
+
+    assert "Круглое" in page
+    assert '<optgroup label="Профиль">' not in page
+    assert ">Хром<" not in page
+
+
+@pytest.mark.django_db
+def test_value_options_name_their_attribute(
+    admin_client: Client, category: Category
+) -> None:
+    """У каждого значения в разметке стоит его атрибут — им сужает скрипт."""
+    shape = Attribute.objects.create(
+        category=category, name="Форма", slug="forma"
+    )
+    value = AttributeValue.objects.create(attribute=shape, value="Круглое")
+    product = Product.objects.create(
+        category=category, name="Зеркало «Луна»", slug="luna"
+    )
+
+    page = admin_client.get(
+        f"/admin/catalog/product/{product.pk}/change/"
+    ).content.decode()
+
+    assert f'value="{value.pk}" data-attribute="{shape.pk}"' in page
