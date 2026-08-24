@@ -2,7 +2,6 @@
 <article class="product-card">
   <a class="card-link" href="{% url 'product' product.category.slug product.slug %}">
     <div class="pic">
-      {% if product.is_promo %}<span class="badge">Акция</span>{% endif %}
       {% if product.photo_small %}
       <img src="{{ product.photo_small.url }}" alt="{{ product.name }}" loading="lazy">
       {% endif %}

@@ -21,7 +21,6 @@
     </div>
     {% endif %}
     <div class="main">
-      {% if product.is_promo %}<span class="badge">Акция</span>{% endif %}
       {% if product.main_photo %}
       <img data-gallery-main src="{{ product.main_photo.url }}" alt="{{ product.name }}">
       {% endif %}

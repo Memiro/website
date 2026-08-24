@@ -12,8 +12,7 @@ from memiro.content.models import Promo
 def showcase(db: None) -> SimpleNamespace:
     """Категория с популярными, акционным и черновым товарами."""
     category = Category.objects.create(name="Зеркала", slug="zerkala")
-    # Заголовок блока акции живёт в админке (тикет 08): без него лента
-    # акционных товаров на главную не выходит
+    # Акция опубликована нарочно: с тикета 05 витрина её не показывает
     Promo.objects.create(title="Специальные цены", is_published=True)
     second = Product.objects.create(
         category=category,
@@ -102,12 +101,12 @@ def test_home_popular_ordered_by_manual_order(
     assert content.index("Halo Moon") < content.index("Grand Arc")
 
 
-def test_home_shows_promo_products(
-    client: Client, showcase: SimpleNamespace
-) -> None:
+def test_home_hides_promos(client: Client, showcase: SimpleNamespace) -> None:
+    """Тикет 05: ни заголовка акции, ни её ленты товаров на главной."""
     content = client.get("/").content.decode()
 
-    assert "Dew Glow" in content
+    assert "Специальные цены" not in content
+    assert "Dew Glow" not in content
 
 
 def test_home_hides_draft_products(
@@ -118,11 +117,13 @@ def test_home_hides_draft_products(
     assert "Черновик" not in content
 
 
-def test_home_hides_empty_promo_and_popular_sections(
-    client: Client, db: None
-) -> None:
-    """Без товаров в БД блоки «акция» и «популярное» не рисуются."""
+def test_home_hides_empty_popular_section(client: Client, db: None) -> None:
+    """Без товаров в БД блок «популярное» не рисуется.
+
+    Проверка идёт по заголовку, который шаблон печатает на самом деле:
+    подстрока «Популярное» на странице не встречается ни при каких
+    данных, и тест на ней не мог покраснеть.
+    """
     content = client.get("/").content.decode()
 
-    assert "Популярное" not in content
-    assert "Акция" not in content
+    assert "Популярные товары" not in content

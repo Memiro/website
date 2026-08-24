@@ -485,7 +485,15 @@ def test_product_page_shows_card_data(
     assert "11 795" in html
     assert "Круглое" in html
     assert "2850" in html
-    assert "Акция" in html
+
+
+def test_promo_flag_gives_no_badge(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Тикет 05: флаг «акция» стоит, бейджа нет ни в плитке, ни в карточке."""
+    assert shop.halo.is_promo
+    assert "Акция" not in page_html(client, "/catalog/zerkala/halo-moon/")
+    assert "Акция" not in page_html(client, "/catalog/zerkala/")
 
 
 def test_product_page_has_no_stock_state(

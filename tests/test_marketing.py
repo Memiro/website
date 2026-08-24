@@ -159,7 +159,10 @@ def promo_product(db: None) -> Product:
     )
 
 
-def test_home_shows_published_promo(client: Client) -> None:
+def test_home_hides_published_promo(
+    client: Client, promo_product: Product
+) -> None:
+    """Тикет 05: акция публикуется в админке и на витрину не выходит."""
     Promo.objects.create(
         title="Весенние скидки",
         text="Подробности уточняйте у менеджера.",
@@ -168,57 +171,31 @@ def test_home_shows_published_promo(client: Client) -> None:
 
     content = client.get("/").content.decode()
 
-    assert "Весенние скидки" in content
-    assert "Подробности уточняйте у менеджера." in content
-
-
-def test_home_hides_unpublished_promo(client: Client) -> None:
-    Promo.objects.create(title="Скрытая акция", is_published=False)
-
-    content = client.get("/").content.decode()
-
-    assert "Скрытая акция" not in content
-
-
-def test_promo_block_carries_promo_products(
-    client: Client, promo_product: Product
-) -> None:
-    Promo.objects.create(title="Весенние скидки", is_published=True)
-
-    content = client.get("/").content.decode()
-
-    assert content.index("Весенние скидки") < content.index("Dew Glow")
-
-
-def test_promo_products_hidden_without_published_promo(
-    client: Client, promo_product: Product
-) -> None:
-    """Блок акции живёт из админки: нет акции — нет и её ленты товаров."""
-    content = client.get("/").content.decode()
-
+    assert "Весенние скидки" not in content
+    assert "Подробности уточняйте у менеджера." not in content
     assert "Dew Glow" not in content
 
 
-def test_first_promo_by_order_wins(client: Client) -> None:
-    Promo.objects.create(title="Вторая акция", is_published=True, order=2)
-    Promo.objects.create(title="Первая акция", is_published=True, order=1)
-
-    content = client.get("/").content.decode()
-
-    assert "Первая акция" in content
-    assert "Вторая акция" not in content
-
-
-def test_migration_keeps_existing_sale_block(
+def test_promo_flag_gives_no_badge_on_home(
     client: Client, promo_product: Product
 ) -> None:
-    """Витрина с уже отмеченными товарами не теряет блок при переезде."""
-    sale_migration.create_promo_for_flagged_products(apps, None)
+    """Флаг «акция» у товара витрину не метит — даже в ленте популярного."""
+    Product.objects.filter(pk=promo_product.pk).update(is_popular=True)
 
     content = client.get("/").content.decode()
 
-    assert sale_migration.LEGACY_TITLE in content
     assert "Dew Glow" in content
+    assert "Акция" not in content
+
+
+def test_migration_keeps_flagged_showcase_promo(
+    client: Client, promo_product: Product
+) -> None:
+    """Данные переезда живы: запись заводится, хоть её и не видно."""
+    sale_migration.create_promo_for_flagged_products(apps, None)
+
+    assert Promo.objects.filter(title=sale_migration.LEGACY_TITLE).exists()
+    assert sale_migration.LEGACY_TITLE not in client.get("/").content.decode()
 
 
 def test_migration_skips_showcase_without_flagged_products(db: None) -> None:
@@ -263,17 +240,24 @@ def test_review_created_through_admin_appears_on_site(
     assert "Ольга" in client.get("/").content.decode()
 
 
-def test_promo_hidden_from_site_after_unpublishing_in_admin(
+def test_promo_edited_in_admin_stays_off_the_site(
     admin_client: Client, client: Client, promo_product: Product
 ) -> None:
-    """Снятая с публикации акция уносит с главной и свою ленту товаров."""
+    """Акция остаётся живой записью админки — и после правки не всплывает."""
     promo = Promo.objects.create(title="Весенние скидки", is_published=True)
 
-    admin_client.post(
+    response = admin_client.post(
         f"/admin/content/promo/{promo.pk}/change/",
-        {"title": promo.title, "text": "", "order": "0"},
+        {
+            "title": promo.title,
+            "text": "",
+            "is_published": "on",
+            "order": "0",
+        },
     )
     content = client.get("/").content.decode()
 
+    assert response.status_code == HTTPStatus.FOUND
+    assert Promo.objects.get(pk=promo.pk).is_published
     assert "Весенние скидки" not in content
     assert "Dew Glow" not in content

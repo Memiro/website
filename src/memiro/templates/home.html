@@ -48,25 +48,6 @@
 </section>
 {% endif %}
 
-{% if promo %}
-<section class="wrap section">
-  <div class="section-head">
-    <div>
-      <span class="overline bare">Акция</span>
-      <h2 class="h-section">{{ promo.title }}</h2>
-    </div>
-    {% if promo.text %}<div class="section-note">{{ promo.text }}</div>{% endif %}
-    {# Без товаров с флагом «акция» блок остаётся заголовком со ссылкой #}
-    {% if not sale %}<a class="link-underline" href="{% url 'catalog' %}">Весь каталог →</a>{% endif %}
-  </div>
-  {% if sale %}
-  <div class="carousel grid-4">
-    {% for product in sale %}{% include "catalog/_card.html" %}{% endfor %}
-  </div>
-  {% endif %}
-</section>
-{% endif %}
-
 {% if popular %}
 <section class="wrap section">
   <div class="section-head">
@@ -77,10 +58,7 @@
     {% for product in popular %}{% include "catalog/_card.html" %}{% endfor %}
   </div>
 </section>
-{% endif %}
-
-{% if promo or popular %}
-{# Ленты выше показывают цены «от X ₽» — дисклеймер идёт за ними #}
+{# Лента выше показывает цены «от X ₽» — дисклеймер идёт за ней #}
 <div class="wrap">{% include "legal/_offer_note.html" %}</div>
 {% endif %}
 

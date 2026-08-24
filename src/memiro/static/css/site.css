@@ -221,12 +221,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .product-card .meta { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
 .product-card .name { font-size: 16px; font-weight: 500; line-height: 1.35; }
 .product-card .price { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
-.badge {
-  position: absolute; top: 0; left: 0; z-index: 1;
-  background: var(--ink); color: var(--bg);
-  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
-  padding: 7px 11px;
-}
 
 /* ---------- Тёмный блок «О нас» ---------- */
 .dark { margin-top: 112px; background: var(--ink); color: var(--on-dark); }
