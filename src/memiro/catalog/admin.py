@@ -27,6 +27,7 @@ from .models import (
     ProductAttribute,
     ProductImage,
     ProductVariant,
+    marks_presence,
 )
 
 
@@ -154,7 +155,8 @@ def _present_attribute_ids(rows: list[dict[str, Any]]) -> set[int]:
     return {
         row["attribute"].pk
         for row in rows
-        if row.get("attribute") and row.get("value_bool") is not False
+        if row.get("attribute")
+        and marks_presence(value_bool=row.get("value_bool"))
     }
 
 

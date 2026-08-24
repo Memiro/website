@@ -138,9 +138,13 @@ def product(
         category__slug=category_slug,
         slug=slug,
     )
-    specs = product.attribute_values.select_related(
-        "attribute", "value_option"
-    ).order_by("attribute__order", "attribute__name")
+    # Характеристики — те же строки, что уже загрузил префетч расчёта:
+    # второй запрос за ними отдавал бы то же самое. Порядок владельца
+    # ставится в Python, раз строки в памяти
+    specs = sorted(
+        product.attribute_values.all(),
+        key=lambda row: (row.attribute.order, row.attribute.name),
+    )
     related = (
         product.category.products.published()
         .exclude(pk=product.pk)

@@ -37,21 +37,23 @@
     failed: "Не удалось посчитать цену — попробуйте ещё раз или оставьте заявку.",
   };
 
-  // Приглашение к заявке стоит там, где цены не будет; под просьбой
-  // ввести размеры оно звало бы в обход ещё не начатого расчёта
-  const say = (text, invite = true) => {
-    const note = document.createElement("p");
-    note.className = "calc-note";
-    note.textContent = text;
-    const nodes = [note];
-    if (invite) {
-      const link = document.createElement("a");
-      link.className = "link-underline";
-      link.href = "#inquiry";
-      link.textContent = "Оставить заявку →";
-      nodes.push(link);
-    }
-    result.replaceChildren(...nodes);
+  const note = (text) => {
+    const paragraph = document.createElement("p");
+    paragraph.className = "calc-note";
+    paragraph.textContent = text;
+    return paragraph;
+  };
+
+  // Просто сказать — там, где расчёт ещё впереди
+  const say = (text) => result.replaceChildren(note(text));
+
+  // Позвать к заявке — там, где цены не будет вовсе
+  const invite = (text) => {
+    const link = document.createElement("a");
+    link.className = "link-underline";
+    link.href = "#inquiry";
+    link.textContent = "Оставить заявку →";
+    result.replaceChildren(note(text), link);
   };
 
   const showTotal = (quote) => {
@@ -83,9 +85,13 @@
   let latest = 0;
 
   const recalculate = async () => {
+    // Номер берётся до всякого выхода: стерев ширину, покупатель
+    // отменяет и запрос, что уже в полёте, — иначе ответ на прежний
+    // размер напечатал бы цену над опустевшим полем
+    const ticket = ++latest;
     const sizes = { width_mm: Number(width.value), height_mm: Number(height.value) };
     if (!(sizes.width_mm > 0 && sizes.height_mm > 0)) {
-      say(NOTES.sizes, false);
+      say(NOTES.sizes);
       return;
     }
     const query = new URLSearchParams({
@@ -94,7 +100,6 @@
       height_mm: sizes.height_mm,
       values: selects.map((select) => select.value).join(","),
     });
-    const ticket = ++latest;
     let quote = null;
     try {
       const response = await fetch(`/api/price?${query}`, {
@@ -106,12 +111,12 @@
     }
     if (ticket !== latest) return;
     if (!quote) {
-      say(NOTES.failed);
+      invite(NOTES.failed);
       return;
     }
     // Размер за пределом производства цены не получает вовсе
     if (quote.needs_inquiry || quote.total === null) {
-      say(NOTES.inquiry);
+      invite(NOTES.inquiry);
       return;
     }
     showTotal(quote);

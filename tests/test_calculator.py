@@ -20,6 +20,7 @@ from memiro.catalog.models import (
     Attribute,
     AttributeValue,
     Category,
+    PricingSettings,
     Product,
     ProductAttribute,
     ProductVariant,
@@ -292,6 +293,48 @@ def test_a_product_without_a_single_tariff_has_no_calculator(
         )
 
     assert not CALC.search(card(client, untariffed))
+
+
+def test_a_variant_beyond_production_does_not_open_the_calculator(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Вариант владельца через предел не проходит, а калькулятор — да.
+
+    Открывшись на его размере, калькулятор позвал бы оставить заявку
+    там, где в строке таблицы стоит настоящая цена.
+    """
+    PricingSettings.objects.create(
+        max_long_side_mm=2000, max_short_side_mm=1500
+    )
+    ProductVariant.objects.create(
+        product=shop.product, width_mm=2400, height_mm=1000
+    )
+    ProductVariant.objects.create(
+        product=shop.product, width_mm=800, height_mm=600, order=1
+    )
+
+    body = card(client, shop.product)
+
+    assert 'value="800" data-calc-width' in body
+
+
+def test_an_unfilled_attribute_without_a_tariff_keeps_the_calculator(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Незаполненный «вес» цену не укорачивает — молчать о ней незачем.
+
+    Тариф живёт у значения справочника, а у «да/нет» и числовых
+    значения справочника нет: в расчёт они не входят вовсе.
+    """
+    Attribute.objects.create(
+        category=shop.category,
+        name="Вес",
+        slug="ves",
+        kind=Attribute.Kind.NUMBER,
+        order=3,
+    )
+
+    assert CALC.search(card(client, shop.product))
 
 
 def test_a_free_choice_leaves_nothing_to_charge_and_is_refused(

@@ -552,3 +552,17 @@ def test_product_under_wrong_category_404(
     response = client.get("/catalog/peregorodki/halo-moon/")
 
     assert response.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_specs_follow_the_order_the_owner_gave_attributes(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Характеристики карточки идут в порядке атрибутов категории.
+
+    Строки берутся из того же префетча, что и расчёт, и порядок им
+    ставится в Python — второй запрос за теми же строками отдавал бы
+    ровно то же самое.
+    """
+    html = page_html(client, "/catalog/zerkala/halo-moon/")
+
+    assert html.index("<dt>Форма</dt>") < html.index("<dt>Подсветка</dt>")

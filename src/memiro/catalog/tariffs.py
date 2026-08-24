@@ -35,9 +35,23 @@ def product_values(prefix: str = "") -> Prefetch:
     return Prefetch(
         f"{prefix}attribute_values",
         queryset=ProductAttribute.objects.select_related(
-            "value_option__attribute"
+            "attribute", "value_option__attribute"
         ),
     )
+
+
+def declared_values(product: Product) -> dict[int, AttributeValue]:
+    """Значения справочника, названные товаром, — по атрибуту.
+
+    Атрибуты «да/нет» и числовые сюда не попадают: тариф живёт у
+    значения справочника, а у них значения справочника нет. Берётся
+    `all()`, чтобы попадать в кэш `product_values()`.
+    """
+    return {
+        row.value_option.attribute_id: row.value_option
+        for row in product.attribute_values.all()
+        if row.value_option is not None
+    }
 
 
 def limits_from_settings() -> pricing.PricingLimits:
@@ -62,16 +76,10 @@ def configuration(
 ) -> pricing.Configuration:
     """Что считать: габариты и значения атрибутов изделия.
 
-    Значения товара берутся `all()`, чтобы пачечный пересчёт попадал
-    в кэш `product_values()`; в одиночном вызове тот же префетч ставит
-    вызывающий. Атрибуты «да/нет» и числовые в расчёт не входят: тариф
-    живёт у значения справочника, а у них значения справочника нет.
+    Умолчания товара берутся `declared_values()`; в одиночном вызове
+    префетч под них ставит вызывающий.
     """
-    values = {
-        row.value_option.attribute_id: row.value_option
-        for row in product.attribute_values.all()
-        if row.value_option is not None
-    }
+    values = declared_values(product)
     values.update({value.attribute_id: value for value in chosen})
     return pricing.Configuration(
         width_mm=width_mm,

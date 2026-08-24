@@ -10,8 +10,8 @@
 устарел бы первой же его строкой (ADR-0002). Данными сегодня
 выражаются два условия, и оба обязательны:
 
-* у товара заполнены все атрибуты его категории, применимые к нему, —
-  незаполненный атрибут значит, что изделие ещё не описано целиком;
+* у товара названы все тарифицируемые атрибуты его категории,
+  применимые к нему, — незаполненный значит, что цена изделия неполна;
 * хотя бы одно из значений товара платное — иначе итогом был бы ноль
   или минимальная сумма заказа, число, за которым ничего не стоит.
 
@@ -28,12 +28,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .models import Attribute, AttributeValue
+from . import tariffs
+from .models import Attribute, AttributeValue, marks_presence
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Sequence
 
-    from .models import Product, ProductAttribute, ProductVariant
+    from memiro import pricing
+    from .models import Product, ProductVariant
 
 # Верхняя граница ввода — защита разбора, а не предел производства:
 # тот живёт в «Параметрах расчёта» и отвечает приглашением к заявке,
@@ -95,7 +97,11 @@ def for_product(
     if not is_calculable(product):
         return None
     defaults = _defaults(product)
-    opening = _opening_variant(variants, editable=set(defaults))
+    opening = _opening_variant(
+        variants,
+        editable=set(defaults),
+        limits=tariffs.limits_from_settings(),
+    )
     if opening is not None:
         defaults.update(
             {value.attribute_id: value for value in opening.values.all()}
@@ -109,55 +115,60 @@ def for_product(
 
 def is_calculable(product: Product) -> bool:
     """Укладывается ли изделие в считаемый набор целиком."""
-    rows = list(product.attribute_values.all())
-    return _has_a_charged_value(rows) and _is_described_fully(product, rows)
+    return _has_a_charged_value(product) and _is_described_fully(product)
 
 
-def _has_a_charged_value(rows: Iterable[ProductAttribute]) -> bool:
+def _has_a_charged_value(product: Product) -> bool:
     return any(
-        row.value_option is not None and row.value_option.is_charged
-        for row in rows
+        value.is_charged for value in tariffs.declared_values(product).values()
     )
 
 
-def _is_described_fully(
-    product: Product, rows: Sequence[ProductAttribute]
-) -> bool:
-    """Заведены ли у товара все атрибуты категории, которые ему полагаются.
+def _is_described_fully(product: Product) -> bool:
+    """Названы ли товаром все тарифицируемые атрибуты, ему полагающиеся.
+
+    Спрашивается только о выборе из списка: тариф живёт у значения
+    справочника, а у «да/нет» и числовых значения справочника нет, и
+    их пустота цену не укорачивает. Незаполненный вес — не повод
+    молчать о цене изделия, которое считается целиком. Появится у
+    числового атрибута роль в расчёте (количество вырезов, тикет 22) —
+    правило расширится вместе с `tariffs.configuration`.
 
     «Полагаются» — с поправкой на зависимость: кнопки не бывает без
     подсветки или подогрева, и её отсутствие у товара без них не
-    пробел. Признак «да/нет» со значением «нет» родителем не считается,
-    как и в проверке админки.
+    пробел. Родителем при этом бывает и «да/нет», поэтому заведённое
+    считается по всем строкам товара, а не по одним тарифицируемым.
     """
+    rows = list(product.attribute_values.all())
     filled = {row.attribute_id for row in rows}
-    present = {row.attribute_id for row in rows if row.value_bool is not False}
+    present = {
+        row.attribute_id
+        for row in rows
+        if marks_presence(value_bool=row.value_bool)
+    }
     return not any(
         attribute.pk not in filled
         and attribute.missing_parent_error(present) is None
         for attribute in Attribute.objects.filter(
-            category_id=product.category_id
+            category_id=product.category_id, kind=Attribute.Kind.CHOICE
         ).prefetch_related("parents")
     )
 
 
 def _defaults(product: Product) -> dict[int, AttributeValue]:
-    """Меняемые покупателем значения товара — по атрибуту.
-
-    Атрибут берётся у значения, а не у строки товара: расчёт и так
-    загружает `value_option__attribute`, и второй раз спрашивать базу
-    об одном и том же незачем.
-    """
+    """Меняемые покупателем значения товара — по атрибуту."""
     return {
-        row.value_option.attribute_id: row.value_option
-        for row in product.attribute_values.all()
-        if row.value_option is not None
-        and row.value_option.attribute.is_customer_editable
+        attribute_id: value
+        for attribute_id, value in tariffs.declared_values(product).items()
+        if value.attribute.is_customer_editable
     }
 
 
 def _opening_variant(
-    variants: Sequence[ProductVariant], *, editable: set[int]
+    variants: Sequence[ProductVariant],
+    *,
+    editable: set[int],
+    limits: pricing.PricingLimits,
 ) -> ProductVariant | None:
     """Вариант, который калькулятор способен показать без расхождения.
 
@@ -166,12 +177,20 @@ def _opening_variant(
     нет. Открывшись на его размере с умолчаниями товара, он назвал бы
     на тех же параметрах не ту цену, что стоит в строке таблицы
     (ADR-0007).
+
+    Размер за пределом производства — тот же случай с другой стороны:
+    варианты владельца через предел не проходят и цену в таблице
+    показывают, а калькулятор на таком размере позвал бы оставить
+    заявку вместо неё.
     """
     return next(
         (
             variant
             for variant in variants
-            if all(
+            if limits.fits(
+                width_mm=variant.width_mm, height_mm=variant.height_mm
+            )
+            and all(
                 value.attribute_id in editable
                 for value in variant.values.all()
             )
@@ -184,7 +203,7 @@ def _attributes(
     defaults: dict[int, AttributeValue],
 ) -> tuple[EditableAttribute, ...]:
     """Органы управления в порядке, заданном владельцем атрибутам."""
-    options = _options(defaults)
+    dictionary = _dictionary(defaults)
     return tuple(
         EditableAttribute(
             name=default.attribute.name,
@@ -194,7 +213,7 @@ def _attributes(
                     label=value.value,
                     is_default=value.pk == default.pk,
                 )
-                for value in options.get(attribute_id, ())
+                for value in dictionary.get(attribute_id, ())
             ),
         )
         for attribute_id, default in sorted(
@@ -207,13 +226,13 @@ def _attributes(
     )
 
 
-def _options(
+def _dictionary(
     defaults: dict[int, AttributeValue],
 ) -> dict[int, list[AttributeValue]]:
     """Справочник меняемых атрибутов — одним запросом на карточку."""
-    options: dict[int, list[AttributeValue]] = {}
+    values: dict[int, list[AttributeValue]] = {}
     for value in AttributeValue.objects.filter(
         attribute_id__in=list(defaults)
     ):
-        options.setdefault(value.attribute_id, []).append(value)
-    return options
+        values.setdefault(value.attribute_id, []).append(value)
+    return values
