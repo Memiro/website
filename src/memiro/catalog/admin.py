@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.core.exceptions import ValidationError
 from django.forms import (
     BaseInlineFormSet,
+    CheckboxSelectMultiple,
     ModelChoiceField,
     ModelForm,
     ModelMultipleChoiceField,
@@ -325,7 +326,7 @@ VARIANT_VALUES_HELP = (
     "Чем вариант отличается от товара. Пусто — берёт значения товара "
     "целиком. Значение заменяет умолчание товара, а не добавляется "
     "к нему; двух значений одного атрибута у варианта не бывает — "
-    "это второй вариант. Несколько — щелчок с Ctrl."
+    "это второй вариант."
 )
 
 
@@ -366,6 +367,9 @@ class ProductVariantInline(admin.TabularInline):
     extra = 1
     readonly_fields = ("computed_price",)
 
+    class Media:
+        css: ClassVar = {"all": ("css/admin-variants.css",)}
+
     def get_formset(
         self,
         request: HttpRequest,
@@ -384,7 +388,10 @@ class ProductVariantInline(admin.TabularInline):
             required=False,
             label=values.label,
             help_text=VARIANT_VALUES_HELP,
-            widget=values.widget,
+            # Флажки, а не множественный список: в списке значение
+            # выбирается щелчком с Ctrl, а без него выбор молча
+            # сбрасывается на одно — владельцу это стоило вечера
+            widget=CheckboxSelectMultiple,
         )
         return formset
 

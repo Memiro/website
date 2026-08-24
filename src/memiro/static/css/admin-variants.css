@@ -1,0 +1,28 @@
+/* Значения варианта — флажки, разложенные по атрибутам. Их столько,
+   сколько строк в справочнике категории, и без ограничения высоты
+   одна строка варианта вытеснила бы со страницы всё остальное. */
+.inline-group .field-values ul {
+  max-height: 16rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 0.25rem;
+  list-style: none;
+}
+
+.inline-group .field-values ul ul {
+  max-height: none;
+  overflow-y: visible;
+  padding-left: 0.75rem;
+}
+
+/* Заголовок группы — это имя атрибута; без него флажки «Серебро»
+   и «Серебро» неразличимы */
+.inline-group .field-values > ul > li {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.inline-group .field-values > ul > li li {
+  font-weight: 400;
+  white-space: nowrap;
+}
