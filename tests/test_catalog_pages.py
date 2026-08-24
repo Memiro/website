@@ -487,7 +487,7 @@ def test_product_page_shows_card_data(
     assert "2850" in html
 
 
-def test_promo_flag_gives_no_badge(
+def test_promo_flag_gives_no_badge_in_catalog(
     client: Client, shop: SimpleNamespace
 ) -> None:
     """Тикет 05: флаг «акция» стоит, бейджа нет ни в плитке, ни в карточке."""
