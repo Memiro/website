@@ -9,6 +9,7 @@ from django.db import models
 from django.urls import Resolver404, resolve, reverse
 
 from memiro import pricing
+from memiro.singleton import SingletonModel
 
 if TYPE_CHECKING:
     from django.db.models.fields.files import ImageFieldFile
@@ -316,15 +317,13 @@ class AttributeValue(models.Model):
         )
 
 
-class PricingSettings(models.Model):
+class PricingSettings(SingletonModel):
     """Параметры расчёта: минимальная площадь и минимальная сумма заказа.
 
     Данные, а не константы в коде (ADR-0007): маленькое зеркало считается
     по минимальной площади, а итог не опускается ниже минимальной суммы —
-    оба порога владелец меняет сам. Строка одна на сайт.
+    оба порога владелец меняет сам. Строка одна на сайт (`SingletonModel`).
     """
-
-    SINGLETON_PK = 1
 
     # 0,25 м² — обычная минимальная площадь обработки у стекольных
     # производств; владелец правит под свою
@@ -361,11 +360,6 @@ class PricingSettings(models.Model):
 
     def __str__(self) -> str:
         return "Параметры расчёта"
-
-    def save(self, *args: object, **kwargs: object) -> None:
-        """Строка всегда одна: второй набор порогов — вторая правда."""
-        self.pk = self.SINGLETON_PK
-        super().save(*args, **kwargs)  # type: ignore[arg-type]
 
     def clean(self) -> None:
         """Короткий предел длиннее длинного — не предел, а опечатка.

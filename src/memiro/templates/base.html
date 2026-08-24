@@ -34,11 +34,12 @@
     </nav>
     <div class="nav-side">
       <a class="nav-phone" href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
+      {# Незаполненная ссылка — не иконка в никуда: контакты правит владелец #}
       <div class="icon-row">
-        <a class="icon-btn" href="{{ contacts.telegram }}" target="_blank" rel="noopener"
-           title="Telegram" aria-label="Telegram">{% include "icons/telegram.svg" %}</a>
-        <a class="icon-btn" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener"
-           title="WhatsApp" aria-label="WhatsApp">{% include "icons/whatsapp.svg" %}</a>
+        {% if contacts.telegram %}<a class="icon-btn" href="{{ contacts.telegram }}" target="_blank" rel="noopener"
+           title="Telegram" aria-label="Telegram">{% include "icons/telegram.svg" %}</a>{% endif %}
+        {% if contacts.whatsapp %}<a class="icon-btn" href="{{ contacts.whatsapp }}" target="_blank" rel="noopener"
+           title="WhatsApp" aria-label="WhatsApp">{% include "icons/whatsapp.svg" %}</a>{% endif %}
       </div>
       <a class="icon-btn counter-btn" href="{% url 'favorites' %}"
          title="Избранное" aria-label="Избранное">{% include "icons/heart.svg" %}<span

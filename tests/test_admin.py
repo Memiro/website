@@ -21,7 +21,7 @@ def test_admin_opens_for_superuser(client: Client) -> None:
     assert response.status_code == HTTPStatus.OK
 
 
-def test_admin_requires_login(client: Client) -> None:
+def test_admin_requires_login(client: Client, db: None) -> None:
     """Аноним отправляется на страницу входа."""
     response = client.get("/admin/", follow=True)
 

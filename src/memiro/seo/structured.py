@@ -12,19 +12,20 @@ from typing import TYPE_CHECKING, Any
 from django.templatetags.static import static
 from django.urls import reverse
 
-from memiro.context_processors import CONTACTS
+from memiro.context_processors import site_contacts
 from .meta import DEFAULT_OG_IMAGE, SITE_NAME
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from datetime import time
 
     from django.http import HttpRequest
 
     from memiro.catalog.models import Category, Product
-    from memiro.content.models import Review
+    from memiro.content.models import Review, SiteContacts
 
 
-# Шоурум работает ежедневно (CONTACTS["hours"]) — расписание разметки
+# Шоурум работает ежедневно (часы студии) — расписание разметки
 # перечисляет все семь дней
 EVERY_DAY = (
     "Monday",
@@ -97,6 +98,7 @@ def local_business(
     Рейтинг добавляется только из настоящих отзывов, занесённых в
     админку (CONTEXT.md): выдуманных оценок в разметке не бывает.
     """
+    contacts = site_contacts(request)
     data: dict[str, Any] = {
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
@@ -109,21 +111,29 @@ def local_business(
         "url": request.build_absolute_uri(reverse("home")),
         # Кадр для локального сниппета — тот же, что уходит в OG
         "image": request.build_absolute_uri(static(DEFAULT_OG_IMAGE)),
-        "telephone": CONTACTS["phone"],
-        "email": CONTACTS["email"],
-        "address": {
+    }
+    # Незаполненного контакта разметка не называет — пустой телефон
+    # и профиль пустой строкой такое же враньё поисковику, как
+    # выдуманное расписание ниже
+    if contacts.phone:
+        data["telephone"] = contacts.phone
+    if contacts.email:
+        data["email"] = contacts.email
+    if contacts.city or contacts.street:
+        data["address"] = {
             "@type": "PostalAddress",
             "addressCountry": "RU",
-            "addressLocality": CONTACTS["city"],
-            "streetAddress": CONTACTS["street"],
-        },
-        "sameAs": [
-            CONTACTS["telegram"],
-            CONTACTS["vk"],
-            CONTACTS["avito"],
-        ],
-    }
-    hours = _opening_hours()
+            "addressLocality": contacts.city,
+            "streetAddress": contacts.street,
+        }
+    profiles = [
+        link
+        for link in (contacts.telegram, contacts.vk, contacts.avito)
+        if link
+    ]
+    if profiles:
+        data["sameAs"] = profiles
+    hours = _opening_hours(contacts)
     if hours:
         data["openingHoursSpecification"] = hours
     rating = _aggregate_rating(reviews)
@@ -132,22 +142,27 @@ def local_business(
     return data
 
 
-def _opening_hours() -> list[dict[str, Any]]:
+def _opening_hours(contacts: SiteContacts) -> list[dict[str, Any]]:
     """Расписание шоурума — только если часы заданы.
 
     Незаданные часы разметка пропускает: выдуманное расписание — такое
     же враньё поисковику, как выдуманный рейтинг.
     """
-    if not (CONTACTS["opens"] and CONTACTS["closes"]):
+    if not contacts.has_schedule:
         return []
     return [
         {
             "@type": "OpeningHoursSpecification",
             "dayOfWeek": list(EVERY_DAY),
-            "opens": CONTACTS["opens"],
-            "closes": CONTACTS["closes"],
+            "opens": _hhmm(contacts.opens),
+            "closes": _hhmm(contacts.closes),
         }
     ]
+
+
+def _hhmm(moment: time | None) -> str:
+    """Время так, как его читает schema.org: ЧЧ:ММ."""
+    return moment.strftime("%H:%M") if moment else ""
 
 
 def _aggregate_rating(reviews: Iterable[Review]) -> dict[str, Any] | None:

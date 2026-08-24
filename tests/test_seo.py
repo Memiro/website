@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import time
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
@@ -24,8 +24,7 @@ from memiro.catalog.models import (
     ProductAttribute,
 )
 from memiro.catalog.views import PAGE_SIZE
-from memiro.content.models import Review
-from memiro.context_processors import CONTACTS
+from memiro.content.models import Review, SiteContacts
 from memiro.seo.models import LegacyUrl
 
 HALO_PRICE = 11795
@@ -250,7 +249,9 @@ def test_local_business_has_address(
     business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
 
     assert business["address"]["addressLocality"] == "Санкт-Петербург"
-    assert business["address"]["streetAddress"] == "ул. Тележная, 37"
+    assert business["address"]["streetAddress"] == (
+        "Александра Матросова, 4к2ж"
+    )
     assert business["telephone"]
     assert business["image"].startswith("http")
 
@@ -263,13 +264,36 @@ def test_hours_appear_only_when_set(
         page_html(client, "/contacts/"), "LocalBusiness"
     )
 
-    with patch.dict(CONTACTS, {"opens": "10:00", "closes": "20:00"}):
-        business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
+    contacts = SiteContacts.load()
+    contacts.opens = time(10, 0)
+    contacts.closes = time(20, 0)
+    contacts.save()
+
+    business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
 
     hours = business["openingHoursSpecification"][0]
     assert len(hours["dayOfWeek"]) == DAYS_IN_WEEK
     assert hours["opens"] == "10:00"
     assert hours["closes"] == "20:00"
+
+
+def test_empty_contact_is_not_named_in_markup(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Пустой телефон в разметке — то же враньё, что выдуманные часы."""
+    contacts = SiteContacts.load()
+    contacts.phone = ""
+    contacts.email = ""
+    contacts.telegram = ""
+    contacts.vk = ""
+    contacts.avito = ""
+    contacts.save()
+
+    business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
+
+    assert "telephone" not in business
+    assert "email" not in business
+    assert "sameAs" not in business
 
 
 def test_rating_appears_only_with_real_reviews(

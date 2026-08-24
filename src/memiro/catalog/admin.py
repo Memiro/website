@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from django.db.models.fields.files import ImageFieldFile
     from django.http import HttpRequest
 
+from memiro.singleton import SingletonAdmin
 from . import calculator, tariffs
 from .formatting import rub
 from .models import (
@@ -490,23 +491,10 @@ class ProductAdmin(admin.ModelAdmin):
 
 
 @admin.register(PricingSettings)
-class PricingSettingsAdmin(admin.ModelAdmin):
+class PricingSettingsAdmin(SingletonAdmin):
     """Пороги расчёта: одна строка на сайт, её правят, а не заводят."""
 
     list_display = ("min_area_m2", "min_order_total")
-
-    def has_add_permission(
-        self,
-        request: HttpRequest,  # noqa: ARG002
-    ) -> bool:
-        return not PricingSettings.objects.exists()
-
-    def has_delete_permission(
-        self,
-        request: HttpRequest,  # noqa: ARG002
-        obj: PricingSettings | None = None,  # noqa: ARG002
-    ) -> bool:
-        return False
 
 
 def _condition_value(row: dict[str, Any]) -> object:

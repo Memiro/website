@@ -26,14 +26,17 @@
         <h3>Почта</h3>
         <p><a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a></p>
       </div>
+      {# Заголовок без единой ссылки под ним — тот же случай, что у реквизитов ниже #}
+      {% if contacts.whatsapp or contacts.telegram or contacts.vk %}
       <div class="contact-block">
         <h3>Мессенджеры и соцсети</h3>
         <div class="contact-links">
-          <a href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
-          <a href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>
-          <a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>
+          {% if contacts.whatsapp %}<a href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+          {% if contacts.telegram %}<a href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>{% endif %}
+          {% if contacts.vk %}<a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>{% endif %}
         </div>
       </div>
+      {% endif %}
       {% comment %}Реквизиты продавца — обязательная информация о продавце
          (п. 18 ПП РФ 2463); заполняет владелец в legal/seller.py.
          Условие здесь не дублирует охрану внутри `_seller.html`, а
@@ -54,6 +57,7 @@
     {% comment %}Карта грузится по клику: виджет Яндекса ставит куки,
     а согласия до нажатия нет. Своё локальное согласие, не cookie-баннер:
     карта нужна не всем, баннер — про аналитику (ADR-0006){% endcomment %}
+    {% if contacts.map_embed %}
     <div class="contacts-map" data-map data-map-src="{{ contacts.map_embed }}"
          data-map-title="Шоурум memiro на карте: {{ contacts.address }}">
       <div class="map-placeholder">
@@ -62,6 +66,7 @@
         <button class="btn btn-primary" type="button" data-map-load>Показать карту</button>
       </div>
     </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

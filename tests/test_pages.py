@@ -7,7 +7,7 @@ from django.test import Client
 from memiro.content.models import Work
 
 
-def test_about_page(client: Client) -> None:
+def test_about_page(client: Client, db: None) -> None:
     response = client.get("/about/")
     content = response.content.decode()
 
@@ -16,7 +16,9 @@ def test_about_page(client: Client) -> None:
     assert "производство" in content
 
 
-def test_delivery_page_contains_no_return_clause(client: Client) -> None:
+def test_delivery_page_contains_no_return_clause(
+    client: Client, db: None
+) -> None:
     """Оговорка ст. 26.1 ЗоЗПП — главный защитный текст студии."""
     response = client.get("/delivery/")
     content = response.content.decode()
@@ -28,17 +30,21 @@ def test_delivery_page_contains_no_return_clause(client: Client) -> None:
     assert "не подлежат" in content
 
 
-def test_contacts_page_has_address_hours_and_map(client: Client) -> None:
+def test_contacts_page_has_address_hours_and_map(
+    client: Client, db: None
+) -> None:
     response = client.get("/contacts/")
     content = response.content.decode()
 
     assert response.status_code == HTTPStatus.OK
-    assert "Тележная, 37" in content
+    assert "Александра Матросова, 4к2ж" in content
     assert "по предварительной записи" in content
     assert "yandex.ru/map-widget" in content
 
 
-def test_contacts_map_is_not_loaded_before_click(client: Client) -> None:
+def test_contacts_map_is_not_loaded_before_click(
+    client: Client, db: None
+) -> None:
     """Виджет Яндекса ставит куки — до нажатия iframe в разметке нет."""
     content = client.get("/contacts/").content.decode()
 
