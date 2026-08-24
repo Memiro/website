@@ -87,7 +87,6 @@ def shop(db: None) -> SimpleNamespace:
         category=category,
         name="Halo Moon",
         slug="halo-moon",
-        price=1,
         is_published=True,
     )
     ProductAttribute.objects.create(
@@ -293,7 +292,6 @@ def product_payload(
         "category": shop.category.pk,
         "name": "Зеркало «Луна»",
         "slug": "luna",
-        "price": "1",
         "description": "",
         "article": "",
         "order": "0",

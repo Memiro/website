@@ -65,7 +65,11 @@ class InquiryItem(models.Model):
         related_name="inquiry_items",
     )
     product_name = models.CharField("название", max_length=200)
-    product_price = models.PositiveIntegerField("цена «от», ₽")
+    # Снимок цены на момент заявки; пусто — у товара её не было
+    # вовсе, вариантов ему не завели (ADR-0007)
+    product_price = models.PositiveIntegerField(
+        "цена «от», ₽", null=True, blank=True
+    )
 
     class Meta:
         verbose_name = "товар заявки"

@@ -347,7 +347,9 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 0 22px 22px;
 }
-.card-buttons { display: flex; align-items: center; gap: 10px; }
+/* margin-left: auto — у товара без вариантов цены нет вовсе (ADR-0007),
+   и без неё кнопки уехали бы влево, ломая ряд плиток */
+.card-buttons { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .cart-btn {
   background: none; border: none; padding: 6px 0; cursor: pointer;
   font-family: inherit; font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap;

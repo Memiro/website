@@ -37,11 +37,15 @@ UNPROCESSABLE = ResponseSpec(
 
 
 class ProductSummary(pydantic.BaseModel):
-    """Товар в корзине и избранном: имени и цены хватает для строки."""
+    """Товар в корзине и избранном: имени и цены хватает для строки.
+
+    Цены может не быть: товар без предпосчитанных вариантов её не
+    имеет (ADR-0007), а в корзину и избранное кладут и такой.
+    """
 
     id: int
     name: str
-    price: int
+    price: int | None
     url: str
     photo: str
     category: str

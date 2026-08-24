@@ -180,10 +180,14 @@ def product_markup(request: HttpRequest, product: Product) -> dict[str, Any]:
         "url": url,
         "category": product.category.name,
         "brand": {"@type": "Brand", "name": SITE_NAME},
-        # AggregateOffer, а не Offer: цена товара — стоимость
-        # минимальной конфигурации, витрина показывает её как «от X ₽»
-        # (CONTEXT.md), и точной ценой объявлять её нельзя
-        "offers": {
+    }
+    # AggregateOffer, а не Offer: цена товара — стоимость минимальной
+    # конфигурации, витрина показывает её как «от X ₽» (CONTEXT.md),
+    # и точной ценой объявлять её нельзя. У товара без вариантов цены
+    # нет вовсе — предложения тогда нет тоже: AggregateOffer без
+    # lowPrice разметкой не является
+    if product.has_price:
+        data["offers"] = {
             "@type": "AggregateOffer",
             "url": url,
             "priceCurrency": "RUB",
@@ -193,8 +197,7 @@ def product_markup(request: HttpRequest, product: Product) -> dict[str, Any]:
             # под клиента (CONTEXT.md)
             "availability": "https://schema.org/MadeToOrder",
             "seller": {"@type": "Organization", "name": SITE_NAME},
-        },
-    }
+        }
     if product.description:
         data["description"] = product.description
     if product.article:

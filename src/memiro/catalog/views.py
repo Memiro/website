@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import F, Min
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -23,15 +24,22 @@ from .tiles import catalog_root_target, catalog_tiles
 if TYPE_CHECKING:
     from django.core.paginator import Page
     from django.db.models import QuerySet
+    from django.db.models.expressions import Combinable
     from django.http import HttpRequest, HttpResponse, QueryDict
 
 PAGE_SIZE = 12
 
+# Товар без вариантов цены не имеет (ADR-0007). В сортировке по цене
+# он идёт последним с обоих концов: «дешевле» — не про то, что цена
+# неизвестна, а первым местом это выглядело бы именно так
+CHEAPEST_FIRST = F("price").asc(nulls_last=True)
+DEAREST_FIRST = F("price").desc(nulls_last=True)
+
 # Ключ сортировки → (порядок выборки, подпись в селекте)
-SORTS = {
+SORTS: dict[str, tuple[tuple[str | Combinable, ...], str]] = {
     "popular": (POPULAR_ORDERING, "популярные"),
-    "price": (("price", "order", "name"), "дешевле"),
-    "-price": (("-price", "order", "name"), "дороже"),
+    "price": ((CHEAPEST_FIRST, "order", "name"), "дешевле"),
+    "-price": ((DEAREST_FIRST, "order", "name"), "дороже"),
     "new": (("-created_at", "order", "name"), "новинки"),
 }
 DEFAULT_SORT = "popular"
@@ -200,8 +208,10 @@ def landing(request: HttpRequest, slug: str) -> HttpResponse:
 def _category_meta(category: Category, base: QuerySet[Product]) -> PageMeta:
     """Мета категории считается по всей категории, а не по фильтрам:
     у отфильтрованных URL та же страница в индексе (ADR-0003)."""
-    cheapest = base.order_by("price").values_list("price", flat=True).first()
-    price = f" от {cheapest} ₽" if cheapest else ""
+    # Min(), а не первая строка сортировки: товары без цены её не
+    # задают, а в порядке сортировки они всё равно где-то стоят
+    cheapest = base.aggregate(low=Min("price"))["low"]
+    price = f" от {cheapest} ₽" if cheapest is not None else ""
     return PageMeta(
         title=title(f"{category.name} на заказ в Санкт-Петербурге"),
         description=clamp(
@@ -214,10 +224,11 @@ def _category_meta(category: Category, base: QuerySet[Product]) -> PageMeta:
 
 def _product_meta(product: Product) -> PageMeta:
     photo = product.main_photo
+    # Товар без вариантов цены не имеет — в описании её тогда нет
+    price = f"Цена от {product.price} ₽. " if product.has_price else ""
     description = product.description or (
         f"{product.name} — изготовление под заказ по вашим размерам. "
-        f"Цена от {product.price} ₽, доставка и установка "
-        "в Санкт-Петербурге."
+        f"{price}Доставка и установка в Санкт-Петербурге."
     )
     return PageMeta(
         title=title(f"{product.name} — купить в Санкт-Петербурге"),

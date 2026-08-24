@@ -302,7 +302,7 @@ class ProductQuerySet(models.QuerySet):
 
 
 class Product(models.Model):
-    """Изделие под заказ; наличия нет, цена обязательна (CONTEXT.md)."""
+    """Изделие под заказ; наличия нет, цена — из вариантов (CONTEXT.md)."""
 
     category = models.ForeignKey(
         Category,
@@ -315,9 +315,19 @@ class Product(models.Model):
     # подсветкой в чёрной алюминиевой раме с вырезом Matrix» слаг
     # длиннее, и на PostgreSQL такая вставка падает
     slug = models.SlugField("слаг", unique=True, max_length=120)
+    # Не то, что вводит владелец, а то, что пересчитывается из его
+    # предпосчитанных вариантов (`catalog.repricing`): «от X ₽» — цена
+    # самого дешёвого. NULL значит «вариантов нет», и тогда товар цены
+    # не показывает вовсе — это честнее заглушки. Полем, а не
+    # вычисляемым свойством, цена остаётся намеренно (ADR-0007): на ней
+    # держатся фильтр диапазона, сортировка, мета категории, lowPrice
+    # в разметке и снимок цены в заявке
     price = models.PositiveIntegerField(
         "цена «от», ₽",
-        validators=[MinValueValidator(1)],
+        null=True,
+        blank=True,
+        default=None,
+        editable=False,
     )
     description = models.TextField("описание", blank=True)
     # Артикулы старого каталога неуникальны — уникальность не навязываем
@@ -348,6 +358,17 @@ class Product(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+    @property
+    def has_price(self) -> bool:
+        """Есть ли у товара цена — один ответ на всю витрину.
+
+        `is not None`, а не истинность поля: ноль расчёт вернуть может
+        (изделие, у которого ни одной платной статьи), и это цена, а не
+        её отсутствие. Раскиданная по шаблонам и вьюхам проверка
+        однажды разошлась бы именно на нём.
+        """
+        return self.price is not None
 
     @property
     def main_photo(self) -> ImageFieldFile | None:

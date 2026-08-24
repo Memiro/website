@@ -284,12 +284,29 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable = ("is_published", "is_popular", "is_promo", "order")
     search_fields = ("name", "article")
     prepopulated_fields: ClassVar = {"slug": ("name",)}
-    readonly_fields = ("preview_small", "preview_large")
+    readonly_fields = ("price_explained", "preview_small", "preview_large")
     inlines = (
         ProductImageInline,
         ProductAttributeInline,
         ProductVariantInline,
     )
+
+    @admin.display(description="цена «от»")
+    def price_explained(self, obj: Product) -> str:
+        """Цену владелец не вводит: её даёт самый дешёвый вариант.
+
+        `editable=False` убирает поле из формы молча — а молчание тут
+        читается как «цену забыли». Строка объясняет, откуда число
+        берётся и что делать, когда его нет.
+        """
+        # `is None`, а не `has_price`: здесь же цена и печатается,
+        # и проверку типов устраивает только сужение по самому полю
+        if obj.price is None:
+            return (
+                "—  цена появится, когда у товара будет хотя бы один "
+                "предпосчитанный вариант"
+            )
+        return f"{rub(obj.price)} ₽  — по самому дешёвому варианту"
 
     @admin.display(description="превью малого фото")
     def preview_small(self, obj: Product) -> str:

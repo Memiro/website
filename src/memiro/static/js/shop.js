@@ -131,6 +131,17 @@
   const price = (value) =>
     `от ${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "\u202F")} ₽`;
 
+  // null — товару не завели предпосчитанных вариантов, цены нет вовсе
+  // (ADR-0007). Шаблоны в таком случае не печатают и самого элемента —
+  // здесь так же, иначе разметка карточек разойдётся с серверной
+  const priceNode = (value, tag, className) => {
+    if (value == null) return null;
+    const node = document.createElement(tag);
+    node.className = className;
+    node.textContent = price(value);
+    return node;
+  };
+
   const cartRow = (item) => {
     const row = document.createElement("article");
     row.className = "cart-row";
@@ -157,9 +168,7 @@
     category.textContent = item.category;
     meta.append(title, category);
 
-    const cost = document.createElement("div");
-    cost.className = "cart-price";
-    cost.textContent = price(item.price);
+    const cost = priceNode(item.price, "div", "cart-price");
 
     const drop = document.createElement("button");
     drop.className = "cart-drop";
@@ -171,7 +180,7 @@
       renderCollections();
     });
 
-    row.append(link, meta, cost, drop);
+    row.append(link, meta, ...(cost ? [cost] : []), drop);
     return row;
   };
 
@@ -202,9 +211,7 @@
 
     const actions = document.createElement("div");
     actions.className = "card-actions";
-    const cost = document.createElement("span");
-    cost.className = "price";
-    cost.textContent = price(item.price);
+    const cost = priceNode(item.price, "span", "price");
 
     const buttons = document.createElement("div");
     buttons.className = "card-buttons";
@@ -227,7 +234,7 @@
     cart.dataset.labelOn = "В корзине";
     cart.textContent = "В корзину";
     buttons.append(fav, cart);
-    actions.append(cost, buttons);
+    actions.append(...(cost ? [cost] : []), buttons);
 
     card.append(link, actions);
     return card;

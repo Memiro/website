@@ -30,7 +30,6 @@ def product_payload(category: Category, **extra: object) -> dict[str, object]:
         "category": category.pk,
         "name": "Зеркало «Луна»",
         "slug": "luna",
-        "price": str(PRICE),
         "description": "",
         "article": "",
         "order": "0",
@@ -58,36 +57,9 @@ def test_product_created_via_admin(
 
     assert response.status_code == HTTPStatus.FOUND
     product = Product.objects.get(slug="luna")
-    assert product.price == PRICE
+    # Цену владелец не вводит: она приходит из вариантов (тикет 18)
+    assert product.price is None
     assert not product.is_published
-
-
-@pytest.mark.django_db
-def test_product_price_is_required(
-    admin_client: Client, category: Category
-) -> None:
-    """Без цены товар не сохраняется — режима «цена по запросу» нет."""
-    response = admin_client.post(
-        "/admin/catalog/product/add/",
-        product_payload(category, price=""),
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert not Product.objects.exists()
-
-
-@pytest.mark.django_db
-def test_product_price_must_be_positive(
-    admin_client: Client, category: Category
-) -> None:
-    """Нулевая цена отклоняется валидацией."""
-    response = admin_client.post(
-        "/admin/catalog/product/add/",
-        product_payload(category, price="0"),
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert not Product.objects.exists()
 
 
 @pytest.mark.django_db

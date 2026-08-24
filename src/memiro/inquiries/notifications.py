@@ -46,6 +46,9 @@ def inquiry_message(inquiry: Inquiry) -> str:
         lines.append("Товары:")
         lines += [
             f"— {item.product_name}, от {item.product_price} ₽"
+            if item.product_price is not None
+            # Менеджеру важно увидеть это в заявке, а не гадать
+            else f"— {item.product_name}, цена не рассчитана"
             for item in items
         ]
     if inquiry.comment:

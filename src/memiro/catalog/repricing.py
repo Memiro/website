@@ -1,4 +1,4 @@
-"""Когда цены предпосчитанных вариантов пересчитываются заново.
+"""Когда цены вариантов и товаров пересчитываются заново.
 
 Цена варианта — не то, что владелец вводит, а то, что движок считает
 из справочника. Значит, у неё есть обязанность: доезжать до варианта
@@ -6,6 +6,11 @@
 атрибуты его товара, тариф в справочнике или пороги расчёта. Иначе
 таблица на карточке однажды разойдётся с калькулятором, и объяснить
 расхождение покупателю будет нечем (тикет 17).
+
+Цена товара — цена его самого дешёвого варианта, и держится она тем
+же пересчётом: у неё те же слагаемые плюс появление и исчезновение
+самих вариантов (тикет 18). Товар без единого варианта остаётся без
+цены — NULL, а не заглушка.
 
 Правка общих данных — тарифа в справочнике или порогов расчёта —
 пересчитывает все варианты сразу. Выяснять, каких именно она
@@ -20,12 +25,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.db.models import Min, OuterRef, Subquery
 from django.db.models.signals import m2m_changed, post_delete, post_save
 
 from . import tariffs
 from .models import (
     AttributeValue,
     PricingSettings,
+    Product,
     ProductAttribute,
     ProductVariant,
 )
@@ -40,8 +47,9 @@ M2M_DONE = frozenset({"post_add", "post_remove", "post_clear"})
 
 
 def reprice(variants: Iterable[ProductVariant]) -> None:
-    """Считает и записывает цену каждого варианта пачки."""
+    """Считает цену каждого варианта пачки — и цену их товаров следом."""
     limits = tariffs.thresholds()
+    touched: set[int] = set()
     for variant in variants:
         total = tariffs.price(
             tariffs.configuration(
@@ -55,6 +63,29 @@ def reprice(variants: Iterable[ProductVariant]) -> None:
         if total != variant.price:
             ProductVariant.objects.filter(pk=variant.pk).update(price=total)
         variant.price = total
+        touched.add(variant.product_id)
+    settle_prices(touched)
+
+
+def settle_prices(product_ids: Iterable[int]) -> None:
+    """Ставит товарам цену их самого дешёвого варианта.
+
+    Одним запросом на всю пачку — ради правки тарифа: она
+    пересчитывает весь сайт, и подзапрос там дешевле восьмидесяти
+    отдельных UPDATE. У товара без вариантов подзапрос пуст — цена
+    становится NULL, и витрина о ней молчит.
+    """
+    ids = list(product_ids)
+    if not ids:
+        return
+    Product.objects.filter(pk__in=ids).update(
+        price=Subquery(
+            ProductVariant.objects.filter(product_id=OuterRef("pk"))
+            .values("product_id")
+            .annotate(cheapest=Min("price"))
+            .values("cheapest")
+        )
+    )
 
 
 def all_variants() -> QuerySet[ProductVariant]:
@@ -78,6 +109,19 @@ def _on_variant_saved(
 ) -> None:
     """Заведённый и поправленный вариант получает свою цену."""
     reprice([instance])
+
+
+def _on_variant_deleted(
+    sender: type[Model],  # noqa: ARG001
+    instance: ProductVariant,
+    **kwargs: object,  # noqa: ARG001
+) -> None:
+    """Удалённый вариант мог быть самым дешёвым — и единственным.
+
+    Пересчитывать оставшиеся незачем: их слагаемые не менялись,
+    поменялся только набор, из которого товар выбирает минимум.
+    """
+    settle_prices([instance.product_id])
 
 
 def _on_variant_values_changed(
@@ -126,6 +170,7 @@ def _on_shared_pricing_data_changed(
 def connect() -> None:
     """Подписывает пересчёт на всё, из чего складывается цена."""
     post_save.connect(_on_variant_saved, sender=ProductVariant)
+    post_delete.connect(_on_variant_deleted, sender=ProductVariant)
     m2m_changed.connect(
         _on_variant_values_changed, sender=ProductVariant.values.through
     )

@@ -33,13 +33,18 @@
     <h1>{{ product.name }}</h1>
     {% if product.description %}<div class="desc">{{ product.description|linebreaks }}</div>{% endif %}
 
+    {% comment %}Цена — самого дешёвого варианта; без вариантов её нет вовсе (ADR-0007),
+       и тогда весь блок цены с дисклеймером не печатается: узнать стоимость зовёт заявка{% endcomment %}
+    {% if product.has_price %}
     <div class="price-row">
       <span class="price-now">от {{ product.price|rub }} ₽</span>
       <span class="price-note">цена минимальной конфигурации</span>
     </div>
+    {% endif %}
 
     {% comment %}Дисклеймер у цены — и у результата калькулятора, когда он приедет
-       тикетом 06: расчёт покажется в этом же блоке{% endcomment %}
+       тикетом 06: расчёт покажется в этом же блоке. Печатается всегда, в том числе
+       у товара без цены: снимать текст о ценах — решение юридическое, не витринное{% endcomment %}
     {% include "legal/_offer_note.html" %}
 
     {% if variants %}
