@@ -89,7 +89,7 @@ class Quote:
     # решает судьбу результата на карточке (`catalog.calculator`):
     # погашенная владельцем цена не должна возвращаться по открытому
     # всякому адресу эндпоинта (ADR-0008)
-    shows_price: bool
+    shows_calculated_price: bool
 
     def configuration(
         self, chosen: Sequence[AttributeValue]
@@ -141,6 +141,22 @@ class Quote:
             for value in self.chosen
         ]
 
+    @property
+    def needs_inquiry(self) -> bool:
+        """Случай, когда цену называет менеджер, а не сайт.
+
+        Для покупателя размер за пределом производства и погашенная
+        владельцем цена — одно и то же: числа не будет, и разговор
+        идёт с менеджером. Различаются они только тем, что менеджер
+        читает в снимке заявки, — и потому ответ здесь один.
+
+        Спрашивается у самого расчёта, а не у контроллера: то же
+        условие уже держит `total`, и, повторённое эндпоинтом, оно
+        однажды разъехалось бы с ним — эндпоинт назвал бы цену там,
+        где расчёт молчит (ADR-0008).
+        """
+        return not self.shows_calculated_price or not self.fits()
+
     @cached_property
     def total(self) -> int | None:
         """Итог — или ничего, когда честного числа у конфигурации нет.
@@ -156,7 +172,7 @@ class Quote:
         тарифицированного. Итогом стал бы ноль или минимальная сумма
         заказа — число, за которым ничего не стоит (тикет 19).
         """
-        if not self.shows_price or not self.fits():
+        if self.needs_inquiry:
             return None
         price = self.price(self.chosen)
         return price.total if price.lines else None
@@ -181,7 +197,7 @@ class Quote:
         ]
         if not self.fits():
             parts.append(BEYOND_LIMITS_NOTE)
-        elif not self.shows_price:
+        elif not self.shows_calculated_price:
             parts.append(PRICE_HIDDEN_NOTE)
         elif self.total is None:
             parts.append(NOT_COUNTED_NOTE)
@@ -219,7 +235,7 @@ def quote(
         height_mm=height_mm,
         chosen=_chosen(product, value_ids),
         limits=tariffs.limits_from_settings(),
-        shows_price=calculator.shows_calculated_price(product),
+        shows_calculated_price=calculator.shows_calculated_price(product),
     )
 
 

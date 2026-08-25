@@ -98,7 +98,7 @@ class Calculator:
     # Называет ли карточка число. Погашенная цена оставляет органы
     # управления на месте: покупатель по-прежнему говорит, чего он
     # хочет, — а на месте цены стоит строка о менеджере (ADR-0008)
-    shows_price: bool
+    shows_calculated_price: bool
 
     @property
     def max_side_mm(self) -> int:
@@ -126,7 +126,7 @@ def for_product(
         attributes=_attributes(defaults),
         width_mm=opening.width_mm if opening else None,
         height_mm=opening.height_mm if opening else None,
-        shows_price=shows_calculated_price(product),
+        shows_calculated_price=shows_calculated_price(product),
     )
 
 

@@ -476,8 +476,10 @@ class ProductAdmin(admin.ModelAdmin):
         Погашенная цена — третье состояние, а не второе: конструктор
         у такого товара работает, и назвать его «выключенным» значило
         бы отправить владельца искать в разметке пробел, которого там
-        нет (ADR-0008). Признак при этом показан колонкой рядом —
-        строка говорит, что из него вышло.
+        нет (ADR-0008). Отдельной колонки под сам признак в списке нет
+        намеренно: эта строка уже говорит, что из него вышло, а два
+        столбца об одном разошлись бы в первый же день, когда один
+        из них забудут поправить.
         """
         # Товар в списке не сохранён — считать нечего
         if not obj.pk:
@@ -521,7 +523,7 @@ class ProductAdmin(admin.ModelAdmin):
         он сейчас не трогал, и перестал бы их читать.
         """
         super().save_related(request, form, formsets, change)
-        if "hides_calculated_price" not in form.fields:
+        if not _edits_the_whole_product(form):
             return
         product: Product = form.instance
         if product.hides_calculated_price and not product.variants.exists():
@@ -546,6 +548,16 @@ class PricingSettingsAdmin(SingletonAdmin):
     """Пороги расчёта: одна строка на сайт, её правят, а не заводят."""
 
     list_display = ("min_area_m2", "min_order_total")
+
+
+def _edits_the_whole_product(form: ModelForm) -> bool:
+    """Форма карточки товара, а не строка пакетной правки списка.
+
+    Django зовёт `save_related()` на обе, а различает их только набор
+    полей: в строке списка их столько, сколько колонок в `list_editable`.
+    Признак цены в неё не входит — по нему и различаем.
+    """
+    return "hides_calculated_price" in form.fields
 
 
 def _condition_value(row: dict[str, Any]) -> object:

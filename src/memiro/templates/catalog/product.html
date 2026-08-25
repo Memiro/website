@@ -69,8 +69,8 @@
     {% if calculator %}
     <div class="calc" data-calc data-product="{{ product.pk }}"
          data-calc-inquiry-url="{% url 'cart' %}"
-         {% if calculator.shows_price %}data-calc-priced{% endif %}>
-      <h2>{% if calculator.shows_price %}Расчёт по вашим размерам{% else %}Ваш размер и материалы{% endif %}</h2>
+         {% if calculator.shows_calculated_price %}data-calc-priced{% endif %}>
+      <h2>{% if calculator.shows_calculated_price %}Расчёт по вашим размерам{% else %}Ваш размер и материалы{% endif %}</h2>
       <div class="calc-fields">
         <label class="field">
           <span>Ширина, мм</span>
@@ -93,7 +93,7 @@
         </label>
         {% endfor %}
       </div>
-      {% if calculator.shows_price %}
+      {% if calculator.shows_calculated_price %}
       {# Заполняет product.js; до ответа сервера в блоке пусто — своего числа у него нет #}
       <div class="calc-result" data-calc-result aria-live="polite"></div>
       {% else %}

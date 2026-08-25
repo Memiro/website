@@ -100,13 +100,12 @@ class PriceController(Controller[PydanticSerializer]):
             )
         except quoting.UncalculableError as refusal:
             reject(self, str(refusal))
-        if not quote.shows_price or not quote.fits():
-            # Два случая с одним ответом: цену расчёта погасил владелец
-            # либо размер за пределом производства. Ответ один, потому
-            # что покупателю в обоих цену назовёт менеджер, — а чем они
-            # различаются, читает менеджер в снимке заявки. Доплат нет
-            # ни в одном: они такие же рубли, как итог, и по ним цена
-            # восстанавливалась бы обратно (ADR-0007, ADR-0008)
+        if quote.needs_inquiry:
+            # Цену расчёта погасил владелец либо размер за пределом
+            # производства: решает это сам расчёт, здесь оно только
+            # печатается. Доплат в таком ответе нет — они такие же
+            # рубли, как итог, и по ним цена восстанавливалась бы
+            # обратно (ADR-0007, ADR-0008)
             return PriceQuote(total=None, additions=[], needs_inquiry=True)
         total = quote.total
         if total is None:
