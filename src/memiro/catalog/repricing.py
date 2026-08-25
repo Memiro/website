@@ -51,15 +51,13 @@ def reprice(variants: Iterable[ProductVariant]) -> None:
     limits = tariffs.limits_from_settings()
     touched: set[int] = set()
     for variant in variants:
-        total = tariffs.price(
-            tariffs.configuration(
-                variant.product,
-                width_mm=variant.width_mm,
-                height_mm=variant.height_mm,
-                chosen=variant.values.all(),
-            ),
+        total = tariffs.price_of(
+            variant.product,
+            width_mm=variant.width_mm,
+            height_mm=variant.height_mm,
+            chosen=variant.values.all(),
             limits=limits,
-        ).total
+        )
         if total != variant.price:
             ProductVariant.objects.filter(pk=variant.pk).update(price=total)
         variant.price = total

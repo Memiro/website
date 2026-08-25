@@ -1,31 +1,37 @@
+from dataclasses import asdict
+from http import HTTPStatus
 from itertools import groupby
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
 from django.forms import (
     BaseInlineFormSet,
-    CheckboxSelectMultiple,
     ModelChoiceField,
     ModelForm,
-    ModelMultipleChoiceField,
     Select,
 )
 from django.forms.models import ModelChoiceIterator
+from django.http import JsonResponse
+from django.urls import path, reverse
+from django.utils.decorators import method_decorator
 from django.utils.html import format_html
+from django.views.decorators.http import require_POST
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from django.db.models import QuerySet
     from django.db.models.fields.files import ImageFieldFile
-    from django.http import HttpRequest
+    from django.http import HttpRequest, HttpResponse, QueryDict
+    from django.urls import URLPattern
 
 from memiro.singleton import SingletonAdmin
-from . import calculator, tariffs
+from . import calculator, tariffs, variants
 from .formatting import rub
 from .models import (
+    FOREIGN_CATEGORY,
     MAX_LANDING_ATTRIBUTES,
     Attribute,
     AttributeValue,
@@ -38,6 +44,7 @@ from .models import (
     ProductAttribute,
     ProductImage,
     ProductVariant,
+    check_own_category,
     exhausts_dictionary,
     marks_presence,
 )
@@ -62,11 +69,6 @@ class CategoryAdmin(admin.ModelAdmin):
 class AttributeValueInline(admin.TabularInline):
     model = AttributeValue
     extra = 1
-
-
-# Одно правило — одна формулировка: атрибут чужой категории отвергают
-# и товар, и родитель, и владелец читает об этом одно и то же
-FOREIGN_CATEGORY = "«%(name)s» — атрибут другой категории."
 
 
 class AttributeForm(ModelForm):
@@ -146,23 +148,6 @@ def _attributes(rows: list[dict[str, Any]]) -> list[Attribute]:
     return [row["attribute"] for row in rows if row.get("attribute")]
 
 
-def _check_own_category(
-    attributes: list[Attribute], category_id: int | None
-) -> None:
-    """Атрибуты чужой категории в инлайне — ошибка.
-
-    Пока родитель не сохранён, model.clean его категории не видит,
-    поэтому проверка живёт в формсете.
-    """
-    if not category_id:
-        return
-    for attribute in attributes:
-        if not attribute.belongs_to(category_id):
-            raise ValidationError(
-                FOREIGN_CATEGORY, params={"name": attribute.name}
-            )
-
-
 def _present_attribute_ids(rows: list[dict[str, Any]]) -> set[int]:
     """Атрибуты, признак которых у товара есть.
 
@@ -200,7 +185,7 @@ class ProductAttributeFormSet(BaseInlineFormSet):
     def clean(self) -> None:
         super().clean()
         rows = _kept_rows(self)
-        _check_own_category(_attributes(rows), self.instance.category_id)
+        check_own_category(_attributes(rows), self.instance.category_id)
         _check_parents(rows)
 
 
@@ -258,7 +243,7 @@ class ProductAttributeInline(admin.TabularInline):
     """Характеристики товара: атрибут и его значение построчно.
 
     Оба списка сужены до категории товара — чужого атрибута ему всё
-    равно не назначить (`_check_own_category`), и держать его в выборе
+    равно не назначить (`check_own_category`), и держать его в выборе
     значит предлагать заведомо отвергаемое.
     """
 
@@ -283,7 +268,7 @@ class ProductAttributeInline(admin.TabularInline):
             attribute.queryset = _category_attributes(category_id)
         value_option = fields["value_option"]
         fields["value_option"] = AttributeValueField(
-            queryset=_category_values(category_id),
+            queryset=variants.category_values(category_id),
             required=False,
             label=value_option.label,
             help_text=value_option.help_text,
@@ -300,114 +285,33 @@ def _category_attributes(category_id: int | None) -> QuerySet[Attribute]:
     return attributes.filter(category_id=category_id)
 
 
-def _check_one_value_per_attribute(values: list[AttributeValue]) -> None:
-    """Два значения одного атрибута — не вариант, а два варианта."""
-    seen: set[int] = set()
-    for value in values:
-        if value.attribute_id in seen:
-            message = "«%(name)s» у варианта один — заведите второй вариант."
-            raise ValidationError(
-                message, params={"name": value.attribute.name}
-            )
-        seen.add(value.attribute_id)
-
-
-class ProductVariantFormSet(BaseInlineFormSet):
-    def clean(self) -> None:
-        super().clean()
-        for row in _kept_rows(self):
-            values = list(row.get("values") or ())
-            attributes = [value.attribute for value in values]
-            _check_own_category(attributes, self.instance.category_id)
-            _check_one_value_per_attribute(values)
-
-
-# Что владелец выбирает у варианта — и, главное, чего не выбирает.
-# Пустое поле здесь норма, а не недозаполненность, и сказать об этом
-# больше негде: в списке вариантов подписи нет
-VARIANT_VALUES_HELP = (
-    "Чем вариант отличается от товара. Пусто — берёт значения товара "
-    "целиком. Значение заменяет умолчание товара, а не добавляется "
-    "к нему; двух значений одного атрибута у варианта не бывает — "
-    "это второй вариант."
-)
-
-
-class AttributeValueChoiceField(ModelMultipleChoiceField):
-    """Значения справочника, разложенные по атрибутам.
-
-    В списке варианта значения всех атрибутов категории лежат
-    вперемешку, и `__str__` там читается двусмысленно: «Серебро» —
-    и тип полотна, и цвет рамы. Атрибут называет группа, поэтому из
-    подписи он убран.
-    """
-
-    iterator = GroupedByAttributeIterator
-
-    def label_from_instance(self, obj: AttributeValue) -> str:
-        return obj.value
-
-
-def _category_values(category_id: int | None) -> QuerySet[AttributeValue]:
-    """Значения справочника одной категории, сгруппированные атрибутом."""
-    values = AttributeValue.objects.select_related("attribute").order_by(
-        "attribute__order", "attribute__name", "order", "value"
-    )
-    if category_id is None:
-        return values
-    return values.filter(attribute__category_id=category_id)
-
-
-class ProductVariantInline(admin.TabularInline):
-    """Предпосчитанные варианты правятся в карточке товара.
-
-    Цены среди полей нет: её считает движок из справочника, и вторая
-    правда о цене товару не нужна (тикет 17).
-    """
-
-    model = ProductVariant
-    formset = ProductVariantFormSet
-    extra = 1
-    readonly_fields = ("computed_price",)
-
-    class Media:
-        css: ClassVar = {"all": ("css/admin-variants.css",)}
-
-    def get_formset(
-        self,
-        request: HttpRequest,
-        obj: Product | None = None,
-        **kwargs: object,
-    ) -> type[BaseInlineFormSet]:
-        """Выбирать вариант можно только из атрибутов своей категории.
-
-        У ещё не заведённого товара категории нет — там список полный,
-        а чужое значение отвергает формсет.
-        """
-        formset = super().get_formset(request, obj, **kwargs)
-        values = formset.form.base_fields["values"]
-        formset.form.base_fields["values"] = AttributeValueChoiceField(
-            queryset=_category_values(obj.category_id if obj else None),
-            required=False,
-            label=values.label,
-            help_text=VARIANT_VALUES_HELP,
-            # Флажки, а не множественный список: в списке значение
-            # выбирается щелчком с Ctrl, а без него выбор молча
-            # сбрасывается на одно — владельцу это стоило вечера
-            widget=CheckboxSelectMultiple,
-        )
-        return formset
-
-    @admin.display(description="цена (считается по тарифам)")
-    def computed_price(self, obj: ProductVariant) -> str:
-        # Пустая строка инлайна ещё не сохранена — считать нечего
-        if not obj.pk:
-            return "—"
-        return f"{rub(obj.price)} ₽"
+# Адреса конструктора вариантов: три действия под карточкой товара.
+# Имена нужны шаблону — он печатает их в разметку, чтобы маршруты
+# Django не переписывались в браузере
+VARIANT_PRICE_URL = "catalog_product_variant_price"
+VARIANT_SAVE_URL = "catalog_product_variant_save"
+VARIANT_DELETE_URL = "catalog_product_variant_delete"
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    """Карточка товара — и конструктор вариантов под ней (тикет 18).
+
+    Таблицы вариантов в карточке больше нет: цену она называла только
+    после сохранения всего товара, и на зеркале с восемью размерами
+    владелец ходил восемь кругов вслепую. Конструктор показывает цену
+    до сохранения и заводит вариант, не трогая остальную карточку.
+
+    Живёт он внутри карточки, а не своим разделом админки: вариант без
+    товара не существует — это точка расчёта, а не товар (CONTEXT.md).
+    """
+
+    change_form_template = "admin/catalog/product/change_form.html"
+
+    class Media:
+        js: ClassVar = ("js/admin-variant-builder.js",)
+        css: ClassVar = {"all": ("css/admin-variants.css",)}
+
     list_display = (
         "name",
         "category",
@@ -431,8 +335,127 @@ class ProductAdmin(admin.ModelAdmin):
     inlines = (
         ProductImageInline,
         ProductAttributeInline,
-        ProductVariantInline,
     )
+
+    def get_urls(self) -> list[URLPattern]:
+        """Три адреса конструктора — перед адресами самой админки.
+
+        После них не выйдет: `<path:object_id>/` ловит что угодно,
+        и «варианты» уехали бы в карточку товара с таким номером.
+        """
+        own = [
+            path(
+                "<int:product_id>/variants/price/",
+                self.admin_site.admin_view(self.variant_price_view),
+                name=VARIANT_PRICE_URL,
+            ),
+            path(
+                "<int:product_id>/variants/save/",
+                self.admin_site.admin_view(self.variant_save_view),
+                name=VARIANT_SAVE_URL,
+            ),
+            path(
+                "<int:product_id>/variants/delete/",
+                self.admin_site.admin_view(self.variant_delete_view),
+                name=VARIANT_DELETE_URL,
+            ),
+        ]
+        return own + super().get_urls()
+
+    def change_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Кладёт конструктор в карточку сохранённого товара.
+
+        Только в неё: у товара, которого ещё нет, конструктора нет
+        тоже — вариант без товара не существует, а цену его не
+        посчитать, она складывается из атрибутов, которых товар пока
+        не назвал. На странице заведения признака в контексте нет
+        вовсе, и шаблон говорит там, что делать дальше.
+        """
+        product = self.get_object(request, object_id)
+        return super().change_view(
+            request,
+            object_id,
+            form_url,
+            {
+                **(extra_context or {}),
+                "variant_builder": (
+                    _builder_context(product) if product is not None else None
+                ),
+            },
+        )
+
+    def variant_price_view(
+        self, request: HttpRequest, product_id: int
+    ) -> JsonResponse:
+        """Цена собранного — до того, как владелец нажал «Добавить».
+
+        Считается тем же расчётом, что запишет её варианту, и потому
+        совпадает с ней по построению (`catalog.variants`).
+        """
+        product = self._variant_product(request, product_id)
+        try:
+            composition = _composed(request.GET, product)
+        except ValidationError as refusal:
+            return _refusal(refusal)
+        price = composition.price
+        return JsonResponse(
+            {"price": price, "price_label": variants.price_label(price)}
+        )
+
+    @method_decorator(require_POST)
+    def variant_save_view(
+        self, request: HttpRequest, product_id: int
+    ) -> JsonResponse:
+        """Завести вариант или переписать тот, что владелец правит.
+
+        В ответ уходит весь список: «от X ₽» товара берётся минимумом
+        по вариантам, и один заведённый вариант меняет пометку у
+        другого. Собирать список в браузере значило бы считать этот
+        минимум второй раз.
+        """
+        product = self._variant_product(request, product_id)
+        try:
+            variant = _edited_variant(request.POST, product)
+            composition = _composed(request.POST, product)
+        except ValidationError as refusal:
+            return _refusal(refusal)
+        variants.save(composition, variant=variant)
+        return _rows_response(product)
+
+    @method_decorator(require_POST)
+    def variant_delete_view(
+        self, request: HttpRequest, product_id: int
+    ) -> JsonResponse:
+        """Удалить вариант товара — и вернуть список, каким он стал."""
+        product = self._variant_product(request, product_id)
+        try:
+            variant = _edited_variant(request.POST, product)
+        except ValidationError as refusal:
+            return _refusal(refusal)
+        if variant is not None:
+            variant.delete()
+        return _rows_response(product)
+
+    def _variant_product(
+        self, request: HttpRequest, product_id: int
+    ) -> Product:
+        """Товар, варианты которого этот пользователь вправе править.
+
+        Права спрашиваются те же, что у самой карточки: конструктор —
+        её часть, и своего доступа у него нет. Удаление варианта —
+        тоже правка карточки, а не удаление товара, и права у него
+        те же: сам товар остаётся на месте.
+        """
+        product: Product | None = self.get_object(request, str(product_id))
+        if product is None or not self.has_change_permission(request, product):
+            raise PermissionDenied
+        return product
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Product]:
         """Значения атрибутов — одним запросом на список.
@@ -543,6 +566,124 @@ class ProductAdmin(admin.ModelAdmin):
     @admin.display(description="превью большого фото")
     def preview_large(self, obj: Product) -> str:
         return _preview(obj.photo_large)
+
+
+def _builder_context(product: Product) -> dict[str, Any]:
+    """Всё, из чего шаблон рисует конструктор.
+
+    Адреса приезжают готовыми: собирать их в браузере значило бы
+    держать вторую копию маршрутов Django, которая рассохнется первой
+    же правкой `get_urls()`.
+    """
+    return {
+        "groups": variants.dictionary(product),
+        "rows": _variant_rows(product),
+        "max_side_mm": variants.MAX_SIDE_MM,
+        "price_url": _variant_url(VARIANT_PRICE_URL, product),
+        "save_url": _variant_url(VARIANT_SAVE_URL, product),
+        "delete_url": _variant_url(VARIANT_DELETE_URL, product),
+    }
+
+
+def _variant_url(name: str, product: Product) -> str:
+    return reverse(f"admin:{name}", args=[product.pk])
+
+
+def _variant_rows(product: Product) -> list[dict[str, Any]]:
+    """Варианты товара так, как их читает скрипт конструктора.
+
+    Одним и тем же видом при первой отрисовке и после каждой правки:
+    вторая форма того же списка разошлась бы с первой.
+    """
+    return [asdict(row) for row in variants.rows(product)]
+
+
+def _rows_response(product: Product) -> JsonResponse:
+    """Список вариантов таким, каким он стал после правки."""
+    return JsonResponse({"variants": _variant_rows(product)})
+
+
+def _refusal(error: ValidationError) -> JsonResponse:
+    """Отказ конструктора — словами, обращёнными к владельцу.
+
+    Код тот же, что у отказов витрины: форма запроса верна, а
+    собранное правилам не отвечает. Форма ответа своя, а не
+    `api.errors.ErrorModel`: та живёт у контроллеров dmr, а
+    конструктор — обычная вьюха админки, и заводить ради него
+    контроллер значило бы тащить весь слой API в админку. Читает
+    этот ответ один-единственный скрипт — тот, что рядом.
+    """
+    return JsonResponse(
+        {"error": " ".join(error.messages)},
+        status=HTTPStatus.UNPROCESSABLE_ENTITY,
+    )
+
+
+def _composed(data: QueryDict, product: Product) -> variants.Composition:
+    """Собранное владельцем — из того, что прислала страница.
+
+    Разбор один на показ цены и на сохранение: разойдись они,
+    конструктор назвал бы цену конфигурации, которую сам же потом
+    отверг.
+    """
+    return variants.compose(
+        product,
+        width_mm=_side(data.get("width_mm")),
+        height_mm=_side(data.get("height_mm")),
+        value_ids=_value_ids(data.getlist("values")),
+        order=_order(data.get("order")),
+    )
+
+
+def _side(raw: str | None) -> int:
+    """Миллиметры из поля формы; не число — не размер."""
+    try:
+        return int(raw or "")
+    except ValueError:
+        raise ValidationError(variants.NOT_MEASURED) from None
+
+
+def _order(raw: str | None) -> int:
+    """Каким по счёту вариант стоит на карточке.
+
+    Пустое поле — ноль, а не отказ: порядок владелец задаёт не
+    всякому варианту, и требовать его значило бы мешать заводить
+    первый.
+    """
+    try:
+        return max(int(raw or 0), 0)
+    except ValueError:
+        raise ValidationError(variants.NOT_ORDERED) from None
+
+
+def _value_ids(raw: list[str]) -> list[int]:
+    """Номера отмеченных значений; не номер — не значение.
+
+    Молча пропускать такое нельзя: владелец отметил флажок, а вариант
+    сохранился бы без него — и разошёлся бы с тем, что владелец видел.
+    """
+    if not all(chunk.isdigit() for chunk in raw):
+        raise ValidationError(variants.UNKNOWN_VALUE)
+    return [int(chunk) for chunk in raw]
+
+
+def _edited_variant(
+    data: QueryDict, product: Product
+) -> ProductVariant | None:
+    """Вариант, который правят или удаляют, — или ничего, если заводят.
+
+    Чужой товару вариант сюда не попадает: спрашивается он у самого
+    товара, и подменённый номер отвечает тем же, что и удалённый.
+    """
+    raw = data.get("variant", "")
+    if not raw:
+        return None
+    variant = (
+        product.variants.filter(pk=int(raw)).first() if raw.isdigit() else None
+    )
+    if variant is None:
+        raise ValidationError(variants.GONE)
+    return variant
 
 
 # Пункт фильтра, которого нет среди единиц расхода: пустую строку
@@ -838,7 +979,7 @@ class LandingConditionFormSet(BaseInlineFormSet):
             raise ValidationError(
                 message, params={"limit": MAX_LANDING_ATTRIBUTES}
             )
-        _check_own_category(attributes, self.instance.category_id)
+        check_own_category(attributes, self.instance.category_id)
         _check_no_repeated_values(kept)
         _check_narrows_something(kept)
 

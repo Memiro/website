@@ -12,6 +12,8 @@ from memiro import pricing
 from memiro.singleton import SingletonModel
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from django.db.models.fields.files import ImageFieldFile
 
 
@@ -412,6 +414,35 @@ def marks_presence(
     if value_bool is False:
         return False
     return not (value_option is not None and value_option.marks_absence)
+
+
+# Одно правило — одна формулировка: атрибут чужой категории отвергают
+# и товар, и вариант, и посадочная, и владелец читает об этом одно
+# и то же
+FOREIGN_CATEGORY = "«%(name)s» — атрибут другой категории."
+
+
+def check_own_category(
+    attributes: Iterable[Attribute], category_id: int | None
+) -> None:
+    """Атрибуты чужой категории — ошибка со словами.
+
+    Спрашивают об этом трое: характеристики товара, значения
+    предпосчитанного варианта и условия посадочной. Правило живёт
+    здесь, а не у любого из них, чтобы конструктор вариантов не завёл
+    ему вторую формулировку (тикет 18).
+
+    Пока категория не названа — у только что заведённого товара её
+    ещё нет, — сверять не с чем, и правило молчит: чужое оно отвергнет
+    тогда, когда категория появится.
+    """
+    if not category_id:
+        return
+    for attribute in attributes:
+        if not attribute.belongs_to(category_id):
+            raise ValidationError(
+                FOREIGN_CATEGORY, params={"name": attribute.name}
+            )
 
 
 # Витринный порядок «сначала популярные»: один кортеж на весь проект

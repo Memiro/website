@@ -13,6 +13,7 @@ from memiro.catalog.models import (
     PricingSettings,
     Product,
     ProductAttribute,
+    ProductVariant,
 )
 
 
@@ -37,8 +38,6 @@ def product_payload(category: Category, **extra: object) -> dict[str, object]:
         "gallery-INITIAL_FORMS": "0",
         "attribute_values-TOTAL_FORMS": "0",
         "attribute_values-INITIAL_FORMS": "0",
-        "variants-TOTAL_FORMS": "0",
-        "variants-INITIAL_FORMS": "0",
         "_save": "",
     }
     payload.update(extra)
@@ -768,18 +767,14 @@ def test_a_hidden_price_with_variants_says_nothing(
     Предупреждать тут не о чем — а лишнее предупреждение владелец
     перестаёт читать вместе с нужным.
     """
+    product = Product.objects.create(
+        category=category, name="Зеркало «Луна»", slug="luna"
+    )
+    ProductVariant.objects.create(product=product, width_mm=800, height_mm=600)
+
     response = admin_client.post(
-        "/admin/catalog/product/add/",
-        product_payload(
-            category,
-            hides_calculated_price="on",
-            **{
-                "variants-TOTAL_FORMS": "1",
-                "variants-0-width_mm": "800",
-                "variants-0-height_mm": "600",
-                "variants-0-order": "0",
-            },
-        ),
+        f"/admin/catalog/product/{product.pk}/change/",
+        product_payload(category, hides_calculated_price="on"),
         follow=True,
     )
 

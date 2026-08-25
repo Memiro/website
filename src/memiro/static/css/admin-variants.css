@@ -1,28 +1,75 @@
-/* Значения варианта — флажки, разложенные по атрибутам. Их столько,
-   сколько строк в справочнике категории, и без ограничения высоты
-   одна строка варианта вытеснила бы со страницы всё остальное. */
-.inline-group .field-values ul {
-  max-height: 16rem;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0 0.25rem;
-  list-style: none;
+/* Конструктор предпосчитанных вариантов под карточкой товара
+   (тикет 18). Стили только раскладывают: ни цены, ни пометки «от»
+   разметка сама себе не назначает — их присылает сервер. */
+
+#variant-builder .variant-size input {
+  width: 8rem;
+  margin-right: 1.5rem;
 }
 
-.inline-group .field-values ul ul {
-  max-height: none;
-  overflow-y: visible;
-  padding-left: 0.75rem;
+/* Значения категории — флажки, разложенные по атрибутам. Их столько,
+   сколько строк в справочнике, и без ограничения высоты один
+   конструктор вытеснил бы со страницы всё остальное. */
+#variant-builder .variant-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+#variant-builder .variant-values fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 12rem;
 }
 
 /* Заголовок группы — это имя атрибута; без него флажки «Серебро»
    и «Серебро» неразличимы */
-.inline-group .field-values > ul > li {
-  margin-bottom: 0.5rem;
+#variant-builder .variant-values legend {
+  font-weight: 600;
+  padding: 0;
+}
+
+#variant-builder .variant-values label {
+  display: block;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+#variant-builder .variant-outcome {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Цена — то, ради чего конструктор и заведён: до неё владелец
+   заводил вариант вслепую и узнавал число после сохранения товара */
+#variant-price {
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
-.inline-group .field-values > ul > li li {
+#variant-price.variant-price-failed {
+  font-size: 1rem;
   font-weight: 400;
-  white-space: nowrap;
+  color: var(--error-fg, #ba2121);
+}
+
+#variant-rows {
+  width: 100%;
+  margin-top: 1rem;
+}
+
+#variant-rows td button {
+  margin-right: 0.5rem;
+}
+
+/* Пометка «от» стоит рядом с ценой, а не отдельной колонкой: колонка
+   с одной галочкой на весь список читается хуже, чем строка у числа,
+   которое эту цену и даёт */
+.variant-cheapest {
+  font-weight: 400;
+  color: var(--body-quiet-color, #666);
 }

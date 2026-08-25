@@ -1,5 +1,9 @@
 """Предпосчитанный вариант (тикет 17): цена от движка, вывод на карточке.
 
+Как владелец заводит варианты — дело конструктора в карточке товара
+(тикет 18), и проверяется оно в `test_variant_builder.py`. Здесь —
+само число и то, что с ним делает витрина.
+
 Цена варианта владельцем не вводится — её считает движок из тарифов
 справочника. Поэтому проверяется не устройство сборки, а поведение:
 какое число оказалось у варианта, что показала карточка и что
@@ -281,128 +285,6 @@ def test_variants_stay_out_of_the_sitemap(
     assert after == before
 
 
-# --- админка ----------------------------------------------------------
-
-
-def product_payload(
-    shop: SimpleNamespace, **extra: object
-) -> dict[str, object]:
-    """Форма товара для POST в админку, инлайны пустые."""
-    payload: dict[str, object] = {
-        "category": shop.category.pk,
-        "name": "Зеркало «Луна»",
-        "slug": "luna",
-        "description": "",
-        "article": "",
-        "order": "0",
-        "gallery-TOTAL_FORMS": "0",
-        "gallery-INITIAL_FORMS": "0",
-        "attribute_values-TOTAL_FORMS": "0",
-        "attribute_values-INITIAL_FORMS": "0",
-        "variants-TOTAL_FORMS": "0",
-        "variants-INITIAL_FORMS": "0",
-        "_save": "",
-    }
-    payload.update(extra)
-    return payload
-
-
-@pytest.mark.django_db
-def test_owner_edits_variants_inline_and_never_types_a_price(
-    admin_client: Client, shop: SimpleNamespace
-) -> None:
-    """Инлайн варианта в карточке товара есть, поля цены в нём нет."""
-    response = admin_client.get(
-        f"/admin/catalog/product/{shop.product.pk}/change/"
-    )
-    html = response.content.decode()
-
-    assert response.status_code == HTTPStatus.OK
-    assert 'name="variants-0-width_mm"' in html
-    assert 'name="variants-0-price"' not in html
-
-
-@pytest.mark.django_db
-def test_variant_saved_from_the_admin_gets_its_price(
-    admin_client: Client, shop: SimpleNamespace
-) -> None:
-    """Владелец задаёт размеры и полотно — цену проставляет движок."""
-    response = admin_client.post(
-        "/admin/catalog/product/add/",
-        product_payload(
-            shop,
-            **{
-                "variants-TOTAL_FORMS": "1",
-                "variants-0-width_mm": "800",
-                "variants-0-height_mm": "600",
-                "variants-0-values": [str(shop.silver.pk)],
-                "variants-0-order": "0",
-            },
-        ),
-    )
-
-    assert response.status_code == HTTPStatus.FOUND
-    variant = ProductVariant.objects.get(product__slug="luna")
-    assert variant.price == SILVER_WITHOUT_ILLUMINATION
-
-
-@pytest.mark.django_db
-def test_two_values_of_one_attribute_are_rejected(
-    admin_client: Client, shop: SimpleNamespace
-) -> None:
-    """Серебро и графит сразу — это два варианта, а не один."""
-    response = admin_client.post(
-        "/admin/catalog/product/add/",
-        product_payload(
-            shop,
-            **{
-                "variants-TOTAL_FORMS": "1",
-                "variants-0-width_mm": "800",
-                "variants-0-height_mm": "600",
-                "variants-0-values": [
-                    str(shop.silver.pk),
-                    str(shop.graphite.pk),
-                ],
-                "variants-0-order": "0",
-            },
-        ),
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert not ProductVariant.objects.exists()
-    assert "Тип полотна" in response.content.decode()
-
-
-@pytest.mark.django_db
-def test_value_of_a_foreign_category_is_rejected(
-    admin_client: Client, shop: SimpleNamespace
-) -> None:
-    """Вариант зеркала не собрать из атрибутов душевых перегородок."""
-    other = Category.objects.create(name="Перегородки", slug="peregorodki")
-    glass = Attribute.objects.create(
-        category=other, name="Стекло", slug="steklo"
-    )
-    matte = AttributeValue.objects.create(attribute=glass, value="Матовое")
-
-    response = admin_client.post(
-        "/admin/catalog/product/add/",
-        product_payload(
-            shop,
-            **{
-                "variants-TOTAL_FORMS": "1",
-                "variants-0-width_mm": "800",
-                "variants-0-height_mm": "600",
-                "variants-0-values": [str(matte.pk)],
-                "variants-0-order": "0",
-            },
-        ),
-    )
-
-    assert response.status_code == HTTPStatus.OK
-    assert not ProductVariant.objects.exists()
-    assert "Стекло" in response.content.decode()
-
-
 # --- справочник -------------------------------------------------------
 
 
@@ -425,16 +307,3 @@ def test_shape_factor_needs_something_to_multiply(
             rate=Decimal("1.5"),
             scaled_by_shape=True,
         ).full_clean()
-
-
-@pytest.mark.django_db
-def test_variant_values_are_grouped_and_explained(
-    admin_client: Client, shop: SimpleNamespace
-) -> None:
-    """Владелец видит, чем заполнять поле и что пустое — это норма."""
-    page = admin_client.get(
-        f"/admin/catalog/product/{shop.product.pk}/change/"
-    ).content.decode()
-
-    assert '<optgroup label="Тип полотна">' in page
-    assert "Пусто — берёт значения товара целиком" in page
