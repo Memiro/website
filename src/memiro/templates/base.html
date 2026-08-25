@@ -54,6 +54,9 @@
     <a href="{% url 'contacts' %}">Контакты</a>
     <a href="{% url 'cart' %}">Корзина</a>
     <a class="phone" href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
+    {# Иконки шапки на телефоне скрыты, а MAX — один из трёх контактов студии #}
+    {% if contacts.max_link %}<a href="{{ contacts.max_link }}"
+       target="_blank" rel="noopener">MAX</a>{% endif %}
   </nav>
 </header>
 

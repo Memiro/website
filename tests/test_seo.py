@@ -24,7 +24,7 @@ from memiro.catalog.models import (
     ProductAttribute,
 )
 from memiro.catalog.views import PAGE_SIZE
-from memiro.content.models import Review, SiteContacts
+from memiro.content.models import MAX_PLACEHOLDER, Review, SiteContacts
 from memiro.seo.models import LegacyUrl
 
 HALO_PRICE = 11795
@@ -301,7 +301,7 @@ def test_max_placeholder_is_not_a_profile_in_markup(
     бы вовсе и утечка MAX прошла бы мимо теста.
     """
     contacts = SiteContacts.load()
-    contacts.max_link = "https://max.ru/"
+    contacts.max_link = MAX_PLACEHOLDER
     contacts.vk = "https://vk.com/memirospb"
     contacts.avito = ""
     contacts.save()
@@ -309,6 +309,21 @@ def test_max_placeholder_is_not_a_profile_in_markup(
     business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
 
     assert business["sameAs"] == ["https://vk.com/memirospb"]
+
+
+def test_real_max_link_reaches_markup_without_a_deploy(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Настоящий адрес владелец подставляет в админке — код не правится."""
+    contacts = SiteContacts.load()
+    contacts.max_link = "https://max.ru/memiro"
+    contacts.vk = ""
+    contacts.avito = ""
+    contacts.save()
+
+    business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
+
+    assert business["sameAs"] == ["https://max.ru/memiro"]
 
 
 def test_rating_never_appears_while_reviews_are_hidden(

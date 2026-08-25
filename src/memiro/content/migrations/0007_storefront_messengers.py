@@ -58,8 +58,10 @@ class Migration(migrations.Migration):
             name="max_link",
             field=models.URLField(
                 blank=True,
-                help_text="Пока стоит заглушка: настоящий адрес владелец "
-                "подставит сюда сам, без выкатки.",
+                help_text="Ссылка на профиль студии в MAX. Заглушка "
+                "«https://max.ru/» поисковику не уходит: витрина иконку "
+                "рисует, а разметка профиля не называет, пока не стоит "
+                "настоящий адрес.",
                 verbose_name="MAX",
             ),
         ),

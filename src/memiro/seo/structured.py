@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from django.templatetags.static import static
 from django.urls import reverse
 
+from memiro.content.models import MAX_PLACEHOLDER
 from memiro.context_processors import site_contacts
 from .meta import DEFAULT_OG_IMAGE, SITE_NAME
 
@@ -127,9 +128,16 @@ def local_business(request: HttpRequest) -> dict[str, Any]:
             "addressLocality": contacts.city,
             "streetAddress": contacts.street,
         }
-    # MAX в `sameAs` не едет: там пока заглушка, а заглушка вместо
-    # профиля — то же враньё поисковику, что и пустой телефон выше
-    profiles = [link for link in (contacts.vk, contacts.avito) if link]
+    # Заглушка вместо профиля — то же враньё поисковику, что и пустой
+    # телефон выше, поэтому в `sameAs` она не едет. Настоящий адрес
+    # поедет сам, как только владелец подставит его в админке:
+    # ссылка — данные владельца, а не выкатка
+    max_profile = (
+        "" if contacts.max_link == MAX_PLACEHOLDER else contacts.max_link
+    )
+    profiles = [
+        link for link in (max_profile, contacts.vk, contacts.avito) if link
+    ]
     if profiles:
         data["sameAs"] = profiles
     hours = _opening_hours(contacts)

@@ -10,7 +10,7 @@ from django.db import connection
 from django.test import Client
 from django.test.utils import CaptureQueriesContext
 
-from memiro.content.models import SiteContacts
+from memiro.content.models import MAX_PLACEHOLDER, SiteContacts
 
 
 @pytest.mark.django_db
@@ -103,6 +103,8 @@ def test_storefront_messengers_are_max_only(client: Client, page: str) -> None:
 
     Telegram и WhatsApp сняты с витрины целиком: шапка и футер
     приезжают на каждую страницу, «Контакты» и главная — свои блоки.
+    Ссылка тут своя, не заглушка: заодно видно, что адрес приезжает
+    из админки, а не из кода.
     """
     contacts = SiteContacts.load()
     contacts.max_link = "https://max.ru/memiro"
@@ -124,23 +126,11 @@ def test_max_icon_stands_from_the_start_with_a_placeholder(
     Пустая ссылка обычно значит «не показывать», но заглушку сюда
     завела миграция: забыть про иконку легче, чем про пустое место.
     """
-    assert SiteContacts.load().max_link
+    assert SiteContacts.load().max_link == MAX_PLACEHOLDER
 
     content = client.get("/contacts/").content.decode()
 
     assert ">MAX</a>" in content
-
-
-@pytest.mark.django_db
-def test_max_link_comes_from_admin(client: Client) -> None:
-    """Заглушку владелец меняет в админке, а не выкаткой."""
-    contacts = SiteContacts.load()
-    contacts.max_link = "https://max.ru/memiro"
-    contacts.save()
-
-    content = client.get("/contacts/").content.decode()
-
-    assert 'href="https://max.ru/memiro"' in content
 
 
 @pytest.mark.django_db
