@@ -975,6 +975,29 @@ def test_the_admin_shows_the_wish_inside_the_items(
 
 
 @pytest.mark.django_db
+def test_the_admin_keeps_the_paragraphs_of_the_wish(
+    client: Client,
+    admin_client: Client,
+    products: list[Product],
+    settings: Settings,
+) -> None:
+    """Абзацы пожелания видны и в журнале, а не склеиваются в строку.
+
+    Читателей у заявки двое — письмо и админка, — и текст покупателя
+    они показывают одинаково.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+    post_inquiry(client, items=[item(products[0], wish="Первое\nВторое")])
+    inquiry = Inquiry.objects.get()
+
+    page = admin_client.get(
+        f"/admin/inquiries/inquiry/{inquiry.pk}/change/"
+    ).content.decode()
+
+    assert "Первое<br>Второе" in page
+
+
+@pytest.mark.django_db
 def test_a_wish_keeps_the_paragraphs_of_the_buyer(
     client: Client, products: list[Product], settings: Settings
 ) -> None:

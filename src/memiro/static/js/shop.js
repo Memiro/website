@@ -42,9 +42,13 @@
   // Личное пожелание к зеркалу: свободный текст покупателя, в расчёт
   // он не идёт (тикет 15). Обрезается тем же потолком, что у эндпоинта:
   // длинное пожелание отвергло бы всю заявку вместе с контактами
-  const wish = (value) =>
+  // Режется по символам, а не по единицам UTF-16: `slice` разрубил бы
+  // эмодзи пополам, оставив половину суррогатной пары, и считал бы её
+  // за два. Сервер считает символы — на потолке эти двое должны
+  // сходиться, иначе заявку отвергнет то, что браузер пропустил
+  const trimmedWish = (value) =>
     typeof value === "string"
-      ? value.trim().slice(0, limits.max_wish_length)
+      ? [...value.trim()].slice(0, limits.max_wish_length).join("")
       : "";
 
   // Позиция подборки — товар и то, каким его настроили на карточке:
@@ -61,7 +65,7 @@
     return {
       product: value.product,
       configuration: configuration(value.configuration),
-      wish: wish(value.wish),
+      wish: trimmedWish(value.wish),
     };
   };
 
@@ -113,8 +117,13 @@
   // Пожелание правится у уже собранного зеркала: покупатель дописывает
   // его на карточке после нажатия и на странице заявки, передумав
   // (тикет 15). Позиции нет в подборке — писать некуда, и это не
-  // потеря: пожелание уедет вместе с зеркалом, когда его добавят
-  const remember = (id, said) => {
+  // потеря: пожелание уедет вместе с зеркалом, когда его добавят.
+  //
+  // Подборка здесь названа прямо, а не приехала параметром `kind`:
+  // поле пожелания живёт в разметке само по себе, и вида подборки
+  // при нём нет. Заведись вторая — `data-wish` назовёт её так же,
+  // как `data-toggle` называет её кнопке
+  const rememberWish = (id, said) => {
     const items = read("cart");
     if (!items.some((item) => item.product === id && item.wish !== said)) {
       return;
@@ -134,7 +143,7 @@
   document.addEventListener("input", (event) => {
     const field = event.target.closest("[data-wish]");
     if (!field) return;
-    remember(Number(field.dataset.wish), wish(field.value));
+    rememberWish(Number(field.dataset.wish), trimmedWish(field.value));
   });
 
   // Что покупатель написал в прошлый раз: подборка переживает
@@ -254,7 +263,7 @@
       button.dataset.toggle,
       id,
       latest.get(id) ?? null,
-      field ? wish(field.value) : "",
+      field ? trimmedWish(field.value) : "",
     );
     paint();
   });
@@ -285,22 +294,31 @@
   // добавлял его заново (тикет 15). Текст ставится значением поля,
   // а не разметкой: чужих тегов в подборке взяться неоткуда, но
   // печатать хранилище разметкой — не то обещание, что стоит давать
-  const wishRow = (id) => {
+  const wishRow = (item) => {
     const label = document.createElement("label");
     // `field` — тот же вид, что у полей формы заявки рядом: одно
     // поле на сайте выглядит одинаково, где бы оно ни стояло
-    label.className = "field cart-wish";
+    label.className = "field wish-field";
     const caption = document.createElement("span");
     caption.textContent = "Пожелание";
     const field = document.createElement("textarea");
     field.rows = 2;
     field.maxLength = limits.max_wish_length;
-    field.dataset.wish = String(id);
+    field.dataset.wish = String(item.id);
+    // Чтецу зеркало называется в самом имени поля: подписей «Пожелание»
+    // на странице столько же, сколько зеркал, и глазами их различает
+    // название строкой выше, а на слух — ничто. Видимая подпись входит
+    // в это имя целиком, иначе они разошлись бы у тех, кто читает
+    // экран и слушает его одновременно
+    field.setAttribute(
+      "aria-label",
+      `${caption.textContent} к зеркалу «${item.name}»`,
+    );
     // Подсказки здесь нет намеренно: пример уже стоял в поле карточки,
     // а вторая его копия — второй текст, который однажды разойдётся
-    // с первым. Строка правится у зеркала, названного прямо над ней
-    const stored = read("cart").find((entry) => entry.product === id);
-    field.value = stored ? stored.wish : "";
+    // с первым. Строка правится у зеркала, названного прямо над ней.
+    // Написанного поле тоже не несёт: его ставит `paintWishes` — одно
+    // место читает хранилище и для карточки, и для строки
     label.append(caption, field);
     return label;
   };
@@ -329,7 +347,7 @@
     const category = document.createElement("div");
     category.className = "cart-category";
     category.textContent = item.category;
-    meta.append(title, category, wishRow(item.id));
+    meta.append(title, category, wishRow(item));
 
     const cost = priceNode(item.price);
 
@@ -399,6 +417,10 @@
     mount.hidden = false;
     showState(kind, "filled");
     items.forEach((item) => mount.append(cartRow(item)));
+    // Строки готовы — написанное покупателем ставит в них то же место,
+    // что и на карточке товара: второй чтец хранилища разошёлся бы
+    // с первым на первой же правке
+    paintWishes();
   };
 
   const renderCollections = () => {

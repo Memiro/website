@@ -181,3 +181,17 @@ def test_pages_expose_the_wish_limit(client: Client) -> None:
     body = client.get("/").content.decode()
 
     assert '"max_wish_length": 500' in body
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("products")
+def test_the_card_says_where_the_wish_goes(client: Client) -> None:
+    """Текст без зеркала менеджеру не уедет — и об этом сказано словами.
+
+    Подборка хранит позиции; пожеланию без своей позиции лежать негде,
+    и молча потерянный текст покупатель заметил бы только по молчанию
+    менеджера (тикет 15).
+    """
+    card = client.get("/catalog/zerkala/halo-moon/").content.decode()
+
+    assert "Уедет менеджеру вместе с зеркалом" in card

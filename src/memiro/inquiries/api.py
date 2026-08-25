@@ -122,9 +122,7 @@ class ItemInput(pydantic.BaseModel):
     # режут и `maxlength` поля, и `shop.js`, — так что за такой
     # длиной стоит не опечатка, а обход формы, и терять с ним нечего
     wish: Annotated[
-        str,
-        Trimmed,
-        pydantic.Field(default="", max_length=MAX_WISH_LENGTH),
+        str, Trimmed, pydantic.Field(max_length=MAX_WISH_LENGTH)
     ] = ""
 
 

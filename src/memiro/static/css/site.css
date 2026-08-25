@@ -328,11 +328,15 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .cart-pic img { width: 100%; height: 100%; object-fit: cover; }
 .cart-name { font-size: 17px; font-weight: 500; }
 .cart-category { font-size: 13px; color: var(--muted); margin-top: 4px; }
-/* Пожелание — под названием зеркала, в его же колонке: оно про это
-   зеркало, а не про заявку (тикет 15) */
-.cart-wish { margin-top: 14px; max-width: 42ch; }
-.cart-wish textarea, .wish-field textarea { resize: vertical; }
+/* Поле пожелания — одно на сайт: класс общий у карточки товара и у
+   строки подборки, а разводит их место, а не второе имя. Два имени
+   на одно поле разъехались бы на первой же правке вида (тикет 15) */
 .wish-field { margin-top: 26px; }
+.wish-field textarea { resize: vertical; }
+.wish-hint { margin-top: 8px; font-size: 13px; color: var(--muted); }
+/* В строке подборки поле стоит под названием зеркала, в его же
+   колонке: оно про это зеркало, а не про заявку */
+.cart-meta .wish-field { margin-top: 14px; max-width: 42ch; }
 .cart-price { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
 /* grid-column: 4 — у товара без вариантов цены нет вовсе (ADR-0007), и её
    ячейка пустует; без явной колонки «Убрать» съехала бы на её место, и в

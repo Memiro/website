@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="inquiryitem",
             name="wish",
-            field=models.CharField(
+            field=models.TextField(
                 blank=True, max_length=500, verbose_name="личное пожелание"
             ),
         ),
