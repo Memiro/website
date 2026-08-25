@@ -243,15 +243,15 @@ def test_a_product_with_an_unfilled_attribute_has_no_calculator(
     assert not CALC.search(card(client, bare))
 
 
-def test_the_calculator_carries_the_address_of_the_free_form(
+def test_the_calculator_carries_the_address_of_the_inquiry(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Некуда посчитать — калькулятор зовёт к заявке, и адрес не выдуман.
+    """Некуда посчитать — калькулятор зовёт к подборке, и адрес не выдуман.
 
     Ссылку рисует `product.js` по этому атрибуту: пропадёт он —
-    «Оставить заявку →» уедет в никуда, и молча (тикет 07).
+    «Перейти к заявке →» уедет в никуда, и молча (тикет 07).
     """
-    assert 'data-calc-inquiry="/#inquiry"' in card(client, shop.product)
+    assert 'data-calc-inquiry-url="/cart/"' in card(client, shop.product)
 
 
 def test_a_product_outside_the_set_still_shows_variants_and_a_way_to_ask(

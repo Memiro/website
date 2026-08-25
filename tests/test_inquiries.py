@@ -104,7 +104,12 @@ def test_inquiry_is_stored_with_cart_items(
 def test_inquiry_from_product_page_needs_no_items(
     client: Client, products: list[Product], settings: Settings
 ) -> None:
-    """Заявка возможна и с карточки товара — одним товаром."""
+    """Эндпоинт принимает заявку об одном товаре без подборки.
+
+    Источник «карточка товара» витрина не шлёт с тикета 07, но
+    контракт приёма её помнит: так пришли старые заявки, и так
+    придут заявки позиции в тикете 14.
+    """
     settings.INQUIRY_NOTIFIER = RECORDING
 
     response = post_inquiry(

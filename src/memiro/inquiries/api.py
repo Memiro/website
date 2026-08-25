@@ -110,8 +110,8 @@ class InquiryInput(pydantic.BaseModel):
     # а не заявка без согласия
     consent: Literal[True]
     items: Annotated[list[int], pydantic.Field(max_length=MAX_ITEMS)] = []
-    # Расчёт есть не у всякой заявки: из корзины, свободной формой и
-    # с карточки вне считаемого набора он не приходит вовсе
+    # Расчёт приходит не со всякой заявкой — когда и почему, сказано
+    # у поля `Inquiry.configuration`
     configuration: ConfigurationInput | None = None
 
     @pydantic.field_validator("phone")
@@ -194,9 +194,8 @@ def _snapshot(payload: InquiryInput, products: list[Product]) -> Snapshot:
     sent = payload.configuration
     # Расчёт бывает только у заявки с карточки об одном изделии, и
     # решает это сервер, а не то, что прислал браузер. С тикета 07
-    # витрина такой заявки не шлёт вовсе: формы на карточке нет, и
-    # ветка держится ради старых заявок и тикета 14, который приложит
-    # конфигурацию к позиции (ADR-0009)
+    # витрина такой заявки не шлёт вовсе (`Inquiry.configuration`):
+    # ветка держится ради старых заявок и тикета 14
     if sent is None or payload.source != Inquiry.Source.PRODUCT:
         return NO_CALCULATION
     unrecognised = Snapshot(
