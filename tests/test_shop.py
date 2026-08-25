@@ -33,7 +33,7 @@ def products(db: None) -> list[Product]:
 def test_summaries_return_requested_products(
     client: Client, products: list[Product]
 ) -> None:
-    """Корзина подтягивает названия и цены с сервера."""
+    """Подборка подтягивает названия и цены с сервера."""
     ids = f"{products[1].pk},{products[0].pk}"
 
     response = client.get(f"/api/products?ids={ids}")
@@ -62,7 +62,7 @@ def test_summaries_skip_unpublished(
 
 @pytest.mark.django_db
 def test_summaries_without_ids_are_empty(client: Client) -> None:
-    """Пустая корзина не требует особого случая на клиенте."""
+    """Пустая подборка не требует особого случая на клиенте."""
     response = client.get("/api/products?ids=")
 
     assert response.status_code == HTTPStatus.OK
@@ -89,7 +89,7 @@ def test_summaries_reject_oversized_selection(client: Client) -> None:
 
 @pytest.mark.django_db
 def test_cart_page_opens(client: Client) -> None:
-    """Корзина отдаёт страницу; наполняет её клиент."""
+    """Страница заявки отдаётся пустой; наполняет её клиент."""
     response = client.get("/cart/")
 
     assert response.status_code == HTTPStatus.OK

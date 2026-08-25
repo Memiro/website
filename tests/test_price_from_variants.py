@@ -316,7 +316,7 @@ def test_the_storefront_reads_the_product_price_field(
 def test_the_price_snapshot_of_an_inquiry_reads_the_same_field(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Снимок цены в заявке и в корзине — то же поле товара."""
+    """Снимок цены в заявке и в подборке — то же поле товара."""
     add_variant_to(shop.priced, 600, 400, shop.silver)
     Product.objects.filter(pk=shop.priced.pk).update(price=SEAM_PRICE)
 

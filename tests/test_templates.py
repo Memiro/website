@@ -16,23 +16,11 @@ from http import HTTPStatus
 import pytest
 from django.test import Client
 
-from tests.sources import templates_dir
+from tests.sources import DATALESS_PAGES, templates_dir
 
 # Тело комментария не содержит `{#`: иначе незакрытый комментарий
 # проглотил бы файл до следующего `#}` и отчёт стал бы нечитаемым
 COMMENT = re.compile(r"\{#((?:(?!\{#).)*?)#\}", re.DOTALL)
-
-# Страницы, которым не нужны данные в базе: рендерятся на пустом каталоге
-DATALESS_PAGES = (
-    "/",
-    "/about/",
-    "/delivery/",
-    "/privacy/",
-    "/contacts/",
-    "/works/",
-    "/catalog/",
-    "/cart/",
-)
 
 
 def test_no_multiline_django_comments() -> None:

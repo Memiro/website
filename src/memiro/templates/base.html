@@ -39,8 +39,9 @@
         {% if contacts.max_link %}<a class="icon-btn" href="{{ contacts.max_link }}" target="_blank" rel="noopener"
            title="MAX" aria-label="MAX">{% include "icons/max.svg" %}</a>{% endif %}
       </div>
+      {# Не тележка: тележка обещает магазин, а сайт ничего не резервирует #}
       <a class="icon-btn counter-btn" href="{% url 'cart' %}"
-         title="Корзина" aria-label="Корзина">{% include "icons/cart.svg" %}<span
+         title="Заявка" aria-label="Заявка">{% include "icons/inquiry.svg" %}<span
          class="counter" data-count="cart" hidden>0</span></a>
       <button class="icon-btn nav-burger" type="button" data-menu-toggle
               aria-expanded="false" aria-controls="mobile-menu" aria-label="Меню">{% include "icons/burger.svg" %}</button>
@@ -52,7 +53,7 @@
     <a href="{% url 'about' %}">О нас</a>
     <a href="{% url 'delivery' %}">Доставка и возврат</a>
     <a href="{% url 'contacts' %}">Контакты</a>
-    <a href="{% url 'cart' %}">Корзина</a>
+    <a href="{% url 'cart' %}">Заявка</a>
     <a class="phone" href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
     {# Иконки шапки на телефоне скрыты, а MAX — один из трёх контактов студии #}
     {% if contacts.max_link %}<a href="{{ contacts.max_link }}"
@@ -106,7 +107,7 @@
 
 {% if cookie_choice.needed %}{% include "legal/_cookie_banner.html" %}{% endif %}
 
-{# Сообщения корзины: одна живая область на страницу #}
+{# Сообщения подборки: одна живая область на страницу #}
 <p class="shop-note" data-shop-note aria-live="polite" hidden></p>
 
 {# Границы подборки приходят с сервера — копий в JS не держим #}

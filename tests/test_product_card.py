@@ -110,7 +110,7 @@ def test_tile_has_no_inquiry_button(everywhere: dict[str, list[str]]) -> None:
     for where, found in everywhere.items():
         for card in found:
             assert 'data-toggle="cart"' not in card, where
-            assert "В корзину" not in card, where
+            assert "Добавить в заявку" not in card, where
 
 
 def test_tile_is_a_single_link(everywhere: dict[str, list[str]]) -> None:

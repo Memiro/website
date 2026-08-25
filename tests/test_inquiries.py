@@ -77,7 +77,7 @@ def post_inquiry(client: Client, **overrides: object) -> TestResponse:
 def test_inquiry_is_stored_with_cart_items(
     client: Client, products: list[Product], settings: Settings
 ) -> None:
-    """Заявка из корзины попадает в журнал вместе с составом."""
+    """Заявка по подборке попадает в журнал вместе с составом."""
     settings.INQUIRY_NOTIFIER = RECORDING
 
     response = post_inquiry(client, items=[p.pk for p in products])
@@ -549,7 +549,7 @@ def test_the_snapshot_says_why_there_is_no_price(
 def test_an_inquiry_without_a_calculation_is_unchanged(
     client: Client, products: list[Product], settings: Settings
 ) -> None:
-    """Заявка из корзины и свободной формой работает как раньше."""
+    """Заявка по подборке и свободной формой работает как раньше."""
     settings.INQUIRY_NOTIFIER = RECORDING
 
     response = post_inquiry(client, items=[p.pk for p in products])
@@ -616,7 +616,7 @@ def test_an_absurd_size_does_not_cost_the_lead(
 def test_a_cart_inquiry_carries_no_configuration(
     client: Client, calculable: SimpleNamespace, settings: Settings
 ) -> None:
-    """Конфигурации нет у заявки из корзины — и решает это сервер.
+    """Конфигурации нет у заявки по подборке — и решает это сервер.
 
     Браузер её оттуда и не шлёт, но снимок ставит не он (CONTEXT.md,
     «Расчёт в заявке»).

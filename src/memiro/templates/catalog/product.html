@@ -34,7 +34,7 @@
 
     {% comment %}Цена — самого дешёвого варианта; без вариантов её нет вовсе (ADR-0007),
        и тогда весь блок цены с дисклеймером не печатается: о цене договариваются
-       через заявку, и путь к ней — «В корзину» ниже{% endcomment %}
+       через заявку, и путь к ней — «Добавить в заявку» ниже{% endcomment %}
     {% if product.has_price %}
     <div class="price-row">
       <span class="price-now">от {{ product.price|rub }} ₽</span>
@@ -106,10 +106,13 @@
 
     {% comment %}Кнопка одна: «Узнать стоимость» рядом с посчитанной ценой
        обесценивала её — если цену всё равно надо узнавать, что показывал
-       калькулятор? Путь к менеджеру идёт через корзину (тикет 07){% endcomment %}
+       калькулятор? Путь к менеджеру идёт через подборку (тикет 07).
+       Слово «корзина» на витрине не звучит: оплаты нет и ничего
+       не резервируется (тикет 13){% endcomment %}
     <div class="buy-row">
       <button class="btn btn-primary" type="button" data-toggle="cart" data-product="{{ product.pk }}"
-              aria-pressed="false" data-label-off="В корзину" data-label-on="В корзине">В корзину</button>
+              aria-pressed="false" data-label-off="Добавить в заявку"
+              data-label-on="Добавлено в заявку">Добавить в заявку</button>
     </div>
 
     <div class="promises">
