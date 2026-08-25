@@ -17,14 +17,11 @@ import re
 
 from django.conf import settings as django_settings
 
+from tests.cssrules import classes, rules, stylesheet
+
 # `class="wrap footer-grid"` и прочие соседи по одному атрибуту.
 # Кавычки любые: Django-шаблоны допускают и одинарные
 CLASS_ATTR = re.compile(r"""class=["']([^"']*\bwrap\b[^"']*)["']""")
-# Селектор правила целиком: `.footer-grid {` и `.grid-4, .grid-3 {`.
-# Классы вынимаются из всего списка — иначе проверялся бы только
-# последний перед скобкой, и правило на два селектора прошло бы молча
-RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
-CLASS_IN_SELECTOR = re.compile(r"\.([a-z0-9-]+)", re.IGNORECASE)
 # `padding: 26px 0` — шорткат; `padding-top` под него не подходит
 PADDING_SHORTHAND = re.compile(r"(?<!-)\bpadding\s*:")
 
@@ -46,14 +43,12 @@ def wrap_companions() -> set[str]:
 
 def test_wrap_companions_keep_side_padding() -> None:
     companions = wrap_companions()
-    stylesheet = django_settings.STATICFILES_DIRS[0] / "css" / "site.css"
-    css = stylesheet.read_text(encoding="utf-8")
 
     offenders = [
-        f"{selector.strip()} {{{body.strip()[:60]}…}}"
-        for selector, body in RULE.findall(css)
-        if PADDING_SHORTHAND.search(body)
-        and companions & set(CLASS_IN_SELECTOR.findall(selector))
+        f"{rule.selector} {{{rule.body.strip()[:60]}…}}"
+        for rule in rules(stylesheet())
+        if PADDING_SHORTHAND.search(rule.body)
+        and companions & classes(rule.selector)
     ]
 
     assert not offenders, (
