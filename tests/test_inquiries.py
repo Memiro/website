@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         _MonkeyPatchedWSGIResponse as TestResponse,
     )
 
+from memiro.catalog.formatting import rub
 from memiro.catalog.models import (
     Attribute,
     AttributeValue,
@@ -21,9 +22,13 @@ from memiro.catalog.models import (
     Product,
     ProductAttribute,
 )
-from memiro.inquiries.models import Inquiry
+from memiro.inquiries.limits import MAX_ITEMS
+from memiro.inquiries.models import Inquiry, InquiryItem
 from memiro.inquiries.notifications import inquiry_message
 from tests.notifiers import RecordingNotifier
+
+# Цена «от» первого зеркала фикстуры: её снимок читают несколько тестов
+HALO_MOON_PRICE = 11795
 
 RECORDING = "tests.notifiers.RecordingNotifier"
 FAILING = "tests.notifiers.FailingNotifier"
@@ -46,10 +51,18 @@ def products(db: None) -> list[Product]:
             is_published=True,
         )
         for name, slug, price in (
-            ("Halo Moon", "halo-moon", 11795),
+            ("Halo Moon", "halo-moon", HALO_MOON_PRICE),
             ("View Match", "view-match", 8300),
         )
     ]
+
+
+def item(product: Product, **configuration: object) -> dict[str, object]:
+    """Позиция подборки: товар и то, каким его настроили (ADR-0009)."""
+    return {
+        "product": product.pk,
+        "configuration": configuration or None,
+    }
 
 
 def payload(**overrides: object) -> dict[str, object]:
@@ -80,7 +93,7 @@ def test_inquiry_is_stored_with_cart_items(
     """Заявка по подборке попадает в журнал вместе с составом."""
     settings.INQUIRY_NOTIFIER = RECORDING
 
-    response = post_inquiry(client, items=[p.pk for p in products])
+    response = post_inquiry(client, items=[item(p) for p in products])
 
     assert response.status_code == HTTPStatus.CREATED
     inquiry = Inquiry.objects.get(pk=response.json()["id"])
@@ -104,16 +117,16 @@ def test_inquiry_is_stored_with_cart_items(
 def test_inquiry_from_product_page_needs_no_items(
     client: Client, products: list[Product], settings: Settings
 ) -> None:
-    """Эндпоинт принимает заявку об одном товаре без подборки.
+    """Эндпоинт принимает заявку об одном товаре.
 
     Источник «карточка товара» витрина не шлёт с тикета 07, но
-    контракт приёма её помнит: так пришли старые заявки, и так
-    придут заявки позиции в тикете 14.
+    контракт приёма его помнит: так пришли старые заявки, и
+    переписывать историю нельзя.
     """
     settings.INQUIRY_NOTIFIER = RECORDING
 
     response = post_inquiry(
-        client, source="product", items=[products[0].pk], comment=""
+        client, source="product", items=[item(products[0])], comment=""
     )
 
     assert response.status_code == HTTPStatus.CREATED
@@ -133,7 +146,7 @@ def test_inquiry_of_a_product_without_a_price_says_so(
     settings.INQUIRY_NOTIFIER = RECORDING
     Product.objects.filter(pk=products[0].pk).update(price=None)
 
-    post_inquiry(client, items=[products[0].pk])
+    post_inquiry(client, items=[item(products[0])])
     message = inquiry_message(Inquiry.objects.get())
 
     assert "Halo Moon, цена не рассчитана" in message
@@ -147,7 +160,7 @@ def test_inquiry_notifies_owner(
     """POST триггерит уведомление владельцу."""
     settings.INQUIRY_NOTIFIER = RECORDING
 
-    post_inquiry(client, items=[products[0].pk])
+    post_inquiry(client, items=[item(products[0])])
 
     assert len(RecordingNotifier.sent) == 1
     assert RecordingNotifier.sent[0].pk == Inquiry.objects.get().pk
@@ -224,7 +237,7 @@ def test_unpublished_product_is_not_accepted(
     hidden.is_published = False
     hidden.save()
 
-    response = post_inquiry(client, items=[hidden.pk, products[1].pk])
+    response = post_inquiry(client, items=[item(hidden), item(products[1])])
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
     assert not Inquiry.objects.exists()
@@ -389,13 +402,14 @@ def post_calculated(
 ) -> TestResponse:
     return post_inquiry(
         client,
-        source="product",
-        items=[calculable.product.pk],
-        configuration={
-            "width_mm": width_mm,
-            "height_mm": height_mm,
-            "values": [calculable.silver.pk] if values is None else values,
-        },
+        items=[
+            item(
+                calculable.product,
+                width_mm=width_mm,
+                height_mm=height_mm,
+                values=[calculable.silver.pk] if values is None else values,
+            )
+        ],
         **overrides,
     )
 
@@ -414,11 +428,11 @@ def test_calculated_inquiry_keeps_configuration_and_total(
     )
 
     assert response.status_code == HTTPStatus.CREATED
-    inquiry = Inquiry.objects.get()
-    assert inquiry.configuration == (
+    stored = InquiryItem.objects.get()
+    assert stored.configuration == (
         "800 × 600 мм; Тип полотна: Серебро; Подогрев: Есть"
     )
-    assert inquiry.calculated_price == SILVER_WITH_HEATING
+    assert stored.calculated_price == SILVER_WITH_HEATING
 
 
 @pytest.mark.django_db
@@ -450,7 +464,7 @@ def test_the_stored_price_is_the_servers_own(
     )
 
     assert shown == SILVER_WITH_HEATING
-    assert Inquiry.objects.get().calculated_price == shown
+    assert InquiryItem.objects.get().calculated_price == shown
 
 
 @pytest.mark.django_db
@@ -469,9 +483,9 @@ def test_a_size_beyond_the_limit_is_kept_without_a_price(
     )
 
     assert response.status_code == HTTPStatus.CREATED
-    inquiry = Inquiry.objects.get()
-    assert inquiry.configuration.startswith(f"{MAX_LONG_SIDE_MM + 100} × 400")
-    assert inquiry.calculated_price is None
+    stored = InquiryItem.objects.get()
+    assert stored.configuration.startswith(f"{MAX_LONG_SIDE_MM + 100} × 400")
+    assert stored.calculated_price is None
 
 
 @pytest.mark.django_db
@@ -499,29 +513,28 @@ def test_an_unrecognised_configuration_does_not_cost_the_lead(
     response = post_calculated(client, calculable, values=[alien.pk])
 
     assert response.status_code == HTTPStatus.CREATED
-    inquiry = Inquiry.objects.get()
+    stored = InquiryItem.objects.get()
     assert (
-        inquiry.configuration == "800 × 600 мм; конфигурацию сайт не распознал"
+        stored.configuration == "800 × 600 мм; конфигурацию сайт не распознал"
     )
-    assert inquiry.calculated_price is None
+    assert stored.calculated_price is None
 
 
 @pytest.mark.django_db
-def test_a_configuration_without_a_single_product_keeps_the_sizes(
+def test_a_free_form_inquiry_carries_no_configuration(
     client: Client, settings: Settings
 ) -> None:
-    """Расчёт без единственного изделия не о чем — но заявка проходит."""
+    """Заявке свободной формой конфигурация не нужна вовсе.
+
+    У неё и товара нет — приложить настроенное не к чему, и ей
+    остаётся комментарий (ADR-0009).
+    """
     settings.INQUIRY_NOTIFIER = RECORDING
 
-    response = post_inquiry(
-        client,
-        source="product",
-        items=[],
-        configuration={"width_mm": 800, "height_mm": 600, "values": []},
-    )
+    response = post_inquiry(client, source="home", items=[])
 
     assert response.status_code == HTTPStatus.CREATED
-    assert Inquiry.objects.get().configuration.startswith("800 × 600 мм")
+    assert not InquiryItem.objects.exists()
 
 
 @pytest.mark.django_db
@@ -540,7 +553,7 @@ def test_the_snapshot_says_why_there_is_no_price(
         client, calculable, width_mm=MAX_LONG_SIDE_MM + 100, height_mm=400
     )
 
-    assert Inquiry.objects.get().configuration.endswith(
+    assert InquiryItem.objects.get().configuration.endswith(
         "размер за пределом производства"
     )
 
@@ -552,12 +565,14 @@ def test_an_inquiry_without_a_calculation_is_unchanged(
     """Заявка по подборке и свободной формой работает как раньше."""
     settings.INQUIRY_NOTIFIER = RECORDING
 
-    response = post_inquiry(client, items=[p.pk for p in products])
+    response = post_inquiry(client, items=[item(p) for p in products])
 
     assert response.status_code == HTTPStatus.CREATED
     inquiry = Inquiry.objects.get()
-    assert inquiry.configuration == ""
-    assert inquiry.calculated_price is None
+    assert [stored.configuration for stored in inquiry.items.all()] == ["", ""]
+    assert all(
+        stored.calculated_price is None for stored in inquiry.items.all()
+    )
     assert "Расчёт:" not in inquiry_message(inquiry)
 
 
@@ -572,7 +587,9 @@ def test_the_manager_reads_the_calculation_in_the_notification(
     message = inquiry_message(Inquiry.objects.get())
 
     assert "Расчёт: 800 × 600 мм; Тип полотна: Серебро" in message
-    assert f"Показанная цена: {SILVER_TOTAL} ₽" in message
+    # Число разбито тем же фильтром, что и на витрине: заявка читается
+    # одинаково и в письме, и в журнале
+    assert f"Показанная цена: {rub(SILVER_TOTAL)} ₽" in message
 
 
 @pytest.mark.django_db
@@ -589,7 +606,7 @@ def test_the_manager_reads_the_calculation_in_the_journal(
     page = admin_client.get("/admin/inquiries/inquiry/").content.decode()
 
     assert "800 × 600 мм; Тип полотна: Серебро" in page
-    assert "2\u202f000 ₽" in page
+    assert f"{rub(SILVER_TOTAL)} ₽" in page
 
 
 @pytest.mark.django_db
@@ -607,28 +624,147 @@ def test_an_absurd_size_does_not_cost_the_lead(
     response = post_calculated(client, calculable, width_mm=900_000)
 
     assert response.status_code == HTTPStatus.CREATED
-    inquiry = Inquiry.objects.get()
-    assert inquiry.configuration.endswith("конфигурацию сайт не распознал")
-    assert inquiry.calculated_price is None
+    stored = InquiryItem.objects.get()
+    assert stored.configuration.endswith("конфигурацию сайт не распознал")
+    assert stored.calculated_price is None
 
 
 @pytest.mark.django_db
-def test_a_cart_inquiry_carries_no_configuration(
+def test_two_mirrors_of_different_sizes_arrive_whole(
     client: Client, calculable: SimpleNamespace, settings: Settings
 ) -> None:
-    """Конфигурации нет у заявки по подборке — и решает это сервер.
+    """Ради этого случая поля и переезжали на позицию (ADR-0009).
 
-    Браузер её оттуда и не шлёт, но снимок ставит не он (CONTEXT.md,
-    «Расчёт в заявке»).
+    Зеркало в ванную и зеркало в прихожую — разные размеры, разные
+    цены. Одно поле на заявку запомнило бы одну конфигурацию из
+    двух, и менеджер изготовил бы не то.
     """
     settings.INQUIRY_NOTIFIER = RECORDING
 
     response = post_inquiry(
         client,
-        source="cart",
-        items=[calculable.product.pk],
-        configuration={"width_mm": 800, "height_mm": 600, "values": []},
+        items=[
+            item(
+                calculable.product,
+                width_mm=800,
+                height_mm=600,
+                values=[calculable.silver.pk],
+            ),
+            item(
+                calculable.product,
+                width_mm=800,
+                height_mm=600,
+                values=[calculable.silver.pk, calculable.heating.pk],
+            ),
+        ],
     )
 
     assert response.status_code == HTTPStatus.CREATED
-    assert Inquiry.objects.get().configuration == ""
+    stored = list(Inquiry.objects.get().items.all())
+    assert [row.calculated_price for row in stored] == [
+        SILVER_TOTAL,
+        SILVER_WITH_HEATING,
+    ]
+    assert stored[0].configuration == "800 × 600 мм; Тип полотна: Серебро"
+    assert stored[1].configuration.endswith("Подогрев: Есть")
+
+
+@pytest.mark.django_db
+def test_a_position_without_a_calculator_is_still_a_position(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Товару без калькулятора настраивать нечего — но он в заявке.
+
+    Конфигурации у такой позиции нет вовсе, и это не пробел: цену
+    ему называет менеджер (ADR-0009).
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(client, items=[item(products[0])])
+
+    assert response.status_code == HTTPStatus.CREATED
+    stored = InquiryItem.objects.get()
+    assert stored.configuration == ""
+    assert stored.calculated_price is None
+    assert stored.product_price == HALO_MOON_PRICE
+
+
+@pytest.mark.django_db
+def test_more_positions_than_allowed_are_rejected(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Потолок подборки считает позиции, а не товары (тикет 14).
+
+    Переезд конфигурации превратил список id в список позиций —
+    ограничение должно было переехать вместе с ним, иначе браузер
+    прислал бы сколько угодно.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(
+        client, items=[item(products[0])] * (MAX_ITEMS + 1)
+    )
+
+    # 400, как всякая невалидная форма запроса: список длиннее
+    # потолка разбор не проходит вовсе
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert not Inquiry.objects.exists()
+
+
+@pytest.mark.django_db
+def test_the_manager_reads_each_configuration_in_the_notification(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Конфигурация печатается у своего зеркала, а не над составом."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_inquiry(
+        client,
+        items=[
+            item(
+                calculable.product,
+                width_mm=800,
+                height_mm=600,
+                values=[calculable.silver.pk],
+            ),
+            item(
+                calculable.product,
+                width_mm=1200,
+                height_mm=400,
+                values=[calculable.silver.pk, calculable.heating.pk],
+            ),
+        ],
+    )
+    inquiry = Inquiry.objects.get()
+    message = inquiry_message(inquiry)
+
+    assert "Расчёт: 800 × 600 мм" in message
+    assert "Расчёт: 1200 × 400 мм" in message
+    # По строке цены на зеркало — ни одной над составом
+    assert message.count("Показанная цена:") == len(inquiry.items.all())
+
+
+@pytest.mark.django_db
+def test_the_admin_shows_the_configuration_inside_the_items(
+    client: Client,
+    admin_client: Client,
+    calculable: SimpleNamespace,
+    settings: Settings,
+) -> None:
+    """В карточке заявки конфигурация стоит в составе, а не над ним.
+
+    Над составом ей места нет: заявка из двух зеркал показала бы там
+    одну конфигурацию из двух (ADR-0009).
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+    post_calculated(client, calculable)
+    inquiry = Inquiry.objects.get()
+
+    page = admin_client.get(
+        f"/admin/inquiries/inquiry/{inquiry.pk}/change/"
+    ).content.decode()
+
+    assert "800 × 600 мм; Тип полотна: Серебро" in page
+    # Поле заявки исчезло вместе с полем модели: второй правде о цене
+    # взяться неоткуда
+    assert 'name="configuration"' not in page

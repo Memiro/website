@@ -2,6 +2,9 @@
 // На витрине она называется заявкой (тикет 13); `cart` осталось
 // внутренним именем — так её зовут разметка, хранилище и модель.
 // Подборка живёт в localStorage: регистрации нет, сервер о ней не знает.
+// Хранит она не список id, а позиции — товар и то, каким его настроили
+// на карточке: заявка из двух зеркал разных размеров иначе запомнила бы
+// одно (тикет 14, ADR-0009).
 // Названия и цены всегда берутся с сервера — цена остаётся его правдой.
 // Вид подборки (`kind`) ездит параметром не про запас, а потому что
 // приходит из разметки: `data-toggle`, `data-count`, `data-collection`.
@@ -9,6 +12,8 @@
   const KEYS = {
     cart: "memiro:cart",
   };
+  // Имя события калькулятора — то же, что шлёт product.js
+  const CONFIGURED = "memiro:configured";
   // Границы приходят с сервера (memiro/inquiries/limits.py): вторая
   // копия чисел разъехалась бы с валидацией эндпоинтов
   const limits = (() => {
@@ -20,41 +25,99 @@
     }
   })();
 
+  // Конфигурация из хранилища: чужому объекту здесь взяться неоткуда,
+  // но испорченное хранилище не повод отправить менеджеру мусор
+  const configuration = (value) => {
+    if (!value) return null;
+    const { width_mm, height_mm, values } = value;
+    if (!(width_mm > 0 && height_mm > 0)) return null;
+    return {
+      width_mm,
+      height_mm,
+      values: Array.isArray(values) ? values.filter(Number.isInteger) : [],
+    };
+  };
+
+  // Позиция подборки — товар и то, каким его настроили на карточке:
+  // габариты и выбранные значения (тикет 14, ADR-0009). Цены здесь
+  // нет: её называет сервер, пересчитывая конфигурацию теми же
+  // тарифами, что и витрина. Число из браузера доказательством
+  // в споре о цене не было бы
+  const entry = (value) => {
+    // Подборка, сложенная до переезда, — просто список id. Своей
+    // конфигурации у неё не было, и выдумывать её нечем
+    if (Number.isInteger(value)) return { product: value, configuration: null };
+    if (!value || !Number.isInteger(value.product)) return null;
+    return {
+      product: value.product,
+      configuration: configuration(value.configuration),
+    };
+  };
+
   const read = (kind) => {
     try {
       const stored = JSON.parse(localStorage.getItem(KEYS[kind]) || "[]");
-      return Array.isArray(stored) ? stored.filter(Number.isInteger) : [];
+      return Array.isArray(stored) ? stored.map(entry).filter(Boolean) : [];
     } catch {
       // Испорченное хранилище — не повод ронять страницу
       return [];
     }
   };
 
-  const write = (kind, ids) => {
+  // Товары подборки: их спрашивают у /api/products и ими же красят
+  // кнопки. Позиция помнит больше, но здесь нужен только товар
+  const productIds = (kind) => read(kind).map((item) => item.product);
+
+  const write = (kind, items) => {
     try {
-      localStorage.setItem(KEYS[kind], JSON.stringify(ids));
+      localStorage.setItem(KEYS[kind], JSON.stringify(items));
     } catch {
       // Приватный режим без записи: подборка живёт до перезагрузки
     }
   };
 
-  const toggle = (kind, id) => {
-    const ids = read(kind);
-    if (ids.includes(id)) {
+  const toggle = (kind, id, configured) => {
+    const items = read(kind);
+    if (items.some((item) => item.product === id)) {
       write(
         kind,
-        ids.filter((stored) => stored !== id),
+        items.filter((item) => item.product !== id),
       );
       return false;
     }
     // Потолок тот же, что у эндпоинтов: длинный список они отвергнут
-    if (ids.length >= limits.max_items) {
+    if (items.length >= limits.max_items) {
       announce(`Больше ${limits.max_items} товаров в заявку не помещается.`);
       return false;
     }
-    write(kind, [...ids, id]);
+    write(kind, [...items, { product: id, configuration: configured }]);
     return true;
   };
+
+  // ---------- Что объявил калькулятор карточки ----------
+
+  // Калькулятор живёт в product.js и сам говорит, что покупатель
+  // настроил: событием, а не общей функцией. У события есть свой
+  // товар, и вторая кнопка «Добавить в заявку» на той же странице
+  // чужих размеров не подхватит. Второй разбор тех же полей здесь
+  // однажды разошёлся бы с первым — потому спрашиваем, а не читаем
+  const announced = new Map();
+
+  document.addEventListener(CONFIGURED, (event) => {
+    const { product, configuration: sent } = event.detail;
+    announced.set(product, sent);
+    const items = read("cart");
+    if (!items.some((item) => item.product === product)) return;
+    // Зеркало уже в подборке: менеджеру оно должно уехать таким,
+    // каким покупатель видит его сейчас, а не каким добавил. Иначе
+    // передумавший о размере получил бы не то, что заказывал
+    write(
+      "cart",
+      items.map((item) =>
+        item.product === product ? { ...item, configuration: sent } : item,
+      ),
+    );
+  });
 
   // Живая область под сообщения, которым негде показаться в разметке
   let noteTimer = null;
@@ -72,7 +135,7 @@
   const remove = (kind, id) => {
     write(
       kind,
-      read(kind).filter((stored) => stored !== id),
+      read(kind).filter((item) => item.product !== id),
     );
   };
 
@@ -88,7 +151,7 @@
 
   const paintButton = (button) => {
     const kind = button.dataset.toggle;
-    const isOn = read(kind).includes(Number(button.dataset.product));
+    const isOn = productIds(kind).includes(Number(button.dataset.product));
     button.setAttribute("aria-pressed", String(isOn));
     button.classList.toggle("on", isOn);
     // Подписи живут в разметке: JS их не сочиняет, а читает. Подпись же
@@ -115,7 +178,10 @@
     const button = event.target.closest("[data-toggle][data-product]");
     if (!button) return;
     event.preventDefault();
-    toggle(button.dataset.toggle, Number(button.dataset.product));
+    const id = Number(button.dataset.product);
+    // Настроенное на карточке едет в подборку вместе с зеркалом
+    // (тикет 14). Товару без калькулятора конфигурации взять неоткуда
+    toggle(button.dataset.toggle, id, announced.get(id) ?? null);
     paint();
   });
 
@@ -192,7 +258,7 @@
 
   const renderCollection = async (mount) => {
     const kind = mount.dataset.collection;
-    const ids = read(kind);
+    const ids = productIds(kind);
     mount.replaceChildren();
     if (!ids.length) {
       mount.hidden = true;
@@ -218,10 +284,12 @@
       showState(kind, "failed");
       return;
     }
-    // Товар, снятый с публикации, из подборки уходит вместе с id
+    // Товар, снятый с публикации, уходит из подборки вместе со своей
+    // позицией; у остальных конфигурация остаётся нетронутой
+    const alive = new Set(items.map((item) => item.id));
     write(
       kind,
-      items.map((item) => item.id),
+      read(kind).filter((item) => alive.has(item.product)),
     );
     paintCounters();
     if (!items.length) {
@@ -333,9 +401,9 @@
           consent: true,
           // Формы на карточке товара больше нет (тикет 07), и всякая
           // оставшаяся форма отправляет одно и то же — собранную
-          // подборку: своего товара ни у одной из них нет.
-          // Конфигурация же приедет от позиции заявки, а не от формы
-          // (тикет 14, ADR-0009)
+          // подборку: своего товара ни у одной из них нет. Конфигурация
+          // едет от позиции подборки, а не от формы (тикет 14,
+          // ADR-0009), и цену на неё называет сервер
           items: read("cart"),
         }),
       });

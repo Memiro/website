@@ -18,7 +18,7 @@ from django.conf import settings
 from django.utils.module_loading import import_string
 
 if TYPE_CHECKING:
-    from memiro.inquiries.models import Inquiry
+    from memiro.inquiries.models import Inquiry, InquiryItem
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,33 @@ class InquiryNotifier(Protocol):
     """Транспорт уведомления о заявке."""
 
     def send(self, inquiry: Inquiry) -> None: ...
+
+
+def item_lines(item: InquiryItem) -> list[str]:
+    """Позиция в письме: зеркало, его конфигурация и её цена.
+
+    Конфигурация печатается у своего зеркала, а не над составом: у
+    зеркала в ванную и у зеркала в прихожую разные размеры, и
+    сложенные в одну строку они заставили бы менеджера разбирать,
+    что к чему относится (ADR-0009).
+
+    Позиции без конфигурации остаётся «цена от»: калькулятор есть не
+    у всякого товара, и настраивать покупателю там было нечего.
+
+    Размер за пределом производства цены не получает: это личное
+    пожелание, и цену называет менеджер — но увидеть это он должен
+    в заявке, а не вывести из молчания.
+    """
+    # Цену словами называет сама позиция: письмо и админка читают
+    # заявку одинаково, а «не рассчитана» пишется в одном месте
+    lines = [f"— {item.product_name}, {item.product_price_label()}"]
+    if not item.configuration:
+        return lines
+    # То, что покупатель настроил на карточке, — менеджер звонит
+    # со знанием дела, а не переспрашивает размеры
+    lines.append(f"  Расчёт: {item.configuration}")
+    lines.append(f"  Показанная цена: {item.calculated_price_label()}")
+    return lines
 
 
 def inquiry_message(inquiry: Inquiry) -> str:
@@ -44,24 +71,8 @@ def inquiry_message(inquiry: Inquiry) -> str:
     items = list(inquiry.items.all())
     if items:
         lines.append("Товары:")
-        lines += [
-            f"— {item.product_name}, от {item.product_price} ₽"
-            if item.product_price is not None
-            # Менеджеру важно увидеть это в заявке, а не гадать
-            else f"— {item.product_name}, цена не рассчитана"
-            for item in items
-        ]
-    if inquiry.configuration:
-        # То, что покупатель считал на карточке, — менеджер звонит
-        # со знанием дела, а не переспрашивает размеры
-        lines.append(f"Расчёт: {inquiry.configuration}")
-        lines.append(
-            f"Показанная цена: {inquiry.calculated_price} ₽"
-            if inquiry.calculated_price is not None
-            # Размер за пределом производства цены не получает: это
-            # личное пожелание, и цену называет менеджер
-            else "Показанная цена: не рассчитана"
-        )
+        for item in items:
+            lines += item_lines(item)
     if inquiry.comment:
         lines.append(f"Комментарий: {inquiry.comment}")
     return "\n".join(lines)

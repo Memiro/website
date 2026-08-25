@@ -1,19 +1,35 @@
 from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
+from django.db.models import Prefetch
 
-from memiro.catalog.formatting import rub
 from .models import Inquiry, InquiryItem
 
 if TYPE_CHECKING:
+    from django.db.models import QuerySet
     from django.http import HttpRequest
+
+
+# Имя, под которым `get_queryset` кладёт настроенные позиции, а
+# колонка расчёта их читает: связь между ними неявная, и живёт она
+# хотя бы в одной строке, а не в двух литералах
+CONFIGURED_ITEMS = "configured_items"
 
 
 class InquiryItemInline(admin.TabularInline):
     model = InquiryItem
     extra = 0
-    # Состав — снимок на момент обращения: правке не подлежит
-    readonly_fields = ("product", "product_name", "product_price")
+    # Состав — снимок на момент обращения: правке не подлежит.
+    # Конфигурация стоит здесь, у своего зеркала, а не над составом:
+    # у заявки из двух зеркал размеры разные, и общего поля на них
+    # не хватило бы (ADR-0009)
+    readonly_fields = (
+        "product",
+        "product_name",
+        "product_price",
+        "configuration",
+        "calculated_price",
+    )
     can_delete = False
 
     def has_add_permission(
@@ -49,8 +65,6 @@ class InquiryAdmin(admin.ModelAdmin):
         "source",
         "consent",
         "consent_version",
-        "configuration",
-        "calculated_price",
         "created_at",
     )
     fields: ClassVar = [
@@ -60,31 +74,43 @@ class InquiryAdmin(admin.ModelAdmin):
         "email",
         "comment",
         "source",
-        "configuration",
-        "calculated_price",
         "consent",
         "consent_version",
         "is_processed",
     ]
     inlines = (InquiryItemInline,)
 
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Inquiry]:
+        """Состав вперёд: колонка расчёта читает его у каждой заявки."""
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related(
+                Prefetch(
+                    "items",
+                    queryset=InquiryItem.objects.exclude(configuration=""),
+                    to_attr=CONFIGURED_ITEMS,
+                )
+            )
+        )
+
     @admin.display(description="расчёт")
     def calculation(self, obj: Inquiry) -> str:
-        """Что покупатель считал и какую цену увидел — прямо в журнале.
+        """Что покупатель настроил и какую цену увидел — в самом списке.
 
-        Менеджер перезванивает, не открывая товар: конфигурация в
-        заявке и есть весь предмет разговора. Цены может не быть при
-        конфигурации — размеру за пределом производства сайт цены не
-        называет, и это личное пожелание, а не пробел.
+        Менеджер перезванивает, не открывая товар: конфигурации заявки
+        и есть весь предмет разговора. Зеркал в заявке бывает
+        несколько, и тогда строк тоже несколько — какая из них к
+        какому, читается в составе.
         """
-        if not obj.configuration:
-            return "—"
-        price = (
-            f"{rub(obj.calculated_price)} ₽"
-            if obj.calculated_price is not None
-            else "цена не рассчитана"
-        )
-        return f"{obj.configuration} — {price}"
+        # Пусто, а не падение, если заявку достали мимо `get_queryset`:
+        # колонка не то место, где стоит ронять список заявок
+        configured: list[InquiryItem] = getattr(obj, CONFIGURED_ITEMS, [])
+        lines = [
+            f"{item.configuration} — {item.calculated_price_label()}"
+            for item in configured
+        ]
+        return " · ".join(lines) if lines else "—"
 
     def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
         return False

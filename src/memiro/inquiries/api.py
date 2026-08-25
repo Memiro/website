@@ -72,12 +72,12 @@ class SummariesQuery(pydantic.BaseModel):
 
 
 class ConfigurationInput(pydantic.BaseModel):
-    """Что покупатель считал калькулятором, отправляя заявку.
+    """Как покупатель настроил это зеркало, кладя его в заявку.
 
     Здесь только присланное: габариты и выбранные значения. Цены в
     заявке нет намеренно — её ставит сервер, пересчитывая это же
     теми же тарифами. Число из браузера доказательством в споре
-    о цене не было бы (тикет 21).
+    о цене не было бы (ADR-0005, ADR-0009).
     """
 
     # Границы здесь шире, чем у расчёта, намеренно: за не тем числом
@@ -91,6 +91,21 @@ class ConfigurationInput(pydantic.BaseModel):
     values: Annotated[
         list[int], pydantic.Field(max_length=MAX_STORED_VALUES)
     ] = []
+
+
+class ItemInput(pydantic.BaseModel):
+    """Позиция подборки: товар и то, каким его настроили.
+
+    Подборка присылает не список id, а список позиций: конфигурация
+    у зеркала своя, и без неё заявка из двух зеркал разных размеров
+    запомнила бы одно (ADR-0009).
+
+    Конфигурации может не быть вовсе: калькулятор есть не у всякого
+    товара, и настраивать покупателю там нечего.
+    """
+
+    product: Annotated[int, pydantic.Field(ge=1)]
+    configuration: ConfigurationInput | None = None
 
 
 class InquiryInput(pydantic.BaseModel):
@@ -109,10 +124,11 @@ class InquiryInput(pydantic.BaseModel):
     # Literal[True] вместо bool: снятый чекбокс — ошибка валидации,
     # а не заявка без согласия
     consent: Literal[True]
-    items: Annotated[list[int], pydantic.Field(max_length=MAX_ITEMS)] = []
-    # Расчёт приходит не со всякой заявкой — когда и почему, сказано
-    # у поля `Inquiry.configuration`
-    configuration: ConfigurationInput | None = None
+    # Потолок тот же, что у подборки: список длиннее описывает не
+    # заявку, а попытку нагрузить сервер
+    items: Annotated[
+        list[ItemInput], pydantic.Field(max_length=MAX_ITEMS)
+    ] = []
 
     @pydantic.field_validator("phone")
     @classmethod
@@ -127,11 +143,15 @@ class InquiryCreated(pydantic.BaseModel):
     id: int
 
 
-def _published(ids: list[int]) -> tuple[list[Product], list[int]]:
+def _published(ids: list[int]) -> tuple[dict[int, Product], list[int]]:
     """Опубликованные товары в порядке запроса плюс список пропавших.
 
     Одна выборка на оба эндпоинта: подборке пропавшие безразличны,
     заявке — нет, поэтому решает вызывающий, а не запрос.
+
+    Отдаётся отображение, а не список: заявка кладёт по позиции на
+    каждую присланную конфигурацию, и одно зеркало в двух размерах —
+    две позиции с одним товаром. Список схлопнул бы их в одну.
     """
     unique = list(dict.fromkeys(ids))
     found = {
@@ -141,7 +161,7 @@ def _published(ids: list[int]) -> tuple[list[Product], list[int]]:
         .select_related("category")
     }
     return (
-        [found[pk] for pk in unique if pk in found],
+        {pk: found[pk] for pk in unique if pk in found},
         [pk for pk in unique if pk not in found],
     )
 
@@ -164,7 +184,7 @@ def _summary(product: Product) -> ProductSummary:
 
 
 class Snapshot(NamedTuple):
-    """Расчёт заявки, каким он ложится в журнал: строка и цена.
+    """Расчёт позиции, каким он ложится в журнал: строка и цена.
 
     Цены может не быть при самой конфигурации, и почему — сказано
     в строке: сайт не называет цену ни за пределом производства, ни
@@ -178,41 +198,52 @@ class Snapshot(NamedTuple):
 NO_CALCULATION = Snapshot(configuration="", calculated_price=None)
 
 
-def _snapshot(payload: InquiryInput, products: list[Product]) -> Snapshot:
-    """Расчёт заявки — пересчитанный здесь, а не принятый на слово.
+def _snapshot(product: Product, sent: ConfigurationInput | None) -> Snapshot:
+    """Расчёт позиции — пересчитанный здесь, а не принятый на слово.
 
     Считается тем же `catalog.quoting`, что и витрина: разойдись они,
     в заявке оказалась бы цена, которой карточка не показывала, — а
-    спор о цене решается именно ею.
+    спор о цене решается именно ею. Спрашивается он теперь на каждую
+    позицию: у зеркала в ванную и у зеркала в прихожую свои размеры
+    (ADR-0009).
 
-    Не посчиталось — заявка всё равно принимается. Лид дороже снимка:
-    заявку на личное пожелание менеджер должен получить, «чтобы не
-    терять заказ, который сайт посчитать не умеет» (спека расчёта,
-    история 32). Габариты покупателя остаются в снимке и в этом
-    случае — гадать о них менеджеру не приходится.
+    Не посчиталось — позиция всё равно остаётся позицией, а заявка
+    принимается. Лид дороже снимка: заявку на личное пожелание
+    менеджер должен получить, «чтобы не терять заказ, который сайт
+    посчитать не умеет» (спека расчёта, история 32). Габариты
+    покупателя остаются в снимке и в этом случае — гадать о них
+    менеджеру не приходится.
     """
-    sent = payload.configuration
-    # Расчёт бывает только у заявки с карточки об одном изделии, и
-    # решает это сервер, а не то, что прислал браузер. С тикета 07
-    # витрина такой заявки не шлёт вовсе (`Inquiry.configuration`):
-    # ветка держится ради старых заявок и тикета 14
-    if sent is None or payload.source != Inquiry.Source.PRODUCT:
+    if sent is None:
         return NO_CALCULATION
-    unrecognised = Snapshot(
-        quoting.unrecognised_label(sent.width_mm, sent.height_mm), None
-    )
-    if len(products) != 1:
-        return unrecognised
     try:
         quote = quoting.quote(
-            product_id=products[0].pk,
+            product_id=product.pk,
             width_mm=sent.width_mm,
             height_mm=sent.height_mm,
             value_ids=sent.values,
         )
     except quoting.UncalculableError:
-        return unrecognised
+        return Snapshot(
+            quoting.unrecognised_label(sent.width_mm, sent.height_mm), None
+        )
     return Snapshot(quote.label, quote.total)
+
+
+def _item(inquiry: Inquiry, product: Product, sent: ItemInput) -> InquiryItem:
+    """Позиция снимком: название, цена «от» и своя конфигурация.
+
+    Цену конфигурации ставит сервер — как и редакцию согласия.
+    """
+    snapshot = _snapshot(product, sent.configuration)
+    return InquiryItem(
+        inquiry=inquiry,
+        product=product,
+        product_name=product.name,
+        product_price=product.price,
+        configuration=snapshot.configuration,
+        calculated_price=snapshot.calculated_price,
+    )
 
 
 class ProductSummariesController(Controller[PydanticSerializer]):
@@ -221,7 +252,9 @@ class ProductSummariesController(Controller[PydanticSerializer]):
     def get(self, parsed_query: Query[SummariesQuery]) -> ProductSummaries:
         # Исчезнувшие товары просто выпадают из подборки
         products, _missing = _published(parse_ids(parsed_query.ids))
-        return ProductSummaries(items=[_summary(item) for item in products])
+        return ProductSummaries(
+            items=[_summary(item) for item in products.values()]
+        )
 
 
 @csrf_protect_json
@@ -240,14 +273,12 @@ class InquiryController(Controller[PydanticSerializer]):
     )
     def post(self, parsed_body: Body[InquiryInput]) -> InquiryCreated:
         products = self._products(parsed_body.items)
-        inquiry = self._store(
-            parsed_body, products, _snapshot(parsed_body, products)
-        )
+        inquiry = self._store(parsed_body, products)
         notify(inquiry)
         return InquiryCreated(id=inquiry.pk)
 
-    def _products(self, ids: list[int]) -> list[Product]:
-        products, missing = _published(ids)
+    def _products(self, items: list[ItemInput]) -> dict[int, Product]:
+        products, missing = _published([item.product for item in items])
         if missing:
             reject(
                 self,
@@ -256,10 +287,7 @@ class InquiryController(Controller[PydanticSerializer]):
         return products
 
     def _store(
-        self,
-        payload: InquiryInput,
-        products: list[Product],
-        snapshot: Snapshot,
+        self, payload: InquiryInput, products: dict[int, Product]
     ) -> Inquiry:
         with transaction.atomic():
             # Поля уже обрезаны валидацией (Trimmed)
@@ -271,17 +299,11 @@ class InquiryController(Controller[PydanticSerializer]):
                 source=payload.source,
                 consent=payload.consent,
                 consent_version=PRIVACY_VERSION,
-                # Снимок ставит сервер — как и редакцию согласия
-                configuration=snapshot.configuration,
-                calculated_price=snapshot.calculated_price,
             )
+            # Позиция на каждую присланную, а не на каждый товар: одно
+            # зеркало в двух размерах — две позиции (ADR-0009)
             InquiryItem.objects.bulk_create(
-                InquiryItem(
-                    inquiry=inquiry,
-                    product=product,
-                    product_name=product.name,
-                    product_price=product.price,
-                )
-                for product in products
+                _item(inquiry, products[sent.product], sent)
+                for sent in payload.items
             )
         return inquiry
