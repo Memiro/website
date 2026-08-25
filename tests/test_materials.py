@@ -68,6 +68,12 @@ def dictionary(db: None) -> SimpleNamespace:
     without_frame = AttributeValue.objects.create(
         attribute=frame, value="Без рамы", marks_absence=True
     )
+    half = AttributeValue.objects.create(
+        attribute=frame,
+        value="Багет",
+        unit=AttributeValue.Unit.LINEAR_METER,
+        order=1,
+    )
     product = Product.objects.create(
         category=category, name="Halo Moon", slug="halo-moon"
     )
@@ -82,6 +88,7 @@ def dictionary(db: None) -> SimpleNamespace:
         graphite=graphite,
         contour=contour,
         without_frame=without_frame,
+        half=half,
         product=product,
         variant=variant,
     )
@@ -158,6 +165,19 @@ def test_values_without_a_tariff_are_findable(
 
     assert "Графит" in html
     assert "Серебро" not in html
+
+
+def test_half_a_tariff_is_findable_among_the_tariffless(
+    admin_client: Client, dictionary: SimpleNamespace
+) -> None:
+    """Единица без ставки статьи расхода не даёт — это не тариф.
+
+    В списке такая строка выглядит заполненной, и мимо этого пункта
+    владелец её не нашёл бы никогда.
+    """
+    html = screen(admin_client, "?unit=none")
+
+    assert "Багет" in html
 
 
 def test_search_finds_a_value_by_its_name(
@@ -306,6 +326,49 @@ def test_the_edit_stays_in_the_history_of_the_screen(
     assert "тариф" in response.content.decode().lower()
 
 
+def test_an_absence_that_charges_money_is_visible_and_fixable(
+    admin_client: Client, dictionary: SimpleNamespace
+) -> None:
+    """«Без рамы» со ставкой берёт деньги молча — движок цены о
+    признаке отсутствия не спрашивает, а `clean()` мимо переноса и
+    пачечной правки проходит. Чинят такое там, где чинят цены.
+    """
+    broken = dictionary.without_frame
+    AttributeValue.objects.filter(pk=broken.pk).update(
+        unit=AttributeValue.Unit.LINEAR_METER, rate=Decimal(700)
+    )
+
+    assert "Без рамы" in screen(admin_client)
+
+    edit(admin_client, broken, unit="", rate="")
+
+    broken.refresh_from_db()
+    assert broken.unit == ""
+    assert broken.rate is None
+    assert "Без рамы" not in screen(admin_client)
+
+
+def test_a_tariff_is_refused_to_an_absence_of_a_feature(
+    admin_client: Client, dictionary: SimpleNamespace
+) -> None:
+    """Починка — снять ставку, а не оставить её на месте."""
+    broken = dictionary.without_frame
+    AttributeValue.objects.filter(pk=broken.pk).update(
+        unit=AttributeValue.Unit.LINEAR_METER, rate=Decimal(700)
+    )
+
+    html = edit(
+        admin_client,
+        broken,
+        unit=AttributeValue.Unit.LINEAR_METER,
+        rate="900",
+    )
+
+    broken.refresh_from_db()
+    assert broken.rate == Decimal(700)
+    assert "Отсутствие признака не расходуется" in html
+
+
 # --- правила справочника ----------------------------------------------
 
 
@@ -382,11 +445,17 @@ def test_a_single_row_opens_from_the_list(
 # --- чего экран не делает ---------------------------------------------
 
 
-def test_values_are_neither_born_nor_die_on_the_price_screen(
+def test_values_are_not_born_on_the_price_screen(
     admin_client: Client, dictionary: SimpleNamespace
 ) -> None:
     """Строка справочника — атрибут и значение; их здесь не спрашивают."""
     response = admin_client.get(SCREEN + "add/")
 
     assert response.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_values_do_not_die_on_the_price_screen(
+    admin_client: Client, dictionary: SimpleNamespace
+) -> None:
+    """Удалить отсюда значение, на которое опирается товар, слишком легко."""
     assert "delete_selected" not in screen(admin_client)

@@ -2,7 +2,8 @@ from itertools import groupby
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib import admin, messages
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
+from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.forms import (
     BaseInlineFormSet,
     CheckboxSelectMultiple,
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
 from memiro.singleton import SingletonAdmin
-from . import calculator, repricing, tariffs
+from . import calculator, tariffs
 from .formatting import rub
 from .models import (
     MAX_LANDING_ATTRIBUTES,
@@ -544,15 +545,13 @@ class ProductAdmin(admin.ModelAdmin):
         return _preview(obj.photo_large)
 
 
-# --- экран «Материалы и цены» (тикет 17) ------------------------------
-
 # Пункт фильтра, которого нет среди единиц расхода: пустую строку
 # `choices` не знает, а искать значения без тарифа владельцу нужно
 NO_TARIFF = "none"
 
-# Сказано ли о пересчёте в этом запросе: пачкой правят по два десятка
-# строк, и двадцать одинаковых сообщений перестают читать
-REPRICING_ANNOUNCED = "_memiro_repricing_announced"
+# Имя пометки на запросе: сказано ли в нём о пересчёте. Пачкой правят
+# по два десятка строк, и двадцать одинаковых сообщений перестают читать
+REPRICING_ANNOUNCED_ATTR = "_memiro_repricing_announced"
 
 # Что на экране цен правится, а что только показывается. Одной тройкой
 # на форму и на список: разойдясь, они дали бы строку, поля которой
@@ -593,19 +592,23 @@ class MaterialPriceForm(ModelForm):
             for message in found
         ]
         if foreign:
-            super().add_error(NON_FIELD_ERRORS, foreign)
+            super().add_error(None, foreign)
         if own:
             super().add_error(None, own)
 
 
-class UnitFilter(admin.SimpleListFilter):
-    """Единица расхода — и отдельным пунктом её отсутствие.
+class UnitOrNoTariffFilter(admin.SimpleListFilter):
+    """Единица расхода — и отдельным пунктом отсутствие тарифа.
 
     425 значений переехали со старого сайта до заведения тарифов, и
     «бесплатно» от «руки не дошли» в данных не отличить: отличает их
     владелец, глядя на список (тикет 17). Пункт «тариф не заведён»
     собирает такие строки в одно место — обычный фильтр по полю его
     не даёт, пустая строка среди `choices` не значится.
+
+    Половина тарифа собирается туда же: статьи расхода она не даёт
+    (`AttributeValue.is_charged`), а в списке выглядит заполненной —
+    и мимо этого пункта не нашлась бы никогда.
     """
 
     title = "единица расхода"
@@ -629,7 +632,9 @@ class UnitFilter(admin.SimpleListFilter):
         chosen = self.value()
         if chosen is None:
             return queryset
-        return queryset.filter(unit="" if chosen == NO_TARIFF else chosen)
+        if chosen == NO_TARIFF:
+            return queryset.filter(Q(unit="") | Q(rate__isnull=True))
+        return queryset.filter(unit=chosen)
 
 
 @admin.register(MaterialPrice)
@@ -646,12 +651,12 @@ class MaterialPriceAdmin(admin.ModelAdmin):
     """
 
     form = MaterialPriceForm
-    list_display = ("value", "attribute", "unit", "rate", "scaled_by_shape")
+    list_display = ("value", "attribute", *PRICE_COLUMNS)
     list_display_links = ("value",)
     list_editable = PRICE_COLUMNS
     list_filter = (
         ("attribute", admin.RelatedOnlyFieldListFilter),
-        UnitFilter,
+        UnitOrNoTariffFilter,
     )
     search_fields = ("value",)
     ordering = ("attribute__order", "attribute__name", "order", "value")
@@ -665,17 +670,22 @@ class MaterialPriceAdmin(admin.ModelAdmin):
     def get_queryset(self, request: HttpRequest) -> QuerySet[MaterialPrice]:
         """Строки, которые стоят денег или могут начать стоить.
 
-        Отсутствие признака — «без рамы», «без подсветки» — тарифа не
-        несёт и по правилу `clean()` нести не может: держать его на
-        экране цен значило бы предлагать заведомо отвергаемое. Правило
-        тут не столько действует, сколько исполнено заранее — строке,
-        которой на экране нет, ставку не поставить вовсе.
+        Отсутствие признака — «без рамы», «без подсветки» — денег не
+        стоит и по правилу `clean()` стоить не может: держать пустое
+        такое значение на экране цен значило бы предлагать заведомо
+        отвергаемое.
+
+        Кроме одного случая: если ставка на нём всё-таки стоит.
+        `clean()` мимо переносов и пачечных правок проходит, а движок
+        цены о признаке отсутствия не спрашивает — такая строка берёт
+        деньги молча, и чинить её надо там, где чинят цены. Здесь она
+        видна, и правило говорит о ней словами.
         """
         return (
             super()
             .get_queryset(request)
             .select_related("attribute")
-            .exclude(marks_absence=True)
+            .exclude(marks_absence=True, unit="", rate__isnull=True)
         )
 
     def has_add_permission(
@@ -697,6 +707,7 @@ class MaterialPriceAdmin(admin.ModelAdmin):
         request: HttpRequest,  # noqa: ARG002 — сигнатура Django
         obj: MaterialPrice | None = None,  # noqa: ARG002 — сигнатура Django
     ) -> bool:
+        """Причина та же, что и у `has_add_permission()`."""
         return False
 
     def get_changelist_form(
@@ -740,17 +751,16 @@ class MaterialPriceAdmin(admin.ModelAdmin):
         руками. Считается он здесь же, в сохранении, — сообщение
         говорит о том, что уже случилось, а не обещает.
         """
-        if getattr(request, REPRICING_ANNOUNCED, False):
+        if getattr(request, REPRICING_ANNOUNCED_ATTR, False):
             return
-        setattr(request, REPRICING_ANNOUNCED, True)
-        variants = repricing.all_variants().count()
-        told = (
-            f"Цены пересчитаны: предпосчитанных вариантов — {variants}, "
-            "цены товаров взяты по самому дешёвому из них."
-            if variants
+        setattr(request, REPRICING_ANNOUNCED_ATTR, True)
+        message = (
+            "Цены пересчитаны: тариф проехал по всем предпосчитанным "
+            "вариантам, а цены товаров взяты по самому дешёвому из них."
+            if ProductVariant.objects.exists()
             else "Предпосчитанных вариантов пока нет — пересчитывать нечего."
         )
-        messages.info(request, told)
+        messages.info(request, message)
 
 
 @admin.register(PricingSettings)
