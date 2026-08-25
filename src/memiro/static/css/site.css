@@ -657,7 +657,10 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .cart-row { grid-template-columns: 72px 1fr; gap: 8px 16px; padding: 16px; }
   .cart-pic { width: 72px; height: 80px; }
   .cart-price, .cart-drop { grid-column: 2; justify-self: start; }
-  .card-actions { padding: 0 16px 18px; }
+  /* Цена и «В корзину» — оба без переноса, и в плитке карусели
+     (208px) они вместе не помещаются: раньше цена ломалась пополам,
+     теперь бы срезало кнопку. Пусть кнопка уходит на свою строку */
+  .card-actions { padding: 0 16px 18px; flex-wrap: wrap; row-gap: 8px; }
   .footer { margin-top: 38px; }
   .footer-grid { grid-template-columns: 1fr; gap: 30px; padding-top: 44px; padding-bottom: 28px; }
   .footer .wordmark { font-size: 26px; }

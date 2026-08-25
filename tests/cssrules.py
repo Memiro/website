@@ -22,6 +22,15 @@ COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 CLASS_IN_SELECTOR = re.compile(r"\.([a-z0-9-]+)", re.IGNORECASE)
 
 
+class StylesheetError(Exception):
+    """Скобки таблицы стилей не сходятся — разбирать нечего."""
+
+
+UNCLOSED_RULE = "незакрытое правило"
+UNCLOSED_AT_RULE = "незакрытый at-rule"
+STRAY_BRACE = "лишняя закрывающая скобка"
+
+
 class Rule(NamedTuple):
     """Одно правило: селектор целиком и объявления внутри скобок."""
 
@@ -43,7 +52,13 @@ def stylesheet() -> str:
 
 
 def rules(css: str) -> list[Rule]:
-    """Все правила таблицы, включая вложенные в `@media`."""
+    """Все правила таблицы, включая вложенные в `@media`.
+
+    Ошибиться разбор может только громко: `StylesheetError` на
+    испорченном файле. Молчаливая ошибка здесь опаснее падения — тест
+    на цену спрашивает, объявлено ли свойство безусловно, и лишний
+    уровень вложенности сделал бы его зелёным на сломанной вёрстке.
+    """
     found: list[Rule] = []
     prelude: list[str] = []
     depth = 0
@@ -54,18 +69,35 @@ def rules(css: str) -> list[Rule]:
             selector = "".join(prelude).strip()
             prelude = []
             if selector.startswith("@"):
-                # Блочный at-rule: правила внутри разбираются дальше
+                # Блочный at-rule (`@media`, `@supports`): правила внутри
+                # разбираются дальше, но помечаются условными
                 depth += 1
             else:
-                end = css.index("}", index)
+                end = css.find("}", index)
+                if end < 0:
+                    unclosed = f"{UNCLOSED_RULE} `{selector}`"
+                    raise StylesheetError(unclosed)
                 body = css[index + 1 : end]
                 found.append(Rule(selector, body, conditional=depth > 0))
                 index = end
         elif char == "}":
+            # Объявления блока дочитаны — что не стало правилом, тому
+            # и не быть селектором. Без сброса тело `@font-face`,
+            # вложенных правил не имеющего, приклеилось бы к следующему
+            if depth == 0:
+                raise StylesheetError(STRAY_BRACE)
+            prelude = []
             depth -= 1
+        elif char == ";":
+            # At-rule на одной строке (`@import url(...);`) блока не
+            # открывает. Прими его за блочный — и `depth` не вернётся
+            # к нулю, а все правила файла станут условными
+            prelude = []
         else:
             prelude.append(char)
         index += 1
+    if depth:
+        raise StylesheetError(UNCLOSED_AT_RULE)
     return found
 
 
