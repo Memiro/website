@@ -49,6 +49,12 @@ TEMPLATE_COMMENT = re.compile(r"\{#.*?#\}")
 HEX_COLOR = re.compile(r"#[0-9a-f]{6}\b", re.IGNORECASE)
 
 
+def assert_offers_both_exits(content: str) -> None:
+    """Поиска по сайту нет: выходы со страницы ошибки — ровно эти два."""
+    assert "Каталог" in content
+    assert "Контакты" in content
+
+
 def falls(request: HttpRequest) -> HttpResponse:
     """Представление, которое всегда падает."""
     raise RuntimeError(BOOM)
@@ -90,8 +96,7 @@ def test_bad_host_renders_the_error_page(
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert "Некорректный запрос" in content
-    assert "Каталог" in content
-    assert "Контакты" in content
+    assert_offers_both_exits(content)
 
 
 @pytest.mark.django_db
@@ -105,8 +110,7 @@ def test_forbidden_view_renders_the_error_page(
 
     assert response.status_code == HTTPStatus.FORBIDDEN
     assert "Доступ закрыт" in content
-    assert "Каталог" in content
-    assert "Контакты" in content
+    assert_offers_both_exits(content)
 
 
 @pytest.mark.django_db
@@ -118,8 +122,7 @@ def test_unknown_address_renders_the_error_page(
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert "Страница не найдена" in content
-    assert "Каталог" in content
-    assert "Контакты" in content
+    assert_offers_both_exits(content)
     assert "Traceback" not in content
 
 
@@ -135,8 +138,7 @@ def test_removed_legacy_address_renders_the_gone_page(
 
     assert response.status_code == HTTPStatus.GONE
     assert "Страница удалена" in content
-    assert "Каталог" in content
-    assert "Контакты" in content
+    assert_offers_both_exits(content)
 
 
 @pytest.mark.django_db
@@ -153,6 +155,27 @@ def test_falling_view_renders_the_error_page(
     assert LITERAL_PHONE in content
     assert BOOM not in content
     assert "Traceback" not in content
+
+
+@pytest.mark.django_db
+def test_stale_form_renders_the_error_page(live: Settings) -> None:
+    """Провал CSRF идёт мимо `handler403` — у Django на него своё
+    представление, и без `CSRF_FAILURE_VIEW` оно отдаёт английскую
+    страницу с техническими подсказками.
+
+    Заявки это не касается: её форма уходит в API и получает оттуда
+    сообщение в JSON. А вот любой обычный POST витрины — касается.
+    """
+    strict = Client(enforce_csrf_checks=True)
+
+    response = strict.post("/", {})
+    content = response.content.decode()
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert "Страница устарела" in content
+    assert 'lang="ru"' in content
+    assert "CSRF" not in content
+    assert_offers_both_exits(content)
 
 
 @pytest.mark.django_db
@@ -175,8 +198,7 @@ def test_server_error_page_needs_no_database() -> None:
     content = loader.render_to_string("500.html")
 
     assert LITERAL_PHONE in content
-    assert "Каталог" in content
-    assert "Контакты" in content
+    assert_offers_both_exits(content)
 
 
 def test_server_error_template_asks_nothing_of_django() -> None:

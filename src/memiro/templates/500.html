@@ -16,7 +16,9 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: #f0f2f3; color: #15181b;
-    font-family: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    /* Golos Text здесь не назван: `@font-face` живёт в `site.css`,
+       а его эта страница не подключает — имя было бы враньём */
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   main { max-width: 1320px; margin: 0 auto; padding: 96px 24px; }

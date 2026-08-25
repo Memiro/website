@@ -61,6 +61,11 @@ if os.environ.get("DJANGO_TRUST_PROXY_SSL") == "1":
 
 ROOT_URLCONF = "memiro.urls"
 
+# Провал проверки CSRF идёт мимо `handler403`: Django зовёт отдельное
+# представление и без этой строки рисует свою английскую страницу
+# с техническими подсказками (тикет 12)
+CSRF_FAILURE_VIEW = "memiro.errors.csrf_failure"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
