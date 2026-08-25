@@ -10,6 +10,7 @@ from django.templatetags.static import static
 from django.utils.safestring import SafeString
 
 from memiro.seo import structured
+from memiro.seo.absolute import absolute_uri
 
 if TYPE_CHECKING:
     from django.template.context import RequestContext
@@ -51,5 +52,4 @@ def absolute(context: RequestContext, url: str) -> str:
     if not url:
         return ""
     path = url if url.startswith(("/", "http")) else static(url)
-    request = context["request"]
-    return str(request.build_absolute_uri(path))
+    return absolute_uri(context["request"], path)

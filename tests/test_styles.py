@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import re
 
-from django.conf import settings as django_settings
-
 from tests.cssrules import classes, rules, stylesheet
+from tests.sources import templates_dir
 
 # `class="wrap footer-grid"` и прочие соседи по одному атрибуту.
 # Кавычки любые: Django-шаблоны допускают и одинарные
@@ -28,10 +27,7 @@ PADDING_SHORTHAND = re.compile(r"(?<!-)\bpadding\s*:")
 
 def wrap_companions() -> set[str]:
     """Классы, которые в разметке стоят в одном атрибуте с `wrap`."""
-    # Каталог шаблонов берётся рядом со статикой: `settings.TEMPLATES`
-    # типизирован как `object` и mypy его не индексирует, а `STATICFILES_DIRS`
-    # — тот же `PACKAGE_DIR`, что и `DIRS` у движка шаблонов
-    templates = django_settings.STATICFILES_DIRS[0].parent / "templates"
+    templates = templates_dir()
     return {
         name
         for path in templates.rglob("*.html")

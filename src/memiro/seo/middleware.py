@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from django.http import HttpResponseGone, HttpResponsePermanentRedirect
+from django.http import HttpResponsePermanentRedirect
 
+from memiro import errors
 from .models import LegacyUrl, normalize_path
 
 if TYPE_CHECKING:
@@ -38,5 +39,8 @@ class LegacyUrlMiddleware:
         if rule is None:
             return response
         if rule.is_gone:
-            return HttpResponseGone()
+            # Своя страница, а не пустой `HttpResponseGone`: адрес живой,
+            # человек по нему пришёл и должен увидеть, куда идти дальше
+            # (тикет 12 набора `owner-revision`)
+            return errors.GONE.view(request)
         return HttpResponsePermanentRedirect(rule.new_path)

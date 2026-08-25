@@ -1,0 +1,58 @@
+{# 500-я — единственная страница сайта без `base.html`. #}
+{# Django рисует её через `django.views.defaults.server_error`, а тот #}
+{# зовёт шаблон без `request`: контекст-процессоров нет, и переменная #}
+{# контактов развернулась бы в пустоту. Упавшая база — самая частая причина 500, #}
+{# так что страница не спрашивает ни базу, ни контекст: телефон литералом, #}
+{# стили строкой. Ссылки — тоже литералами: `{% url %}` тянет urlconf, #}
+{# а он на этой странице может быть и виновником. #}
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ошибка на сервере — memiro</title>
+<meta name="robots" content="noindex">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f0f2f3; color: #15181b;
+    font-family: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1320px; margin: 0 auto; padding: 96px 24px; }
+  .code {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: #3c5b6e;
+  }
+  .code::before { content: ""; width: 28px; height: 1px; background: currentColor; }
+  h1 {
+    margin-top: 18px; font-size: clamp(30px, 3.9vw, 54px);
+    font-weight: 700; line-height: 1.04; letter-spacing: -0.03em;
+  }
+  p { margin-top: 18px; max-width: 62ch; font-size: 19px; line-height: 1.55; color: #434a50; }
+  .actions { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 14px; }
+  a.btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 19px 38px; border: 1px solid transparent;
+    font-size: 16px; font-weight: 600; text-decoration: none; white-space: nowrap;
+  }
+  .primary { background: #15181b; color: #f0f2f3; }
+  .ghost { padding: 18px 34px; border-color: #828689; color: #15181b; }
+</style>
+</head>
+<body>
+<main>
+  <span class="code">Ошибка 500</span>
+  <h1>Что-то сломалось на нашей стороне</h1>
+  <p>Страница не открылась из-за сбоя на сервере. Мы уже знаем о нём —
+    попробуйте обновить страницу через несколько минут.</p>
+  <p>Если зеркало нужно сейчас, позвоните: <a href="tel:+79812304050">+7 981 230-40-50</a>.
+    Менеджер примет заявку без сайта.</p>
+  <div class="actions">
+    <a class="btn primary" href="/catalog/">Каталог</a>
+    <a class="btn ghost" href="/contacts/">Контакты</a>
+  </div>
+</main>
+</body>
+</html>

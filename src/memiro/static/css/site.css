@@ -483,6 +483,10 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .legal-note p, .page-note p { margin-top: 14px; color: var(--body); max-width: 70ch; }
 .page-note { margin-top: 40px; }
 
+/* Страницы ошибок: тот же `.page`, что у статических, плюс пара выходов.
+   Своей 500-й эти правила не достаются — она везёт стили в себе */
+.error-actions { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 14px; }
+
 .contacts-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px; align-items: start; }
 .contacts-info { display: grid; gap: 28px; }
 .contact-block h3 { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -662,6 +666,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .footer ul { gap: 11px; }
 
   .page-lead { font-size: 17px; }
+  .error-actions { display: grid; }
   .feature-grid { grid-template-columns: 1fr; gap: 8px; }
   .feature { padding: 24px 22px; }
   .legal-note { padding: 26px 22px; }

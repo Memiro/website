@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
+from memiro import errors
 from memiro.catalog.views import landing
 from memiro.seo.sitemaps import SITEMAPS
 from memiro.seo.views import robots
@@ -31,6 +32,13 @@ urlpatterns = [
     # достаться настоящим страницам (Landing.clean проверяет это же)
     path("<slug:slug>/", landing, name="landing"),
 ]
+
+# Страницы ошибок: мету и код ответа даёт представление (memiro/errors.py).
+# 500-й здесь нет намеренно — она остаётся за штатным Django, потому что
+# рисуется без `request` и без базы
+handler400 = errors.BAD_REQUEST.view
+handler403 = errors.FORBIDDEN.view
+handler404 = errors.NOT_FOUND.view
 
 if settings.DEBUG:
     # Медиа (фото товаров) в разработке отдаёт runserver

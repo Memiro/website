@@ -14,8 +14,9 @@ import re
 from http import HTTPStatus
 
 import pytest
-from django.conf import settings as django_settings
 from django.test import Client
+
+from tests.sources import templates_dir
 
 # Тело комментария не содержит `{#`: иначе незакрытый комментарий
 # проглотил бы файл до следующего `#}` и отчёт стал бы нечитаемым
@@ -36,10 +37,7 @@ DATALESS_PAGES = (
 
 def test_no_multiline_django_comments() -> None:
     """Многострочный `{# #}` — не комментарий, а текст на странице."""
-    # Каталог шаблонов берётся рядом со статикой: `settings.TEMPLATES`
-    # типизирован как `object` и mypy его не индексирует, а `STATICFILES_DIRS`
-    # — тот же `PACKAGE_DIR`, что и `DIRS` у движка шаблонов
-    templates = django_settings.STATICFILES_DIRS[0].parent / "templates"
+    templates = templates_dir()
     leaking = [
         f"{path.relative_to(templates)}: {match.group(0)[:60]}…"
         for path in sorted(templates.rglob("*.html"))

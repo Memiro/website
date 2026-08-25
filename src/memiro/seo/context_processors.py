@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .absolute import absolute_uri
 from .meta import SITE_NAME, PageMeta
 
 if TYPE_CHECKING:
@@ -28,6 +29,6 @@ def defaults(request: HttpRequest) -> dict[str, Any]:
         "site_name": SITE_NAME,
         # Canonical по умолчанию — сама страница; каталог и карточка
         # перекрывают его по ADR-0003
-        "canonical": request.build_absolute_uri(request.path),
+        "canonical": absolute_uri(request, request.path),
         "breadcrumbs": [],
     }

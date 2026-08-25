@@ -7,13 +7,13 @@
 <title>{{ meta.title }}</title>
 <meta name="description" content="{{ meta.description }}">
 {% if meta.robots %}<meta name="robots" content="{{ meta.robots }}">{% endif %}
-<link rel="canonical" href="{{ canonical }}">
+{% if canonical %}<link rel="canonical" href="{{ canonical }}">{% endif %}
 <meta property="og:site_name" content="{{ site_name }}">
 <meta property="og:locale" content="ru_RU">
 <meta property="og:type" content="{{ meta.og_type }}">
 <meta property="og:title" content="{{ meta.title }}">
 <meta property="og:description" content="{{ meta.description }}">
-<meta property="og:url" content="{{ canonical }}">
+{% if canonical %}<meta property="og:url" content="{{ canonical }}">{% endif %}
 {% absolute meta.image as og_image %}{% if og_image %}<meta property="og:image" content="{{ og_image }}">{% endif %}
 <meta name="twitter:card" content="summary_large_image">
 {% block head %}{% endblock %}
