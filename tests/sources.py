@@ -42,6 +42,11 @@ def templates_dir() -> Path:
     return django_settings.STATICFILES_DIRS[0].parent / "templates"
 
 
-def static_dir() -> Path:
-    """Каталог статики витрины."""
-    return django_settings.STATICFILES_DIRS[0]
+def scripts_dir() -> Path:
+    """Каталог скриптов витрины."""
+    return django_settings.STATICFILES_DIRS[0] / "js"
+
+
+def site_css() -> Path:
+    """Таблица стилей витрины."""
+    return django_settings.STATICFILES_DIRS[0] / "css" / "site.css"

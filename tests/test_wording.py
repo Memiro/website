@@ -22,7 +22,7 @@ import pytest
 from django.test import Client
 
 from memiro.catalog.models import Category, Product
-from tests.sources import DATALESS_PAGES, static_dir, templates_dir
+from tests.sources import DATALESS_PAGES, scripts_dir, templates_dir
 
 CATEGORY_URL = "/catalog/zerkala/"
 PRODUCT_URL = "/catalog/zerkala/halo-moon/"
@@ -41,6 +41,12 @@ BANNED = (
 CODE = re.compile(
     r"<(script|style)\b[^>]*>.*?</\1>", re.DOTALL | re.IGNORECASE
 )
+# Разметка — исключение: она уезжает в выдачу, и имя хлебной крошки
+# поисковик покажет там же, где витрина показывает заголовок
+JSONLD = re.compile(
+    r"<script[^>]*application/ld\+json[^>]*>(.*?)</script>",
+    re.DOTALL | re.IGNORECASE,
+)
 TAG = re.compile(r"<[^>]*>")
 # Подписи, которые произносит чтец: тегом они срезаются вместе с ним
 SPOKEN = re.compile(r'\b(?:title|aria-label|alt)="([^"]*)"', re.IGNORECASE)
@@ -54,9 +60,14 @@ LITERALS = (
 
 
 def spoken(html: str) -> str:
-    """Всё, что покупатель прочитает или услышит от чтеца."""
+    """Всё, что покупатель прочитает, услышит от чтеца или найдёт в выдаче."""
     body = CODE.sub(" ", html)
-    return f"{TAG.sub(' ', body)} {' '.join(SPOKEN.findall(body))}"
+    parts = (
+        TAG.sub(" ", body),
+        *SPOKEN.findall(body),
+        *JSONLD.findall(html),
+    )
+    return " ".join(parts)
 
 
 def banned_in(text: str) -> list[str]:
@@ -104,7 +115,7 @@ def test_catalog_pages_never_say_cart(client: Client, url: str) -> None:
 
 def test_scripts_never_say_cart() -> None:
     """Текст, который скрипт печатает на странице, — та же витрина."""
-    scripts = sorted((static_dir() / "js").glob("*.js"))
+    scripts = sorted(scripts_dir().glob("*.js"))
     assert scripts, "скриптов витрины не нашлось — тест смотрит не туда"
 
     leaking = [

@@ -16,7 +16,7 @@ from __future__ import annotations
 import re
 from typing import NamedTuple
 
-from django.conf import settings as django_settings
+from tests.sources import site_css
 
 COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 CLASS_IN_SELECTOR = re.compile(r"\.([a-z0-9-]+)", re.IGNORECASE)
@@ -42,13 +42,8 @@ class Rule(NamedTuple):
 
 
 def stylesheet() -> str:
-    """Текст `site.css` без комментариев.
-
-    Каталог статики берётся из `STATICFILES_DIRS`: `settings.TEMPLATES`
-    типизирован как `object` и mypy его не индексирует.
-    """
-    path = django_settings.STATICFILES_DIRS[0] / "css" / "site.css"
-    return COMMENT.sub("", path.read_text(encoding="utf-8"))
+    """Текст `site.css` без комментариев."""
+    return COMMENT.sub("", site_css().read_text(encoding="utf-8"))
 
 
 def rules(css: str) -> list[Rule]:

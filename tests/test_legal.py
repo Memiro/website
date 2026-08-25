@@ -9,7 +9,6 @@ import re
 from http import HTTPStatus
 
 import pytest
-from django.conf import settings as django_settings
 from django.test import Client
 from pytest_django.fixtures import Settings
 
@@ -17,6 +16,7 @@ from memiro.catalog.models import Category, Product
 from memiro.inquiries.models import Inquiry
 from memiro.legal import analytics_consent, checks, seller
 from memiro.legal.privacy import PRIVACY_VERSION
+from tests.sources import site_css
 
 COUNTER = "12345678"
 
@@ -229,8 +229,7 @@ def test_fonts_are_self_hosted() -> None:
     Fonts внутри стилей утёк бы мимо `test_pages_reach_no_foreign_services`
     — а это ровно та локализация ПД (23-ФЗ), которую тикет и защищает.
     """
-    stylesheet = django_settings.STATICFILES_DIRS[0] / "css" / "site.css"
-    css = stylesheet.read_text(encoding="utf-8")
+    css = site_css().read_text(encoding="utf-8")
 
     assert "@font-face" in css
     for host in FOREIGN_HOSTS:
