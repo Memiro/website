@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from importlib import import_module
 from typing import TYPE_CHECKING
 
 import pytest
@@ -18,6 +19,11 @@ if TYPE_CHECKING:
 
     from django.db.migrations.state import StateApps
     from django.db.models import Model
+
+# Имя модуля миграции начинается с цифры — обычным import не взять
+moving = import_module(
+    "memiro.inquiries.migrations.0005_configuration_per_item"
+)
 
 BEFORE = ("inquiries", "0004_inquiry_calculated_price_inquiry_configuration")
 AFTER = ("inquiries", "0005_configuration_per_item")
@@ -84,19 +90,62 @@ def test_the_snapshot_moves_to_the_only_item(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_an_inquiry_without_items_loses_nothing(
+def test_a_free_form_inquiry_passes_untouched(
     at_the_old_state: StateApps,
 ) -> None:
     """Заявке свободной формой снимок отдавать некому — и нечему.
 
-    Позиции у неё нет вовсе, и миграция проходит мимо, а не падает.
+    Позиции у неё нет вовсе, снимка тоже, и миграция проходит мимо,
+    а не падает.
     """
-    inquiry(at_the_old_state, source="home", configuration="")
+    inquiry(
+        at_the_old_state,
+        source="home",
+        configuration="",
+        calculated_price=None,
+        comment="Перезвоните после шести",
+    )
 
     new = migrate(AFTER)
 
     assert not new.get_model("inquiries", "InquiryItem").objects.exists()
-    assert new.get_model("inquiries", "Inquiry").objects.count() == 1
+    stored = new.get_model("inquiries", "Inquiry").objects.get()
+    assert stored.comment == "Перезвоните после шести"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_snapshot_without_any_item_moves_to_the_comment(
+    at_the_old_state: StateApps,
+) -> None:
+    """Позиции у снимка нет — но и терять его нельзя (тикет 14).
+
+    Так до тикета 07 приходил расчёт с карточки: старый разбор писал
+    в снимок габариты, даже не найдя единственного товара. Позиции
+    такому снимку не создать — зеркало в ней было бы выдуманным, —
+    и он уходит в комментарий, где его не примут за конфигурацию.
+    """
+    inquiry(at_the_old_state, comment="Нужен замер")
+
+    new = migrate(AFTER)
+
+    stored = new.get_model("inquiries", "Inquiry").objects.get()
+    assert stored.comment.startswith("Нужен замер")
+    assert moving.KEPT_IN_COMMENT in stored.comment
+    assert CONFIGURATION in stored.comment
+    assert f"{PRICE} ₽" in stored.comment
+
+
+@pytest.mark.django_db(transaction=True)
+def test_a_kept_snapshot_says_when_there_was_no_price(
+    at_the_old_state: StateApps,
+) -> None:
+    """Цены у снимка могло не быть — и это пишется словами."""
+    inquiry(at_the_old_state, calculated_price=None)
+
+    new = migrate(AFTER)
+
+    stored = new.get_model("inquiries", "Inquiry").objects.get()
+    assert "цена не рассчитана" in stored.comment
 
 
 @pytest.mark.django_db(transaction=True)
@@ -116,3 +165,62 @@ def test_a_snapshot_is_not_guessed_onto_one_of_many_items(
 
     items = new.get_model("inquiries", "InquiryItem").objects.all()
     assert [stored.configuration for stored in items] == ["", ""]
+    # Но и не потерян: раздать его некому, забыть — нельзя
+    assert (
+        CONFIGURATION
+        in new.get_model("inquiries", "Inquiry").objects.get().comment
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_the_snapshot_comes_back_to_the_inquiry_on_rollback(
+    at_the_old_state: StateApps,
+) -> None:
+    """Откат дорогой, и потому проверен: снимок возвращается заявке.
+
+    ADR-0009 зовёт это решение дорогим в откате — тем важнее, чтобы
+    откат отрабатывал, а не падал на первой же настроенной позиции.
+    """
+    old = inquiry(at_the_old_state, configuration="", calculated_price=None)
+    add_item(at_the_old_state, old, "Halo Moon")
+    new = migrate(AFTER)
+    stored = new.get_model("inquiries", "InquiryItem").objects.get()
+    stored.configuration = CONFIGURATION
+    stored.calculated_price = PRICE
+    stored.save()
+
+    back = migrate(BEFORE)
+
+    returned = back.get_model("inquiries", "Inquiry").objects.get()
+    assert returned.configuration == CONFIGURATION
+    assert returned.calculated_price == PRICE
+
+
+@pytest.mark.django_db(transaction=True)
+def test_the_rollback_returns_the_first_configured_position(
+    at_the_old_state: StateApps,
+) -> None:
+    """Двум конфигурациям в старой модели места нет — берётся первая.
+
+    Она первая по `pk`: `InquiryItem` так и упорядочен, и откат не
+    зависит от того, в каком порядке база вернула строки.
+    """
+    old = inquiry(at_the_old_state, configuration="", calculated_price=None)
+    add_item(at_the_old_state, old, "Halo Moon")
+    add_item(at_the_old_state, old, "View Match")
+    new = migrate(AFTER)
+    positions = new.get_model("inquiries", "InquiryItem").objects.order_by(
+        "pk"
+    )
+    for position, label in zip(
+        positions, (CONFIGURATION, "1200 × 400 мм"), strict=True
+    ):
+        position.configuration = label
+        position.save()
+
+    back = migrate(BEFORE)
+
+    assert (
+        back.get_model("inquiries", "Inquiry").objects.get().configuration
+        == CONFIGURATION
+    )

@@ -149,9 +149,10 @@ def _published(ids: list[int]) -> tuple[dict[int, Product], list[int]]:
     Одна выборка на оба эндпоинта: подборке пропавшие безразличны,
     заявке — нет, поэтому решает вызывающий, а не запрос.
 
-    Отдаётся отображение, а не список: заявка кладёт по позиции на
-    каждую присланную конфигурацию, и одно зеркало в двух размерах —
-    две позиции с одним товаром. Список схлопнул бы их в одну.
+    Отдаётся отображение, а не список: заявка идёт по присланным
+    позициям и спрашивает товар по id. Список пришлось бы искать
+    линейно, а совпадение по порядку тут и не выйдет — пропавшие
+    товары из него уже вынуты.
     """
     unique = list(dict.fromkeys(ids))
     found = {
@@ -230,12 +231,16 @@ def _snapshot(product: Product, sent: ConfigurationInput | None) -> Snapshot:
     return Snapshot(quote.label, quote.total)
 
 
-def _item(inquiry: Inquiry, product: Product, sent: ItemInput) -> InquiryItem:
+def _item(
+    inquiry: Inquiry,
+    product: Product,
+    sent: ConfigurationInput | None,
+) -> InquiryItem:
     """Позиция снимком: название, цена «от» и своя конфигурация.
 
     Цену конфигурации ставит сервер — как и редакцию согласия.
     """
-    snapshot = _snapshot(product, sent.configuration)
+    snapshot = _snapshot(product, sent)
     return InquiryItem(
         inquiry=inquiry,
         product=product,
@@ -303,7 +308,7 @@ class InquiryController(Controller[PydanticSerializer]):
             # Позиция на каждую присланную, а не на каждый товар: одно
             # зеркало в двух размерах — две позиции (ADR-0009)
             InquiryItem.objects.bulk_create(
-                _item(inquiry, products[sent.product], sent)
+                _item(inquiry, products[sent.product], sent.configuration)
                 for sent in payload.items
             )
         return inquiry

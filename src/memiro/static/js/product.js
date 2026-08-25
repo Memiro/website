@@ -109,8 +109,13 @@
   // бы с этим, потому конфигурацию объявляем сами. Товар в событии
   // назван, чтобы чужая кнопка на той же странице её не подхватила.
   // Цены в объявлении нет — её называет сервер, пересчитывая
-  // конфигурацию заново
-  const announce = (sent) =>
+  // конфигурацию заново.
+  //
+  // Объявляется только полная конфигурация. Опустевшее поле ширины —
+  // не новая настройка, а полпути к ней: объявив её, калькулятор
+  // стёр бы у уже добавленного зеркала размеры, которые покупатель
+  // ввёл и видел, и менеджер получил бы позицию без конфигурации
+  const publish = (sent) =>
     document.dispatchEvent(
       new CustomEvent("memiro:configured", {
         detail: { product: Number(root.dataset.product), configuration: sent },
@@ -123,11 +128,11 @@
     // размер напечатал бы цену над опустевшим полем
     const ticket = ++latest;
     const sent = configuration();
-    announce(sent);
     if (!sent) {
       say(NOTES.sizes);
       return;
     }
+    publish(sent);
     const query = new URLSearchParams({
       product: root.dataset.product,
       width_mm: sent.width_mm,

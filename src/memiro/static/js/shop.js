@@ -100,17 +100,29 @@
   // настроил: событием, а не общей функцией. У события есть свой
   // товар, и вторая кнопка «Добавить в заявку» на той же странице
   // чужих размеров не подхватит. Второй разбор тех же полей здесь
-  // однажды разошёлся бы с первым — потому спрашиваем, а не читаем
-  const announced = new Map();
+  // однажды разошёлся бы с первым — потому слушаем, а не читаем.
+  // Последнее объявленное по каждому товару: кнопка нажимается
+  // когда угодно, а поля к тому времени давно набраны
+  const latest = new Map();
+
+  const same = (one, other) => JSON.stringify(one) === JSON.stringify(other);
 
   document.addEventListener(CONFIGURED, (event) => {
     const { product, configuration: sent } = event.detail;
-    announced.set(product, sent);
+    latest.set(product, sent);
     const items = read("cart");
-    if (!items.some((item) => item.product === product)) return;
     // Зеркало уже в подборке: менеджеру оно должно уехать таким,
     // каким покупатель видит его сейчас, а не каким добавил. Иначе
-    // передумавший о размере получил бы не то, что заказывал
+    // передумавший о размере получил бы не то, что заказывал.
+    // Ничего не поменялось — не пишем: калькулятор объявляет
+    // конфигурацию на каждый пересчёт, в том числе на тот же размер
+    if (
+      !items.some(
+        (item) => item.product === product && !same(item.configuration, sent),
+      )
+    ) {
+      return;
+    }
     write(
       "cart",
       items.map((item) =>
@@ -181,7 +193,7 @@
     const id = Number(button.dataset.product);
     // Настроенное на карточке едет в подборку вместе с зеркалом
     // (тикет 14). Товару без калькулятора конфигурации взять неоткуда
-    toggle(button.dataset.toggle, id, announced.get(id) ?? null);
+    toggle(button.dataset.toggle, id, latest.get(id) ?? null);
     paint();
   });
 

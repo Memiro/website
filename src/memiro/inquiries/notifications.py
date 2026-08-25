@@ -70,7 +70,10 @@ def inquiry_message(inquiry: Inquiry) -> str:
         lines.append(f"E-mail: {inquiry.email}")
     items = list(inquiry.items.all())
     if items:
-        lines.append("Товары:")
+        # «Состав», а не «Товары»: строк столько, сколько позиций,
+        # и одно зеркало двумя размерами — две из них (CONTEXT.md,
+        # «Позиция заявки»)
+        lines.append("Состав заявки:")
         for item in items:
             lines += item_lines(item)
     if inquiry.comment:
