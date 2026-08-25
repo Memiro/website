@@ -2,7 +2,7 @@ from itertools import groupby
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.forms import (
     BaseInlineFormSet,
     CheckboxSelectMultiple,
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from django.http import HttpRequest
 
 from memiro.singleton import SingletonAdmin
-from . import calculator, tariffs
+from . import calculator, repricing, tariffs
 from .formatting import rub
 from .models import (
     MAX_LANDING_ATTRIBUTES,
@@ -31,6 +31,7 @@ from .models import (
     Category,
     Landing,
     LandingCondition,
+    MaterialPrice,
     PricingSettings,
     Product,
     ProductAttribute,
@@ -541,6 +542,215 @@ class ProductAdmin(admin.ModelAdmin):
     @admin.display(description="превью большого фото")
     def preview_large(self, obj: Product) -> str:
         return _preview(obj.photo_large)
+
+
+# --- экран «Материалы и цены» (тикет 17) ------------------------------
+
+# Пункт фильтра, которого нет среди единиц расхода: пустую строку
+# `choices` не знает, а искать значения без тарифа владельцу нужно
+NO_TARIFF = "none"
+
+# Сказано ли о пересчёте в этом запросе: пачкой правят по два десятка
+# строк, и двадцать одинаковых сообщений перестают читать
+REPRICING_ANNOUNCED = "_memiro_repricing_announced"
+
+# Что на экране цен правится, а что только показывается. Одной тройкой
+# на форму и на список: разойдясь, они дали бы строку, поля которой
+# правила справочника не проверяют
+PRICE_COLUMNS = ("unit", "rate", "scaled_by_shape")
+
+
+class MaterialPriceForm(ModelForm):
+    """Строка экрана цен: правила справочника целиком, полей меньше.
+
+    `AttributeValue.clean()` умеет указать на `value` и на
+    `marks_absence` — поля, которых в строке списка нет. Django на
+    ошибку по чужому полю отвечает `ValueError` и роняет страницу,
+    поэтому такая ошибка показывается строкой целиком: правило должно
+    звучать, а не падать.
+    """
+
+    class Meta:
+        model = MaterialPrice
+        fields = PRICE_COLUMNS
+
+    # `Any` — потому что в базе метод перегружен: поле с ошибкой
+    # приходит и строкой, и None, и словарём, и сузить это здесь
+    # значило бы отвергнуть половину вызовов Django
+    def add_error(self, field: Any, error: Any) -> None:  # noqa: ANN401
+        if field is not None or not hasattr(error, "error_dict"):
+            super().add_error(field, error)
+            return
+        own = {
+            name: found
+            for name, found in error.error_dict.items()
+            if name in self.fields
+        }
+        foreign = [
+            message
+            for name, found in error.error_dict.items()
+            if name not in self.fields
+            for message in found
+        ]
+        if foreign:
+            super().add_error(NON_FIELD_ERRORS, foreign)
+        if own:
+            super().add_error(None, own)
+
+
+class UnitFilter(admin.SimpleListFilter):
+    """Единица расхода — и отдельным пунктом её отсутствие.
+
+    425 значений переехали со старого сайта до заведения тарифов, и
+    «бесплатно» от «руки не дошли» в данных не отличить: отличает их
+    владелец, глядя на список (тикет 17). Пункт «тариф не заведён»
+    собирает такие строки в одно место — обычный фильтр по полю его
+    не даёт, пустая строка среди `choices` не значится.
+    """
+
+    title = "единица расхода"
+    parameter_name = "unit"
+
+    def lookups(
+        self,
+        request: HttpRequest,  # noqa: ARG002 — сигнатура Django
+        model_admin: admin.ModelAdmin,  # noqa: ARG002 — сигнатура Django
+    ) -> tuple[tuple[str, str], ...]:
+        return (
+            *AttributeValue.Unit.choices,
+            (NO_TARIFF, "тариф не заведён"),
+        )
+
+    def queryset(
+        self,
+        request: HttpRequest,  # noqa: ARG002 — сигнатура Django
+        queryset: QuerySet[MaterialPrice],
+    ) -> QuerySet[MaterialPrice]:
+        chosen = self.value()
+        if chosen is None:
+            return queryset
+        return queryset.filter(unit="" if chosen == NO_TARIFF else chosen)
+
+
+@admin.register(MaterialPrice)
+class MaterialPriceAdmin(admin.ModelAdmin):
+    """Все платные строки справочника одним плоским списком.
+
+    Экран не заводит второй правды о цене: это тот же справочник,
+    показанный поперёк атрибутов (ADR-0007). Движок расчёта, сборка
+    тарифов и пересчёт он не трогает — только даёт до них дойти.
+
+    Поиск ищет по названию значения, а не по атрибуту: атрибут в этом
+    списке спрашивают фильтром, и вторая дорога к тому же сужению
+    сделала бы выдачу поиска необъяснимой.
+    """
+
+    form = MaterialPriceForm
+    list_display = ("value", "attribute", "unit", "rate", "scaled_by_shape")
+    list_display_links = ("value",)
+    list_editable = PRICE_COLUMNS
+    list_filter = (
+        ("attribute", admin.RelatedOnlyFieldListFilter),
+        UnitFilter,
+    )
+    search_fields = ("value",)
+    ordering = ("attribute__order", "attribute__name", "order", "value")
+    # На странице одной строки те же три поля, что и в списке, — но
+    # там они стоят без подписи, чьи они: «за м², 4 000» одинаково
+    # читается у полотна и у рамы. Атрибут и значение её и называют,
+    # а правятся они там же, где заводятся, — у атрибута
+    fields = ("attribute", "value", *PRICE_COLUMNS)
+    readonly_fields = ("attribute", "value")
+
+    def get_queryset(self, request: HttpRequest) -> QuerySet[MaterialPrice]:
+        """Строки, которые стоят денег или могут начать стоить.
+
+        Отсутствие признака — «без рамы», «без подсветки» — тарифа не
+        несёт и по правилу `clean()` нести не может: держать его на
+        экране цен значило бы предлагать заведомо отвергаемое. Правило
+        тут не столько действует, сколько исполнено заранее — строке,
+        которой на экране нет, ставку не поставить вовсе.
+        """
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("attribute")
+            .exclude(marks_absence=True)
+        )
+
+    def has_add_permission(
+        self,
+        request: HttpRequest,  # noqa: ARG002 — сигнатура Django
+    ) -> bool:
+        """Значения заводят у их атрибута, а не здесь.
+
+        Строка справочника — это атрибут и значение; на экране цен их
+        обоих нет, и заводить строку тут значило бы спрашивать о
+        справочнике посреди разговора о деньгах. Удаление закрыто по
+        той же причине, и заодно потому, что удалить с экрана цен
+        значение, на которое опирается товар, слишком легко.
+        """
+        return False
+
+    def has_delete_permission(
+        self,
+        request: HttpRequest,  # noqa: ARG002 — сигнатура Django
+        obj: MaterialPrice | None = None,  # noqa: ARG002 — сигнатура Django
+    ) -> bool:
+        return False
+
+    def get_changelist_form(
+        self, request: HttpRequest, **kwargs: object
+    ) -> type[ModelForm]:
+        """Строку списка правит форма экрана, а не голая `ModelForm`.
+
+        Иначе правила справочника, указавшие на поле вне строки,
+        уронили бы страницу пакетной правки.
+        """
+        return super().get_changelist_form(request, form=self.form, **kwargs)
+
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: MaterialPrice,
+        form: ModelForm,
+        change: bool,  # noqa: FBT001 — сигнатура Django
+    ) -> None:
+        """Сохранить строку тем классом, которым она живёт, — и сказать.
+
+        Пересчёт подписан на `AttributeValue` (`repricing.connect()`),
+        а прокси шлёт сигналы от своего имени: сохранённая от имени
+        экрана строка оставила бы цены старыми, и молча.
+
+        И вернуть класс обратно: историю правок админка пишет после
+        сохранения и кладёт её на тот класс, которым объект назвался.
+        Уехав вместе с сигналом, история легла бы мимо экрана — и
+        «История» у строки цен всегда была бы пуста.
+        """
+        obj.__class__ = AttributeValue  # type: ignore[assignment]
+        super().save_model(request, obj, form, change)
+        obj.__class__ = MaterialPrice
+        self._announce_repricing(request)
+
+    def _announce_repricing(self, request: HttpRequest) -> None:
+        """Сказать, что правка тарифа доехала до цен.
+
+        Пересчёт молчалив: владелец, поднявший цену полотна, видит
+        только «изменено 1 значение» и уходит проверять карточки
+        руками. Считается он здесь же, в сохранении, — сообщение
+        говорит о том, что уже случилось, а не обещает.
+        """
+        if getattr(request, REPRICING_ANNOUNCED, False):
+            return
+        setattr(request, REPRICING_ANNOUNCED, True)
+        variants = repricing.all_variants().count()
+        told = (
+            f"Цены пересчитаны: предпосчитанных вариантов — {variants}, "
+            "цены товаров взяты по самому дешёвому из них."
+            if variants
+            else "Предпосчитанных вариантов пока нет — пересчитывать нечего."
+        )
+        messages.info(request, told)
 
 
 @admin.register(PricingSettings)
