@@ -16,10 +16,16 @@
     <span>E-mail</span>
     <input name="email" type="email" maxlength="254" autocomplete="email">
   </label>
+  {% comment %}Комментарий — свободной форме, где товара нет вовсе и сказать
+     о заявке больше негде. На странице заявки его не показываем: у каждого
+     зеркала там своё пожелание, и общее поле рядом с ними спрашивало бы,
+     куда писать (тикет 15). Поле модели остаётся{% endcomment %}
+  {% if source != "cart" %}
   <label class="field">
     <span>Комментарий</span>
     <textarea name="comment" rows="3" maxlength="2000"></textarea>
   </label>
+  {% endif %}
   {% comment %}Чекбокс намеренно непредотмечен: предотмеченное согласие РКН
      не принимает (ст. 9 152-ФЗ). Сервер отвергает заявку без него{% endcomment %}
   <label class="consent">

@@ -32,8 +32,28 @@ class InquiryNotifier(Protocol):
     def send(self, inquiry: Inquiry) -> None: ...
 
 
+def wish_lines(wish: str) -> list[str]:
+    """Пожелание позиции — своими строками под своим зеркалом.
+
+    Переносы покупателя сохраняются, но каждая строка получает тот же
+    отступ, что и расчёт: иначе вторая строка пожелания встала бы
+    вровень с позициями и прочиталась бы как ещё одно зеркало.
+
+    Пустые строки остаются пустыми, а не выбрасываются: абзацы ставил
+    покупатель, и править его текст письмо не вправе. Отступа им не
+    достаётся — строка из одних пробелов читается хуже пустой.
+    """
+    said = wish.splitlines()
+    if not any(line.strip() for line in said):
+        return []
+    return [
+        f"  Пожелание: {said[0]}",
+        *(f"  {line}" if line.strip() else "" for line in said[1:]),
+    ]
+
+
 def item_lines(item: InquiryItem) -> list[str]:
-    """Позиция в письме: зеркало, его конфигурация и её цена.
+    """Позиция в письме: зеркало, его расчёт и его пожелание.
 
     Конфигурация печатается у своего зеркала, а не над составом: у
     зеркала в ванную и у зеркала в прихожую разные размеры, и
@@ -50,13 +70,15 @@ def item_lines(item: InquiryItem) -> list[str]:
     # Цену словами называет сама позиция: письмо и админка читают
     # заявку одинаково, а «не рассчитана» пишется в одном месте
     lines = [f"— {item.product_name}, {item.product_price_label()}"]
-    if not item.configuration:
-        return lines
-    # То, что покупатель настроил на карточке, — менеджер звонит
-    # со знанием дела, а не переспрашивает размеры
-    lines.append(f"  Расчёт: {item.configuration}")
-    lines.append(f"  Показанная цена: {item.calculated_price_label()}")
-    return lines
+    if item.configuration:
+        # То, что покупатель настроил на карточке, — менеджер звонит
+        # со знанием дела, а не переспрашивает размеры
+        lines.append(f"  Расчёт: {item.configuration}")
+        lines.append(f"  Показанная цена: {item.calculated_price_label()}")
+    # Пожелание печатается и там, где расчёта не было вовсе: у товара
+    # без калькулятора настраивать было нечего, а сказать словами
+    # покупателю есть что (тикет 15)
+    return lines + wish_lines(item.wish)
 
 
 def inquiry_message(inquiry: Inquiry) -> str:

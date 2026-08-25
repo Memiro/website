@@ -4,7 +4,8 @@
 // Подборка живёт в localStorage: регистрации нет, сервер о ней не знает.
 // Хранит она не список id, а позиции — товар и то, каким его настроили
 // на карточке: заявка из двух зеркал разных размеров иначе запомнила бы
-// одно (тикет 14, ADR-0009).
+// одно (тикет 14, ADR-0009). Вместе с зеркалом лежит и личное пожелание
+// к нему — свободный текст, который в расчёт не идёт (тикет 15).
 // Названия и цены всегда берутся с сервера — цена остаётся его правдой.
 // Вид подборки (`kind`) ездит параметром не про запас, а потому что
 // приходит из разметки: `data-toggle`, `data-count`, `data-collection`.
@@ -21,7 +22,7 @@
     try {
       return JSON.parse(blob.textContent);
     } catch {
-      return { max_items: 100, min_phone_digits: 7 };
+      return { max_items: 100, min_phone_digits: 7, max_wish_length: 500 };
     }
   })();
 
@@ -38,6 +39,14 @@
     };
   };
 
+  // Личное пожелание к зеркалу: свободный текст покупателя, в расчёт
+  // он не идёт (тикет 15). Обрезается тем же потолком, что у эндпоинта:
+  // длинное пожелание отвергло бы всю заявку вместе с контактами
+  const wish = (value) =>
+    typeof value === "string"
+      ? value.trim().slice(0, limits.max_wish_length)
+      : "";
+
   // Позиция подборки — товар и то, каким его настроили на карточке:
   // габариты и выбранные значения (тикет 14, ADR-0009). Цены здесь
   // нет: её называет сервер, пересчитывая конфигурацию теми же
@@ -46,11 +55,13 @@
   const entry = (value) => {
     // Подборка, сложенная до переезда, — просто список id. Своей
     // конфигурации у неё не было, и выдумывать её нечем
-    if (Number.isInteger(value)) return { product: value, configuration: null };
+    if (Number.isInteger(value))
+      return { product: value, configuration: null, wish: "" };
     if (!value || !Number.isInteger(value.product)) return null;
     return {
       product: value.product,
       configuration: configuration(value.configuration),
+      wish: wish(value.wish),
     };
   };
 
@@ -76,7 +87,7 @@
     }
   };
 
-  const toggle = (kind, id, configured) => {
+  const toggle = (kind, id, configured, said) => {
     const items = read(kind);
     if (items.some((item) => item.product === id)) {
       write(
@@ -90,8 +101,50 @@
       announce(`Больше ${limits.max_items} товаров в заявку не помещается.`);
       return false;
     }
-    write(kind, [...items, { product: id, configuration: configured }]);
+    write(kind, [
+      ...items,
+      { product: id, configuration: configured, wish: said },
+    ]);
     return true;
+  };
+
+  // ---------- Личное пожелание ----------
+
+  // Пожелание правится у уже собранного зеркала: покупатель дописывает
+  // его на карточке после нажатия и на странице заявки, передумав
+  // (тикет 15). Позиции нет в подборке — писать некуда, и это не
+  // потеря: пожелание уедет вместе с зеркалом, когда его добавят
+  const remember = (id, said) => {
+    const items = read("cart");
+    if (!items.some((item) => item.product === id && item.wish !== said)) {
+      return;
+    }
+    write(
+      "cart",
+      items.map((item) =>
+        item.product === id ? { ...item, wish: said } : item,
+      ),
+    );
+  };
+
+  // Поле пожелания карточки — своё у каждого товара: `data-wish`
+  // назван товаром по той же причине, что и событие калькулятора
+  const wishField = (id) => document.querySelector(`[data-wish="${id}"]`);
+
+  document.addEventListener("input", (event) => {
+    const field = event.target.closest("[data-wish]");
+    if (!field) return;
+    remember(Number(field.dataset.wish), wish(field.value));
+  });
+
+  // Что покупатель написал в прошлый раз: подборка переживает
+  // перезагрузку, и пожелание должно пережить её вместе с зеркалом
+  const paintWishes = () => {
+    read("cart").forEach((item) => {
+      const field = wishField(item.product);
+      // Набранное сейчас не затираем: поле правит покупатель, а не мы
+      if (field && !field.value) field.value = item.wish;
+    });
   };
 
   // ---------- Что объявил калькулятор карточки ----------
@@ -183,6 +236,7 @@
   const paint = () => {
     paintCounters();
     paintButtons();
+    paintWishes();
     paintCartNotes();
   };
 
@@ -192,8 +246,16 @@
     event.preventDefault();
     const id = Number(button.dataset.product);
     // Настроенное на карточке едет в подборку вместе с зеркалом
-    // (тикет 14). Товару без калькулятора конфигурации взять неоткуда
-    toggle(button.dataset.toggle, id, latest.get(id) ?? null);
+    // (тикет 14). Товару без калькулятора конфигурации взять неоткуда.
+    // Пожелание же читается прямо из поля рядом: набрано оно к этому
+    // нажатию, а не к событию калькулятора (тикет 15)
+    const field = wishField(id);
+    toggle(
+      button.dataset.toggle,
+      id,
+      latest.get(id) ?? null,
+      field ? wish(field.value) : "",
+    );
     paint();
   });
 
@@ -216,6 +278,31 @@
     node.className = "cart-price";
     node.textContent = price(value);
     return node;
+  };
+
+  // Пожелание правится там же, где покупатель видит своё зеркало:
+  // передумавший о втором выключателе иначе снимал бы зеркало и
+  // добавлял его заново (тикет 15). Текст ставится значением поля,
+  // а не разметкой: чужих тегов в подборке взяться неоткуда, но
+  // печатать хранилище разметкой — не то обещание, что стоит давать
+  const wishRow = (id) => {
+    const label = document.createElement("label");
+    // `field` — тот же вид, что у полей формы заявки рядом: одно
+    // поле на сайте выглядит одинаково, где бы оно ни стояло
+    label.className = "field cart-wish";
+    const caption = document.createElement("span");
+    caption.textContent = "Пожелание";
+    const field = document.createElement("textarea");
+    field.rows = 2;
+    field.maxLength = limits.max_wish_length;
+    field.dataset.wish = String(id);
+    // Подсказки здесь нет намеренно: пример уже стоял в поле карточки,
+    // а вторая его копия — второй текст, который однажды разойдётся
+    // с первым. Строка правится у зеркала, названного прямо над ней
+    const stored = read("cart").find((entry) => entry.product === id);
+    field.value = stored ? stored.wish : "";
+    label.append(caption, field);
+    return label;
   };
 
   const cartRow = (item) => {
@@ -242,7 +329,7 @@
     const category = document.createElement("div");
     category.className = "cart-category";
     category.textContent = item.category;
-    meta.append(title, category);
+    meta.append(title, category, wishRow(item.id));
 
     const cost = priceNode(item.price);
 

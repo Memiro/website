@@ -16,7 +16,11 @@ from memiro.api.errors import UNPROCESSABLE, reject
 from memiro.api.ids import IDS_PATTERN, MAX_IDS_LENGTH, parse_ids
 from memiro.catalog import quoting
 from memiro.catalog.models import Product
-from memiro.inquiries.limits import MAX_ITEMS, MIN_PHONE_DIGITS
+from memiro.inquiries.limits import (
+    MAX_ITEMS,
+    MAX_WISH_LENGTH,
+    MIN_PHONE_DIGITS,
+)
 from memiro.inquiries.models import Inquiry, InquiryItem
 from memiro.inquiries.notifications import notify
 from memiro.legal.privacy import PRIVACY_VERSION
@@ -102,10 +106,26 @@ class ItemInput(pydantic.BaseModel):
 
     Конфигурации может не быть вовсе: калькулятор есть не у всякого
     товара, и настраивать покупателю там нечего.
+
+    Пожелание же бывает у любой позиции, в том числе у товара без
+    калькулятора: оно свободный текст и в расчёт не идёт (тикет 15).
     """
 
     product: Annotated[int, pydantic.Field(ge=1)]
     configuration: ConfigurationInput | None = None
+    # Потолок тот же, что у поля модели, и здесь он отвергает заявку
+    # целиком — не так, как поступлено с размером десятью строками
+    # выше. Разница не в строгости, а в том, откуда берётся негодное
+    # значение: не тот размер набирает настоящий покупатель с
+    # настоящим телефоном, и отвергнутая заявка потеряла бы его.
+    # Пожелания длиннее потолка форма не производит вовсе — его
+    # режут и `maxlength` поля, и `shop.js`, — так что за такой
+    # длиной стоит не опечатка, а обход формы, и терять с ним нечего
+    wish: Annotated[
+        str,
+        Trimmed,
+        pydantic.Field(default="", max_length=MAX_WISH_LENGTH),
+    ] = ""
 
 
 class InquiryInput(pydantic.BaseModel):
@@ -231,16 +251,15 @@ def _snapshot(product: Product, sent: ConfigurationInput | None) -> Snapshot:
     return Snapshot(quote.label, quote.total)
 
 
-def _item(
-    inquiry: Inquiry,
-    product: Product,
-    sent: ConfigurationInput | None,
-) -> InquiryItem:
-    """Позиция снимком: название, цена «от» и своя конфигурация.
+def _item(inquiry: Inquiry, product: Product, sent: ItemInput) -> InquiryItem:
+    """Позиция снимком: название, цена «от», конфигурация и пожелание.
 
     Цену конфигурации ставит сервер — как и редакцию согласия.
+
+    Пожелание же принимается как есть: пересчитывать в нём нечего, оно
+    и есть та часть заявки, которую сайт посчитать не умеет (тикет 15).
     """
-    snapshot = _snapshot(product, sent)
+    snapshot = _snapshot(product, sent.configuration)
     return InquiryItem(
         inquiry=inquiry,
         product=product,
@@ -248,6 +267,7 @@ def _item(
         product_price=product.price,
         configuration=snapshot.configuration,
         calculated_price=snapshot.calculated_price,
+        wish=sent.wish,
     )
 
 
@@ -308,7 +328,7 @@ class InquiryController(Controller[PydanticSerializer]):
             # Позиция на каждую присланную, а не на каждый товар: одно
             # зеркало в двух размерах — две позиции (ADR-0009)
             InquiryItem.objects.bulk_create(
-                _item(inquiry, products[sent.product], sent.configuration)
+                _item(inquiry, products[sent.product], sent)
                 for sent in payload.items
             )
         return inquiry

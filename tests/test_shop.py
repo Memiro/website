@@ -141,3 +141,43 @@ def test_pages_expose_selection_limits(client: Client) -> None:
 
     assert '"max_items": 100' in body
     assert '"min_phone_digits": 7' in body
+
+
+@pytest.mark.django_db
+@pytest.mark.usefixtures("products")
+def test_the_card_asks_for_a_wish_next_to_the_button(
+    client: Client,
+) -> None:
+    """Пожелание вводится там же, где зеркало кладут в заявку.
+
+    Поле названо товаром: своё пожелание у каждого зеркала, и чужая
+    кнопка на той же странице его не подхватит (тикет 15).
+    """
+    product = Product.objects.get(slug="halo-moon")
+
+    card = client.get("/catalog/zerkala/halo-moon/").content.decode()
+
+    assert f'data-wish="{product.pk}"' in card
+    assert 'maxlength="500"' in card
+
+
+@pytest.mark.django_db
+def test_the_inquiry_page_keeps_no_common_comment(client: Client) -> None:
+    """На странице заявки общего поля нет: пожелание у каждой позиции.
+
+    Поле модели остаётся — свободной форме с главной, где товара нет
+    вовсе, писать больше негде (тикет 15).
+    """
+    page = client.get("/cart/").content.decode()
+    home = client.get("/").content.decode()
+
+    assert 'name="comment"' not in page
+    assert 'name="comment"' in home
+
+
+@pytest.mark.django_db
+def test_pages_expose_the_wish_limit(client: Client) -> None:
+    """Потолок пожелания приезжает в браузер с сервера, а не копией."""
+    body = client.get("/").content.decode()
+
+    assert '"max_wish_length": 500' in body

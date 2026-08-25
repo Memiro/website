@@ -41,5 +41,6 @@ def inquiry_limits(request: HttpRequest) -> dict[str, dict[str, int]]:  # noqa: 
         "inquiry_limits": {
             "max_items": limits.MAX_ITEMS,
             "min_phone_digits": limits.MIN_PHONE_DIGITS,
+            "max_wish_length": limits.MAX_WISH_LENGTH,
         },
     }

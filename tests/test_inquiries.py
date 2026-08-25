@@ -22,7 +22,7 @@ from memiro.catalog.models import (
     Product,
     ProductAttribute,
 )
-from memiro.inquiries.limits import MAX_ITEMS
+from memiro.inquiries.limits import MAX_ITEMS, MAX_WISH_LENGTH
 from memiro.inquiries.models import Inquiry, InquiryItem
 from memiro.inquiries.notifications import inquiry_message
 from tests.notifiers import RecordingNotifier
@@ -57,11 +57,18 @@ def products(db: None) -> list[Product]:
     ]
 
 
-def item(product: Product, **configuration: object) -> dict[str, object]:
-    """Позиция подборки: товар и то, каким его настроили (ADR-0009)."""
+def item(
+    product: Product, wish: str = "", **configuration: object
+) -> dict[str, object]:
+    """Позиция подборки: товар, его настройки и его пожелание.
+
+    Настройки — конфигурация расчёта (ADR-0009); пожелание — свободный
+    текст покупателя об этом зеркале, в расчёт он не идёт (тикет 15).
+    """
     return {
         "product": product.pk,
         "configuration": configuration or None,
+        "wish": wish,
     }
 
 
@@ -768,3 +775,217 @@ def test_the_admin_shows_the_configuration_inside_the_items(
     # Поле заявки исчезло вместе с полем модели: второй правде о цене
     # взяться неоткуда
     assert 'name="configuration"' not in page
+
+
+@pytest.mark.django_db
+def test_each_mirror_carries_its_own_wish(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Ради этого случая пожелание и живёт у позиции (тикет 15).
+
+    У зеркала в ванную и у зеркала в прихожую хотелки разные, и
+    сложенные в один комментарий они заставили бы менеджера
+    разбирать, что к чему относится.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(
+        client,
+        items=[
+            item(
+                calculable.product,
+                wish="Второй выключатель слева",
+                width_mm=800,
+                height_mm=600,
+                values=[calculable.silver.pk],
+            ),
+            item(
+                calculable.product,
+                wish="Вырез под розетку",
+                width_mm=1200,
+                height_mm=400,
+                values=[calculable.silver.pk],
+            ),
+        ],
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    assert [row.wish for row in Inquiry.objects.get().items.all()] == [
+        "Второй выключатель слева",
+        "Вырез под розетку",
+    ]
+
+
+@pytest.mark.django_db
+def test_a_wish_is_not_a_configuration(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Пожелание в расчёт не идёт: ни в строку, ни в цену.
+
+    Тем личное пожелание и отличается от выбора из справочника — сайт
+    его посчитать не умеет, и притворяться обратным не должен.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_inquiry(
+        client,
+        items=[
+            item(
+                calculable.product,
+                wish="Второй выключатель слева",
+                width_mm=800,
+                height_mm=600,
+                values=[calculable.silver.pk],
+            )
+        ],
+    )
+
+    stored = InquiryItem.objects.get()
+    assert stored.configuration == "800 × 600 мм; Тип полотна: Серебро"
+    assert stored.calculated_price == SILVER_TOTAL
+
+
+@pytest.mark.django_db
+def test_a_wish_needs_no_calculator(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Сказать словами покупатель вправе и там, где расчёта нет.
+
+    Калькулятор есть не у всякого товара, а пожелание к такому зеркалу
+    менеджеру нужно тем более: цену ему называть по нему.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(
+        client, items=[item(products[0], wish="Скруглить углы")]
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    stored = InquiryItem.objects.get()
+    assert stored.wish == "Скруглить углы"
+    assert stored.configuration == ""
+
+
+@pytest.mark.django_db
+def test_a_wish_longer_than_the_limit_is_refused(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Свободный текст без потолка — нагрузка на журнал, не пожелание.
+
+    Браузер такой длины не выпустит: `maxlength` полей приезжает из
+    того же `limits.py`. Отвергается запрос целиком, как и список
+    позиций сверх потолка, — обходят форму не опечаткой.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    response = post_inquiry(
+        client,
+        items=[item(products[0], wish="а" * (MAX_WISH_LENGTH + 1))],
+    )
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert not Inquiry.objects.exists()
+
+
+@pytest.mark.django_db
+def test_the_manager_reads_the_wish_under_its_position(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Пожелание печатается под своим зеркалом, а не над составом."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_inquiry(
+        client,
+        items=[
+            item(
+                calculable.product,
+                wish="Второй выключатель слева",
+                width_mm=800,
+                height_mm=600,
+                values=[calculable.silver.pk],
+            ),
+            item(calculable.product, wish="Вырез под розетку"),
+        ],
+    )
+    lines = inquiry_message(Inquiry.objects.get()).splitlines()
+
+    # Пожелание идёт следом за своим зеркалом — с расчётом между ними
+    # у первой позиции и вплотную у второй, где расчёта не было
+    assert lines.index("  Пожелание: Второй выключатель слева") < lines.index(
+        "  Пожелание: Вырез под розетку"
+    )
+    assert lines.count("  Пожелание: Вырез под розетку") == 1
+
+
+@pytest.mark.django_db
+def test_a_multiline_wish_keeps_its_indent(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Вторая строка пожелания не выдаёт себя за ещё одно зеркало.
+
+    Позиции письма начинаются с тире у левого края; отступ — то
+    единственное, чем строки одной позиции держатся вместе.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_inquiry(
+        client,
+        items=[item(products[0], wish="Второй выключатель\nи вырез снизу")],
+    )
+    message = inquiry_message(Inquiry.objects.get())
+
+    assert "  Пожелание: Второй выключатель" in message
+    assert "\n  и вырез снизу" in message
+
+
+@pytest.mark.django_db
+def test_an_inquiry_without_a_wish_says_nothing_about_it(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Пустое пожелание в письме не занимает строки."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_inquiry(client, items=[item(products[0])])
+
+    assert "Пожелание" not in inquiry_message(Inquiry.objects.get())
+
+
+@pytest.mark.django_db
+def test_the_admin_shows_the_wish_inside_the_items(
+    client: Client,
+    admin_client: Client,
+    products: list[Product],
+    settings: Settings,
+) -> None:
+    """Пожелание видно в составе заявки — и видно как текст.
+
+    Покупатель пишет свободным текстом, и разметка в нём остаётся
+    разметкой на экране, а не в браузере менеджера.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+    post_inquiry(client, items=[item(products[0], wish="<b>срочно</b>")])
+    inquiry = Inquiry.objects.get()
+
+    page = admin_client.get(
+        f"/admin/inquiries/inquiry/{inquiry.pk}/change/"
+    ).content.decode()
+
+    assert "&lt;b&gt;срочно&lt;/b&gt;" in page
+    assert "<b>срочно</b>" not in page
+
+
+@pytest.mark.django_db
+def test_a_wish_keeps_the_paragraphs_of_the_buyer(
+    client: Client, products: list[Product], settings: Settings
+) -> None:
+    """Абзацы ставил покупатель — письмо его текст не правит."""
+    settings.INQUIRY_NOTIFIER = RECORDING
+
+    post_inquiry(
+        client,
+        items=[item(products[0], wish="Первое\n\nВторое")],
+    )
+
+    assert "  Пожелание: Первое\n\n  Второе" in inquiry_message(
+        Inquiry.objects.get()
+    )
