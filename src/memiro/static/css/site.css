@@ -217,8 +217,13 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 }
 .product-card:hover { border-color: var(--control); color: inherit; }
 /* Ссылка обёрнута вокруг всей плитки, а не вокруг куска (тикет 10),
-   и по высоте ряда тянется она — иначе низ плитки не её и не кликается */
+   и по высоте ряда тянется она — иначе низ плитки не её и не кликается.
+   outline-offset: -2px — ссылка теперь занимает плитку целиком, а
+   `overflow: hidden` у плитки срезает всё, что вылезает за её края:
+   кольцо фокуса с общим отступом наружу пропало бы у клавиатуры
+   полностью. Внутрь — единственная сторона, где его видно */
 .product-card .card-link { display: flex; flex-direction: column; flex: 1; }
+.product-card .card-link:focus-visible { outline-offset: -2px; }
 .product-card .pic { position: relative; aspect-ratio: 1 / 1.08; background: var(--bg-muted); }
 .product-card .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .product-card .meta { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1; }

@@ -35,6 +35,9 @@ LINK = re.compile(r"<a\b")
 # Разметки под них больше нет, и правила в таблице стилей — мёртвые
 GONE_FROM_STYLESHEET = frozenset({"card-actions", "cart-btn"})
 
+# Отступ кольца фокуса внутрь элемента — отрицательный
+OUTSIDE_OFFSET = re.compile(r"outline-offset\s*:\s*-")
+
 
 @pytest.fixture
 def shop(db: None) -> SimpleNamespace:
@@ -131,6 +134,26 @@ def test_tile_keeps_photo_name_and_price(
     # Узкий неразрывный пробел — тот самый разделитель, на котором цена
     # не рвётся (тикет 09): нормализовать его тут — перестать его сторожить
     assert "11\u202f795" in card
+
+
+def test_focus_ring_of_the_tile_link_is_drawn_inside() -> None:
+    """Кольцо фокуса не срезается краем плитки.
+
+    Ссылка занимает плитку целиком, а `.product-card` скрывает всё, что
+    вылезает за края. Общее кольцо лежит снаружи — и у клавиатуры пропало
+    бы целиком, молча: вёрстка при этом выглядит нетронутой.
+    """
+    inside = [
+        rule
+        for rule in rules(stylesheet())
+        if ".card-link:focus-visible" in rule.selector
+        and OUTSIDE_OFFSET.search(rule.body)
+    ]
+
+    assert inside, (
+        "у ссылки плитки нет `outline-offset` внутрь — кольцо фокуса "
+        "срежет `overflow: hidden` у `.product-card`"
+    )
 
 
 def test_stylesheet_keeps_no_rules_for_the_gone_button() -> None:
