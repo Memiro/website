@@ -10,9 +10,12 @@
     <h1 class="h-display">Зеркала на заказ<br><span class="lead-word">любой</span> сложности</h1>
     <p class="sub">Быстро и качественно изготовим и установим зеркало любой
       сложности, даже если другие компании отказались.</p>
+    {% comment %}«Узнать стоимость» убрана владельцем (тикет 07): цену
+       называет карточка, а не форма. Каталог остался один и стал главным
+       действием — обводка на единственной кнопке героя читалась бы как
+       второстепенная{% endcomment %}
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#inquiry">Узнать стоимость</a>
-      <a class="btn btn-ghost" href="{% url 'catalog' %}">Смотреть каталог</a>
+      <a class="btn btn-primary" href="{% url 'catalog' %}">Смотреть каталог</a>
     </div>
     <div class="hero-stats">
       <div><div class="n">2021</div><div class="c">год основания</div></div>

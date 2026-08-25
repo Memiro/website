@@ -496,6 +496,22 @@ def test_promo_flag_gives_no_badge_in_catalog(
     assert "Акция" not in page_html(client, "/catalog/zerkala/")
 
 
+def test_product_page_has_no_inquiry_form(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Тикет 07: ни кнопки «Узнать стоимость», ни формы заявки на карточке.
+
+    Второй вход в ту же дверь на той же странице — выбор, которого
+    покупатель не просил: к менеджеру ведёт подборка.
+    """
+    html = page_html(client, "/catalog/zerkala/halo-moon/")
+
+    assert "Узнать стоимость" not in html
+    assert "data-inquiry-form" not in html
+    assert 'id="inquiry"' not in html
+    assert 'data-toggle="cart"' in html
+
+
 def test_product_page_has_no_stock_state(
     client: Client, shop: SimpleNamespace
 ) -> None:

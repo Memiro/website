@@ -63,7 +63,8 @@
        Пересчёт делает product.js — сервер отдаёт органы управления, а итог
        приходит с /api/price: ставок и коэффициентов в браузере нет (ADR-0007){% endcomment %}
     {% if calculator %}
-    <div class="calc" data-calc data-product="{{ product.pk }}">
+    <div class="calc" data-calc data-product="{{ product.pk }}"
+         data-calc-inquiry="{% url 'home' %}#inquiry">
       <h2>Расчёт по вашим размерам</h2>
       <div class="calc-fields">
         <label class="field">
@@ -99,11 +100,12 @@
        не витринное{% endcomment %}
     {% include "legal/_offer_note.html" %}
 
-    {# Корзина и заявка — тикет 07 #}
+    {% comment %}Кнопка одна: «Узнать стоимость» рядом с посчитанной ценой
+       обесценивала её — если цену всё равно надо узнавать, что показывал
+       калькулятор? Путь к менеджеру идёт через корзину (тикет 07){% endcomment %}
     <div class="buy-row">
       <button class="btn btn-primary" type="button" data-toggle="cart" data-product="{{ product.pk }}"
               aria-pressed="false" data-label-off="В корзину" data-label-on="В корзине">В корзину</button>
-      <a class="btn btn-ghost" href="#inquiry">Узнать стоимость</a>
     </div>
 
     <div class="promises">
@@ -124,22 +126,6 @@
     {% endif %}
   </div>
 </div>
-
-<section class="wrap section" id="inquiry">
-  <div class="inquiry-block">
-    <div>
-      <span class="overline bare">Заявка</span>
-      <h2 class="h-section">Узнать стоимость</h2>
-      <p>Рассчитаем цену «{{ product.name }}» под ваши размеры и опции.
-        Ответим в течение рабочего дня — оплаты и обязательств на сайте нет.</p>
-      <div class="inquiry-contacts">
-        <a href="tel:{{ contacts.phone }}">{{ contacts.phone_display }}</a>
-        <a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a>
-      </div>
-    </div>
-    {% include "inquiries/_form.html" with source="product" product_id=product.pk %}
-  </div>
-</section>
 
 {% if related %}
 <section class="wrap section">

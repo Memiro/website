@@ -263,22 +263,6 @@
     return NOTES.failed;
   };
 
-  const cartForm = (form) => form.dataset.source !== "product";
-
-  const formItems = (form) => {
-    if (cartForm(form)) return read("cart");
-    return form.dataset.product ? [Number(form.dataset.product)] : [];
-  };
-
-  // Посчитанное калькулятором карточки уезжает вместе с заявкой:
-  // менеджер видит, что человек считал, а не расспрашивает его заново
-  // (тикет 21). Калькулятор публикует это в window.memiro (product.js);
-  // на странице без него функции нет — и конфигурации тоже
-  const formConfiguration = (form) => {
-    if (cartForm(form)) return null;
-    return window.memiro.configuration ? window.memiro.configuration() : null;
-  };
-
   // «товар / товара / товаров» — как фильтр ru_plural в шаблонах
   const products = (count) => {
     const tail = count % 10;
@@ -293,7 +277,7 @@
   const paintCartNote = (form) => {
     const note = form.querySelector("[data-inquiry-cart-note]");
     if (!note) return;
-    const count = cartForm(form) ? read("cart").length : 0;
+    const count = read("cart").length;
     // На странице корзины состав и так перед глазами
     const silent = form.dataset.source === "cart";
     note.hidden = !count || silent;
@@ -345,8 +329,12 @@
           comment: (data.get("comment") || "").trim(),
           source: form.dataset.source,
           consent: true,
-          items: formItems(form),
-          configuration: formConfiguration(form),
+          // Формы на карточке товара больше нет (тикет 07), и всякая
+          // оставшаяся форма отправляет одно и то же — собранную
+          // подборку: своего товара ни у одной из них нет.
+          // Конфигурация же приедет от позиции заявки, а не от формы
+          // (тикет 14, ADR-0009)
+          items: read("cart"),
         }),
       });
       if (!response.ok) {
@@ -355,7 +343,7 @@
       }
       say(NOTES.sent, true);
       form.reset();
-      if (cartForm(form) && read("cart").length) {
+      if (read("cart").length) {
         // Подборка ушла менеджеру — держать её дальше незачем
         write("cart", []);
         paint();

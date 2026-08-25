@@ -108,7 +108,7 @@ def test_favorites_page_is_gone(client: Client) -> None:
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("url", ["/cart/", "/", "/catalog/zerkala/halo-moon/"])
+@pytest.mark.parametrize("url", ["/cart/", "/"])
 @pytest.mark.usefixtures("products")
 def test_consent_checkbox_is_separate_and_unchecked(
     client: Client, url: str

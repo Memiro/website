@@ -243,10 +243,25 @@ def test_a_product_with_an_unfilled_attribute_has_no_calculator(
     assert not CALC.search(card(client, bare))
 
 
-def test_a_product_outside_the_set_still_shows_variants_and_an_inquiry(
+def test_the_calculator_carries_the_address_of_the_free_form(
     client: Client, shop: SimpleNamespace
 ) -> None:
-    """Вне считаемого набора карточка живёт вариантами и заявкой."""
+    """Некуда посчитать — калькулятор зовёт к заявке, и адрес не выдуман.
+
+    Ссылку рисует `product.js` по этому атрибуту: пропадёт он —
+    «Оставить заявку →» уедет в никуда, и молча (тикет 07).
+    """
+    assert 'data-calc-inquiry="/#inquiry"' in card(client, shop.product)
+
+
+def test_a_product_outside_the_set_still_shows_variants_and_a_way_to_ask(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Вне считаемого набора карточка живёт вариантами и подборкой.
+
+    Формы заявки на карточке больше нет (тикет 07): к менеджеру ведёт
+    та же кнопка, что и у считаемого товара.
+    """
     shop.blade.is_customer_editable = False
     shop.blade.save()
     outside = Product.objects.create(
@@ -261,7 +276,7 @@ def test_a_product_outside_the_set_still_shows_variants_and_an_inquiry(
 
     assert not CALC.search(body)
     assert "Типовые размеры" in body
-    assert 'data-inquiry-form data-source="product"' in body
+    assert 'data-toggle="cart"' in body
 
 
 def test_a_product_without_a_single_tariff_has_no_calculator(

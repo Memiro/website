@@ -1,6 +1,8 @@
-{# Форма заявки (тикет 07). Состав корзины подставляет shop.js по data-source. #}
-<form class="inquiry-form" data-inquiry-form data-source="{{ source|default:'home' }}"
-      {% if product_id %}data-product="{{ product_id }}"{% endif %}>
+{% comment %}Форма заявки: свободная на главной и заявка из корзины
+   на странице подборки. Состав подборки подставляет shop.js — своего
+   товара нет ни у той, ни у другой с тех пор, как форму убрали
+   с карточки (тикет 07 набора owner-revision){% endcomment %}
+<form class="inquiry-form" data-inquiry-form data-source="{{ source|default:'home' }}">
   {% csrf_token %}
   <label class="field">
     <span>Ваше имя *</span>

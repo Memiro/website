@@ -127,3 +127,15 @@ def test_home_hides_empty_popular_section(client: Client, db: None) -> None:
     content = client.get("/").content.decode()
 
     assert "Популярные товары" not in content
+
+
+def test_home_hero_leads_to_the_catalog_only(client: Client, db: None) -> None:
+    """Тикет 07: «Узнать стоимость» из героя убрана.
+
+    Свободная форма внизу главной остаётся — там она единственный путь
+    к менеджеру, а не второй.
+    """
+    content = client.get("/").content.decode()
+
+    assert "Узнать стоимость" not in content
+    assert 'data-inquiry-form data-source="home"' in content
