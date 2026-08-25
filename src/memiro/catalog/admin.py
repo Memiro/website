@@ -1,7 +1,7 @@
 from itertools import groupby
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from django.forms import (
     BaseInlineFormSet,
@@ -472,14 +472,65 @@ class ProductAdmin(admin.ModelAdmin):
         проставляет их по одному (тикет 22). Без этой строки он видел
         бы только отсутствие калькулятора на карточке и гадал, чего
         именно недостаёт.
+
+        Погашенная цена — третье состояние, а не второе: конструктор
+        у такого товара работает, и назвать его «выключенным» значило
+        бы отправить владельца искать в разметке пробел, которого там
+        нет (ADR-0008). Признак при этом показан колонкой рядом —
+        строка говорит, что из него вышло.
         """
         # Товар в списке не сохранён — считать нечего
         if not obj.pk:
             return "—"
         missing = calculator.missing_for_calculation(obj)
-        if not missing:
-            return "включён"
-        return "не включается: " + ", ".join(missing)
+        if missing:
+            return "не включается: " + ", ".join(missing)
+        if obj.hides_calculated_price:
+            return "включён без цены: её называет менеджер"
+        return "включён"
+
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: ModelForm,
+        formsets: list[Any],
+        change: bool,  # noqa: FBT001 — сигнатура Django
+    ) -> None:
+        """Сохранить товар и сказать, если цены у него не осталось.
+
+        Погашенная цена расчёта и отсутствие предпосчитанных вариантов
+        по отдельности законны: первое — решение владельца, второе —
+        обычное состояние только что заведённого товара. Вместе они
+        дают карточку без единого числа, и приходит владелец к ней не
+        нарочно — гасит цену у товара, вариантов которому ещё не завёл.
+        Сказать об этом надо здесь: на карточке он увидел бы молчание
+        и счёл его поломкой.
+
+        Не запрет, а предупреждение: товар без цены вовсе — законное
+        состояние витрины, молчание честнее заглушки (ADR-0007).
+
+        После инлайнов, а не в `save_model`: варианты приезжают формсетом,
+        и до их сохранения только что заведённый вариант ещё не в базе —
+        предупреждение сработало бы на товаре, у которого цена как раз
+        появилась.
+
+        Форма списка сюда приходит тоже — Django зовёт `save_related()`
+        на каждую строку пакетной правки. Признака в ней нет, и по нему
+        такая форма и отличается: сняв галочку «опубликован» у двадцати
+        товаров, владелец получил бы двадцать предупреждений о том, чего
+        он сейчас не трогал, и перестал бы их читать.
+        """
+        super().save_related(request, form, formsets, change)
+        if "hides_calculated_price" not in form.fields:
+            return
+        product: Product = form.instance
+        if product.hides_calculated_price and not product.variants.exists():
+            messages.warning(
+                request,
+                f"«{product.name}»: цена расчёта скрыта, предпосчитанных "
+                "вариантов нет — цены на сайте у этого товара не будет "
+                "вовсе. Заведите варианты, если цену показать нужно.",
+            )
 
     @admin.display(description="превью малого фото")
     def preview_small(self, obj: Product) -> str:

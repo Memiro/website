@@ -68,8 +68,9 @@
        зеркало, а не один только размер{% endcomment %}
     {% if calculator %}
     <div class="calc" data-calc data-product="{{ product.pk }}"
-         data-calc-inquiry-url="{% url 'cart' %}">
-      <h2>Расчёт по вашим размерам</h2>
+         data-calc-inquiry-url="{% url 'cart' %}"
+         {% if calculator.shows_price %}data-calc-priced{% endif %}>
+      <h2>{% if calculator.shows_price %}Расчёт по вашим размерам{% else %}Ваш размер и материалы{% endif %}</h2>
       <div class="calc-fields">
         <label class="field">
           <span>Ширина, мм</span>
@@ -92,8 +93,23 @@
         </label>
         {% endfor %}
       </div>
+      {% if calculator.shows_price %}
       {# Заполняет product.js; до ответа сервера в блоке пусто — своего числа у него нет #}
       <div class="calc-result" data-calc-result aria-live="polite"></div>
+      {% else %}
+      {% comment %}Цену расчёта у этого товара погасил владелец: числу, которое
+         сайт умеет посчитать, он не верит. Гаснет только оно — поля выше
+         остаются рабочими, и настроенное уезжает менеджеру позицией заявки
+         (тикет 16, ADR-0008). На месте цены стоит строка, а не пустота:
+         молчащий блок покупатель прочитал бы как сломанную страницу.
+         Печатает её сервер, а не product.js: тот же признак гасит и ответ
+         эндпоинта, и спрашивать его браузеру не за чем{% endcomment %}
+      <div class="calc-result">
+        <p class="calc-note">Цену этого зеркала называет менеджер: выберите
+          размер и материалы, добавьте зеркало в заявку — и он посчитает
+          её по вашей конфигурации.</p>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
 

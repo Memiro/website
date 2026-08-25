@@ -255,6 +255,23 @@ def test_admin_says_calculator_is_on(
     assert "включён" in html
 
 
+def test_admin_tells_a_hidden_price_from_a_broken_markup(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Погашенная цена — третье состояние колонки, а не «не включается».
+
+    Конструктор у такого товара работает, и назови его колонка
+    выключенным — владелец пошёл бы искать в разметке пробел, которого
+    там нет (тикет 16, ADR-0008).
+    """
+    shop.product.hides_calculated_price = True
+    shop.product.save()
+
+    html = page_html(admin_client, "/admin/catalog/product/")
+
+    assert "включён без цены: её называет менеджер" in html
+
+
 def test_untariffed_product_is_named_so(shop: SimpleNamespace) -> None:
     """Разметка есть, тарифов нет — причина названа отдельно от пробелов."""
     graphite = shop.blade.values.get(value="Графит")

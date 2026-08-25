@@ -16,6 +16,7 @@ from types import SimpleNamespace
 import pytest
 from django.test import Client
 
+from memiro.catalog.formatting import rub
 from memiro.catalog.models import (
     Attribute,
     AttributeValue,
@@ -446,3 +447,114 @@ def test_the_endpoint_refuses_what_the_card_does_not_offer(
     )
 
     assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
+def test_a_hidden_price_leaves_the_calculator_in_place(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Признак товара гасит цену, а не конструктор (тикет 16, ADR-0008).
+
+    Поля размеров и списки значений остаются рабочими: погашенная цена
+    отбирает у покупателя число, а не способ сказать, чего он хочет.
+    """
+    shop.product.hides_calculated_price = True
+    shop.product.save()
+
+    body = card(client, shop.product)
+
+    assert CALC.search(body)
+    assert "data-calc-width" in body
+    assert "Тип полотна" in {
+        name.strip() for name in SELECT_LABEL.findall(body)
+    }
+
+
+def test_a_hidden_price_says_who_names_it(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """На месте цены — строка о менеджере, а не пустой блок.
+
+    Молчащий блок покупатель прочитал бы как сломанную страницу.
+    Печатает строку сервер: за числом браузеру ходить незачем, и
+    место под ответ эндпоинта карточка не оставляет.
+    """
+    shop.product.hides_calculated_price = True
+    shop.product.save()
+
+    body = card(client, shop.product)
+
+    assert "data-calc-priced" not in body
+    assert "data-calc-result" not in body
+    assert "Цену этого зеркала называет менеджер" in body
+
+
+def test_the_endpoint_names_no_price_where_the_card_is_silent(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Гейт цены один: адрес расчёта открыт, и обойти карточку им нельзя.
+
+    Ни итога, ни доплат: доплаты — такие же рубли, и по ним цена
+    восстанавливалась бы обратно.
+    """
+    shop.product.hides_calculated_price = True
+    shop.product.save()
+
+    response = client.get(
+        "/api/price",
+        {
+            "product": shop.product.pk,
+            "width_mm": 800,
+            "height_mm": 600,
+            "values": str(shop.heating.pk),
+        },
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() == {
+        "total": None,
+        "additions": [],
+        "needs_inquiry": True,
+    }
+
+
+def test_a_hidden_price_does_not_touch_the_variants(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Предпосчитанные варианты признак не гасит (ADR-0008).
+
+    Их цены заводит владелец — тот, кто и решает, за сколько продаёт;
+    гейт расчёта о них не спрашивают ни каталог, ни карточка.
+    """
+    shop.product.hides_calculated_price = True
+    shop.product.save()
+    ProductVariant.objects.create(
+        product=shop.product, width_mm=800, height_mm=600
+    )
+    shop.product.refresh_from_db()
+
+    body = card(client, shop.product)
+
+    assert shop.product.price is not None
+    assert "Типовые размеры" in body
+
+
+def test_a_hidden_price_keeps_the_price_from_in_the_catalogue(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """«От X ₽» в каталоге стоит на вариантах, а не на расчёте.
+
+    Признак гасит цену, которую называет сайт; цену, которую назвал
+    владелец, он не трогает — иначе товар пропал бы и из сужения по
+    диапазону цены, и из сортировки (ADR-0008).
+    """
+    shop.product.hides_calculated_price = True
+    shop.product.save()
+    ProductVariant.objects.create(
+        product=shop.product, width_mm=800, height_mm=600
+    )
+    shop.product.refresh_from_db()
+
+    listing = client.get(f"/catalog/{shop.category.slug}/")
+
+    assert listing.status_code == HTTPStatus.OK
+    assert rub(shop.product.price) in listing.content.decode()

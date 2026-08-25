@@ -732,3 +732,102 @@ def test_value_options_name_their_attribute(
     ).content.decode()
 
     assert f'value="{value.pk}" data-attribute="{shape.pk}"' in page
+
+
+@pytest.mark.django_db
+def test_a_hidden_price_without_variants_is_warned_about(
+    admin_client: Client, category: Category
+) -> None:
+    """Цены не будет вовсе — и владелец узнаёт об этом при сохранении.
+
+    К такому сочетанию он приходит не нарочно: гасит цену у товара,
+    вариантов которому ещё не завёл, а увидел бы это молчание уже
+    на карточке (тикет 16, ADR-0008).
+    """
+    response = admin_client.post(
+        "/admin/catalog/product/add/",
+        product_payload(category, hides_calculated_price="on"),
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert Product.objects.get(slug="luna").hides_calculated_price
+    said = [str(message) for message in response.context["messages"]]
+    assert any(
+        "цены на сайте у этого товара не будет вовсе" in message
+        for message in said
+    )
+
+
+@pytest.mark.django_db
+def test_a_hidden_price_with_variants_says_nothing(
+    admin_client: Client, category: Category
+) -> None:
+    """Цена «от» у товара остаётся: варианты признак не гасит.
+
+    Предупреждать тут не о чем — а лишнее предупреждение владелец
+    перестаёт читать вместе с нужным.
+    """
+    response = admin_client.post(
+        "/admin/catalog/product/add/",
+        product_payload(
+            category,
+            hides_calculated_price="on",
+            **{
+                "variants-TOTAL_FORMS": "1",
+                "variants-0-width_mm": "800",
+                "variants-0-height_mm": "600",
+                "variants-0-order": "0",
+            },
+        ),
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    warnings = [
+        str(message)
+        for message in response.context["messages"]
+        if "не будет вовсе" in str(message)
+    ]
+    assert not warnings
+
+
+@pytest.mark.django_db
+def test_a_batch_edit_of_the_list_stays_silent(
+    admin_client: Client, category: Category
+) -> None:
+    """Пакетная правка списка о погашенной цене не напоминает.
+
+    Django зовёт `save_related()` на каждую строку такой правки, и
+    сняв галочку «опубликован» у товаров с погашенной ценой, владелец
+    получил бы предупреждения о том, чего сейчас не трогал, — и
+    перестал бы их читать (тикет 16).
+    """
+    product = Product.objects.create(
+        category=category,
+        name="Зеркало «Луна»",
+        slug="luna",
+        is_published=True,
+        hides_calculated_price=True,
+    )
+
+    response = admin_client.post(
+        "/admin/catalog/product/",
+        {
+            "form-TOTAL_FORMS": "1",
+            "form-INITIAL_FORMS": "1",
+            "form-0-id": str(product.pk),
+            "form-0-is_published": "",
+            "form-0-is_popular": "",
+            "form-0-is_promo": "",
+            "form-0-order": "0",
+            "_save": "",
+        },
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    product.refresh_from_db()
+    assert not product.is_published
+    said = [str(message) for message in response.context["messages"]]
+    assert not [message for message in said if "не будет вовсе" in message]

@@ -1012,3 +1012,32 @@ def test_a_wish_keeps_the_paragraphs_of_the_buyer(
     assert "  Пожелание: Первое\n\n  Второе" in inquiry_message(
         Inquiry.objects.get()
     )
+
+
+@pytest.mark.django_db
+def test_a_hidden_price_still_sends_the_configuration(
+    client: Client, calculable: SimpleNamespace, settings: Settings
+) -> None:
+    """Погашенная цена отбирает число, а не ТЗ (тикет 16, ADR-0008).
+
+    Ради этого конструктор и оставлен на карточке: менеджер получает
+    размер и выбранные значения готовыми, а цену называет сам — и
+    видит в снимке, почему её нет.
+    """
+    settings.INQUIRY_NOTIFIER = RECORDING
+    calculable.product.hides_calculated_price = True
+    calculable.product.save()
+
+    response = post_calculated(
+        client,
+        calculable,
+        values=[calculable.silver.pk, calculable.heating.pk],
+    )
+
+    assert response.status_code == HTTPStatus.CREATED
+    stored = InquiryItem.objects.get()
+    assert stored.calculated_price is None
+    assert stored.configuration == (
+        "800 × 600 мм; Тип полотна: Серебро; Подогрев: Есть; "
+        "цену этого зеркала называет менеджер"
+    )

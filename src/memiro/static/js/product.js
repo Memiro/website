@@ -20,7 +20,9 @@
 // цена с /api/price. Ставки, коэффициенты и разбор изделия на статьи
 // сюда не приезжают — считает сервер, браузер только показывает
 // (ADR-0007). Блока в разметке нет у товара вне считаемого набора,
-// и тогда весь этот код молчит.
+// и тогда весь этот код молчит. У товара с погашенной ценой блок
+// есть, а цены в нём нет: поля работают и конфигурацию объявляют,
+// за числом никто не ходит (тикет 16).
 (() => {
   const root = document.querySelector("[data-calc]");
   if (!root) return;
@@ -28,6 +30,13 @@
   const width = root.querySelector("[data-calc-width]");
   const height = root.querySelector("[data-calc-height]");
   const selects = [...root.querySelectorAll("[data-calc-value]")];
+  // Цену расчёта у товара может гасить владелец: поля остаются
+  // рабочими, а числа не будет ни здесь, ни на эндпоинте (тикет 16,
+  // ADR-0008). Строку о менеджере на месте цены печатает сервер —
+  // здесь остаётся не спрашивать цену и не затирать эту строку своими
+  // подсказками. Конфигурация при этом объявляется как обычно: она
+  // и есть то, ради чего конструктор оставлен
+  const priced = "calcPriced" in root.dataset;
 
   const NOTES = {
     sizes: "Введите ширину и высоту — посчитаем цену вашего размера.",
@@ -129,10 +138,11 @@
     const ticket = ++latest;
     const sent = configuration();
     if (!sent) {
-      say(NOTES.sizes);
+      if (priced) say(NOTES.sizes);
       return;
     }
     publish(sent);
+    if (!priced) return;
     const query = new URLSearchParams({
       product: root.dataset.product,
       width_mm: sent.width_mm,
