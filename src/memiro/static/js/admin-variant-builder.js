@@ -8,7 +8,13 @@
 // разбора изделия на статьи сюда не приезжает — как и на витрину
 // (ADR-0007). Разбивку тысяч тоже присылает сервер: типографика цены
 // у сайта одна.
-(() => {
+//
+// Запускается по `DOMContentLoaded`, а не сразу: медиа админки Django
+// печатает этот тег в `<head>` и без `defer`, поэтому в момент
+// выполнения разметки конструктора ещё нет — и панель молча осталась
+// бы мёртвой. Тем же способом ждёт разметку соседний
+// `admin-attribute-values.js`.
+document.addEventListener("DOMContentLoaded", () => {
   // Панель, а не форма: Django печатает этот блок внутри формы
   // товара, а вложенную форму браузер выбрасывает целиком. Токен
   // CSRF берётся у формы товара — своего у панели быть не может
@@ -28,7 +34,22 @@
 
   const NOTES = {
     sizes: "Введите ширину и высоту — посчитаем цену варианта.",
+    counting: "Считаем цену…",
     failed: "Не удалось посчитать цену. Попробуйте ещё раз.",
+    // Истёкшая сессия отвечает не отказом, а страницей входа: сервер
+    // уводит на неё редиректом, и разбор JSON спотыкается об HTML.
+    // Без этой строки владелец прочитал бы английское сообщение
+    // разборщика браузера
+    expired: "Сессия админки истекла — войдите заново и повторите.",
+  };
+
+  // Ответ, пришедший не JSON-ом, — это не ответ конструктора
+  const answered = async (response) => {
+    try {
+      return await response.json();
+    } catch {
+      return { error: response.ok ? NOTES.failed : NOTES.expired };
+    }
   };
 
   const say = (text, failed) => {
@@ -65,20 +86,34 @@
       },
       body: data,
     });
-    const answer = await response.json();
-    if (!response.ok) throw new Error(answer.error || NOTES.failed);
+    const answer = await answered(response);
+    if (!response.ok || !answer.variants) {
+      throw new Error(answer.error || NOTES.failed);
+    }
     return answer;
   };
 
   // Ответы приходят не в порядке отправки: показываем только последний
   // запрошенный, иначе цена мигала бы на предыдущий размер
   let latest = 0;
+  // Идёт ли сейчас запись. Пока идёт, вторая кнопка не нажимается:
+  // список перерисовывается ответом целиком, и ответ, пришедший
+  // вторым, вернул бы владельцу состояние до первой правки
+  let writing = false;
+
+  // Кнопка ждёт цену. Ввод миллиметров дебаунсится, и всё это время
+  // на экране висит цена прежнего размера — нажав «Добавить» тогда,
+  // владелец завёл бы вариант, глядя на чужое число
+  const settled = (ready) => {
+    apply.disabled = !ready || writing;
+  };
 
   const recalculate = async () => {
     const ticket = ++latest;
     const data = composed();
     if (!data) {
       say(NOTES.sizes);
+      settled(false);
       return;
     }
     let quote = null;
@@ -86,14 +121,22 @@
       const response = await fetch(`${panel.dataset.priceUrl}?${data}`, {
         headers: { Accept: "application/json" },
       });
-      const answer = await response.json();
-      quote = response.ok ? answer : { error: answer.error };
+      const answer = await answered(response);
+      quote = response.ok ? answer : { error: answer.error || NOTES.failed };
     } catch {
       quote = { error: NOTES.failed };
     }
     if (ticket !== latest) return;
     if (quote.error) say(quote.error, true);
     else say(quote.price_label);
+    settled(!quote.error);
+  };
+
+  // Поля тронули — показанная цена устарела в тот же миг, задолго до
+  // ответа сервера. Говорим об этом сразу, а не молчим 400 мс
+  const staled = () => {
+    say(composed() ? NOTES.counting : NOTES.sizes);
+    settled(false);
   };
 
   const row = (variant) => {
@@ -136,6 +179,8 @@
   const redraw = (variants) => {
     rows = variants;
     table.replaceChildren(...variants.map(row));
+    // Шапка без единой строки под ней обещает список, которого нет
+    table.closest("table").hidden = variants.length === 0;
     empty.hidden = variants.length > 0;
   };
 
@@ -169,18 +214,22 @@
       say(NOTES.sizes, true);
       return;
     }
-    if (edited.value) data.set("variant", edited.value);
+    const rewritten = edited.value;
+    if (rewritten) data.set("variant", rewritten);
+    writing = true;
     apply.disabled = true;
     try {
       redraw((await send(panel.dataset.saveUrl, data)).variants);
       // Поля остаются заполненными: следующий вариант отличается
-      // обычно одним размером — и правка на этом заканчивается
-      editing(null);
-      recalculate();
+      // обычно одним размером. Правка при этом из правки не выходит —
+      // иначе следующий щелчок по той же кнопке, ничего не изменив,
+      // завёл бы дубль только что переписанного варианта
+      if (!rewritten) editing(null);
     } catch (error) {
       failed(error);
     } finally {
-      apply.disabled = false;
+      writing = false;
+      recalculate();
     }
   });
 
@@ -204,20 +253,30 @@
     if (button.dataset.action === "clone") {
       // Копия, у которой меняется только размер: значения остаются
       // отмеченными, курсор встаёт в ширину — по опыту владельца это
-      // половина всей работы
+      // половина всей работы. Порядок копия не наследует: два
+      // варианта с одним номером спорили бы за то, на каком из них
+      // открывается калькулятор покупателя, — новая встаёт в конец
       fill(variant);
+      order.value = String(
+        rows.reduce((last, other) => Math.max(last, other.order), 0) + 1,
+      );
       editing(null);
       recalculate();
       width.select();
       return;
     }
+    if (writing) return;
     if (!window.confirm(`Удалить вариант ${variant.size_label}?`)) return;
     const data = new URLSearchParams({ variant: variant.variant_id });
+    writing = true;
     try {
       redraw((await send(panel.dataset.deleteUrl, data)).variants);
       if (edited.value === String(variant.variant_id)) editing(null);
     } catch (error) {
       failed(error);
+    } finally {
+      writing = false;
+      recalculate();
     }
   });
 
@@ -225,6 +284,7 @@
   let typing = null;
   [width, height].forEach((field) => {
     field.addEventListener("input", () => {
+      staled();
       clearTimeout(typing);
       typing = setTimeout(recalculate, 400);
     });
@@ -236,4 +296,4 @@
 
   redraw(JSON.parse(document.getElementById("variant-rows-data").textContent));
   recalculate();
-})();
+});

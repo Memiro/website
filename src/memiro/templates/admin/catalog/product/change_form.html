@@ -39,6 +39,13 @@
       размере открывается калькулятор покупателя.
     </p>
 
+    <noscript>
+      <p class="errornote">
+        Конструктор вариантов работает скриптом: без него ни цены, ни
+        списка заведённых вариантов здесь не будет.
+      </p>
+    </noscript>
+
     {{ variant_builder.rows|json_script:"variant-rows-data" }}
 
     {% comment %}
@@ -68,6 +75,7 @@
       </div>
 
       {% if variant_builder.groups %}
+        <p class="help">{{ variant_builder.values_help }}</p>
         <div class="form-row variant-values">
           {% for name, values in variant_builder.groups %}
             <fieldset>

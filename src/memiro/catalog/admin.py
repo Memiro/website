@@ -376,18 +376,23 @@ class ProductAdmin(admin.ModelAdmin):
         посчитать, она складывается из атрибутов, которых товар пока
         не назвал. На странице заведения признака в контексте нет
         вовсе, и шаблон говорит там, что делать дальше.
+
+        Нет его и у того, кто карточку только смотрит: адреса
+        конструктора спрашивают право на правку, и нарисованные ему
+        поля с кнопками были бы предложением заведомо отвергаемого.
         """
-        product = self.get_object(request, object_id)
+        product: Product | None = self.get_object(request, object_id)
+        builder = (
+            _builder_context(product)
+            if product is not None
+            and self.has_change_permission(request, product)
+            else None
+        )
         return super().change_view(
             request,
             object_id,
             form_url,
-            {
-                **(extra_context or {}),
-                "variant_builder": (
-                    _builder_context(product) if product is not None else None
-                ),
-            },
+            {**(extra_context or {}), "variant_builder": builder},
         )
 
     def variant_price_view(
@@ -421,7 +426,7 @@ class ProductAdmin(admin.ModelAdmin):
         """
         product = self._variant_product(request, product_id)
         try:
-            variant = _edited_variant(request.POST, product)
+            variant = _named_variant(request.POST, product)
             composition = _composed(request.POST, product)
         except ValidationError as refusal:
             return _refusal(refusal)
@@ -435,7 +440,7 @@ class ProductAdmin(admin.ModelAdmin):
         """Удалить вариант товара — и вернуть список, каким он стал."""
         product = self._variant_product(request, product_id)
         try:
-            variant = _edited_variant(request.POST, product)
+            variant = _named_variant(request.POST, product)
         except ValidationError as refusal:
             return _refusal(refusal)
         if variant is not None:
@@ -577,8 +582,9 @@ def _builder_context(product: Product) -> dict[str, Any]:
     """
     return {
         "groups": variants.dictionary(product),
+        "values_help": variants.VALUES_HELP,
         "rows": _variant_rows(product),
-        "max_side_mm": variants.MAX_SIDE_MM,
+        "max_side_mm": calculator.MAX_INPUT_SIDE_MM,
         "price_url": _variant_url(VARIANT_PRICE_URL, product),
         "save_url": _variant_url(VARIANT_SAVE_URL, product),
         "delete_url": _variant_url(VARIANT_DELETE_URL, product),
@@ -624,53 +630,23 @@ def _composed(data: QueryDict, product: Product) -> variants.Composition:
 
     Разбор один на показ цены и на сохранение: разойдись они,
     конструктор назвал бы цену конфигурации, которую сам же потом
-    отверг.
+    отверг. Живёт он в `catalog.variants`, рядом со словами отказа;
+    здесь остаётся достать поля из запроса.
     """
-    return variants.compose(
-        product,
-        width_mm=_side(data.get("width_mm")),
-        height_mm=_side(data.get("height_mm")),
-        value_ids=_value_ids(data.getlist("values")),
-        order=_order(data.get("order")),
+    return variants.compose_from(
+        product=product,
+        width_mm=data.get("width_mm"),
+        height_mm=data.get("height_mm"),
+        value_ids=data.getlist("values"),
+        order=data.get("order"),
     )
 
 
-def _side(raw: str | None) -> int:
-    """Миллиметры из поля формы; не число — не размер."""
-    try:
-        return int(raw or "")
-    except ValueError:
-        raise ValidationError(variants.NOT_MEASURED) from None
+def _named_variant(data: QueryDict, product: Product) -> ProductVariant | None:
+    """Вариант, который запрос назвал, — или ничего, если не назвал.
 
-
-def _order(raw: str | None) -> int:
-    """Каким по счёту вариант стоит на карточке.
-
-    Пустое поле — ноль, а не отказ: порядок владелец задаёт не
-    всякому варианту, и требовать его значило бы мешать заводить
-    первый.
-    """
-    try:
-        return max(int(raw or 0), 0)
-    except ValueError:
-        raise ValidationError(variants.NOT_ORDERED) from None
-
-
-def _value_ids(raw: list[str]) -> list[int]:
-    """Номера отмеченных значений; не номер — не значение.
-
-    Молча пропускать такое нельзя: владелец отметил флажок, а вариант
-    сохранился бы без него — и разошёлся бы с тем, что владелец видел.
-    """
-    if not all(chunk.isdigit() for chunk in raw):
-        raise ValidationError(variants.UNKNOWN_VALUE)
-    return [int(chunk) for chunk in raw]
-
-
-def _edited_variant(
-    data: QueryDict, product: Product
-) -> ProductVariant | None:
-    """Вариант, который правят или удаляют, — или ничего, если заводят.
+    Называют его правка и удаление; заведение — нет, ему нечего
+    называть.
 
     Чужой товару вариант сюда не попадает: спрашивается он у самого
     товара, и подменённый номер отвечает тем же, что и удалённый.

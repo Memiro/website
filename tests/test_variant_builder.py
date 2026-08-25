@@ -13,12 +13,15 @@
 from __future__ import annotations
 
 import json
+import re
 from decimal import Decimal
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from django.test import Client
 
 from memiro.catalog.models import (
@@ -30,6 +33,7 @@ from memiro.catalog.models import (
     ProductAttribute,
     ProductVariant,
 )
+from tests.sources import scripts_dir
 
 # Те же условные тарифы ADR-0007, что и у остальных тестов цены:
 # серебро 4 000 ₽/м², графит 5 000 ₽/м², контурная подсветка
@@ -419,6 +423,67 @@ def test_two_values_of_one_attribute_are_rejected(
 
 
 @pytest.mark.django_db
+def test_a_value_that_left_the_dictionary_is_refused(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Значение исчезло, пока владелец собирал, — сохранять нечего.
+
+    Молча пропустив его, конструктор завёл бы вариант, отличающийся
+    от того, что владелец видел на экране.
+    """
+    gone = shop.graphite.pk
+    shop.graphite.delete()
+
+    response = admin_client.post(
+        save_url(shop),
+        {"width_mm": 800, "height_mm": 600, "values": [gone]},
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert "справочнике" in json.loads(response.content)["error"]
+    assert not ProductVariant.objects.exists()
+
+
+@pytest.mark.django_db
+def test_a_negative_order_is_refused_instead_of_silently_zeroed(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Минус в порядке — не ноль, а промах: о нём говорят вслух.
+
+    Подменив его нулём, конструктор поставил бы вариант не туда, куда
+    владелец целился, и не сказал бы об этом.
+    """
+    response = admin_client.post(
+        save_url(shop),
+        {"width_mm": 800, "height_mm": 600, "order": -1},
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert "Порядок" in json.loads(response.content)["error"]
+    assert not ProductVariant.objects.exists()
+
+
+@pytest.mark.django_db
+def test_editing_a_variant_that_is_already_gone_says_so(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Вариант удалили в другой вкладке — правка не заводит новый."""
+    variant = ProductVariant.objects.create(
+        product=shop.product, width_mm=800, height_mm=600
+    )
+    lost = variant.pk
+    variant.delete()
+
+    response = admin_client.post(
+        save_url(shop),
+        {"variant": lost, "width_mm": 900, "height_mm": 600},
+    )
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert not ProductVariant.objects.exists()
+
+
+@pytest.mark.django_db
 def test_a_value_of_a_foreign_category_is_rejected(
     admin_client: Client, shop: SimpleNamespace
 ) -> None:
@@ -501,6 +566,46 @@ def test_the_builder_is_not_a_form_inside_a_form(
 
 
 @pytest.mark.django_db
+def test_the_builder_explains_that_an_empty_choice_is_normal(
+    admin_client: Client, shop: SimpleNamespace
+) -> None:
+    """Пустой набор флажков — норма, и сказать об этом больше негде.
+
+    В списке вариантов подписи нет: не отмеченный ни один флажок там
+    неотличим от недозаполненной строки.
+    """
+    page = card(admin_client, shop)
+
+    assert "берёт значения товара целиком" in page
+    assert "заменяет умолчание товара" in page
+
+
+@pytest.mark.django_db
+def test_a_reader_of_the_card_gets_no_builder(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Кто карточку только смотрит, тот не получает и конструктора.
+
+    Адреса конструктора спрашивают право на правку, и нарисованные
+    такому пользователю поля были бы предложением заведомо
+    отвергаемого.
+    """
+    reader = get_user_model().objects.create_user(
+        username="reader", password="reader-password", is_staff=True
+    )
+    reader.user_permissions.add(
+        Permission.objects.get(codename="view_product")
+    )
+
+    assert client.login(username="reader", password="reader-password")
+    page = client.get(
+        f"/admin/catalog/product/{shop.product.pk}/change/"
+    ).content.decode()
+
+    assert 'id="variant-builder-form"' not in page
+
+
+@pytest.mark.django_db
 def test_a_product_that_is_not_saved_yet_has_no_builder(
     admin_client: Client, db: None
 ) -> None:
@@ -531,3 +636,35 @@ def test_a_stranger_gets_nothing_from_the_builder(
     assert response.status_code == HTTPStatus.FOUND
     assert "/admin/login/" in response["Location"]
     assert not ProductVariant.objects.exists()
+
+
+# Сам вызов, а не слово: упомянуть `DOMContentLoaded` в комментарии
+# над кодом, который его не ждёт, — ровно та ошибка, которую тест ловит
+WAITS_FOR_MARKUP = re.compile(
+    r"""addEventListener\(\s*["']DOMContentLoaded["']"""
+)
+
+
+def test_admin_scripts_wait_for_the_markup() -> None:
+    """Скрипт админки обязан дождаться разметки — иначе он мёртв.
+
+    Медиа `ModelAdmin` печатается в `<head>` и без `defer`: скрипт
+    отрабатывает раньше, чем появляется то, к чему он цепляется, и
+    молча ничего не делает. Серверу эта поломка невидима — разметка
+    отдаётся полной, — а тесты по отданному HTML её не ловят: страница
+    целиком на месте. Витрина от этого защищена `defer` в шаблонах,
+    у админки такого места нет, и остаётся сам скрипт.
+    """
+    scripts = sorted(scripts_dir().glob("admin-*.js"))
+    assert scripts, "скриптов админки не нашлось — тест смотрит не туда"
+
+    hasty = [
+        path.name
+        for path in scripts
+        if not WAITS_FOR_MARKUP.search(path.read_text(encoding="utf-8"))
+    ]
+
+    assert not hasty, (
+        "скрипт админки цепляется к разметке, которой ещё нет; "
+        "оберните запуск в DOMContentLoaded: " + ", ".join(hasty)
+    )
