@@ -137,8 +137,7 @@
         <a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a>
       </div>
       <div class="contact-links">
-        {% if contacts.telegram %}<a href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>{% endif %}
-        {% if contacts.whatsapp %}<a href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+        {% if contacts.max_link %}<a href="{{ contacts.max_link }}" target="_blank" rel="noopener">MAX</a>{% endif %}
         {% if contacts.vk %}<a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>{% endif %}
       </div>
     </div>

@@ -27,12 +27,11 @@
         <p><a href="mailto:{{ contacts.email }}">{{ contacts.email }}</a></p>
       </div>
       {# Заголовок без единой ссылки под ним — тот же случай, что у реквизитов ниже #}
-      {% if contacts.whatsapp or contacts.telegram or contacts.vk %}
+      {% if contacts.max_link or contacts.vk %}
       <div class="contact-block">
         <h3>Мессенджеры и соцсети</h3>
         <div class="contact-links">
-          {% if contacts.whatsapp %}<a href="{{ contacts.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
-          {% if contacts.telegram %}<a href="{{ contacts.telegram }}" target="_blank" rel="noopener">Telegram</a>{% endif %}
+          {% if contacts.max_link %}<a href="{{ contacts.max_link }}" target="_blank" rel="noopener">MAX</a>{% endif %}
           {% if contacts.vk %}<a href="{{ contacts.vk }}" target="_blank" rel="noopener">ВКонтакте</a>{% endif %}
         </div>
       </div>

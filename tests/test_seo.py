@@ -281,7 +281,6 @@ def test_empty_contact_is_not_named_in_markup(
     contacts = SiteContacts.load()
     contacts.phone = ""
     contacts.email = ""
-    contacts.telegram = ""
     contacts.vk = ""
     contacts.avito = ""
     contacts.save()
@@ -291,6 +290,25 @@ def test_empty_contact_is_not_named_in_markup(
     assert "telephone" not in business
     assert "email" not in business
     assert "sameAs" not in business
+
+
+def test_max_placeholder_is_not_a_profile_in_markup(
+    client: Client, shop: SimpleNamespace
+) -> None:
+    """Тикет 08: заглушка вместо профиля — то же враньё, что пустой телефон.
+
+    «ВКонтакте» здесь заполнен нарочно: с пустым `sameAs` ключа не было
+    бы вовсе и утечка MAX прошла бы мимо теста.
+    """
+    contacts = SiteContacts.load()
+    contacts.max_link = "https://max.ru/"
+    contacts.vk = "https://vk.com/memirospb"
+    contacts.avito = ""
+    contacts.save()
+
+    business = block_of(page_html(client, "/contacts/"), "LocalBusiness")
+
+    assert business["sameAs"] == ["https://vk.com/memirospb"]
 
 
 def test_rating_never_appears_while_reviews_are_hidden(

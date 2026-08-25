@@ -127,11 +127,9 @@ def local_business(request: HttpRequest) -> dict[str, Any]:
             "addressLocality": contacts.city,
             "streetAddress": contacts.street,
         }
-    profiles = [
-        link
-        for link in (contacts.telegram, contacts.vk, contacts.avito)
-        if link
-    ]
+    # MAX в `sameAs` не едет: там пока заглушка, а заглушка вместо
+    # профиля — то же враньё поисковику, что и пустой телефон выше
+    profiles = [link for link in (contacts.vk, contacts.avito) if link]
     if profiles:
         data["sameAs"] = profiles
     hours = _opening_hours(contacts)

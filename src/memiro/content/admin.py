@@ -100,7 +100,7 @@ class SiteContactsAdmin(SingletonAdmin):
         (
             "Ссылки",
             {
-                "fields": ("telegram", "whatsapp", "vk", "avito"),
+                "fields": ("max_link", "vk", "avito"),
                 "description": (
                     "Пустая ссылка значит «не показывать»: витрина "
                     "не рисует иконку в никуда."

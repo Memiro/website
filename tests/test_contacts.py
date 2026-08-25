@@ -84,8 +84,7 @@ def test_footer_prints_values_from_admin(client: Client) -> None:
 def test_empty_link_gives_no_icon(client: Client) -> None:
     """Пустая ссылка значит «не показывать», а не иконку в никуда."""
     contacts = SiteContacts.load()
-    contacts.telegram = ""
-    contacts.whatsapp = ""
+    contacts.max_link = ""
     contacts.vk = ""
     contacts.map_embed = ""
     contacts.save()
@@ -93,9 +92,55 @@ def test_empty_link_gives_no_icon(client: Client) -> None:
     content = client.get("/contacts/").content.decode()
 
     assert 'href=""' not in content
+    assert "MAX" not in content
+    assert "data-map-src" not in content
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("page", ["/", "/contacts/", "/about/"])
+def test_storefront_messengers_are_max_only(client: Client, page: str) -> None:
+    """Тикет 08: связь со студией — телефон, почта и MAX.
+
+    Telegram и WhatsApp сняты с витрины целиком: шапка и футер
+    приезжают на каждую страницу, «Контакты» и главная — свои блоки.
+    """
+    contacts = SiteContacts.load()
+    contacts.max_link = "https://max.ru/memiro"
+    contacts.save()
+
+    content = client.get(page).content.decode()
+
     assert "Telegram" not in content
     assert "WhatsApp" not in content
-    assert "data-map-src" not in content
+    assert 'href="https://max.ru/memiro"' in content
+
+
+@pytest.mark.django_db
+def test_max_icon_stands_from_the_start_with_a_placeholder(
+    client: Client,
+) -> None:
+    """Тикет 08: иконку владелец велел поставить до настоящей ссылки.
+
+    Пустая ссылка обычно значит «не показывать», но заглушку сюда
+    завела миграция: забыть про иконку легче, чем про пустое место.
+    """
+    assert SiteContacts.load().max_link
+
+    content = client.get("/contacts/").content.decode()
+
+    assert ">MAX</a>" in content
+
+
+@pytest.mark.django_db
+def test_max_link_comes_from_admin(client: Client) -> None:
+    """Заглушку владелец меняет в админке, а не выкаткой."""
+    contacts = SiteContacts.load()
+    contacts.max_link = "https://max.ru/memiro"
+    contacts.save()
+
+    content = client.get("/contacts/").content.decode()
+
+    assert 'href="https://max.ru/memiro"' in content
 
 
 @pytest.mark.django_db

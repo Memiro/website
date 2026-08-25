@@ -179,8 +179,16 @@ class SiteContacts(SingletonModel):
         "сайт о расписании молчит.",
     )
     closes = models.TimeField("закрытие для разметки", null=True, blank=True)
-    telegram = models.URLField("Telegram", blank=True)
-    whatsapp = models.URLField("WhatsApp", blank=True)
+    # Связь со студией — телефон, почта и MAX (решение владельца,
+    # тикет 08). Труба, по которой заявка едет менеджеру, к этому полю
+    # отношения не имеет. `max_link`, а не `max` в ряд к `vk` и `avito`:
+    # имя встроенной функции в атрибуте класса линтер читает как ошибку
+    max_link = models.URLField(
+        "MAX",
+        blank=True,
+        help_text="Пока стоит заглушка: настоящий адрес владелец "
+        "подставит сюда сам, без выкатки.",
+    )
     vk = models.URLField("ВКонтакте", blank=True)
     avito = models.URLField(
         "витрина на Avito",
