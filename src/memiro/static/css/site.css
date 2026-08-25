@@ -216,11 +216,19 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   background: var(--bg-card); border: 1px solid var(--line-card); overflow: hidden;
 }
 .product-card:hover { border-color: var(--control); color: inherit; }
+/* Ссылка обёрнута вокруг всей плитки, а не вокруг куска (тикет 10),
+   и по высоте ряда тянется она — иначе низ плитки не её и не кликается */
+.product-card .card-link { display: flex; flex-direction: column; flex: 1; }
 .product-card .pic { position: relative; aspect-ratio: 1 / 1.08; background: var(--bg-muted); }
 .product-card .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .product-card .meta { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
 .product-card .name { font-size: 16px; font-weight: 500; line-height: 1.35; }
-.product-card .price { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+/* margin-top: auto — названия разной длины, и без прижатия к низу
+   цены в ряду плиток встали бы на разной высоте */
+.product-card .price {
+  margin-top: auto;
+  font-size: 24px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap;
+}
 
 /* ---------- Тёмный блок «О нас» ---------- */
 .dark { margin-top: 112px; background: var(--ink); color: var(--on-dark); }
@@ -327,21 +335,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .cart-drop:hover { color: var(--accent); }
 .collection-empty { margin-top: 40px; font-size: 17px; color: var(--body); }
 
-/* ---------- Действия карточки товара ---------- */
-.card-link { display: flex; flex-direction: column; flex: 1; }
-.card-actions {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 0 22px 22px;
-}
-/* margin-left: auto — у товара без вариантов цены нет вовсе (ADR-0007),
-   и без неё кнопка уехала бы влево, ломая ряд плиток */
-.cart-btn {
-  margin-left: auto;
-  background: none; border: none; padding: 6px 0; cursor: pointer;
-  font-family: inherit; font-size: 14px; font-weight: 600; color: var(--accent); white-space: nowrap;
-}
-.cart-btn:hover { color: var(--text); }
-.cart-btn.on { color: var(--muted); }
+/* ---------- Счётчик заявки в шапке ---------- */
 .counter-btn { position: relative; }
 .counter {
   position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px;
@@ -657,10 +651,6 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .cart-row { grid-template-columns: 72px 1fr; gap: 8px 16px; padding: 16px; }
   .cart-pic { width: 72px; height: 80px; }
   .cart-price, .cart-drop { grid-column: 2; justify-self: start; }
-  /* Цена и «В корзину» — оба без переноса, и в плитке карусели
-     (208px) они вместе не помещаются: раньше цена ломалась пополам,
-     теперь бы срезало кнопку. Пусть кнопка уходит на свою строку */
-  .card-actions { padding: 0 16px 18px; flex-wrap: wrap; row-gap: 8px; }
   .footer { margin-top: 38px; }
   .footer-grid { grid-template-columns: 1fr; gap: 30px; padding-top: 44px; padding-bottom: 28px; }
   .footer .wordmark { font-size: 26px; }

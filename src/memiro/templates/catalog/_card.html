@@ -1,5 +1,7 @@
 {% load catalog_tags %}
 <article class="product-card">
+  {% comment %}Плитка целиком — одна ссылка на товар (тикет 10): кнопки заявки
+     на ней нет, покупатель добавляет конфигурацию, а не строку каталога{% endcomment %}
   <a class="card-link" href="{% url 'product' product.category.slug product.slug %}">
     <div class="pic">
       {% if product.photo_small %}
@@ -8,13 +10,9 @@
     </div>
     <div class="meta">
       <div class="name">{{ product.name }}</div>
+      {% comment %}Товар без предпосчитанных вариантов цены не показывает вовсе (ADR-0007):
+         заглушка на её месте была бы неправдой, а строчка «уточняйте» — той же заглушкой{% endcomment %}
+      {% if product.has_price %}<span class="price">от {{ product.price|rub }} ₽</span>{% endif %}
     </div>
   </a>
-  <div class="card-actions">
-    {% comment %}Товар без предпосчитанных вариантов цены не показывает вовсе (ADR-0007):
-       заглушка на её месте была бы неправдой, а строчка «уточняйте» — той же заглушкой{% endcomment %}
-    {% if product.has_price %}<span class="price">от {{ product.price|rub }} ₽</span>{% endif %}
-    <button class="cart-btn" type="button" data-toggle="cart" data-product="{{ product.pk }}"
-            aria-pressed="false" data-label-off="В корзину" data-label-on="В корзине">В корзину</button>
-  </div>
 </article>
