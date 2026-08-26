@@ -82,8 +82,9 @@ enable_error_code = [
 include = ["src", "tests"]
 typeCheckingMode = "strict"
 
+# The scan scope is given on the CLI (`bandit -r src` in `just static`); the
+# section must exist for `-c pyproject.toml` to resolve.
 [tool.bandit]
-targets = ["src"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers --strict-config"

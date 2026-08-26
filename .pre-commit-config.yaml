@@ -1,5 +1,5 @@
 # Safety net only: run `just lint` and `just static` by hand before committing.
-default_install_hook_types: [pre-commit, pre-push]
+# Hook types are chosen by `just install` (the justfile is the single source of commands).
 
 repos:
   - repo: https://github.com/gitleaks/gitleaks
@@ -43,6 +43,13 @@ repos:
       - id: basedpyright
         name: basedpyright
         entry: uv run basedpyright
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]
+      - id: bandit
+        name: bandit
+        entry: uv run bandit -c pyproject.toml -r src
         language: system
         types: [python]
         pass_filenames: false

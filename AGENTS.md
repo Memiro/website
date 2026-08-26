@@ -32,8 +32,9 @@ descriptions and product-facing docs (`docs/`, ADRs) — Russian.
 - write production code before a red test; the use-case spec page
   (`docs/usecase/<feature>/`) comes before the red test;
 - use `unittest.mock` or `monkeypatch` — they sit in ruff `banned-api`; the
-  replacement is a fake behind a port (own infrastructure is real via
-  testcontainers);
+  fixture form (`monkeypatch` as a bare test argument) involves no import, so
+  the tool cannot catch it — the ban covers it all the same; the replacement
+  is a fake behind a port (own infrastructure is real via testcontainers);
 - run bare `pytest` — use `just test` / `just test-e2e`; bare pytest sweeps
   up e2e tests without a contour;
 - import adapters, dishka, SQLAlchemy or Django from `entities/` or
