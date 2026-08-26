@@ -356,6 +356,7 @@ requires-dist = [
     { name = "basedpyright", marker = "extra == 'lint'", specifier = "==1.39.10" },
     { name = "import-linter", marker = "extra == 'lint'", specifier = "==2.13" },
     { name = "memiro", extras = ["dev"], marker = "extra == 'ci'" },
+    { name = "memiro", extras = ["docs"], marker = "extra == 'dev'" },
     { name = "memiro", extras = ["lint"], marker = "extra == 'dev'" },
     { name = "memiro", extras = ["test"], marker = "extra == 'dev'" },
     { name = "mypy", marker = "extra == 'lint'", specifier = "==2.3.1" },
@@ -369,7 +370,7 @@ requires-dist = [
     { name = "structlog", specifier = "==26.1.0" },
     { name = "typos", marker = "extra == 'lint'", specifier = "==1.49.0" },
 ]
-provides-extras = ["lint", "test", "dev", "ci"]
+provides-extras = ["lint", "test", "docs", "dev", "ci"]
 
 [[package]]
 name = "mypy"
