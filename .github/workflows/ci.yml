@@ -31,6 +31,6 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen --extra ci
-      # Integration tests bring their own Postgres via testcontainers; the
-      # compose db of `just test` is only a host-side convenience.
-      - run: uv run pytest tests/unit tests/integration
+      # Integration tests bring their own Postgres via testcontainers (one per
+      # xdist worker); the compose db of `just test` is a host-side convenience.
+      - run: uv run pytest -n auto tests/unit tests/integration

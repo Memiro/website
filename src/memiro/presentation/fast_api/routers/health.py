@@ -25,5 +25,8 @@ async def alive() -> HealthStatus:
 @router.get("/ready")
 async def ready(session: FromDishka[AsyncSession]) -> HealthStatus:
     """Report readiness by taking a session from DI and touching the database."""
+    # Deliberate §10.2 deviation: readiness is infrastructure, not a use case —
+    # an interactor here would put probe SQL into the application layer for no
+    # domain rule. Domain routes stay one-line interactor calls.
     await session.execute(text("SELECT 1"))
     return HealthStatus(status="ok")
