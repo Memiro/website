@@ -1,0 +1,11 @@
+# In-container config for the api and migrations services (docker compose).
+
+[db]
+host = "db"
+port = 5432
+user = "memiro"
+password = "memiro"
+database = "memiro"
+
+[observability]
+enabled = false
