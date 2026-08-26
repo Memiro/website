@@ -7,10 +7,10 @@ the ADRs in `docs/adr/` and the patterns already in the repository. When this
 file and existing code disagree, this file wins — propose a fix for the code
 instead of copying the deviation.
 
-Transitional note: this file describes the rewrite target. Until the MVP code
-on `main` is replaced (skeleton ticket onward), the legacy Django code and its
-justfile predate these rules and do not follow them; do not copy their
-patterns into new work.
+Transitional note: this file describes the rewrite target. The legacy MVP
+code lives in git history and on `main` until the first release replaces it;
+it predates these rules and does not follow them — do not copy its patterns
+into new work.
 
 The repository is one bounded context `memiro`: a FastAPI backend
 (`src/memiro/`), shared primitives (`src/memiro_common/`), a Django admin as a
@@ -25,8 +25,10 @@ descriptions and product-facing docs (`docs/`, ADRs) — Russian.
 
 **Never:**
 
-- commit or push to `main` — feature branch → PR → rebase-merge, and merging
-  a PR requires the owner's explicit OK;
+- commit or push to `dev` or `main` directly — the working trunk is `dev`:
+  feature branch off `dev` → PR into `dev` → rebase-merge, and merging a PR
+  requires the owner's explicit OK; `dev` flows into `main` only as a release
+  by the owner (`main` is production);
 - write production code before a red test; the use-case spec page
   (`docs/usecase/<feature>/`) comes before the red test;
 - use `unittest.mock` or `monkeypatch` — they sit in ruff `banned-api`; the

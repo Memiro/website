@@ -1,0 +1,36 @@
+[importlinter]
+root_packages =
+    memiro
+    memiro_common
+include_external_packages = True
+
+[importlinter:contract:layers]
+name = The layers point inward: entities <- application <- adapters <- presentation <- bootstrap
+type = layers
+layers =
+    memiro.bootstrap
+    memiro.presentation
+    memiro.adapters
+    memiro.application
+    memiro.entities
+
+[importlinter:contract:common-knows-no-context]
+name = memiro_common knows nothing of the contexts
+type = forbidden
+source_modules =
+    memiro_common
+forbidden_modules =
+    memiro
+
+[importlinter:contract:domain-is-pure]
+name = entities and application never import frameworks (fastapi, sqlalchemy, dishka, django)
+type = forbidden
+source_modules =
+    memiro.entities
+    memiro.application
+forbidden_modules =
+    fastapi
+    sqlalchemy
+    alembic
+    dishka
+    django
