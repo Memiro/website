@@ -1,0 +1,86 @@
+[project]
+name = "memiro"
+version = "0.1.0"
+description = "Memiro studio website: FastAPI backend + Django admin of one bounded context"
+readme = "README.md"
+requires-python = "==3.13.*"
+dependencies = [
+    "structlog==26.1.0",
+    "opentelemetry-api==1.44.0",
+    "opentelemetry-sdk==1.44.0",
+    "opentelemetry-exporter-otlp-proto-http==1.44.0",
+]
+
+[project.optional-dependencies]
+lint = [
+    "ruff==0.16.4",
+    "mypy==2.3.1",
+    "basedpyright==1.39.10",
+    "import-linter==2.13",
+    "typos==1.49.0",
+    "bandit==1.9.4",
+]
+test = [
+    "pytest==9.1.1",
+    "pytest-xdist==3.8.0",
+]
+dev = [
+    "memiro[lint]",
+    "memiro[test]",
+    "pre-commit==4.6.2",
+]
+ci = [
+    "memiro[dev]",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/memiro", "src/memiro_common"]
+
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "D100",    # module docstrings are not required: the docstring convention covers public objects, not files
+    "D104",    # empty __init__.py is the convention: packages are namespaces, imports are full-path
+    "D105",    # magic methods carry the language's contract; docstrings there add nothing
+    "D203",    # incompatible with D211 (no blank line before class docstring); D211 is the project style
+    "D213",    # incompatible with D212 (docstring summary on the first line); D212 is the project style
+    "COM812",  # trailing-comma rule conflicts with the ruff formatter (ruff's own recommendation)
+    "CPY001",  # the project does not use per-file copyright headers
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
+"src/memiro_common/interactor.py" = ["ANN401"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"unittest.mock" = { msg = "fakes behind ports instead of mocks" }
+"pytest.MonkeyPatch" = { msg = "fakes behind ports instead of mocks" }
+
+[tool.mypy]
+files = ["src", "tests"]
+strict = true
+enable_error_code = [
+    "explicit-override",
+    "ignore-without-code",
+    "possibly-undefined",
+    "redundant-expr",
+    "unused-awaitable",
+]
+
+[tool.basedpyright]
+include = ["src", "tests"]
+typeCheckingMode = "strict"
+
+[tool.bandit]
+targets = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config"
