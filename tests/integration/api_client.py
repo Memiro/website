@@ -1,0 +1,57 @@
+from types import TracebackType
+from typing import Self
+
+import httpx
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+from memiro.presentation.fast_api.routers.health import HealthStatus
+
+
+class ApiResponse[ModelT: BaseModel]:
+    """One API response with fluent assertions (§14.5.4)."""
+
+    def __init__(self, response: httpx.Response, model_type: type[ModelT]) -> None:
+        """Wrap a raw response together with its expected DTO type."""
+        self._response = response
+        self._model_type = model_type
+
+    def assert_status(self, expected: int) -> Self:
+        """Assert the HTTP status code, failing with the response body."""
+        assert self._response.status_code == expected, self._response.text
+        return self
+
+    def ensure_content(self) -> ModelT:
+        """Parse the body into the real production DTO."""
+        return self._model_type.model_validate_json(self._response.text)
+
+
+class ApiClient:
+    """Typed client over the in-process ASGI app: one method per endpoint."""
+
+    def __init__(self, app: FastAPI) -> None:
+        """Build an httpx client over the app's ASGI transport."""
+        transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+        self._client = httpx.AsyncClient(transport=transport, base_url="http://test")
+
+    async def __aenter__(self) -> Self:
+        """Enter the underlying HTTP client."""
+        await self._client.__aenter__()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Close the underlying HTTP client."""
+        await self._client.__aexit__(exc_type, exc, tb)
+
+    async def alive(self) -> ApiResponse[HealthStatus]:
+        """Call the liveness probe."""
+        return ApiResponse(await self._client.get("/internal/alive"), HealthStatus)
+
+    async def ready(self) -> ApiResponse[HealthStatus]:
+        """Call the readiness probe."""
+        return ApiResponse(await self._client.get("/internal/ready"), HealthStatus)

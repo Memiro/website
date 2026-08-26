@@ -9,6 +9,13 @@ dependencies = [
     "opentelemetry-api==1.44.0",
     "opentelemetry-sdk==1.44.0",
     "opentelemetry-exporter-otlp-proto-http==1.44.0",
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "sqlalchemy==2.0.52",
+    "asyncpg==0.31.0",
+    "alembic==1.19.1",
+    "dishka==1.10.1",
+    "opentelemetry-instrumentation-fastapi==0.65b0",
 ]
 
 [project.optional-dependencies]
@@ -21,8 +28,12 @@ lint = [
     "bandit==1.9.4",
 ]
 test = [
+    "asgi-lifespan==2.1.0",
+    "httpx==0.28.1",
     "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
     "pytest-xdist==3.8.0",
+    "testcontainers==4.15.0",
 ]
 # docs is empty until a docs toolchain appears; kept for the §3.1 extras layering.
 docs = []
@@ -35,6 +46,9 @@ dev = [
 ci = [
     "memiro[dev]",
 ]
+
+[project.scripts]
+memiro = "memiro.bootstrap.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -62,6 +76,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
 "src/memiro_common/interactor.py" = ["ANN401"]
+# Tests speak in asserts (S101); test databases are named with f-strings over
+# values the suite itself generates, not user input (S608).
+"tests/**" = ["S101", "S608"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "unittest.mock" = { msg = "fakes behind ports instead of mocks" }
@@ -88,3 +105,8 @@ typeCheckingMode = "strict"
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers --strict-config"
+asyncio_mode = "auto"
+# One event loop per session: session-scoped resources (admin engine, the
+# testcontainer) and per-test apps must live on the same loop.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
