@@ -1,29 +1,23 @@
-"""Уведомление владельца о заявке.
+"""Уведомление менеджера о заявке.
 
 Транспорт подменяем: класс берётся из `settings.INQUIRY_NOTIFIER`, так что
-тесты подставляют свой, а прод — Telegram. Падение транспорта не
-отменяет заявку: она уже в журнале, уведомление — вторично.
+тесты подставляют свой, а прод — почту. Падение транспорта не отменяет
+заявку: она уже в журнале, уведомление — вторично.
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import urllib.error
-import urllib.parse
-import urllib.request
 from typing import TYPE_CHECKING, Protocol
 
 from django.conf import settings
+from django.core.mail import EmailMessage, mailers
 from django.utils.module_loading import import_string
 
 if TYPE_CHECKING:
     from memiro.inquiries.models import Inquiry, InquiryItem
 
 logger = logging.getLogger(__name__)
-
-TELEGRAM_API = "https://api.telegram.org"
-TIMEOUT_SECONDS = 5
 
 
 class InquiryNotifier(Protocol):
@@ -103,32 +97,43 @@ def inquiry_message(inquiry: Inquiry) -> str:
     return "\n".join(lines)
 
 
-class TelegramNotifier:
-    """Отправка в Telegram; без токена и чата — только запись в лог."""
+def inquiry_subject(inquiry: Inquiry) -> str:
+    """Тема письма: номер и источник.
+
+    По ней менеджер находит заявку в журнале, не открывая письма, и
+    отличает две заявки одного человека друг от друга.
+    """
+    return f"Заявка №{inquiry.pk} — {inquiry.get_source_display()}"
+
+
+class EmailNotifier:
+    """Письмо менеджеру; без адреса — только запись в лог.
+
+    Реквизиты ящика живут в окружении (`MAILERS` собирается из него в
+    настройках, адрес менеджера — `INQUIRY_MANAGER_EMAIL`), а не в коде:
+    пароль приложения — секрет, и в репозиторий ему нельзя.
+    """
 
     def send(self, inquiry: Inquiry) -> None:
-        token = settings.TELEGRAM_BOT_TOKEN
-        chat_id = settings.TELEGRAM_CHAT_ID
-        if not token or not chat_id:
+        manager = settings.INQUIRY_MANAGER_EMAIL
+        if not manager:
             logger.warning(
-                "Telegram не настроен, заявка №%s без уведомления", inquiry.pk
+                "Адрес менеджера не задан, заявка №%s без уведомления",
+                inquiry.pk,
             )
             return
-        payload = urllib.parse.urlencode(
-            {"chat_id": chat_id, "text": inquiry_message(inquiry)}
-        ).encode()
-        request = urllib.request.Request(  # noqa: S310
-            f"{TELEGRAM_API}/bot{token}/sendMessage",
-            data=payload,
-            method="POST",
+        letter = EmailMessage(
+            subject=inquiry_subject(inquiry),
+            body=inquiry_message(inquiry),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[manager],
         )
-        # Схема жёстко https://api.telegram.org, подстановки URL нет
-        with urllib.request.urlopen(  # noqa: S310  # nosec B310
-            request, timeout=TIMEOUT_SECONDS
-        ) as response:
-            answer = json.loads(response.read())
-        if not answer.get("ok"):
-            logger.error("Telegram отказал: %s", answer)
+        # Отправка через `mailers`, а не через `letter.send()`: второй
+        # ходит устаревшим путём, которого в Django 7.0 не будет.
+        # Сбой не глушится — его ловит notify() и пишет в лог с
+        # трассировкой, а молчаливая отправка «в никуда» оставила бы
+        # менеджера без заявки и без следа о том, почему
+        mailers.default.send_messages([letter])
 
 
 def notify(inquiry: Inquiry) -> None:

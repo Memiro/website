@@ -146,13 +146,39 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Уведомление владельца о заявке: транспорт подменяем (тесты ставят свой)
+# Уведомление менеджера о заявке: транспорт подменяем (тесты ставят свой)
 INQUIRY_NOTIFIER = os.environ.get(
     "INQUIRY_NOTIFIER",
-    "memiro.inquiries.notifications.TelegramNotifier",
+    "memiro.inquiries.notifications.EmailNotifier",
 )
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
+# Ящик менеджера: пусто — заявка пишется в журнал и в лог, но письма нет
+INQUIRY_MANAGER_EMAIL = os.environ.get("INQUIRY_MANAGER_EMAIL", "")
+
+# Отправка письма. Умолчания — под Яндекс.Почту: порт 465 и SSL, а пароль
+# приложения вместо пароля от ящика (обычный SMTP не примет). Реквизиты
+# живут в окружении, в репозитории их нет.
+# Настройка через MAILERS, а не через EMAIL_*: те объявлены устаревшими
+# и в Django 7.0 их не станет
+MAILERS = {
+    "default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": os.environ.get("EMAIL_HOST", "smtp.yandex.ru"),
+            "port": int(os.environ.get("EMAIL_PORT", "465")),
+            "username": os.environ.get("EMAIL_HOST_USER", ""),
+            "password": os.environ.get("EMAIL_HOST_PASSWORD", ""),
+            # 465 у Яндекса — SSL с первого байта, не STARTTLS
+            "use_ssl": True,
+            # Чужой сервер молчит — заявку это не держит: приём ждёт
+            # ответа SMTP ровно столько
+            "timeout": 10,
+        },
+    }
+}
+# Отправитель по умолчанию — сам ящик: чужой адрес в From Яндекс отвергает
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", os.environ.get("EMAIL_HOST_USER", "")
+)
 
 # Единственная аналитика сайта — Яндекс.Метрика, и та за согласием
 # (memiro/legal/analytics_consent.py). Пусто — счётчика нет, cookie-баннер
