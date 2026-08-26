@@ -34,3 +34,15 @@ forbidden_modules =
     alembic
     dishka
     django
+
+; Interim half of decision 41: until presentation.django_admin and
+; bootstrap.django_admin exist (ticket 16), django appears nowhere at all.
+; Ticket 16 replaces this with the precise django_admin contracts.
+[importlinter:contract:no-django-yet]
+name = django is imported nowhere until the admin presentation lands
+type = forbidden
+source_modules =
+    memiro
+    memiro_common
+forbidden_modules =
+    django
