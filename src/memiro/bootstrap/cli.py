@@ -20,4 +20,5 @@ def main() -> None:
     if args.command == "run":
         run_api()
     elif args.command == "migrations":
-        apply_migrations(Config.load().db.url)
+        config = Config.load()
+        apply_migrations(config.db.url)

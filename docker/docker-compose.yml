@@ -1,5 +1,15 @@
 name: memiro
 
+# Shared shape of the Python services; only command/depends_on/healthcheck differ.
+x-app: &app
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile
+  environment:
+    APP_CONFIG_PATH: /app/.config/config.docker.toml
+  volumes:
+    - ../.config:/app/.config:ro
+
 services:
   db:
     image: postgres:17-alpine
@@ -23,27 +33,15 @@ services:
   # One-shot: the order of migration steps lives here, not in anyone's memory.
   # Django's `migrate` for the service tables appends when the admin lands.
   migrations:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    <<: *app
     command: ["memiro", "migrations", "apply"]
-    environment:
-      APP_CONFIG_PATH: /app/.config/config.docker.toml
-    volumes:
-      - ../.config:/app/.config:ro
     depends_on:
       db:
         condition: service_healthy
 
   api:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    <<: *app
     command: ["memiro", "run", "api"]
-    environment:
-      APP_CONFIG_PATH: /app/.config/config.docker.toml
-    volumes:
-      - ../.config:/app/.config:ro
     depends_on:
       migrations:
         condition: service_completed_successfully
