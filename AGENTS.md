@@ -1,10 +1,11 @@
 # AGENTS.md
 
-Operational rules for AI agents working in this repository. This file is a
-distillation of the full coding standard (`agent-coding-instruction`); where
-this file is silent, the full instruction is the reference. When this file and
-existing code disagree, this file wins — propose a fix for the code instead of
-copying the deviation.
+Operational rules for AI agents working in this repository — a distillation
+of the coding standard the project was founded on (agent-coding-instruction).
+This file is self-sufficient: where it is silent, follow the existing code,
+the ADRs in `docs/adr/` and the patterns already in the repository. When this
+file and existing code disagree, this file wins — propose a fix for the code
+instead of copying the deviation.
 
 The repository is one bounded context `memiro`: a FastAPI backend
 (`src/memiro/`), shared primitives (`src/memiro_common/`), a Django admin as a
@@ -65,9 +66,8 @@ command lines.
 | `just migrate` | apply migrations locally |
 | `just run` | run the API locally |
 
-Tool traps: `just lint` rewrites files — run it before staging, not after;
-`lint` is the only mutating recipe and its order matters (formatters first,
-checkers after); `just test` never requires starting docker by hand.
+Tool trap: `just lint` is the only mutating recipe — it rewrites files, so
+run it before staging, not after.
 
 ## Architecture facts
 
@@ -142,15 +142,17 @@ replacement for assertions.
    app assembled by the production `create_app(config)`; negative tests are
    one line: `assert_error(status, "CODE")`; positive tests compare the whole
    object.
-6. The mechanical negative checklist per use case: 401, wrong role → 404,
-   interloper → 403, `uuid4()` → 404, every limit at `+1` from the production
+6. The mechanical negative checklist per use case: 401, role missing → 404
+   (no existence oracle), interloper → 403, `uuid4()` → 404, every limit at
+   `+1` from the production
    constant → 422, state conflicts → 409, domain validation → 400; races are
    two competitors in `asyncio.gather`.
 7. Expected values are hardcoded, never re-derived by re-running production
    logic; production constants are imported so the test hits exactly
    `LIMIT + 1`.
 8. Time: injected `Clock`; unit tests use `FakeClock` frozen on a module
-   `NOW` with non-zero seconds; data uses only `timedelta` from `now`.
+   `NOW` with non-zero seconds and microseconds (otherwise missing
+   normalization is invisible); data uses only `timedelta` from `now`.
 9. Hypothesis — unit only, densest on `entities/pricing/`; strategies as
    `@st.composite` in one `composite.py`; invariants generated coherently,
    never patched after the draw.
