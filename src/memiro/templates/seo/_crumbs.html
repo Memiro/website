@@ -1,4 +1,0 @@
-{% load seo_tags %}{% if breadcrumbs %}
-<nav class="crumbs wrap">{% for crumb in breadcrumbs %}{% if not forloop.first %} / {% endif %}{% if crumb.url %}<a href="{{ crumb.url }}">{{ crumb.name }}</a>{% else %}{{ crumb.name }}{% endif %}{% endfor %}</nav>
-{% breadcrumbs_jsonld %}
-{% endif %}
