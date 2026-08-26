@@ -1,4 +1,7 @@
 set positional-arguments := true
+# Host-side recipes (`just run`, `just migrate`) read APP_CONFIG_PATH from .env;
+# recipes run from the justfile directory, so the relative path there resolves.
+set dotenv-load := true
 
 # List available commands
 default:
@@ -27,6 +30,10 @@ static:
 test *args:
     just db-up
     uv run pytest tests/unit tests/integration "$@"
+
+# CI test entry: testcontainers brings its own database, the compose db is not needed
+test-ci:
+    uv run pytest -n auto tests/unit tests/integration
 
 # End-to-end tests: full contour up, run, contour down
 test-e2e:

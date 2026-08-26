@@ -42,7 +42,11 @@ def create_app(config: Config) -> FastAPI:
 
 
 def app_factory() -> FastAPI:
-    """Build the app for ``uvicorn --factory`` — the only place ``Config.load()`` runs."""
+    """Build the app for ``uvicorn --factory``.
+
+    The only place the API process calls ``Config.load()``; other process
+    entry points (CLI migrations) load their config in ``cli.py``.
+    """
     return create_app(Config.load())
 
 

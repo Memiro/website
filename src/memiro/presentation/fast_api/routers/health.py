@@ -10,6 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter(tags=["internal"], route_class=DishkaRoute, prefix="/internal")
 
 
+# HealthStatus lives here, not in application: the probes are infrastructure
+# with no use case behind them (see the §10.2 deviation note on `ready`), and
+# the application layer must not learn transport-only shapes.
 class HealthStatus(BaseModel):
     """Health probe response."""
 
