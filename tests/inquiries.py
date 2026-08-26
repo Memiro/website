@@ -1,33 +1,28 @@
-"""Общая обстановка тестов о заявке: считаемое зеркало и отправка формы.
+"""Отправка заявки: тарифы фикстуры, состав подборки и POST на эндпоинт.
 
-Зеркало с тарифами и POST на эндпоинт нужны всем, кто проверяет заявку, —
-и приёму, и журналу, и письму менеджеру. Собраны здесь, чтобы третий такой
-тест не переписывал их в третий раз (тот же приём, что в `sources.py`).
+Нужны всем, кто проверяет заявку, — и приёму, и журналу, и письму
+менеджеру, — чтобы третий такой тест не переписывал их в третий раз
+(тот же приём, что в `sources.py`). Само зеркало живёт фикстурой
+`calculable` в `conftest.py`: фикстуру pytest должен найти сам, без
+импорта в каждом модуле.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
-import pytest
 from django.test import Client
 
 if TYPE_CHECKING:
+    from types import SimpleNamespace
+
     # Тип ответа тестового клиента живёт только в стабах django-stubs
     from django.test.client import (
         _MonkeyPatchedWSGIResponse as TestResponse,
     )
 
-from memiro.catalog.models import (
-    Attribute,
-    AttributeValue,
-    Category,
-    PricingSettings,
-    Product,
-    ProductAttribute,
-)
+    from memiro.catalog.models import Product
 
 # Условные тарифы: полотно 4 000 ₽/м², подогрев 3 500 ₽/шт
 GLASS_RATE = Decimal(4000)
@@ -75,63 +70,6 @@ def post_inquiry(client: Client, **overrides: object) -> TestResponse:
         "/api/inquiries",
         data=payload(**overrides),
         content_type="application/json",
-    )
-
-
-@pytest.fixture
-def calculable(db: None) -> SimpleNamespace:
-    """Зеркало в считаемом наборе: полотно и подогрев меняет покупатель."""
-    PricingSettings.objects.create(
-        max_long_side_mm=MAX_LONG_SIDE_MM,
-        max_short_side_mm=MAX_SHORT_SIDE_MM,
-    )
-    category = Category.objects.create(name="Зеркала", slug="zerkala")
-    blade = Attribute.objects.create(
-        category=category,
-        name="Тип полотна",
-        slug="tip-polotna",
-        is_customer_editable=True,
-    )
-    silver = AttributeValue.objects.create(
-        attribute=blade,
-        value="Серебро",
-        unit=AttributeValue.Unit.SQUARE_METER,
-        rate=GLASS_RATE,
-    )
-    heating_attribute = Attribute.objects.create(
-        category=category,
-        name="Подогрев",
-        slug="podogrev",
-        is_customer_editable=True,
-        order=1,
-    )
-    heating = AttributeValue.objects.create(
-        attribute=heating_attribute,
-        value="Есть",
-        unit=AttributeValue.Unit.PIECE,
-        rate=HEATING_RATE,
-    )
-    # Умолчание товара: бесплатное «нет» — покупатель его и заменяет
-    no_heating = AttributeValue.objects.create(
-        attribute=heating_attribute, value="Нет", order=1
-    )
-    product = Product.objects.create(
-        category=category,
-        name="Halo Moon",
-        slug="halo-moon",
-        is_published=True,
-    )
-    ProductAttribute.objects.create(
-        product=product, attribute=blade, value_option=silver
-    )
-    ProductAttribute.objects.create(
-        product=product, attribute=heating_attribute, value_option=no_heating
-    )
-    return SimpleNamespace(
-        product=product,
-        silver=silver,
-        heating=heating,
-        no_heating=no_heating,
     )
 
 

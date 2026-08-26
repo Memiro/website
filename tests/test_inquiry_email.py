@@ -1,8 +1,8 @@
 """Заявка уходит менеджеру письмом (тикет 19).
 
-Про состав письма спрашивает `test_inquiries.py` — там живёт
-`inquiry_message()`. Здесь спрашивают про транспорт: кому уходит, с
-какой темой и что бывает, когда почта молчит.
+Текст письма собирает `inquiry_message()` из `inquiries/notifications.py`,
+и построчно его разбирает `test_inquiries.py`. Здесь спрашивают про
+транспорт: кому уходит, с какой темой и что бывает, когда почта молчит.
 """
 
 from http import HTTPStatus
@@ -13,10 +13,11 @@ from django.core import mail
 from django.test import Client
 from pytest_django.fixtures import Settings
 
+from memiro.catalog.formatting import rub
 from memiro.inquiries.models import Inquiry
 from memiro.inquiries.notifications import inquiry_message
 from tests.inquiries import (
-    calculable,
+    SILVER_TOTAL,
     item,
     post_calculated,
     post_inquiry,
@@ -25,16 +26,15 @@ from tests.inquiries import (
 if TYPE_CHECKING:
     from types import SimpleNamespace
 
-# Фикстура приезжает импортом, но pytest узнаёт её только по имени
-# в модуле — линтеру это видится неиспользованным именем
-__all__ = ["calculable"]
-
 EMAIL = "memiro.inquiries.notifications.EmailNotifier"
 MANAGER = "manager@example.com"
 SENDER = "robot@memiro.ru"
 
 # Одно и то же зеркало двумя размерами — две строки состава
 MIRRORS_IN_THE_CART = 2
+# Зеркало 1200 × 700 — 0,84 м²: 3 360 ₽ полотна плюс 3 500 ₽ подогрева,
+# итог округляется вверх до сотни
+SILVER_WITH_HEATING_1200 = 6900
 # Размер, которого производство не берёт: цену называет менеджер
 ABSURD_WIDTH_MM = 900_000
 
@@ -108,6 +108,8 @@ def test_two_mirrors_arrive_with_their_own_calculations(
     assert (
         "Расчёт: 1200 × 700 мм; Тип полотна: Серебро; Подогрев: Есть" in body
     )
+    assert f"Показанная цена: {rub(SILVER_TOTAL)} ₽" in body
+    assert f"Показанная цена: {rub(SILVER_WITH_HEATING_1200)} ₽" in body
     assert "Пожелание: В прихожую" in body
     assert "Пожелание: В ванную, с подогревом" in body
 

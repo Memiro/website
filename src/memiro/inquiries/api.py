@@ -282,7 +282,7 @@ class ProductSummariesController(Controller[PydanticSerializer]):
 
 @csrf_protect_json
 class InquiryController(Controller[PydanticSerializer]):
-    """Приём заявки: журнал в админке и уведомление владельцу."""
+    """Приём заявки: журнал в админке и уведомление менеджеру."""
 
     responses: ClassVar = [*csrf_protect_json.responses]
     # Лимита на частоту заявок здесь нет: dmr считает по REMOTE_ADDR,

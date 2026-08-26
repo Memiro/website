@@ -154,31 +154,41 @@ INQUIRY_NOTIFIER = os.environ.get(
 # Ящик менеджера: пусто — заявка пишется в журнал и в лог, но письма нет
 INQUIRY_MANAGER_EMAIL = os.environ.get("INQUIRY_MANAGER_EMAIL", "")
 
-# Отправка письма. Умолчания — под Яндекс.Почту: порт 465 и SSL, а пароль
-# приложения вместо пароля от ящика (обычный SMTP не примет). Реквизиты
-# живут в окружении, в репозитории их нет.
+# Отправка письма. Умолчания — под Яндекс.Почту: 465 и пароль приложения
+# вместо пароля от ящика (обычный SMTP не примет). Реквизиты живут в
+# окружении, в репозитории их нет.
 # Настройка через MAILERS, а не через EMAIL_*: те объявлены устаревшими
-# и в Django 7.0 их не станет
+# и в Django 7.0 их не станет — а рядом с MAILERS Django их и не пускает,
+# потому имена настроек здесь свои (SMTP_*), при том что переменные
+# окружения остались привычными
+SMTP_SSL_PORT = 465
+SMTP_STARTTLS_PORT = 587
+SMTP_PORT = int(os.environ.get("EMAIL_PORT", SMTP_SSL_PORT))
+SMTP_USER = os.environ.get("EMAIL_HOST_USER", "")
 MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
         "OPTIONS": {
             "host": os.environ.get("EMAIL_HOST", "smtp.yandex.ru"),
-            "port": int(os.environ.get("EMAIL_PORT", "465")),
-            "username": os.environ.get("EMAIL_HOST_USER", ""),
+            "port": SMTP_PORT,
+            "username": SMTP_USER,
             "password": os.environ.get("EMAIL_HOST_PASSWORD", ""),
-            # 465 у Яндекса — SSL с первого байта, не STARTTLS
-            "use_ssl": True,
-            # Чужой сервер молчит — заявку это не держит: приём ждёт
-            # ответа SMTP ровно столько
+            # Шифрование выводится из порта, а не из своей переменной:
+            # 465 — SSL с первого байта, 587 — STARTTLS. Отдельная
+            # ручка позволяла бы выставить её вразрез с портом, и SMTP
+            # молча отказывал бы на каждой заявке
+            "use_ssl": SMTP_PORT == SMTP_SSL_PORT,
+            "use_tls": SMTP_PORT == SMTP_STARTTLS_PORT,
+            # Чужой сервер молчит — приём заявки ждёт ответа SMTP
+            # ровно столько и не висит на посетителе
             "timeout": 10,
         },
     }
 }
-# Отправитель по умолчанию — сам ящик: чужой адрес в From Яндекс отвергает
-DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", os.environ.get("EMAIL_HOST_USER", "")
-)
+# Отправитель по умолчанию — сам ящик: чужой адрес в From Яндекс
+# отвергает. Проверка через `or`, а не умолчанием `get()`: в .env
+# ключ обычно есть и пуст, и умолчание до отката не дошло бы
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or SMTP_USER
 
 # Единственная аналитика сайта — Яндекс.Метрика, и та за согласием
 # (memiro/legal/analytics_consent.py). Пусто — счётчика нет, cookie-баннер

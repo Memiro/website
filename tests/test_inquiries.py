@@ -19,7 +19,6 @@ from tests.inquiries import (
     MAX_LONG_SIDE_MM,
     SILVER_TOTAL,
     SILVER_WITH_HEATING,
-    calculable,
     item,
     payload,
     post_calculated,
@@ -29,10 +28,6 @@ from tests.notifiers import RecordingNotifier
 
 if TYPE_CHECKING:
     from types import SimpleNamespace
-
-# Фикстура приезжает импортом, но pytest узнаёт её только по имени
-# в модуле — линтеру это видится неиспользованным именем
-__all__ = ["calculable"]
 
 # Цена «от» первого зеркала фикстуры: её снимок читают несколько тестов
 HALO_MOON_PRICE = 11795

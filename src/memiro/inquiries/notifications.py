@@ -75,10 +75,21 @@ def item_lines(item: InquiryItem) -> list[str]:
     return lines + wish_lines(item.wish)
 
 
+def inquiry_subject(inquiry: Inquiry) -> str:
+    """Шапка заявки: номер и источник.
+
+    Она же тема письма — по ней менеджер находит заявку в журнале, не
+    открывая письма, и отличает две заявки одного человека друг от
+    друга. Она же первая строка текста: разъедься эти две подписи, и
+    список входящих начал бы называть заявку иначе, чем её же письмо.
+    """
+    return f"Заявка №{inquiry.pk} — {inquiry.get_source_display()}"
+
+
 def inquiry_message(inquiry: Inquiry) -> str:
     """Текст уведомления: контакты, состав и комментарий одной пачкой."""
     lines = [
-        f"Заявка №{inquiry.pk} ({inquiry.get_source_display()})",
+        inquiry_subject(inquiry),
         f"Имя: {inquiry.name}",
         f"Телефон: {inquiry.phone}",
     ]
@@ -95,15 +106,6 @@ def inquiry_message(inquiry: Inquiry) -> str:
     if inquiry.comment:
         lines.append(f"Комментарий: {inquiry.comment}")
     return "\n".join(lines)
-
-
-def inquiry_subject(inquiry: Inquiry) -> str:
-    """Тема письма: номер и источник.
-
-    По ней менеджер находит заявку в журнале, не открывая письма, и
-    отличает две заявки одного человека друг от друга.
-    """
-    return f"Заявка №{inquiry.pk} — {inquiry.get_source_display()}"
 
 
 class EmailNotifier:
@@ -137,7 +139,7 @@ class EmailNotifier:
 
 
 def notify(inquiry: Inquiry) -> None:
-    """Уведомить владельца, не роняя приём заявки.
+    """Уведомить менеджера, не роняя приём заявки.
 
     Внутри try и загрузка транспорта: опечатка в `INQUIRY_NOTIFIER` — тоже
     сбой уведомления, а не повод отдать 500 на уже принятую заявку.
