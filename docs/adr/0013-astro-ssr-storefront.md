@@ -12,7 +12,7 @@ SEO целиком: sitemap, robots, meta/OG, canonical, JSON-LD и 301-реди
 легаси-адресов — забота фронта, бэкенд отдаёт данные. SEO переживает будущую
 смену стека при сохранении URL: адреса — контракт, рендер — деталь.
 
-У `frontend/` свой `AGENTS.md`; правила agent-coding-instruction на
+У `frontend/` будет свой `AGENTS.md`; правила agent-coding-instruction на
 TypeScript не распространяются.
 
 **Триггер пересмотра — личный кабинет.** Пока сайт — витрина с

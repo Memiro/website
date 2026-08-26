@@ -7,11 +7,16 @@ the ADRs in `docs/adr/` and the patterns already in the repository. When this
 file and existing code disagree, this file wins — propose a fix for the code
 instead of copying the deviation.
 
+Transitional note: this file describes the rewrite target. Until the MVP code
+on `main` is replaced (skeleton ticket onward), the legacy Django code and its
+justfile predate these rules and do not follow them; do not copy their
+patterns into new work.
+
 The repository is one bounded context `memiro`: a FastAPI backend
 (`src/memiro/`), shared primitives (`src/memiro_common/`), a Django admin as a
 second presentation of the same context, and an Astro SSR storefront in
-`frontend/`. **These rules cover the Python backend only.** `frontend/` has
-its own `AGENTS.md`; nothing here extends to TypeScript.
+`frontend/`. **These rules cover the Python backend only.** `frontend/` gets
+its own `AGENTS.md` when it lands; nothing here extends to TypeScript.
 
 Language: code, docstrings and comments — English only. Commit messages, PR
 descriptions and product-facing docs (`docs/`, ADRs) — Russian.
@@ -65,9 +70,6 @@ command lines.
 | `just db-up` / `just db-down` | Postgres only — **there is no Redis in this contour** |
 | `just migrate` | apply migrations locally |
 | `just run` | run the API locally |
-
-Tool trap: `just lint` is the only mutating recipe — it rewrites files, so
-run it before staging, not after.
 
 ## Architecture facts
 
@@ -128,7 +130,8 @@ The test architecture is part of the contract. Coverage is a floor, not a
 replacement for assertions.
 
 1. AAA with blank-line separation; single Act per unit test; no `if` in test
-   bodies (polling lives in waiter helpers with deadlines).
+   bodies; `sleep` in test bodies is banned — polling lives in waiter
+   helpers with deadlines that return the awaited state.
 2. Test names are complete English sentences promising behaviour
    (`test_a_profile_keeps_the_city_it_was_given`), never method calls; every
    test has a one-line docstring naming the error code where relevant.
@@ -139,9 +142,12 @@ replacement for assertions.
    `api_client`; direct DB writes only as named helpers (`_update_directly`,
    `prime_*`).
 5. Integration tests go over HTTP through the typed `ApiClient` against the
-   app assembled by the production `create_app(config)`; negative tests are
-   one line: `assert_error(status, "CODE")`; positive tests compare the whole
-   object.
+   app assembled by the production `create_app(config)`; the test `Config` is
+   built by hand — never `Config.load()`, no `dependency_overrides`; the
+   app's DI container is the tests' container, and a test-only DI override
+   (when needed at all) is a separate provider appended last. Negative tests
+   are one line: `assert_error(status, "CODE")`; positive tests compare the
+   whole object.
 6. The mechanical negative checklist per use case: 401, role missing → 404
    (no existence oracle), interloper → 403, `uuid4()` → 404, every limit at
    `+1` from the production
@@ -152,13 +158,25 @@ replacement for assertions.
    `LIMIT + 1`.
 8. Time: injected `Clock`; unit tests use `FakeClock` frozen on a module
    `NOW` with non-zero seconds and microseconds (otherwise missing
-   normalization is invisible); data uses only `timedelta` from `now`.
+   normalization is invisible); integration uses the real `SystemClock`;
+   data uses only `timedelta` from `now`.
 9. Hypothesis — unit only, densest on `entities/pricing/`; strategies as
    `@st.composite` in one `composite.py`; invariants generated coherently,
    never patched after the draw.
 10. Unit/integration duplication is deliberate: the unit test pins the type
     and text of the domain exception, the integration test pins the HTTP
     status and the machine code of the same rule.
+11. Canonical actors: `owner`, `interloper`, `participant`, `admin`. File
+    order: happy path → races → the `fails_if` quartet → conflicts →
+    not_found.
+12. `parametrize` only when the value changes and the scenario doesn't;
+    different refusal causes are separate tests; `ids=` is never used;
+    datasets are module constants `(patch, expected code)` where the code
+    pins which layer catches.
+13. A pure test refactor has no red to show, so its check is equivalence:
+    the suite is green before and after, and the passing-test count moves by
+    exactly the declared number; after splitting a test, break the step in
+    production code and confirm the test naming it is the one that reddens.
 
 ## Checklist: adding a use case
 
@@ -184,6 +202,6 @@ replacement for assertions.
 1. `just lint` (mutating — run before staging).
 2. `just static`.
 3. `just test` (and `just test-e2e` when the contour changed).
-4. Conventional Commit, imperative, scope = subsystem (`(db)`, `(admin)`),
-   never a feature name; message in Russian.
+4. Conventional Commit, imperative; the scope, when given, names a subsystem
+   (`(db)`, `(admin)`), never a feature; message in Russian.
 5. The diff is one vertical slice and fits the PR budget.
