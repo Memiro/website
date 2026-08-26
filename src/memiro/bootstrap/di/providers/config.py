@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, from_context
 
 from memiro.adapters.db.config import DbConfig
-from memiro.bootstrap.config_loader import ObservabilityConfig
+from memiro_common.observability.config import ObservabilityConfig
 
 
 class ConfigProvider(Provider):

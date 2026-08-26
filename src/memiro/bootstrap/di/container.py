@@ -3,10 +3,11 @@ from typing import Any
 from dishka import STRICT_VALIDATION, AsyncContainer, make_async_container
 
 from memiro.adapters.db.config import DbConfig
-from memiro.bootstrap.config_loader import Config, ObservabilityConfig
+from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.di.providers.adapters import AdapterProvider
 from memiro.bootstrap.di.providers.config import ConfigProvider
 from memiro.bootstrap.di.providers.interactors import InteractorProvider
+from memiro_common.observability.config import ObservabilityConfig
 
 
 def _context(config: Config) -> dict[Any, Any]:

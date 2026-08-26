@@ -19,5 +19,5 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "run":
         run_api()
-    else:
+    elif args.command == "migrations":
         apply_migrations(Config.load().db.url)
