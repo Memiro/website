@@ -4,12 +4,12 @@ from fastapi import APIRouter
 
 from memiro.application.calculate_price import CalculatedPrice, CalculatePrice, CalculatePriceForm
 
-# No prefix: nginx serves this router under /api, so the public address of
-# the endpoint is /api/calculate.
-router = APIRouter(tags=["pricing"], route_class=DishkaRoute)
+# nginx serves this router under /api, so the public address of the endpoint
+# is /api/calculate; the prefix carries the whole path (§10.1).
+router = APIRouter(tags=["pricing"], route_class=DishkaRoute, prefix="/calculate")
 
 
-@router.post("/calculate")
+@router.post("")
 async def calculate_price(
     interactor: FromDishka[CalculatePrice],
     data: CalculatePriceForm,

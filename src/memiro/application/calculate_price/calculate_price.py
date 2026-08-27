@@ -3,7 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 import structlog
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from memiro.application.common.gateway.catalog import AttributeGateway, ProductGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
@@ -22,6 +22,37 @@ from memiro_common.logger import Logger
 logger: Logger = structlog.get_logger(__name__)
 
 
+def _selections(
+    product: Product,
+    attributes: Sequence[Attribute],
+    # The models are declared below the helpers (§13.4), so the form's type
+    # is a forward reference here (§13.5).
+    selections: Sequence["Selection"],
+) -> dict[AttributeId, AttributeValueId]:
+    """Check every choice against the dictionary and the product, then index it by attribute.
+
+    The customer *replaces* the product's own value, he does not introduce a
+    setting the product never had: without something to replace, the add-on
+    price would have nothing to be counted from (ADR-0007).
+    """
+    index = {attribute.id: attribute for attribute in attributes}
+    chosen: dict[AttributeId, AttributeValueId] = {}
+    for selection in selections:
+        attribute_id = AttributeId(selection.attribute_id)
+        value_id = AttributeValueId(selection.value_id)
+        attribute = index.get(attribute_id)
+        if attribute is None or attribute.value(value_id) is None or product.declared(attribute_id) is None:
+            logger.warning(
+                "A choice outside the product's dictionary",
+                product_id=product.id,
+                attribute_id=attribute_id,
+                value_id=value_id,
+            )
+            raise AttributeValueNotFoundError
+        chosen[attribute_id] = value_id
+    return chosen
+
+
 class Selection(BaseModel):
     """One choice of the customer: what he put in place of the product's own value."""
 
@@ -36,6 +67,15 @@ class CalculatePriceForm(BaseModel):
     width_mm: int = Field(ge=MIN_SIDE_MM, le=MAX_SIDE_MM)
     height_mm: int = Field(ge=MIN_SIDE_MM, le=MAX_SIDE_MM)
     selections: list[Selection] = Field(default_factory=list[Selection], max_length=MAX_SELECTIONS)
+
+    @model_validator(mode="after")
+    def _one_choice_per_attribute(self) -> "CalculatePriceForm":
+        """Refuse two choices on one attribute: the second would be priced and the first still answered."""
+        attribute_ids = [selection.attribute_id for selection in self.selections]
+        if len(set(attribute_ids)) != len(attribute_ids):
+            msg = "An attribute can be chosen only once"
+            raise ValueError(msg)
+        return self
 
 
 class SelectionDelta(BaseModel):
@@ -63,8 +103,8 @@ class CalculatePrice:
     """Interactor for pricing one configuration of a product."""
 
     product_gateway: ProductGateway
-    attribute_gateway: AttributeGateway
     pricing_settings_gateway: PricingSettingsGateway
+    attribute_gateway: AttributeGateway
 
     async def execute(self, data: CalculatePriceForm) -> CalculatedPrice:
         """Price the configuration and answer with the projection the storefront may show."""
@@ -114,32 +154,3 @@ class CalculatePrice:
                 for selection in data.selections
             ],
         )
-
-
-def _selections(
-    product: Product,
-    attributes: Sequence[Attribute],
-    selections: Sequence[Selection],
-) -> dict[AttributeId, AttributeValueId]:
-    """Check every choice against the dictionary and the product, then index it by attribute.
-
-    The customer *replaces* the product's own value, he does not introduce a
-    setting the product never had: without something to replace, the add-on
-    price would have nothing to be counted from (ADR-0007).
-    """
-    index = {attribute.id: attribute for attribute in attributes}
-    chosen: dict[AttributeId, AttributeValueId] = {}
-    for selection in selections:
-        attribute_id = AttributeId(selection.attribute_id)
-        value_id = AttributeValueId(selection.value_id)
-        attribute = index.get(attribute_id)
-        if attribute is None or attribute.value(value_id) is None or product.declared(attribute_id) is None:
-            logger.warning(
-                "A choice outside the product's dictionary",
-                product_id=product.id,
-                attribute_id=attribute_id,
-                value_id=value_id,
-            )
-            raise AttributeValueNotFoundError
-        chosen[attribute_id] = value_id
-    return chosen

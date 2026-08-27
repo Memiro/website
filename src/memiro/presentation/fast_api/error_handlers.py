@@ -27,8 +27,6 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
 }
 
-_LOG_AS_ERROR_FROM = status.HTTP_500_INTERNAL_SERVER_ERROR
-
 
 class ErrorResponse(BaseModel):
     """The one response shape of every failure: a machine code, a message and its context."""
@@ -40,14 +38,20 @@ class ErrorResponse(BaseModel):
 
 async def _handle_app_error(_request: Request, exc: Exception) -> JSONResponse:
     """Map an expected business failure onto its status through the table."""
-    error = exc if isinstance(exc, AppError) else AppError()
-    code = type(error).code
-    http_status = ERROR_STATUSES.get(type(error))
+    if not isinstance(exc, AppError):
+        # The handler is registered on AppError; anything else here means the
+        # registration was changed without this code (§12.3).
+        msg = f"The application error handler was given a {type(exc).__name__}"
+        raise TypeError(msg)
+    code = type(exc).code
+    http_status = ERROR_STATUSES.get(type(exc))
     if http_status is None:
         logger.critical("Error is missing from the HTTP mapping table", code=code)
-        return _response(_LOG_AS_ERROR_FROM, INTERNAL_ERROR_CODE, "Internal error")
+        return _response(status.HTTP_500_INTERNAL_SERVER_ERROR, INTERNAL_ERROR_CODE, "Internal error")
+    # Refusals are 4xx by construction, so they are logged at info; the
+    # threshold's other half is the critical above (§10.3).
     logger.info("Request refused", code=code, status=http_status)
-    return _response(http_status, code, error.message, error.meta)
+    return _response(http_status, code, exc.message, exc.meta)
 
 
 async def _handle_validation_error(_request: Request, exc: Exception) -> JSONResponse:
