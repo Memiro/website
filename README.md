@@ -1,47 +1,90 @@
 # Memiro
 
-Сайт студии **Memiro** — производство интерьерных зеркал.
+Сайт студии **Memiro** — производство интерьерных зеркал на заказ: витрина с
+каталогом, расчёт цены конфигурации и заявка менеджеру.
 
-## О проекте
+Репозиторий: https://github.com/Memiro/website
 
-Django-монолит с серверным рендерингом страниц, встроенной админкой и
-типизированными JSON-эндпоинтами на
-[django-modern-rest](https://github.com/wemake-services/django-modern-rest).
+## Возможности
 
-- Репозиторий: https://github.com/Memiro/website
-- Python 3.14, зависимости через [uv](https://docs.astral.sh/uv/),
-  команды через [just](https://just.systems/)
+- Расчёт цены конфигурации зеркала: размеры и выбранные значения атрибутов
+  считаются единственным доменным сервисом — тем же, которым считаются книга
+  xlsx владельца и предпосчитанные варианты товара.
+- Справочник атрибутов и их тарифов как данные админки: цена собирается из
+  единиц расхода (м², погонный метр, штука) и коэффициентов формы.
+- Публичный ответ усечён: итог, знаковые дельты выбранных добавок и машинный
+  код вердикта — без ставок и статей расчёта.
+- Один ограниченный контекст `memiro`: FastAPI-бэкенд, Django-админка как
+  вторая презентация того же контекста и витрина на Astro SSR.
+
+Что уже написано и что впереди — `.scratch/rewrite/issues/`.
 
 ## Быстрый старт
 
 ```sh
 just install   # venv, .env, git-хуки
-just run       # миграции + runserver на 127.0.0.1:8000 (SQLite)
-just test      # тесты (in-process, docker не нужен)
-just lint      # ruff + codespell
-just static    # mypy + bandit + django check
+just test      # unit + integration; базу поднимает сам
+just run       # API на 127.0.0.1:8000
 ```
 
-Контуры в docker (PostgreSQL, gunicorn — как в проде):
+Живой контур целиком (Postgres → миграции → API → nginx):
 
 ```sh
-just up        # локальный контур на 127.0.0.1:8000
-just test-up   # тестовый контур на 127.0.0.1:8001
+just up
+curl http://127.0.0.1:8080/internal/alive
 ```
 
-Пробные точки: `/` — главная, `/api/ping` — живость API,
-`/api/openapi/schema.json` — OpenAPI-схема, `/admin/` — админка
-(`just manage createsuperuser`).
+## Команды
 
-## Структура
+| Рецепт | Что делает |
+|---|---|
+| `just install` | venv, `.env`, pre-commit хуки |
+| `just lint` | ruff format + check, mypy, lint-imports, typos — **мутирующий, переписывает файлы** |
+| `just static` | basedpyright, bandit |
+| `just test` | unit + integration; поднимает базу сам |
+| `just test-ci` | то же, но без docker compose: базу приносит testcontainers |
+| `just test-e2e` | контур целиком → e2e → контур вниз |
+| `just up` / `just down` | локальный контур |
+| `just db-up` / `just db-down` | только Postgres |
+| `just migrate` | применить миграции к локальной базе |
+| `just run` | запустить API локально |
 
-- `src/memiro/` — код сайта (settings, urls, api)
-- `tests/` — HTTP-тесты через тестовый клиент Django
-- `CLAUDE.md` — инструкции для AI-агентов (Claude Code)
-- `docs/agents/` — конфигурация инженерных скиллов (issue-трекер, triage-метки, домен-доки)
-- `docs/adr/` — архитектурные решения (ADR)
+## Архитектура
 
-## Задачи
+```
+src/
+  memiro/
+    entities/       # домен: сущности, величины, доменные сервисы, доменные ошибки
+    application/    # интеракторы и порты: один пакет — один сценарий
+    adapters/       # реализации портов: db/ (SQLAlchemy, alembic)
+    presentation/   # fast_api/: роутеры и обработчики ошибок
+    bootstrap/      # CLI, конфиг, DI (dishka)
+  memiro_common/    # примитивы контекстов: Clock, UoW, AppError, @interactor
+tests/
+  unit/             # домен, синхронно, без I/O
+  integration/      # по HTTP против приложения, собранного продакшен-сборкой
+docs/               # доменный справочник: сущности, величины, сценарии, ошибки
+```
 
-Спека и тикеты — локальные markdown-файлы в `.scratch/new-site/`
-(см. `docs/agents/issue-tracker.md`).
+Зависимости смотрят только внутрь: `bootstrap → presentation → adapters →
+application → entities`, и это машинный контракт — `.importlinter` проверяет
+его в CI, а не рецензент глазами.
+
+## Путь запроса
+
+1. nginx отдаёт `/api/*` в uvicorn, `/internal/*` остаётся служебным.
+2. Роутер `presentation/fast_api/routers/` берёт интерактор из dishka и в одну
+   строку зовёт `execute` — логики в обработчике нет.
+3. Интерактор грузит агрегаты через порты-гейтвеи и передаёт решение домену.
+4. Доменный сервис считает цену на чистых данных: ни базы, ни времени, ни
+   фреймворков.
+5. Ответ уходит DTO приложения; любое исключение превращается глобальными
+   обработчиками в одну форму `{code, message, meta}`.
+
+## Документы
+
+- `AGENTS.md` — операционные правила для AI-агентов; полный стандарт —
+  `docs/agents/coding-instruction.md`.
+- `GETTING_STARTED.md` — как поднять проект человеку, впервые открывшему репозиторий.
+- `CONTEXT.md` и `docs/adr/` — язык домена и архитектурные решения.
+- `docs/errors/` — реестр машинных кодов ошибок как контракт API.

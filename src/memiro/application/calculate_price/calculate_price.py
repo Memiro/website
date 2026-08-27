@@ -38,8 +38,8 @@ def _selections(
     index = {attribute.id: attribute for attribute in attributes}
     chosen: dict[AttributeId, AttributeValueId] = {}
     for selection in selections:
-        attribute_id = AttributeId(selection.attribute_id)
-        value_id = AttributeValueId(selection.value_id)
+        attribute_id: AttributeId = selection.attribute_id
+        value_id: AttributeValueId = selection.value_id
         attribute = index.get(attribute_id)
         if attribute is None or attribute.value(value_id) is None or product.declared(attribute_id) is None:
             logger.warning(
@@ -109,7 +109,7 @@ class CalculatePrice:
     async def execute(self, data: CalculatePriceForm) -> CalculatedPrice:
         """Price the configuration and answer with the projection the storefront may show."""
         logger.debug("Calculating a price", product_id=data.product_id)
-        product_id = ProductId(data.product_id)
+        product_id: ProductId = data.product_id
         product = await self.product_gateway.get(product_id)
         if product is None:
             logger.warning("Pricing asked for an unknown product", product_id=product_id)
@@ -149,7 +149,7 @@ class CalculatePrice:
                 SelectionDelta(
                     attribute_id=selection.attribute_id,
                     value_id=selection.value_id,
-                    delta=deltas[AttributeId(selection.attribute_id)],
+                    delta=deltas[selection.attribute_id],
                 )
                 for selection in data.selections
             ],

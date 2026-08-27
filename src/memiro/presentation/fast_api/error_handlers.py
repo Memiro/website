@@ -13,8 +13,6 @@ from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasure
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
 
-logger: Logger = structlog.get_logger(__name__)
-
 VALIDATION_ERROR_CODE = "VALIDATION_ERROR"
 INTERNAL_ERROR_CODE = "INTERNAL_ERROR"
 
@@ -28,6 +26,8 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     NegativeMeasureError: status.HTTP_400_BAD_REQUEST,
     EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
 }
+
+logger: Logger = structlog.get_logger(__name__)
 
 
 class ErrorResponse(BaseModel):

@@ -10,14 +10,14 @@ from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro.entities.pricing.quotation import PricingVerdict, Quotation, QuotationLine
 
+_ZERO = Money(amount=Decimal(0))
+
 # The tail of the calculation rounds up to whole hundreds of roubles — the
 # owner's rule, not a display convention: the number is what he is paid.
 ROUNDING_STEP = Decimal(100)
 
 type Configuration = Mapping[AttributeId, AttributeValueId]
 type ResolvedValues = tuple[tuple[AttributeId, AttributeValue], ...]
-
-_ZERO = Money(amount=Decimal(0))
 
 
 def price_product(

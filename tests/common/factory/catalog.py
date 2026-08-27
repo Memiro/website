@@ -22,33 +22,33 @@ def _id(name: str) -> UUID:
     return uuid5(NAMESPACE_URL, f"memiro/test/{name}")
 
 
-BLADE = AttributeId(_id("blade"))
-SILVER = AttributeValueId(_id("silver"))
-GRAPHITE = AttributeValueId(_id("graphite"))
+BLADE: AttributeId = _id("blade")
+SILVER: AttributeValueId = _id("silver")
+GRAPHITE: AttributeValueId = _id("graphite")
 
-FRAME = AttributeId(_id("frame"))
-ALUMINIUM = AttributeValueId(_id("aluminium"))
-NO_FRAME = AttributeValueId(_id("no-frame"))
+FRAME: AttributeId = _id("frame")
+ALUMINIUM: AttributeValueId = _id("aluminium")
+NO_FRAME: AttributeValueId = _id("no-frame")
 
-MOUNT = AttributeId(_id("mount"))
-WITH_MOUNT = AttributeValueId(_id("with-mount"))
-NO_MOUNT = AttributeValueId(_id("no-mount"))
+MOUNT: AttributeId = _id("mount")
+WITH_MOUNT: AttributeValueId = _id("with-mount")
+NO_MOUNT: AttributeValueId = _id("no-mount")
 
-SHAPE = AttributeId(_id("shape"))
-RECTANGULAR = AttributeValueId(_id("rectangular"))
-ROUND = AttributeValueId(_id("round"))
+SHAPE: AttributeId = _id("shape")
+RECTANGULAR: AttributeValueId = _id("rectangular")
+ROUND: AttributeValueId = _id("round")
 
-BACKLIGHT = AttributeId(_id("backlight"))
-CONTOUR = AttributeValueId(_id("contour"))
-NO_BACKLIGHT = AttributeValueId(_id("no-backlight"))
+BACKLIGHT: AttributeId = _id("backlight")
+CONTOUR: AttributeValueId = _id("contour")
+NO_BACKLIGHT: AttributeValueId = _id("no-backlight")
 
 # Heating is in the dictionary but not on the canonical mirror: the customer
 # replaces what the product declares, he does not add a setting it never had.
-HEATING = AttributeId(_id("heating"))
-WITH_HEATING = AttributeValueId(_id("with-heating"))
-NO_HEATING = AttributeValueId(_id("no-heating"))
+HEATING: AttributeId = _id("heating")
+WITH_HEATING: AttributeValueId = _id("with-heating")
+NO_HEATING: AttributeValueId = _id("no-heating")
 
-PRODUCT = ProductId(_id("mirror-in-a-frame"))
+PRODUCT: ProductId = _id("mirror-in-a-frame")
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 
@@ -57,113 +57,143 @@ def _rate(amount: str, unit: Unit) -> Rate:
     return Rate(amount=Money(amount=Decimal(amount)), unit=unit)
 
 
+def demo_blade() -> Attribute:
+    """Build the blade attribute: silver at 4 500 and graphite at 7 000 per square metre."""
+    return Attribute(
+        id=BLADE,
+        name="Тип полотна",
+        sort_order=1,
+        values=[
+            AttributeValue(
+                id=SILVER,
+                name="Серебро",
+                rate=_rate("4500", Unit.SQUARE_METER),
+                scaled_by_shape=True,
+                sort_order=1,
+            ),
+            AttributeValue(
+                id=GRAPHITE,
+                name="Графит",
+                rate=_rate("7000", Unit.SQUARE_METER),
+                scaled_by_shape=True,
+                sort_order=2,
+            ),
+        ],
+    )
+
+
+def demo_shape() -> Attribute:
+    """Build the shape attribute: a rectangle costs what it costs, a circle one and a half of it."""
+    return Attribute(
+        id=SHAPE,
+        name="Форма",
+        sort_order=2,
+        values=[
+            AttributeValue(
+                id=RECTANGULAR,
+                name="Прямоугольное",
+                rate=_rate("1.0", Unit.FACTOR),
+                scaled_by_shape=False,
+                sort_order=1,
+            ),
+            AttributeValue(
+                id=ROUND,
+                name="Круглое",
+                rate=_rate("1.5", Unit.FACTOR),
+                scaled_by_shape=False,
+                sort_order=2,
+            ),
+        ],
+    )
+
+
+def demo_frame() -> Attribute:
+    """Build the frame attribute: aluminium at 2 200 per linear metre, or no frame at all."""
+    return Attribute(
+        id=FRAME,
+        name="Рама",
+        sort_order=3,
+        values=[
+            AttributeValue(
+                id=ALUMINIUM,
+                name="Алюминий",
+                rate=_rate("2200", Unit.LINEAR_METER),
+                scaled_by_shape=True,
+                sort_order=1,
+            ),
+            AttributeValue(id=NO_FRAME, name="Без рамы", rate=FREE, scaled_by_shape=False, sort_order=2),
+        ],
+    )
+
+
+def demo_backlight() -> Attribute:
+    """Build the backlight attribute: a contour tape at 2 500 per linear metre, or none."""
+    return Attribute(
+        id=BACKLIGHT,
+        name="Подсветка",
+        sort_order=4,
+        values=[
+            # The tape is measured in the same linear metre as the frame
+            # but does not grow on a curved cut — hence its own flag.
+            AttributeValue(
+                id=CONTOUR,
+                name="Контурная",
+                rate=_rate("2500", Unit.LINEAR_METER),
+                scaled_by_shape=False,
+                sort_order=1,
+            ),
+            AttributeValue(id=NO_BACKLIGHT, name="Без подсветки", rate=FREE, scaled_by_shape=False, sort_order=2),
+        ],
+    )
+
+
+def demo_mount() -> Attribute:
+    """Build the mount attribute: 500 for the piece, or nothing for none."""
+    return Attribute(
+        id=MOUNT,
+        name="Крепление",
+        sort_order=5,
+        values=[
+            AttributeValue(
+                id=WITH_MOUNT,
+                name="С креплением",
+                rate=_rate("500", Unit.PIECE),
+                scaled_by_shape=False,
+                sort_order=1,
+            ),
+            AttributeValue(id=NO_MOUNT, name="Без крепления", rate=FREE, scaled_by_shape=False, sort_order=2),
+        ],
+    )
+
+
+def demo_heating() -> Attribute:
+    """Build the heating attribute — the one the canonical mirror does not declare."""
+    return Attribute(
+        id=HEATING,
+        name="Подогрев",
+        sort_order=6,
+        values=[
+            AttributeValue(
+                id=WITH_HEATING,
+                name="С подогревом",
+                rate=_rate("3500", Unit.PIECE),
+                scaled_by_shape=False,
+                sort_order=1,
+            ),
+            AttributeValue(id=NO_HEATING, name="Без подогрева", rate=FREE, scaled_by_shape=False, sort_order=2),
+        ],
+    )
+
+
 def demo_attributes() -> list[Attribute]:
     """Build the slice of the owner's dictionary the price of a mirror is made of."""
     return [
-        Attribute(
-            id=BLADE,
-            name="Тип полотна",
-            sort_order=1,
-            values=[
-                AttributeValue(
-                    id=SILVER,
-                    name="Серебро",
-                    rate=_rate("4500", Unit.SQUARE_METER),
-                    scaled_by_shape=True,
-                    sort_order=1,
-                ),
-                AttributeValue(
-                    id=GRAPHITE,
-                    name="Графит",
-                    rate=_rate("7000", Unit.SQUARE_METER),
-                    scaled_by_shape=True,
-                    sort_order=2,
-                ),
-            ],
-        ),
-        Attribute(
-            id=SHAPE,
-            name="Форма",
-            sort_order=2,
-            values=[
-                AttributeValue(
-                    id=RECTANGULAR,
-                    name="Прямоугольное",
-                    rate=_rate("1.0", Unit.FACTOR),
-                    scaled_by_shape=False,
-                    sort_order=1,
-                ),
-                AttributeValue(
-                    id=ROUND,
-                    name="Круглое",
-                    rate=_rate("1.5", Unit.FACTOR),
-                    scaled_by_shape=False,
-                    sort_order=2,
-                ),
-            ],
-        ),
-        Attribute(
-            id=FRAME,
-            name="Рама",
-            sort_order=3,
-            values=[
-                AttributeValue(
-                    id=ALUMINIUM,
-                    name="Алюминий",
-                    rate=_rate("2200", Unit.LINEAR_METER),
-                    scaled_by_shape=True,
-                    sort_order=1,
-                ),
-                AttributeValue(id=NO_FRAME, name="Без рамы", rate=FREE, scaled_by_shape=False, sort_order=2),
-            ],
-        ),
-        Attribute(
-            id=BACKLIGHT,
-            name="Подсветка",
-            sort_order=4,
-            values=[
-                # The tape is measured in the same linear metre as the frame
-                # but does not grow on a curved cut — hence its own flag.
-                AttributeValue(
-                    id=CONTOUR,
-                    name="Контурная",
-                    rate=_rate("2500", Unit.LINEAR_METER),
-                    scaled_by_shape=False,
-                    sort_order=1,
-                ),
-                AttributeValue(id=NO_BACKLIGHT, name="Без подсветки", rate=FREE, scaled_by_shape=False, sort_order=2),
-            ],
-        ),
-        Attribute(
-            id=MOUNT,
-            name="Крепление",
-            sort_order=5,
-            values=[
-                AttributeValue(
-                    id=WITH_MOUNT,
-                    name="С креплением",
-                    rate=_rate("500", Unit.PIECE),
-                    scaled_by_shape=False,
-                    sort_order=1,
-                ),
-                AttributeValue(id=NO_MOUNT, name="Без крепления", rate=FREE, scaled_by_shape=False, sort_order=2),
-            ],
-        ),
-        Attribute(
-            id=HEATING,
-            name="Подогрев",
-            sort_order=6,
-            values=[
-                AttributeValue(
-                    id=WITH_HEATING,
-                    name="С подогревом",
-                    rate=_rate("3500", Unit.PIECE),
-                    scaled_by_shape=False,
-                    sort_order=1,
-                ),
-                AttributeValue(id=NO_HEATING, name="Без подогрева", rate=FREE, scaled_by_shape=False, sort_order=2),
-            ],
-        ),
+        demo_blade(),
+        demo_shape(),
+        demo_frame(),
+        demo_backlight(),
+        demo_mount(),
+        demo_heating(),
     ]
 
 

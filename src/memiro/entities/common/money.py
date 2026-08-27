@@ -2,14 +2,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 
-class NegativeMoneyError(RuntimeError):
-    """Raised when a sum of money comes out negative — a defect, not a refusal.
-
-    A negative total is never a business answer to the customer: it means the
-    calculation is broken, so it leaves as a 500 rather than a 4xx (§12.3).
-    """
-
-
 @dataclass(frozen=True, slots=True, order=True)
 class Money:
     """A sum in roubles — the only monetary type of the domain."""
@@ -17,10 +9,14 @@ class Money:
     amount: Decimal
 
     def __post_init__(self) -> None:
-        """Reject a negative sum: ``Money`` is an amount, and amounts do not go below zero."""
+        """Reject a negative sum: ``Money`` is an amount, and amounts do not go below zero.
+
+        A negative total is never a business answer to the customer — it means
+        the calculation is broken — so this leaves as a 500, not a 4xx (§12.3).
+        """
         if self.amount < 0:
             msg = f"Money cannot be negative: {self.amount}"
-            raise NegativeMoneyError(msg)
+            raise RuntimeError(msg)
 
     def __add__(self, other: "Money") -> "Money":
         """Add two sums; kopecks are kept in full — nothing rounds here."""
