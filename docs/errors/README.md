@@ -12,9 +12,14 @@
 | `PRODUCT_NOT_FOUND` | 404 | `ProductNotFoundError` | Товара с названным идентификатором нет |
 | `ATTRIBUTE_VALUE_NOT_FOUND` | 404 | `AttributeValueNotFoundError` | Значения нет, оно чужого атрибута или атрибут не объявлен у товара |
 | `PRICING_SETTINGS_NOT_FOUND` | 404 | `PricingSettingsNotFoundError` | Параметры расчёта в базе не заведены |
+| `INVALID_FACTOR_RATE` | 400 | `InvalidFactorRateError` | У значения с единицей `FACTOR` нулевой коэффициент |
 | `NEGATIVE_MEASURE` | 400 | `NegativeMeasureError` | Величина получила отрицательное значение |
 | `EMPTY_DIMENSIONS` | 400 | `EmptyDimensionsError` | Сторона изделия не строго положительна |
 | `INTERNAL_ERROR` | 500 | — | Дефект: незамапленная `AppError` или неожиданное исключение |
+
+Пятисотка тоже приходит этой формой: глобальных хендлера три — `AppError`,
+ошибка валидации FastAPI и `Exception`, — и `RuntimeError` домена уезжает
+наружу как `{code, message, meta}`, а не текстовой страницей фреймворка.
 
 Форма ответа одна на всё:
 

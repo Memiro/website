@@ -15,6 +15,7 @@ from memiro.entities.pricing.quotation import PricingVerdict, Quotation, Quotati
 ROUNDING_STEP = Decimal(100)
 
 type Configuration = Mapping[AttributeId, AttributeValueId]
+type ResolvedValues = tuple[tuple[AttributeId, AttributeValue], ...]
 
 _ZERO = Money(amount=Decimal(0))
 
@@ -32,9 +33,9 @@ def price_product(
     Pure: the product, the dictionary and the settings all arrive as
     parameters, and the service never goes to the database (decision 28).
     """
-    configuration = _configuration(product, selections)
-    breakdown = _breakdown(configuration, attributes, settings, dimensions)
-    total = _round_up(_apply_min_order(_subtotal(breakdown, configuration, attributes), settings))
+    values = _values(_configuration(product, selections), attributes)
+    breakdown = _breakdown(values, settings, dimensions)
+    total = _round_up(_apply_min_order(_subtotal(breakdown, values), settings))
     return Quotation(verdict=PricingVerdict.PRICED, total=total, breakdown=breakdown)
 
 
@@ -75,9 +76,8 @@ def _exact_total(
     selections: Configuration,
 ) -> Money:
     """Sum the lines of a configuration with no threshold and no rounding applied."""
-    configuration = _configuration(product, selections)
-    breakdown = _breakdown(configuration, attributes, settings, dimensions)
-    return _subtotal(breakdown, configuration, attributes)
+    values = _values(_configuration(product, selections), attributes)
+    return _subtotal(_breakdown(values, settings, dimensions), values)
 
 
 def _configuration(product: Product, selections: Configuration) -> Configuration:
@@ -87,49 +87,48 @@ def _configuration(product: Product, selections: Configuration) -> Configuration
 
 
 def _breakdown(
-    configuration: Configuration,
-    attributes: Sequence[Attribute],
+    values: ResolvedValues,
     settings: PricingSettings,
     dimensions: Dimensions,
 ) -> tuple[QuotationLine, ...]:
     """Charge every paid value in the unit it is really consumed in."""
     area = dimensions.area().at_least(settings.min_area)
-    perimeter = dimensions.perimeter()
     quantities = {
         Unit.SQUARE_METER: area.value,
-        Unit.LINEAR_METER: perimeter.value,
+        Unit.LINEAR_METER: dimensions.perimeter().value,
         Unit.PIECE: Decimal(1),
     }
     return tuple(
-        QuotationLine(
-            attribute_id=attribute_id,
-            value_id=value.id,
-            quantity=quantities[value.rate.unit],
-            rate=value.rate,
-            amount=value.rate.charge(quantities[value.rate.unit]),
-        )
-        for attribute_id, value in _values(configuration, attributes)
+        _line(attribute_id, value, quantities[value.rate.unit])
+        for attribute_id, value in values
         if value.rate.unit is not Unit.FACTOR and not value.rate.is_free()
     )
 
 
-def _subtotal(
-    breakdown: tuple[QuotationLine, ...],
-    configuration: Configuration,
-    attributes: Sequence[Attribute],
-) -> Money:
+def _line(attribute_id: AttributeId, value: AttributeValue, quantity: Decimal) -> QuotationLine:
+    """Turn one dictionary value and its consumption into a line of the calculation."""
+    return QuotationLine(
+        attribute_id=attribute_id,
+        value_id=value.id,
+        quantity=quantity,
+        rate=value.rate,
+        amount=value.rate.charge(quantity),
+    )
+
+
+def _subtotal(breakdown: tuple[QuotationLine, ...], values: ResolvedValues) -> Money:
     """Add the lines up, the shape factor multiplying only what is cut along the contour."""
-    factor = _shape_factor(configuration, attributes)
-    scaled = {value.id for _, value in _values(configuration, attributes) if value.scaled_by_shape}
+    factor = _shape_factor(values)
+    scaled = {value.id for _, value in values if value.scaled_by_shape}
     plain_total = _sum(line.amount for line in breakdown if line.value_id not in scaled)
     scaled_total = _sum(line.amount for line in breakdown if line.value_id in scaled)
     return plain_total + scaled_total * factor
 
 
-def _shape_factor(configuration: Configuration, attributes: Sequence[Attribute]) -> Decimal:
+def _shape_factor(values: ResolvedValues) -> Decimal:
     """Multiply together every ``FACTOR`` value of the configuration."""
     factor = Decimal(1)
-    for _, value in _values(configuration, attributes):
+    for _, value in values:
         if value.rate.unit is Unit.FACTOR:
             factor *= value.rate.as_factor()
     return factor
@@ -138,10 +137,15 @@ def _shape_factor(configuration: Configuration, attributes: Sequence[Attribute])
 def _values(
     configuration: Configuration,
     attributes: Sequence[Attribute],
-) -> tuple[tuple[AttributeId, AttributeValue], ...]:
-    """Resolve the configuration into dictionary rows, in the owner's order."""
+) -> ResolvedValues:
+    """Resolve the configuration into dictionary rows, in the owner's order.
+
+    The order is the owner's and then the identifier: both sort fields default
+    to zero, so a tie is the normal case and the breakdown would otherwise
+    come out in a different order on every request (§8.4).
+    """
     index = {attribute.id: attribute for attribute in attributes}
-    resolved: list[tuple[int, int, AttributeId, AttributeValue]] = []
+    resolved: list[tuple[int, int, str, AttributeId, AttributeValue]] = []
     for attribute_id, value_id in configuration.items():
         attribute = index.get(attribute_id)
         value = attribute.value(value_id) if attribute is not None else None
@@ -150,9 +154,10 @@ def _values(
             # arriving here means the two disagree, which is a defect (§12.3).
             msg = f"Value {value_id} is not a row of attribute {attribute_id}"
             raise RuntimeError(msg)
-        resolved.append((attribute.sort_order, value.sort_order, attribute_id, value))
+        resolved.append((attribute.sort_order, value.sort_order, str(value.id), attribute_id, value))
     return tuple(
-        (attribute_id, value) for _, _, attribute_id, value in sorted(resolved, key=lambda row: (row[0], row[1]))
+        (attribute_id, value)
+        for _, _, _, attribute_id, value in sorted(resolved, key=lambda row: (row[0], row[1], row[2]))
     )
 
 

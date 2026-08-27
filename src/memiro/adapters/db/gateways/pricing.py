@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from memiro.adapters.db.tables import pricing_settings_table
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
-from memiro.entities.pricing.pricing_settings import PricingSettings
+from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings
 
 
 class SAPricingSettingsGateway(PricingSettingsGateway):
@@ -17,13 +17,8 @@ class SAPricingSettingsGateway(PricingSettingsGateway):
 
     @override
     async def get(self) -> PricingSettings | None:
-        """Load the single settings row; the site has one, and it is fetched without an id.
-
-        Ordered by id all the same: should a second row ever appear, every
-        request must answer with the same one rather than with whatever the
-        database returns first.
-        """
+        """Load the settings row by its known id — the site has exactly one."""
         result = await self._session.execute(
-            select(PricingSettings).order_by(pricing_settings_table.c.id).limit(1),
+            select(PricingSettings).where(pricing_settings_table.c.id == PRICING_SETTINGS_ID),
         )
-        return result.scalars().first()
+        return result.scalar_one_or_none()
