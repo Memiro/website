@@ -9,11 +9,9 @@ class Money:
     amount: Decimal
 
     def __post_init__(self) -> None:
-        """Reject a negative sum: ``Money`` is an amount, and amounts do not go below zero.
-
-        A negative total is never a business answer to the customer — it means
-        the calculation is broken — so this leaves as a 500, not a 4xx (§12.3).
-        """
+        """Reject a negative sum: ``Money`` is an amount, and amounts do not go below zero."""
+        # A negative total is never a business answer to the customer — it
+        # means the calculation is broken — so it leaves as a 500, not a 4xx.
         if self.amount < 0:
             msg = f"Money cannot be negative: {self.amount}"
             raise RuntimeError(msg)
