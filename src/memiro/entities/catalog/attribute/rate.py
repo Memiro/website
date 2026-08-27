@@ -42,4 +42,11 @@ class Rate:
         if self.unit is not Unit.FACTOR:
             msg = f"A {self.unit} rate is money per unit, not a multiplier"
             raise RuntimeError(msg)
+        if self.is_free():
+            # Zero is a legal tariff — "free" — but not a legal multiplier: it
+            # would annihilate the blade and the frame and leave the customer
+            # the minimum order total. "No surcharge for this shape" is a
+            # factor of one.
+            msg = "A FACTOR rate of zero is not a multiplier"
+            raise RuntimeError(msg)
         return self.amount.amount

@@ -28,6 +28,14 @@ def test_a_factor_cannot_be_charged_per_unit() -> None:
         rate.charge(Decimal(1))
 
 
+def test_a_factor_of_zero_is_not_a_multiplier() -> None:
+    """A zero factor would annihilate the blade and the frame, so it is a defect, not "free"."""
+    rate = Rate(amount=Money(amount=Decimal(0)), unit=Unit.FACTOR)
+
+    with pytest.raises(RuntimeError):
+        rate.as_factor()
+
+
 def test_money_per_unit_is_not_a_multiplier() -> None:
     """Reading a per-unit tariff as a factor is the same defect seen from the other side."""
     rate = Rate(amount=Money(amount=Decimal(4500)), unit=Unit.SQUARE_METER)

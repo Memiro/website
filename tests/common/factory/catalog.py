@@ -47,6 +47,12 @@ BACKLIGHT = AttributeId(_id("backlight"))
 CONTOUR = AttributeValueId(_id("contour"))
 NO_BACKLIGHT = AttributeValueId(_id("no-backlight"))
 
+# Heating is in the dictionary but not on the canonical mirror: the customer
+# replaces what the product declares, he does not add a setting it never had.
+HEATING = AttributeId(_id("heating"))
+WITH_HEATING = AttributeValueId(_id("with-heating"))
+NO_HEATING = AttributeValueId(_id("no-heating"))
+
 PRODUCT = ProductId(_id("mirror-in-a-frame"))
 PRICING_SETTINGS = PricingSettingsId(_id("pricing-settings"))
 
@@ -147,6 +153,21 @@ def demo_attributes() -> list[Attribute]:
                     sort_order=1,
                 ),
                 AttributeValue(id=NO_MOUNT, name="Без крепления", rate=FREE, scaled_by_shape=False, sort_order=2),
+            ],
+        ),
+        Attribute(
+            id=HEATING,
+            name="Подогрев",
+            sort_order=6,
+            values=[
+                AttributeValue(
+                    id=WITH_HEATING,
+                    name="С подогревом",
+                    rate=_rate("3500", Unit.PIECE),
+                    scaled_by_shape=False,
+                    sort_order=1,
+                ),
+                AttributeValue(id=NO_HEATING, name="Без подогрева", rate=FREE, scaled_by_shape=False, sort_order=2),
             ],
         ),
     ]

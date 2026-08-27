@@ -9,9 +9,25 @@ from memiro.application.calculate_price import (
     Selection,
     SelectionDelta,
 )
-from memiro.application.common.input_limits import MAX_SIDE_MM
+from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
 from memiro.entities.pricing.quotation import PricingVerdict
-from tests.common.factory.catalog import ALUMINIUM, BLADE, GRAPHITE, PRODUCT
+from tests.common.factory.catalog import (
+    ALUMINIUM,
+    BACKLIGHT,
+    BLADE,
+    CONTOUR,
+    FRAME,
+    GRAPHITE,
+    HEATING,
+    MOUNT,
+    NO_FRAME,
+    NO_MOUNT,
+    PRODUCT,
+    ROUND,
+    SHAPE,
+    SILVER,
+    WITH_HEATING,
+)
 from tests.integration.api_client import ApiClient
 
 pytestmark = pytest.mark.usefixtures("catalog")
@@ -53,6 +69,39 @@ async def test_a_customer_sees_what_a_darker_blade_adds(api_client: ApiClient) -
     )
 
 
+async def test_a_curved_cut_is_paid_by_the_blade_alone(api_client: ApiClient) -> None:
+    """A round mirror with a tape answers 15 000 RUB: the factor takes the blade, not the backlight."""
+    round_mirror = [
+        Selection(attribute_id=SHAPE, value_id=ROUND),
+        Selection(attribute_id=FRAME, value_id=NO_FRAME),
+        Selection(attribute_id=BACKLIGHT, value_id=CONTOUR),
+    ]
+
+    response = await api_client.calculate(_form(width_mm=900, height_mm=900, selections=round_mirror))
+
+    # 0.81 m2 x 4500 x 1.5 + 3.6 lm x 2500 + 500 = 14 967.50 -> 15 000.
+    assert response.assert_status(200).ensure_content().total == Decimal(15000)
+
+
+async def test_a_small_mirror_costs_the_minimum_order_and_the_choice_still_costs_its_own(
+    api_client: ApiClient,
+) -> None:
+    """On a mirror resting on the 2 000 RUB threshold graphite still shows its exact 625 RUB."""
+    bare_and_dark = [
+        Selection(attribute_id=BLADE, value_id=GRAPHITE),
+        Selection(attribute_id=FRAME, value_id=NO_FRAME),
+        Selection(attribute_id=MOUNT, value_id=NO_MOUNT),
+    ]
+
+    response = await api_client.calculate(_form(width_mm=400, height_mm=300, selections=bare_and_dark))
+
+    # 0.12 m2 is billed as the minimum 0.25 m2: 1 750 for the blade, lifted to
+    # the minimum order; the blade itself is (7000 - 4500) x 0.25 = 625 dearer.
+    content = response.assert_status(200).ensure_content()
+    assert content.total == Decimal(2000)
+    assert content.selection_deltas[0].delta == Decimal(625)
+
+
 async def test_the_answer_says_nothing_about_how_the_price_is_made(api_client: ApiClient) -> None:
     """The public projection carries no tariffs, no factors and no lines of blade and edge."""
     response = await api_client.calculate(_form())
@@ -87,6 +136,47 @@ async def test_pricing_fails_if_the_chosen_value_does_not_exist(api_client: ApiC
     response = await api_client.calculate(_form(selections=[selection]))
 
     response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
+
+
+async def test_pricing_fails_if_the_attribute_is_not_declared_by_the_product(api_client: ApiClient) -> None:
+    """Heating the mirror never had is refused with ATTRIBUTE_VALUE_NOT_FOUND: there is nothing to replace."""
+    selection = Selection(attribute_id=HEATING, value_id=WITH_HEATING)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
+
+
+async def test_pricing_fails_if_one_attribute_is_chosen_twice(api_client: ApiClient) -> None:
+    """Two values of one attribute are refused with VALIDATION_ERROR: only one of them could be priced."""
+    twice = [
+        Selection(attribute_id=BLADE, value_id=GRAPHITE),
+        Selection(attribute_id=BLADE, value_id=SILVER),
+    ]
+    dishonest = CalculatePriceForm.model_construct(
+        product_id=PRODUCT,
+        width_mm=800,
+        height_mm=600,
+        selections=twice,
+    )
+
+    response = await api_client.calculate(dishonest)
+
+    response.assert_error(422, "VALIDATION_ERROR")
+
+
+async def test_pricing_fails_if_there_is_one_selection_too_many(api_client: ApiClient) -> None:
+    """One choice over the form's bound is refused with VALIDATION_ERROR."""
+    dishonest = CalculatePriceForm.model_construct(
+        product_id=PRODUCT,
+        width_mm=800,
+        height_mm=600,
+        selections=[Selection(attribute_id=uuid4(), value_id=uuid4()) for _ in range(MAX_SELECTIONS + 1)],
+    )
+
+    response = await api_client.calculate(dishonest)
+
+    response.assert_error(422, "VALIDATION_ERROR")
 
 
 async def test_pricing_fails_if_a_side_is_beyond_the_input_bound(api_client: ApiClient) -> None:
