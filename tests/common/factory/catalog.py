@@ -213,6 +213,17 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
     )
 
 
+def demo_defaults() -> dict[AttributeId, AttributeValueId]:
+    """Tell what the canonical mirror declares — the configuration a customer starts from."""
+    return {declaration.attribute_id: declaration.value_id for declaration in demo_product().declared_values}
+
+
+def demo_choices() -> dict[AttributeId, list[AttributeValueId]]:
+    """Tell what a customer may put in place of each default: the rows of the attributes the mirror declares."""
+    values = {attribute.id: [value.id for value in attribute.values] for attribute in demo_attributes()}
+    return {attribute_id: values[attribute_id] for attribute_id in demo_defaults()}
+
+
 def demo_settings() -> PricingSettings:
     """Build the owner's demo bounds: 0.25 m² of area and 2 000 ₽ of order."""
     return PricingSettings(

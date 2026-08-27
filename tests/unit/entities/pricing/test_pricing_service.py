@@ -24,6 +24,7 @@ from tests.common.factory.catalog import (
     SILVER,
     WITH_MOUNT,
     demo_attributes,
+    demo_defaults,
     demo_product,
     demo_settings,
 )
@@ -181,6 +182,8 @@ def test_a_total_is_always_a_whole_hundred_at_or_above_the_minimum_order(
 
     assert quotation.total is not None
     assert quotation.total.amount % ROUNDING_STEP == 0
+    # The threshold is the owner's datum, so it is read from the same fixture
+    # the calculation was given — the second place to fix is demo_settings().
     assert quotation.total >= demo_settings().min_order_total
 
 
@@ -188,7 +191,7 @@ def test_a_total_is_always_a_whole_hundred_at_or_above_the_minimum_order(
 @given(size=dimensions())
 def test_keeping_every_default_of_the_product_costs_nothing_on_any_size(size: Dimensions) -> None:
     """Choosing exactly what the product declares moves no price, whatever the mirror measures."""
-    defaults = {declaration.attribute_id: declaration.value_id for declaration in demo_product().declared_values}
+    defaults = demo_defaults()
 
     deltas = selection_deltas(
         product=demo_product(),
@@ -207,7 +210,11 @@ def test_only_a_value_charged_per_unit_ever_becomes_a_line(
     size: Dimensions,
     selections: dict[AttributeId, AttributeValueId],
 ) -> None:
-    """A free value and a shape factor describe the mirror without a line of their own."""
+    """A free value and a shape factor describe the mirror without a line of their own.
+
+    The units are the three the calculation knows how to consume; ``FACTOR``
+    and a zero tariff are absent from both sets by the rule under test.
+    """
     quotation = price_product(
         product=demo_product(),
         attributes=demo_attributes(),
@@ -216,5 +223,5 @@ def test_only_a_value_charged_per_unit_ever_becomes_a_line(
         selections=selections,
     )
 
-    assert not any(line.rate.is_free() for line in quotation.breakdown)
-    assert not any(line.rate.unit is Unit.FACTOR for line in quotation.breakdown)
+    assert {line.rate.unit for line in quotation.breakdown} <= {Unit.SQUARE_METER, Unit.LINEAR_METER, Unit.PIECE}
+    assert {line.rate.is_free() for line in quotation.breakdown} <= {False}

@@ -54,6 +54,10 @@ db-up:
 db-down:
     docker compose -f docker/docker-compose.yml stop db
 
+# Build the production image; CI calls this on release tags
+image tag:
+    docker build -f docker/Dockerfile -t "memiro:{{tag}}" .
+
 # Apply migrations to the local database
 migrate:
     uv run memiro migrations apply
