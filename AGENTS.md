@@ -1,13 +1,34 @@
 # AGENTS.md
 
-Operational rules for AI agents working in this repository — a distillation
-of the coding standard the project was founded on
-(`docs/agents/coding-instruction.md` — the full text, referred to by its `§`
-numbers throughout this file and in the tickets).
-This file is self-sufficient: where it is silent, follow the existing code,
-the ADRs in `docs/adr/` and the patterns already in the repository. When this
-file and existing code disagree, this file wins — propose a fix for the code
-instead of copying the deviation.
+Operational rules for AI agents working in this repository.
+
+## The coding standard
+
+**The binding standard is `docs/agents/coding-instruction.md`** — the full,
+self-contained text the project was founded on, divided into sections `§0`–`§18`
+that this file and every ticket cite by number. It is binding end to end, and
+where it gives a recipe the recipe is used verbatim.
+
+This file is the operational summary of it plus the decisions that are this
+repository's own (the `dev` trunk, the Django admin, no Redis in the contour).
+Read this file first; **open the standard itself** before doing any of these,
+using its own "Find your task" table at the top to land on the right section:
+
+| You are about to… | Read |
+|---|---|
+| Add or change a use case | §18, then §6–§10 |
+| Write an entity, a value object or a factory | §6 |
+| Write a port, an interactor, a gateway or a migration | §7–§8 |
+| Register something in DI or add a route | §9–§10 |
+| Add or raise an error | §5.3, §12 |
+| Write or modify tests | §14 |
+| Write README or docs | §16 |
+
+Precedence: this file wins on the repository's own decisions, the standard
+governs everything else, and both win over existing code — when the code
+disagrees, propose a fix for the code instead of copying the deviation. Where
+both are silent, follow the ADRs in `docs/adr/` and the patterns already in
+the repository.
 
 Transitional note: this file describes the rewrite target. The legacy MVP
 code lives in git history and on `main` until the first release replaces it;
@@ -70,11 +91,26 @@ command lines.
 | `just lint` | ruff format + check --fix, mypy, lint-imports, typos — **mutating, rewrites files** |
 | `just static` | basedpyright, bandit |
 | `just test` | unit + integration; brings the database up itself |
+| `just test-ci` | the same without docker compose — testcontainers brings the database |
 | `just test-e2e` | full contour up → e2e → down |
 | `just up` / `just down` | local dev stack |
 | `just db-up` / `just db-down` | Postgres only — **there is no Redis in this contour** |
 | `just migrate` | apply migrations locally |
 | `just run` | run the API locally |
+| `just image <tag>` | build the production image; CI calls it on release tags |
+
+## Where the rest lives
+
+- The full coding standard — `docs/agents/coding-instruction.md` (`§0`–`§18`).
+- Issues — local markdown files under `.scratch/<feature>/`; the workflow is
+  `docs/agents/issue-tracker.md`. Triage labels — `docs/agents/triage-labels.md`.
+- The language of the domain — `CONTEXT.md`; the decisions behind it —
+  `docs/adr/`; how both are maintained — `docs/agents/domain.md`.
+- The domain reference mirroring the code — `docs/usecase/`, `docs/entities/`,
+  `docs/value-objects/`, `docs/errors/`.
+- Human-facing pages — `README.md` (showcase) and `GETTING_STARTED.md`
+  (onboarding); they are the other two audiences of §16.3, not a substitute
+  for this file.
 
 ## Architecture facts
 

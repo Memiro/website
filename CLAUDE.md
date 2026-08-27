@@ -3,25 +3,19 @@
 Сайт студии Memiro — производство интерьерных зеркал.
 Репозиторий: https://github.com/Memiro/website
 
-## Agent skills
+## The rules for this repository are in AGENTS.md
 
-### Coding standard
+**Read `AGENTS.md` before touching anything here.** It holds the boundaries,
+the commands, the architecture facts, the test patterns and the checklists,
+and it names the binding coding standard behind them
+(`docs/agents/coding-instruction.md`, cited everywhere by its `§` numbers).
+Nothing about how code is written in this repository is duplicated here — a
+second copy would be the one that goes stale.
 
-Полный стандарт, на котором основан репозиторий, — `docs/agents/coding-instruction.md`;
-`AGENTS.md` — его выжимка и ссылается на него номерами `§`. При расхождении
-выжимки и кода выигрывает `AGENTS.md`.
-
-### Issue tracker
-
-Issues live as local markdown files under `.scratch/<feature>/` in this repo. See `docs/agents/issue-tracker.md`.
-
-### Triage labels
-
-Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+`AGENTS.md` also points to where the rest lives: issues in `.scratch/<feature>/`
+(`docs/agents/issue-tracker.md`), triage labels
+(`docs/agents/triage-labels.md`), the domain language in `CONTEXT.md` and
+`docs/adr/` (`docs/agents/domain.md`).
 
 BENJAMIN-PLUS MODE ACTIVE
 
