@@ -30,6 +30,8 @@ lint = [
 test = [
     "asgi-lifespan==2.1.0",
     "httpx==0.28.1",
+    "hypothesis==6.145.1",
+    "polyfactory==3.3.0",
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "pytest-xdist==3.8.0",

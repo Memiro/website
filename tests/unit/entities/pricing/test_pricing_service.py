@@ -1,8 +1,12 @@
 from decimal import Decimal
 
+from hypothesis import given, settings
+
+from memiro.entities.catalog.attribute.rate import Unit
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
-from memiro.entities.pricing.pricing_service import price_product, selection_deltas
+from memiro.entities.pricing.pricing_service import ROUNDING_STEP, price_product, selection_deltas
 from memiro.entities.pricing.quotation import PricingVerdict
 from tests.common.factory.catalog import (
     ALUMINIUM,
@@ -23,6 +27,7 @@ from tests.common.factory.catalog import (
     demo_product,
     demo_settings,
 )
+from tests.unit.composite import configurations, dimensions
 
 
 def _dimensions(width: int, height: int) -> Dimensions:
@@ -157,3 +162,59 @@ def test_a_delta_is_taken_before_the_minimum_order_threshold() -> None:
     # Both configurations are lifted to 2 000 RUB, yet graphite really costs
     # (7000 - 4500) x 0.25 m2 = 625 more.
     assert deltas[BLADE] == Decimal(625)
+
+
+@settings(max_examples=25)
+@given(size=dimensions(), selections=configurations())
+def test_a_total_is_always_a_whole_hundred_at_or_above_the_minimum_order(
+    size: Dimensions,
+    selections: dict[AttributeId, AttributeValueId],
+) -> None:
+    """Whatever the customer configures, the price he is shown is a whole hundred and never below the minimum order."""
+    quotation = price_product(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=demo_settings(),
+        dimensions=size,
+        selections=selections,
+    )
+
+    assert quotation.total is not None
+    assert quotation.total.amount % ROUNDING_STEP == 0
+    assert quotation.total >= demo_settings().min_order_total
+
+
+@settings(max_examples=25)
+@given(size=dimensions())
+def test_keeping_every_default_of_the_product_costs_nothing_on_any_size(size: Dimensions) -> None:
+    """Choosing exactly what the product declares moves no price, whatever the mirror measures."""
+    defaults = {declaration.attribute_id: declaration.value_id for declaration in demo_product().declared_values}
+
+    deltas = selection_deltas(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=demo_settings(),
+        dimensions=size,
+        selections=defaults,
+    )
+
+    assert deltas == dict.fromkeys(defaults, Decimal(0))
+
+
+@settings(max_examples=25)
+@given(size=dimensions(), selections=configurations())
+def test_only_a_value_charged_per_unit_ever_becomes_a_line(
+    size: Dimensions,
+    selections: dict[AttributeId, AttributeValueId],
+) -> None:
+    """A free value and a shape factor describe the mirror without a line of their own."""
+    quotation = price_product(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=demo_settings(),
+        dimensions=size,
+        selections=selections,
+    )
+
+    assert not any(line.rate.is_free() for line in quotation.breakdown)
+    assert not any(line.rate.unit is Unit.FACTOR for line in quotation.breakdown)

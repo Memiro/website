@@ -29,6 +29,7 @@ from tests.common.factory.catalog import (
     SILVER,
     WITH_HEATING,
 )
+from tests.common.factory.pricing import SelectionFactory
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import corrupt_a_declaration_directly
 
@@ -104,13 +105,17 @@ async def test_a_darker_blade_on_a_curved_cut_carries_the_factor(api_client: Api
 
     response = await api_client.calculate(_form(width_mm=900, height_mm=900, selections=round_and_dark))
 
-    # (7000 - 4500) x 0.81 m2 x 1.5: the choice is priced inside the
-    # configuration the customer is looking at, curved cut included.
-    content = response.assert_status(200).ensure_content()
-    assert content.selection_deltas[1] == SelectionDelta(
-        attribute_id=BLADE,
-        value_id=GRAPHITE,
-        delta=Decimal("3037.500"),
+    # (0.81 m2 x 7000 + 3.6 lm x 2200) x 1.5 + 500 = 20 885 -> 20 900. The
+    # blade's own share is (7000 - 4500) x 0.81 m2 x 1.5 = 3 037.50: the choice
+    # is priced inside the configuration the customer is looking at, curved cut
+    # included. Dropping the round shape would leave 14 090, hence 6 795.
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(20900),
+        selection_deltas=[
+            SelectionDelta(attribute_id=SHAPE, value_id=ROUND, delta=Decimal("6795.00")),
+            SelectionDelta(attribute_id=BLADE, value_id=GRAPHITE, delta=Decimal("3037.50")),
+        ],
     )
 
 
@@ -217,7 +222,7 @@ async def test_pricing_fails_if_there_is_one_selection_too_many(api_client: ApiC
         product_id=PRODUCT,
         width_mm=800,
         height_mm=600,
-        selections=[Selection(attribute_id=uuid4(), value_id=uuid4()) for _ in range(MAX_SELECTIONS + 1)],
+        selections=SelectionFactory.batch(MAX_SELECTIONS + 1),
     )
 
     response = await api_client.calculate(dishonest)

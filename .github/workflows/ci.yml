@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [dev]
+    tags: ["v*"]
 
 jobs:
   # The same steps as `just lint` + `just static`, without mutations.
@@ -33,3 +34,26 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: uv sync --frozen --extra ci
       - run: just test-ci
+
+  # The image is built on release tags only, and only when the tag really sits
+  # on main: a tag on a side branch would otherwise ship unreleased code.
+  # Publishing it to a registry arrives with the production contour (ticket 23).
+  image:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The tag must sit on the main branch
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$TAG" FETCH_HEAD
+      - name: Build the image
+        env:
+          TAG: ${{ github.ref_name }}
+        run: docker build -f docker/Dockerfile -t "memiro:$TAG" .

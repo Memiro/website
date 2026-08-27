@@ -2,12 +2,12 @@ from decimal import Decimal
 
 import pytest
 
-from memiro.entities.common.money import Money, NegativeMoneyError
+from memiro.entities.common.money import Money
 
 
 def test_money_rejects_a_negative_sum() -> None:
     """A negative sum is a defect of the calculation, not a refusal, so it is a RuntimeError."""
-    with pytest.raises(NegativeMoneyError):
+    with pytest.raises(RuntimeError, match="cannot be negative"):
         Money(amount=Decimal(-1))
 
 
