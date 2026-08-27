@@ -5,6 +5,8 @@ import httpx
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
+from memiro.presentation.fast_api.error_handlers import ErrorResponse
 from memiro.presentation.fast_api.routers.health import HealthStatus
 
 
@@ -21,9 +23,19 @@ class ApiResponse[ModelT: BaseModel]:
         assert self._response.status_code == expected, self._response.text
         return self
 
+    def assert_error(self, expected_status: int, expected_code: str) -> None:
+        """Assert a refusal by its status and its machine code — the whole of a negative test."""
+        assert self._response.status_code == expected_status, self._response.text
+        assert ErrorResponse.model_validate_json(self._response.text).code == expected_code
+
     def ensure_content(self) -> ModelT:
         """Parse the body into the real production DTO."""
         return self._model_type.model_validate_json(self._response.text)
+
+    @property
+    def text(self) -> str:
+        """Return the body as it went over the wire — for fences over what must not be in it."""
+        return self._response.text
 
 
 class ApiClient:
@@ -55,3 +67,8 @@ class ApiClient:
     async def ready(self) -> ApiResponse[HealthStatus]:
         """Call the readiness probe."""
         return ApiResponse(await self._client.get("/internal/ready"), HealthStatus)
+
+    async def calculate(self, data: CalculatePriceForm) -> ApiResponse[CalculatedPrice]:
+        """Price one configuration of a product."""
+        response = await self._client.post("/calculate", json=data.model_dump(mode="json"))
+        return ApiResponse(response, CalculatedPrice)

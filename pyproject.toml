@@ -71,9 +71,18 @@ ignore = [
     "D213",    # incompatible with D212 (docstring summary on the first line); D212 is the project style
     "COM812",  # trailing-comma rule conflicts with the ruff formatter (ruff's own recommendation)
     "CPY001",  # the project does not use per-file copyright headers
+    "TC001",   # §13.5: TYPE_CHECKING blocks are not used — DI needs runtime types, so typing imports stay plain
+    "TC002",   # the same rule for third-party imports
+    "TC003",   # the same rule for standard-library imports
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Alembic owns the layout of its versions directory: the files are loaded by
+# path, and an __init__.py there would be a package alembic never imports.
+"src/memiro/adapters/db/alembic/versions/*" = ["INP001"]
+# The demo dictionary quotes the owner's own value names, and they are
+# Cyrillic; the ambiguous-character rule has nothing to warn about there.
+"tests/common/factory/catalog.py" = ["RUF001"]
 # The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
 "src/memiro_common/interactor.py" = ["ANN401"]
 # Tests speak in asserts (S101); test databases are named with f-strings over

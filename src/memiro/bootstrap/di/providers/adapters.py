@@ -16,6 +16,8 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from memiro.adapters.db.config import DbConfig
+from memiro.adapters.db.gateways.catalog import SAAttributeGateway, SAProductGateway
+from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro_common.clock import SystemClock
 from memiro_common.uow import UoW
 
@@ -24,6 +26,10 @@ class AdapterProvider(Provider):
     """Port implementations and the resources they live on."""
 
     clock = provide(WithParents[SystemClock], scope=Scope.APP)
+
+    product_gateway = provide(WithParents[SAProductGateway], scope=Scope.REQUEST)
+    attribute_gateway = provide(WithParents[SAAttributeGateway], scope=Scope.REQUEST)
+    pricing_settings_gateway = provide(WithParents[SAPricingSettingsGateway], scope=Scope.REQUEST)
 
     @provide(scope=Scope.APP)
     async def get_engine(self, config: DbConfig) -> AsyncIterator[AsyncEngine]:

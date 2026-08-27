@@ -7,6 +7,10 @@ from sqlalchemy.schema import SchemaItem
 
 from memiro.adapters.db.registry import mapper_registry
 
+# Importing the tables is what puts them into the registry's metadata;
+# without it autogenerate would compare the database against nothing.
+import memiro.adapters.db.tables  # noqa: F401  # pyright: ignore[reportUnusedImport]  # isort: skip
+
 target_metadata = mapper_registry.metadata
 
 

@@ -1,0 +1,84 @@
+from typing import Any
+
+import structlog
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+
+from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
+from memiro.application.errors.pricing import PricingSettingsNotFoundError
+from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
+from memiro_common.errors import AppError
+from memiro_common.logger import Logger
+
+logger: Logger = structlog.get_logger(__name__)
+
+VALIDATION_ERROR_CODE = "VALIDATION_ERROR"
+INTERNAL_ERROR_CODE = "INTERNAL_ERROR"
+
+# The flat table keyed by exact type: a miss is a code defect, not a 500 by
+# design, and it is logged as one. Its human mirror is docs/errors/.
+ERROR_STATUSES: dict[type[AppError], int] = {
+    ProductNotFoundError: status.HTTP_404_NOT_FOUND,
+    AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,
+    PricingSettingsNotFoundError: status.HTTP_404_NOT_FOUND,
+    NegativeMeasureError: status.HTTP_400_BAD_REQUEST,
+    EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
+}
+
+_LOG_AS_ERROR_FROM = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+class ErrorResponse(BaseModel):
+    """The one response shape of every failure: a machine code, a message and its context."""
+
+    code: str
+    message: str
+    meta: dict[str, Any] | None = None
+
+
+async def _handle_app_error(_request: Request, exc: Exception) -> JSONResponse:
+    """Map an expected business failure onto its status through the table."""
+    error = exc if isinstance(exc, AppError) else AppError()
+    code = type(error).code
+    http_status = ERROR_STATUSES.get(type(error))
+    if http_status is None:
+        logger.critical("Error is missing from the HTTP mapping table", code=code)
+        return _response(_LOG_AS_ERROR_FROM, INTERNAL_ERROR_CODE, "Internal error")
+    logger.info("Request refused", code=code, status=http_status)
+    return _response(http_status, code, error.message, error.meta)
+
+
+async def _handle_validation_error(_request: Request, exc: Exception) -> JSONResponse:
+    """Give FastAPI's own validation failure the same body as every other error."""
+    return _response(
+        status.HTTP_422_UNPROCESSABLE_CONTENT,
+        VALIDATION_ERROR_CODE,
+        "Request validation failed",
+        {"fields": _invalid_fields(exc)},
+    )
+
+
+def _invalid_fields(exc: Exception) -> list[str]:
+    """Name the fields pydantic refused, in the dotted form the frontend reads."""
+    if not isinstance(exc, RequestValidationError):
+        return []
+    fields: list[str] = []
+    for error in exc.errors():
+        location: Any = error.get("loc", ())
+        fields.append(".".join(str(part) for part in location))
+    return fields
+
+
+def _response(http_status: int, code: str, message: str, meta: dict[str, Any] | None = None) -> JSONResponse:
+    return JSONResponse(
+        status_code=http_status,
+        content=ErrorResponse(code=code, message=message, meta=meta).model_dump(mode="json"),
+    )
+
+
+def setup_error_handlers(app: FastAPI) -> None:
+    """Install the two global handlers that turn exceptions into the one response shape (§10.3)."""
+    app.add_exception_handler(AppError, _handle_app_error)
+    app.add_exception_handler(RequestValidationError, _handle_validation_error)
