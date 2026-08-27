@@ -16,7 +16,10 @@ class AppError(Exception):
     message: str = "Application error"
 
     def __post_init__(self) -> None:
-        super().__init__(self.message)
+        # Explicit base, not a zero-argument ``super()``: ``slots=True`` makes
+        # the decorator build a *new* class, and the ``__class__`` cell of a
+        # method compiled against the old one refuses every subclass instance.
+        Exception.__init__(self, self.message)
 
     @property
     def meta(self) -> dict[str, Any] | None:
