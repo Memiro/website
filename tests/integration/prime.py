@@ -5,7 +5,7 @@ settings yet — the admin brings them with its own slice — so the arrangement
 of a pricing test goes straight to the tables through named helpers.
 """
 
-from sqlalchemy import insert
+from sqlalchemy import insert, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.adapters.db.tables import (
@@ -15,7 +15,7 @@ from memiro.adapters.db.tables import (
     product_declared_values_table,
     products_table,
 )
-from tests.common.factory.catalog import demo_attributes, demo_product, demo_settings
+from tests.common.factory.catalog import ALUMINIUM, BLADE, PRODUCT, demo_attributes, demo_product, demo_settings
 
 
 async def prime_dictionary(engine: AsyncEngine) -> None:
@@ -76,4 +76,21 @@ async def prime_pricing_settings(engine: AsyncEngine) -> None:
                     "min_order_total": settings.min_order_total,
                 },
             ],
+        )
+
+
+async def corrupt_a_declaration_directly(engine: AsyncEngine) -> None:
+    """Point the product's blade at a value of another attribute.
+
+    The foreign keys allow it and no use case can produce it: this is what a
+    defect in the data looks like, and the calculation must not price it.
+    """
+    async with engine.begin() as connection:
+        await connection.execute(
+            update(product_declared_values_table)
+            .where(
+                product_declared_values_table.c.product_id == PRODUCT,
+                product_declared_values_table.c.attribute_id == BLADE,
+            )
+            .values(value_id=ALUMINIUM),
         )

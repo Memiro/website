@@ -11,15 +11,10 @@ from uuid import NAMESPACE_URL, UUID, uuid5
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import DeclaredValue, Product
-from memiro.entities.common.identifiers import (
-    AttributeId,
-    AttributeValueId,
-    PricingSettingsId,
-    ProductId,
-)
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
 from memiro.entities.common.measure import Area
 from memiro.entities.common.money import Money
-from memiro.entities.pricing.pricing_settings import PricingSettings
+from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings
 
 
 def _id(name: str) -> UUID:
@@ -54,7 +49,6 @@ WITH_HEATING = AttributeValueId(_id("with-heating"))
 NO_HEATING = AttributeValueId(_id("no-heating"))
 
 PRODUCT = ProductId(_id("mirror-in-a-frame"))
-PRICING_SETTINGS = PricingSettingsId(_id("pricing-settings"))
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 
@@ -192,7 +186,9 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
 def demo_settings() -> PricingSettings:
     """Build the owner's demo bounds: 0.25 m² of area and 2 000 ₽ of order."""
     return PricingSettings(
-        id=PRICING_SETTINGS,
+        # The known id of the single row: the gateway fetches it by this and
+        # nothing else, so the fixture must speak the production constant.
+        id=PRICING_SETTINGS_ID,
         min_area=Area(value=Decimal("0.25")),
         min_order_total=Money(amount=Decimal(2000)),
     )

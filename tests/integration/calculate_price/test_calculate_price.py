@@ -2,6 +2,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.calculate_price import (
     CalculatedPrice,
@@ -29,6 +30,7 @@ from tests.common.factory.catalog import (
     WITH_HEATING,
 )
 from tests.integration.api_client import ApiClient
+from tests.integration.prime import corrupt_a_declaration_directly
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -79,8 +81,37 @@ async def test_a_curved_cut_is_paid_by_the_blade_alone(api_client: ApiClient) ->
 
     response = await api_client.calculate(_form(width_mm=900, height_mm=900, selections=round_mirror))
 
-    # 0.81 m2 x 4500 x 1.5 + 3.6 lm x 2500 + 500 = 14 967.50 -> 15 000.
-    assert response.assert_status(200).ensure_content().total == Decimal(15000)
+    # 0.81 m2 x 4500 x 1.5 + 3.6 lm x 2500 + 500 = 14 967.50 -> 15 000. The
+    # round shape costs the blade its own 0.81 x 4500 x 0.5 = 1 822.50; the
+    # frame and the tape the mirror gained or lost are their own lines.
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(15000),
+        selection_deltas=[
+            SelectionDelta(attribute_id=SHAPE, value_id=ROUND, delta=Decimal("1822.500")),
+            SelectionDelta(attribute_id=FRAME, value_id=NO_FRAME, delta=Decimal("-11880.00")),
+            SelectionDelta(attribute_id=BACKLIGHT, value_id=CONTOUR, delta=Decimal("9000.000")),
+        ],
+    )
+
+
+async def test_a_darker_blade_on_a_curved_cut_carries_the_factor(api_client: ApiClient) -> None:
+    """Graphite on a round 900 x 900 mirror costs 3 037.50 RUB — the workbook's "+3 038 RUB"."""
+    round_and_dark = [
+        Selection(attribute_id=SHAPE, value_id=ROUND),
+        Selection(attribute_id=BLADE, value_id=GRAPHITE),
+    ]
+
+    response = await api_client.calculate(_form(width_mm=900, height_mm=900, selections=round_and_dark))
+
+    # (7000 - 4500) x 0.81 m2 x 1.5: the choice is priced inside the
+    # configuration the customer is looking at, curved cut included.
+    content = response.assert_status(200).ensure_content()
+    assert content.selection_deltas[1] == SelectionDelta(
+        attribute_id=BLADE,
+        value_id=GRAPHITE,
+        delta=Decimal("3037.500"),
+    )
 
 
 async def test_a_small_mirror_costs_the_minimum_order_and_the_choice_still_costs_its_own(
@@ -97,9 +128,15 @@ async def test_a_small_mirror_costs_the_minimum_order_and_the_choice_still_costs
 
     # 0.12 m2 is billed as the minimum 0.25 m2: 1 750 for the blade, lifted to
     # the minimum order; the blade itself is (7000 - 4500) x 0.25 = 625 dearer.
-    content = response.assert_status(200).ensure_content()
-    assert content.total == Decimal(2000)
-    assert content.selection_deltas[0].delta == Decimal(625)
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(2000),
+        selection_deltas=[
+            SelectionDelta(attribute_id=BLADE, value_id=GRAPHITE, delta=Decimal("625.00")),
+            SelectionDelta(attribute_id=FRAME, value_id=NO_FRAME, delta=Decimal("-3080.00")),
+            SelectionDelta(attribute_id=MOUNT, value_id=NO_MOUNT, delta=Decimal(-500)),
+        ],
+    )
 
 
 async def test_the_answer_says_nothing_about_how_the_price_is_made(api_client: ApiClient) -> None:
@@ -111,6 +148,15 @@ async def test_the_answer_says_nothing_about_how_the_price_is_made(api_client: A
     assert "2200" not in body
     assert "breakdown" not in body
     assert "rate" not in body
+
+
+async def test_a_defect_in_the_data_answers_the_same_error_shape(api_client: ApiClient, engine: AsyncEngine) -> None:
+    """A declaration pointing at another attribute's value answers 500 INTERNAL_ERROR, not a plain-text page."""
+    await corrupt_a_declaration_directly(engine)
+
+    response = await api_client.calculate(_form())
+
+    response.assert_error(500, "INTERNAL_ERROR")
 
 
 async def test_pricing_fails_if_the_product_is_unknown(api_client: ApiClient) -> None:

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
+from memiro.entities.errors.attribute import InvalidFactorRateError
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
@@ -23,6 +24,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,
     PricingSettingsNotFoundError: status.HTTP_404_NOT_FOUND,
+    InvalidFactorRateError: status.HTTP_400_BAD_REQUEST,
     NegativeMeasureError: status.HTTP_400_BAD_REQUEST,
     EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
 }
@@ -75,6 +77,14 @@ def _invalid_fields(exc: Exception) -> list[str]:
     return fields
 
 
+async def _handle_unexpected_error(_request: Request, exc: Exception) -> JSONResponse:
+    """Give a defect the same body as every refusal — the client parses one shape, always."""
+    # The handler runs while the exception is being handled, so the traceback
+    # is attached; ruff cannot see that from the signature alone.
+    logger.exception("Request failed with an unexpected error", error=type(exc).__name__)  # noqa: LOG004
+    return _response(status.HTTP_500_INTERNAL_SERVER_ERROR, INTERNAL_ERROR_CODE, "Internal error")
+
+
 def _response(http_status: int, code: str, message: str, meta: dict[str, Any] | None = None) -> JSONResponse:
     return JSONResponse(
         status_code=http_status,
@@ -83,6 +93,10 @@ def _response(http_status: int, code: str, message: str, meta: dict[str, Any] | 
 
 
 def setup_error_handlers(app: FastAPI) -> None:
-    """Install the two global handlers that turn exceptions into the one response shape (§10.3)."""
+    """Install the global handlers that turn every exception into the one response shape (§10.3)."""
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
+    # The catch-all is registered last and is the reason a deliberate
+    # RuntimeError from the domain still leaves as {code, message, meta}
+    # rather than as the framework's plain-text page (§10.3).
+    app.add_exception_handler(Exception, _handle_unexpected_error)

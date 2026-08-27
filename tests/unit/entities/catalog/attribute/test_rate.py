@@ -4,6 +4,7 @@ import pytest
 
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.common.money import Money
+from memiro.entities.errors.attribute import InvalidFactorRateError
 
 
 def test_a_tariff_charges_a_fractional_consumption() -> None:
@@ -28,12 +29,10 @@ def test_a_factor_cannot_be_charged_per_unit() -> None:
         rate.charge(Decimal(1))
 
 
-def test_a_factor_of_zero_is_not_a_multiplier() -> None:
-    """A zero factor would annihilate the blade and the frame, so it is a defect, not "free"."""
-    rate = Rate(amount=Money(amount=Decimal(0)), unit=Unit.FACTOR)
-
-    with pytest.raises(RuntimeError):
-        rate.as_factor()
+def test_a_factor_rate_rejects_zero() -> None:
+    """A zero factor would annihilate the blade and the frame, and is refused with INVALID_FACTOR_RATE."""
+    with pytest.raises(InvalidFactorRateError):
+        Rate(amount=Money(amount=Decimal(0)), unit=Unit.FACTOR)
 
 
 def test_money_per_unit_is_not_a_multiplier() -> None:

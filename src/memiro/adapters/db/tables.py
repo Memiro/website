@@ -5,7 +5,7 @@ module is what makes the domain tables exist for migrations and for the ORM
 alike.
 """
 
-from sqlalchemy import Boolean, Column, Enum, ForeignKey, Integer, String, Table, Uuid
+from sqlalchemy import Boolean, CheckConstraint, Column, Enum, ForeignKey, Integer, String, Table, Uuid
 from sqlalchemy.orm import composite, relationship
 
 from memiro.adapters.db.registry import mapper_registry
@@ -35,6 +35,10 @@ attribute_values_table = Table(
     Column("rate_unit", Enum(Unit, name="unit", native_enum=False, length=NAME_LENGTH), nullable=False),
     Column("scaled_by_shape", Boolean(), nullable=False, default=False),
     Column("sort_order", Integer(), nullable=False, default=0),
+    # The domain refuses a FACTOR of zero (it would annihilate the price
+    # instead of scaling it); the database refuses it too, so no admin write
+    # path can leave a row the calculation cannot use.
+    CheckConstraint("rate_unit <> 'FACTOR' OR rate_amount > 0", name="ck_attribute_values_factor_is_positive"),
 )
 
 products_table = Table(
@@ -79,7 +83,7 @@ mapper_registry.map_imperatively(
         "values": relationship(
             AttributeValue,
             lazy="raise_on_sql",
-            order_by=attribute_values_table.c.sort_order,
+            order_by=(attribute_values_table.c.sort_order, attribute_values_table.c.id),
         ),
     },
 )

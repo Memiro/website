@@ -50,6 +50,10 @@ def upgrade() -> None:
         sa.Column("sort_order", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["attribute_id"], ["attributes.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint(
+            "rate_unit <> 'FACTOR' OR rate_amount > 0",
+            name="ck_attribute_values_factor_is_positive",
+        ),
     )
     op.create_table(
         "products",
