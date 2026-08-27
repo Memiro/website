@@ -1,7 +1,9 @@
 # AGENTS.md
 
 Operational rules for AI agents working in this repository — a distillation
-of the coding standard the project was founded on (agent-coding-instruction).
+of the coding standard the project was founded on
+(`docs/agents/coding-instruction.md` — the full text, referred to by its `§`
+numbers throughout this file and in the tickets).
 This file is self-sufficient: where it is silent, follow the existing code,
 the ADRs in `docs/adr/` and the patterns already in the repository. When this
 file and existing code disagree, this file wins — propose a fix for the code

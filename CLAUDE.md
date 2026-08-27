@@ -5,6 +5,12 @@
 
 ## Agent skills
 
+### Coding standard
+
+Полный стандарт, на котором основан репозиторий, — `docs/agents/coding-instruction.md`;
+`AGENTS.md` — его выжимка и ссылается на него номерами `§`. При расхождении
+выжимки и кода выигрывает `AGENTS.md`.
+
 ### Issue tracker
 
 Issues live as local markdown files under `.scratch/<feature>/` in this repo. See `docs/agents/issue-tracker.md`.
