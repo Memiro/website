@@ -6,7 +6,7 @@ from sqlalchemy import Dialect, Integer, Numeric, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.types import TypeDecorator
 
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, variant_overrides
+from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, VariantOverrides
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
@@ -87,7 +87,7 @@ class MillimetersType(TypeDecorator[Millimeters]):
         return None if value is None else Millimeters(value=value)
 
 
-class VariantOverridesType(TypeDecorator[tuple[DeclaredValue, ...]]):
+class VariantOverridesType(TypeDecorator[VariantOverrides]):
     """Column type storing a variant's immutable override set as canonical JSONB."""
 
     impl = JSONB
@@ -96,7 +96,7 @@ class VariantOverridesType(TypeDecorator[tuple[DeclaredValue, ...]]):
     @override
     def process_bind_param(
         self,
-        value: tuple[DeclaredValue, ...] | None,
+        value: VariantOverrides | None,
         dialect: Dialect,
     ) -> list[VariantOverridePayload] | None:
         """Flatten and sort overrides so equal sets have one database representation."""
@@ -120,11 +120,11 @@ class VariantOverridesType(TypeDecorator[tuple[DeclaredValue, ...]]):
         self,
         value: list[VariantOverridePayload] | None,
         dialect: Dialect,
-    ) -> tuple[DeclaredValue, ...] | None:
+    ) -> VariantOverrides | None:
         """Rebuild every override through its domain constructors."""
         if value is None:
             return None
-        return variant_overrides(
+        return VariantOverrides(
             DeclaredValue(
                 attribute_id=UUID(payload["attribute_id"] or ""),
                 configured=ConfiguredValue(

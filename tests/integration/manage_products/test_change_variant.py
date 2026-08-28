@@ -107,7 +107,7 @@ async def test_the_owner_changes_a_variant_and_its_derived_product_price(app: Fa
     assert product.price_from == Money(amount=Decimal(13700))
     assert product.variants == (
         Variant(
-            id=original.id,
+            original.id,
             dimensions=Dimensions(
                 width=Millimeters(value=1200),
                 height=Millimeters(value=800),
