@@ -24,6 +24,10 @@ class Millimeters:
         """Convert to metres — the single door out of millimetres."""
         return Decimal(self.value) / MILLIMETERS_IN_METER
 
+    def allows(self, side: "Millimeters") -> bool:
+        """Tell whether this upper bound includes a side, with zero meaning no bound."""
+        return self.value == 0 or side <= self
+
 
 @dataclass(frozen=True, slots=True, order=True)
 class Area:

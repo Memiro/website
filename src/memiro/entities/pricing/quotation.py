@@ -16,11 +16,14 @@ class PricingVerdict(StrEnum):
     """
 
     PRICED = "PRICED"
+    HIDDEN = "HIDDEN"
+    BEYOND_LIMITS = "BEYOND_LIMITS"
+    NOT_PRICEABLE = "NOT_PRICEABLE"
 
 
-# The verdicts that carry a total. Kept as a set rather than a comparison so
-# that adding HIDDEN later is one line and the invariant stays one place.
-_VERDICTS_WITH_TOTAL = frozenset({PricingVerdict.PRICED})
+# The verdicts that carry a total. Kept as a set so the invariant stays in one
+# place when a new total-bearing verdict is added.
+_VERDICTS_WITH_TOTAL = frozenset({PricingVerdict.PRICED, PricingVerdict.HIDDEN})
 
 
 @dataclass(frozen=True, slots=True)

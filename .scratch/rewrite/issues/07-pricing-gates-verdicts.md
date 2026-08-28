@@ -4,10 +4,18 @@
 
 **Blocked by:** 06 (walking skeleton)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Каждый вердикт достижим через `POST /api/calculate` и назван интеграционным тестом
-- [ ] Гейт погашенной цены действует на эндпоинт (HIDDEN), конструктор владельца не гасится
-- [ ] Правило «дорос до расчёта» существует в одном месте; юнит-тесты называют его случаи
-- [ ] Hypothesis гоняет сервис тысячами прогонов: поворот, пределы, округления, пустота
-- [ ] Невалидные комбинации состояний Quotation непредставимы (нет россыпи булевых)
+- [x] Каждый вердикт достижим через `POST /api/calculate` и назван интеграционным тестом
+- [x] Гейт погашенной цены действует на эндпоинт (HIDDEN), конструктор владельца не гасится
+- [x] Правило «дорос до расчёта» существует в одном месте; юнит-тесты называют его случаи
+- [x] Hypothesis гоняет сервис тысячами прогонов: поворот, пределы, округления, пустота
+- [x] Невалидные комбинации состояний Quotation непредставимы (нет россыпи булевых)
+
+## Comments
+
+- Вертикальный срез реализован: `PricingVerdict` и инвариант `Quotation`, покупательские гейты в `price_product_for_customer`, единое `is_product_priceable`, дробный `Decimal`, пределы производства и HTTP-проекция с миграцией. Интеграционные тесты `test_a_customer_sees_the_price_the_workbook_shows`, `test_an_unpublished_product_is_not_priceable`, `test_a_customer_beyond_production_limits_receives_that_verdict` и `test_a_hidden_customer_price_exposes_neither_total_nor_deltas` именуют все четыре вердикта; `test_the_owner_prices_without_customer_gates` подтверждает вопрос владельца.
+- Hypothesis: у каждого свойства `max_examples=25` (§14.7.2); пакетные стратегии дают не менее 1000 согласованных случаев отдельно для поворота и пределов, округления, незаполненных объявлений и дробных количеств.
+- Зависимости проверяются дважды: исходная конфигурация владельца должна быть заполнена сама по себе, а выбор покупателя повторно определяет применимость дочерних атрибутов. Неприменимые значения исключаются и из итога, и из дельт.
+- Graphify: финальный `graphify extract . --code-only --no-cluster` построил 1263 узла и 2383 ребра; запрос по `price_product_for_customer` связал сервис с обеими регрессиями зависимостей и пакетными свойствами.
+- Проверки: `just lint` — «Success: no issues found in 101 source files», «Contracts: 4 kept, 0 broken»; `just static` — «0 errors, 0 warnings, 0 notes», «No issues identified.»; `just test` — «124 passed in 8.77s»; `git diff --check` и `git diff --check origin/dev...HEAD` завершились без вывода (код 0).

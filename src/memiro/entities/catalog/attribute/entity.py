@@ -1,8 +1,16 @@
 from dataclasses import dataclass, field
+from enum import StrEnum, auto
 
 from memiro.entities.catalog.attribute.rate import Rate
 from memiro.entities.common.entity import Entity
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId
+
+
+class AttributeKind(StrEnum):
+    """How a customer configures an attribute."""
+
+    SELECT = auto()
+    NUMBER = auto()
 
 
 @dataclass
@@ -18,6 +26,11 @@ class AttributeValue(Entity):
     rate: Rate
     scaled_by_shape: bool
     sort_order: int
+    marks_absence: bool = False
+
+    def is_present(self) -> bool:
+        """Tell whether this row names a feature the product actually has."""
+        return not self.marks_absence
 
 
 @dataclass
@@ -30,9 +43,20 @@ class Attribute(Entity):
     """
 
     id: AttributeId
+    category_id: CategoryId
     name: str
     sort_order: int
     values: list[AttributeValue] = field(default_factory=list[AttributeValue])
+    kind: AttributeKind = AttributeKind.SELECT
+    parent_ids: tuple[AttributeId, ...] = ()
+    is_customer_changeable: bool = True
+
+    def __post_init__(self) -> None:
+        """Hold dictionary shape invariants and detach parent identifiers."""
+        if self.kind is AttributeKind.NUMBER and len(self.values) != 1:
+            msg = f"Numeric attribute {self.id} needs exactly one tariff row"
+            raise RuntimeError(msg)
+        self.parent_ids = tuple(self.parent_ids)
 
     def value(self, value_id: AttributeValueId) -> AttributeValue | None:
         """Find a dictionary row of this attribute, or report that it is not one."""

@@ -17,6 +17,20 @@ def test_a_millimeter_accepts_zero() -> None:
     assert Millimeters(value=0).value == 0
 
 
+def test_zero_represents_no_upper_bound_for_a_side() -> None:
+    """Zero means an unlimited production bound."""
+    limit = Millimeters(value=0)
+
+    assert limit.allows(Millimeters(value=10_000))
+
+
+def test_a_side_equal_to_its_upper_bound_is_valid() -> None:
+    """A production bound includes its exact edge."""
+    limit = Millimeters(value=2000)
+
+    assert limit.allows(Millimeters(value=2000))
+
+
 def test_dimensions_reject_a_side_of_zero() -> None:
     """A product with no side does not exist and is refused with EMPTY_DIMENSIONS."""
     with pytest.raises(EmptyDimensionsError):

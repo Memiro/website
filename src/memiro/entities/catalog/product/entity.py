@@ -1,7 +1,22 @@
 from dataclasses import dataclass, field
+from decimal import Decimal
 
 from memiro.entities.common.entity import Entity
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
+
+
+@dataclass(frozen=True, slots=True)
+class ConfiguredValue:
+    """One configured attribute, expressed as either a dictionary row or a quantity."""
+
+    value_id: AttributeValueId | None
+    quantity: Decimal | None
+
+    def __post_init__(self) -> None:
+        """Reject two simultaneous representations as a programmer defect."""
+        if self.value_id is not None and self.quantity is not None:
+            msg = "Configured value cannot name both a dictionary row and a quantity"
+            raise RuntimeError(msg)
 
 
 @dataclass
@@ -13,7 +28,14 @@ class DeclaredValue(Entity):
     """
 
     attribute_id: AttributeId
-    value_id: AttributeValueId
+    value_id: AttributeValueId | None
+    quantity: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        """Reject two simultaneous representations while keeping an unfinished declaration legal."""
+        if self.value_id is not None and self.quantity is not None:
+            msg = "Declared value cannot name both a dictionary row and a quantity"
+            raise RuntimeError(msg)
 
 
 @dataclass
@@ -26,9 +48,12 @@ class Product(Entity):
     """
 
     id: ProductId
+    category_id: CategoryId
     name: str
     slug: str
+    is_published: bool
     declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue])
+    hides_calculated_price: bool = False
 
     def declared(self, attribute_id: AttributeId) -> DeclaredValue | None:
         """Return what the product declared on the attribute, if it declared anything."""

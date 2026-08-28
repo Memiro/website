@@ -11,16 +11,20 @@ from memiro.application.calculate_price import (
     SelectionDelta,
 )
 from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
+from memiro.entities.common.measure import Millimeters
 from memiro.entities.pricing.quotation import PricingVerdict
 from tests.common.factory.catalog import (
     ALUMINIUM,
     BACKLIGHT,
     BLADE,
     CONTOUR,
+    CUTOUT,
+    CUTOUTS,
     FRAME,
     GRAPHITE,
     HEATING,
     MOUNT,
+    NO_BACKLIGHT,
     NO_FRAME,
     NO_MOUNT,
     PRODUCT,
@@ -31,7 +35,19 @@ from tests.common.factory.catalog import (
 )
 from tests.common.factory.pricing import SelectionFactory
 from tests.integration.api_client import ApiClient
-from tests.integration.prime import corrupt_a_declaration_directly
+from tests.integration.prime import (
+    corrupt_a_declaration_directly,
+    prime_complete_heating_declaration,
+    prime_hidden_calculated_price,
+    prime_incomplete_declaration,
+    prime_non_changeable_attribute,
+    prime_numeric_catalog,
+    prime_paid_heating_declaration,
+    prime_present_dependency,
+    prime_product_publication,
+    prime_product_without_paid_values,
+    prime_production_limits,
+)
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -72,8 +88,12 @@ async def test_a_customer_sees_what_a_darker_blade_adds(api_client: ApiClient) -
     )
 
 
-async def test_a_curved_cut_is_paid_by_the_blade_alone(api_client: ApiClient) -> None:
+async def test_a_curved_cut_is_paid_by_the_blade_alone(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
     """A round mirror with a tape answers 15 000 RUB: the factor takes the blade, not the backlight."""
+    await prime_complete_heating_declaration(engine)
     round_mirror = [
         Selection(attribute_id=SHAPE, value_id=ROUND),
         Selection(attribute_id=FRAME, value_id=NO_FRAME),
@@ -144,6 +164,263 @@ async def test_a_small_mirror_costs_the_minimum_order_and_the_choice_still_costs
     )
 
 
+async def test_an_absence_marked_parent_leaves_its_undeclared_child_out_of_pricing(
+    api_client: ApiClient,
+) -> None:
+    """A missing dependent declaration is irrelevant while its parent explicitly marks absence."""
+    response = await api_client.calculate(_form())
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(8900),
+        selection_deltas=[],
+    )
+
+
+async def test_a_customer_choice_that_makes_a_parent_present_requires_its_child(
+    api_client: ApiClient,
+) -> None:
+    """A selected present parent makes its undeclared child answer NOT_PRICEABLE."""
+    selection = Selection(attribute_id=BACKLIGHT, value_id=CONTOUR)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_customer_choice_that_makes_a_parent_absent_ignores_its_child(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A selected absent parent makes its complete child irrelevant to pricing."""
+    await prime_present_dependency(engine)
+    await prime_complete_heating_declaration(engine)
+    selection = Selection(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(8900),
+        selection_deltas=[
+            SelectionDelta(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT, delta=Decimal(-7000)),
+        ],
+    )
+
+
+async def test_an_absent_selected_parent_removes_its_paid_child_from_the_price(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A paid child contributes nothing after the customer makes its parent absent."""
+    await prime_paid_heating_declaration(engine)
+    selection = Selection(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(8900),
+        selection_deltas=[
+            SelectionDelta(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT, delta=Decimal(-10500)),
+        ],
+    )
+
+
+async def test_rotated_dimensions_use_the_long_and_short_production_limits(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A rotated 600 x 800 mirror fits production limits expressed as 800 x 600."""
+    await prime_production_limits(
+        engine,
+        max_long_side_mm=Millimeters(value=800),
+        max_short_side_mm=Millimeters(value=600),
+    )
+
+    response = await api_client.calculate(_form(width_mm=600, height_mm=800))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(8900),
+        selection_deltas=[],
+    )
+
+
+async def test_zero_production_limits_leave_both_sides_unlimited(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """Zero production bounds allow dimensions up to the independent request limit."""
+    await prime_production_limits(
+        engine,
+        max_long_side_mm=Millimeters(value=0),
+        max_short_side_mm=Millimeters(value=0),
+    )
+
+    response = await api_client.calculate(_form(width_mm=10_000, height_mm=9000))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(489100),
+        selection_deltas=[],
+    )
+
+
+async def test_a_fractional_numeric_quantity_is_priced_exactly(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A customer can replace one numeric unit with Decimal('2.5') without integer rounding."""
+    await prime_numeric_catalog(engine)
+    selection = Selection(attribute_id=CUTOUTS, quantity=Decimal("2.5"))
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(300),
+        selection_deltas=[SelectionDelta(attribute_id=CUTOUTS, value_id=None, delta=Decimal(150))],
+    )
+
+
+async def test_an_unpublished_product_is_not_priceable(api_client: ApiClient, engine: AsyncEngine) -> None:
+    """An unpublished product answers NOT_PRICEABLE without naming a total."""
+    await prime_product_publication(engine, is_published=False)
+
+    response = await api_client.calculate(_form())
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_an_incomplete_applicable_declaration_is_not_priceable(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """An unfinished declaration answers NOT_PRICEABLE without naming a total."""
+    await prime_incomplete_declaration(engine)
+
+    response = await api_client.calculate(_form())
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_customer_choice_cannot_complete_an_unfinished_owner_declaration(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """An unfinished owner declaration remains NOT_PRICEABLE after a customer choice."""
+    await prime_incomplete_declaration(engine)
+    selection = Selection(attribute_id=BLADE, value_id=SILVER)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_present_parent_makes_its_incomplete_child_not_priceable(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A present dependency parent makes the missing child declaration produce NOT_PRICEABLE."""
+    await prime_present_dependency(engine)
+
+    response = await api_client.calculate(_form())
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_product_without_a_paid_value_is_not_priceable(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A complete configuration made only of free values answers NOT_PRICEABLE."""
+    await prime_product_without_paid_values(engine)
+
+    response = await api_client.calculate(_form())
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_customer_choice_on_a_non_changeable_attribute_is_not_priceable(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A valid choice on an owner-only attribute answers NOT_PRICEABLE."""
+    await prime_non_changeable_attribute(engine)
+    selection = Selection(attribute_id=BLADE, value_id=GRAPHITE)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.NOT_PRICEABLE,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_customer_beyond_production_limits_receives_that_verdict(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A size over production's long and short bounds answers BEYOND_LIMITS."""
+    await prime_production_limits(
+        engine,
+        max_long_side_mm=Millimeters(value=700),
+        max_short_side_mm=Millimeters(value=500),
+    )
+    selection = Selection(attribute_id=BLADE, value_id=GRAPHITE)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.BEYOND_LIMITS,
+        total=None,
+        selection_deltas=[],
+    )
+
+
+async def test_a_hidden_customer_price_exposes_neither_total_nor_deltas(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """HIDDEN completes pricing internally but its public projection carries no amounts."""
+    await prime_hidden_calculated_price(engine)
+    selection = Selection(attribute_id=BLADE, value_id=GRAPHITE)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.HIDDEN,
+        total=None,
+        selection_deltas=[],
+    )
+
+
 async def test_the_answer_says_nothing_about_how_the_price_is_made(api_client: ApiClient) -> None:
     """The public projection carries no tariffs, no factors and no lines of blade and edge."""
     response = await api_client.calculate(_form())
@@ -189,6 +466,41 @@ async def test_pricing_fails_if_the_chosen_value_does_not_exist(api_client: ApiC
     response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
 
 
+async def test_pricing_fails_if_a_select_attribute_is_supplied_as_a_quantity(api_client: ApiClient) -> None:
+    """A quantity for a SELECT attribute is refused with ATTRIBUTE_VALUE_NOT_FOUND."""
+    selection = Selection(attribute_id=BLADE, quantity=Decimal("2.5"))
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
+
+
+async def test_pricing_fails_if_a_numeric_attribute_is_supplied_as_a_value(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A dictionary value for a NUMBER attribute is refused with ATTRIBUTE_VALUE_NOT_FOUND."""
+    await prime_numeric_catalog(engine)
+    selection = Selection(attribute_id=CUTOUTS, value_id=CUTOUT)
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
+
+
+async def test_selection_identity_is_validated_before_the_publication_gate(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """An unknown value on an unpublished product is still refused with ATTRIBUTE_VALUE_NOT_FOUND."""
+    await prime_product_publication(engine, is_published=False)
+    selection = Selection(attribute_id=BLADE, value_id=uuid4())
+
+    response = await api_client.calculate(_form(selections=[selection]))
+
+    response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
+
+
 async def test_pricing_fails_if_the_attribute_is_not_declared_by_the_product(api_client: ApiClient) -> None:
     """Heating the mirror never had is refused with ATTRIBUTE_VALUE_NOT_FOUND: there is nothing to replace."""
     selection = Selection(attribute_id=HEATING, value_id=WITH_HEATING)
@@ -210,6 +522,30 @@ async def test_pricing_fails_if_one_attribute_is_chosen_twice(api_client: ApiCli
         height_mm=600,
         selections=twice,
     )
+
+    response = await api_client.calculate(dishonest)
+
+    response.assert_error(422, "VALIDATION_ERROR")
+
+
+async def test_pricing_fails_if_a_selection_names_both_a_value_and_a_quantity(api_client: ApiClient) -> None:
+    """A selection with two representations is refused with VALIDATION_ERROR."""
+    dishonest_selection = Selection.model_construct(
+        attribute_id=BLADE,
+        value_id=GRAPHITE,
+        quantity=Decimal("2.5"),
+    )
+    dishonest = _form(selections=[dishonest_selection])
+
+    response = await api_client.calculate(dishonest)
+
+    response.assert_error(422, "VALIDATION_ERROR")
+
+
+async def test_pricing_fails_if_a_selection_names_neither_a_value_nor_a_quantity(api_client: ApiClient) -> None:
+    """A selection with no representation is refused with VALIDATION_ERROR."""
+    dishonest_selection = Selection.model_construct(attribute_id=BLADE)
+    dishonest = _form(selections=[dishonest_selection])
 
     response = await api_client.calculate(dishonest)
 

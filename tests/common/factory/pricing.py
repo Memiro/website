@@ -5,6 +5,8 @@ dictionary (`catalog.py`); a test that only needs *some* well-formed choices
 takes them from here (§14.7.1).
 """
 
+from uuid import uuid4
+
 from polyfactory.factories.pydantic_factory import ModelFactory
 
 from memiro.application.calculate_price import Selection
@@ -14,3 +16,5 @@ class SelectionFactory(ModelFactory[Selection]):
     """Build a syntactically valid choice pointing at nothing in particular."""
 
     __model__ = Selection
+    value_id = uuid4
+    quantity = None
