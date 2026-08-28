@@ -7,7 +7,7 @@ of a pricing test goes straight to the tables through named helpers.
 
 from decimal import Decimal
 
-from sqlalchemy import delete, insert, update
+from sqlalchemy import delete, insert, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.adapters.db.tables import (
@@ -68,6 +68,7 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "rate_amount": value.rate.amount,
                     "rate_unit": value.rate.unit,
                     "scaled_by_shape": value.scaled_by_shape,
+                    "scaled_by_size_surcharge": value.scaled_by_size_surcharge,
                     "marks_absence": value.marks_absence,
                     "sort_order": value.sort_order,
                 }
@@ -152,6 +153,24 @@ async def prime_production_limits(
                 max_long_side_mm=max_long_side_mm,
                 max_short_side_mm=max_short_side_mm,
             ),
+        )
+
+
+async def prime_size_surcharge(engine: AsyncEngine) -> None:
+    """Apply the owner's first size-surcharge tier to the demo blade."""
+    settings = demo_settings()
+    async with engine.begin() as connection:
+        await connection.execute(
+            update(attribute_values_table)
+            .where(attribute_values_table.c.id == SILVER)
+            .values(scaled_by_size_surcharge=True),
+        )
+        await connection.execute(
+            text(
+                """INSERT INTO size_surcharges (pricing_settings_id, from_long_side_mm, factor)
+                   VALUES (:pricing_settings_id, 2200, 1.25)"""
+            ),
+            {"pricing_settings_id": settings.id},
         )
 
 
@@ -273,6 +292,7 @@ async def prime_numeric_catalog(engine: AsyncEngine) -> None:
                     "rate_amount": value.rate.amount,
                     "rate_unit": value.rate.unit,
                     "scaled_by_shape": value.scaled_by_shape,
+                    "scaled_by_size_surcharge": value.scaled_by_size_surcharge,
                     "marks_absence": value.marks_absence,
                     "sort_order": value.sort_order,
                 },

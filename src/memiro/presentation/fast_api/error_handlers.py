@@ -10,6 +10,7 @@ from memiro.application.errors.catalog import AttributeValueNotFoundError, Produ
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import InvalidFactorRateError
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
+from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
 
@@ -25,6 +26,8 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     InvalidFactorRateError: status.HTTP_400_BAD_REQUEST,
     NegativeMeasureError: status.HTTP_400_BAD_REQUEST,
     EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
+    InvalidSurchargeFactorError: status.HTTP_400_BAD_REQUEST,
+    DuplicateSizeSurchargeError: status.HTTP_400_BAD_REQUEST,
 }
 
 logger: Logger = structlog.get_logger(__name__)

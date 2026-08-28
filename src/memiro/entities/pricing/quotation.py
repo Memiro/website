@@ -4,6 +4,7 @@ from enum import StrEnum
 
 from memiro.entities.catalog.attribute.rate import Rate
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.common.measure import Millimeters
 from memiro.entities.common.money import Money
 
 
@@ -48,6 +49,7 @@ class Quotation:
     verdict: PricingVerdict
     total: Money | None
     breakdown: tuple[QuotationLine, ...]
+    size_surcharge_from_long_side_mm: Millimeters | None = None
 
     def __post_init__(self) -> None:
         """Hold the verdict/total invariant: a mismatch is a defect, not a refusal (§12.3)."""
@@ -56,4 +58,7 @@ class Quotation:
             raise RuntimeError(msg)
         if self.total is None and self.breakdown:
             msg = f"Verdict {self.verdict} carries no total and must carry no breakdown"
+            raise RuntimeError(msg)
+        if self.total is None and self.size_surcharge_from_long_side_mm is not None:
+            msg = f"Verdict {self.verdict} did no pricing and cannot carry a size-surcharge threshold"
             raise RuntimeError(msg)

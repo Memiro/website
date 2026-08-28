@@ -33,6 +33,7 @@ def test_an_attribute_finds_a_row_of_its_own_dictionary() -> None:
         rate=Rate(amount=Money(amount=Decimal(7000)), unit=Unit.SQUARE_METER),
         scaled_by_shape=True,
         sort_order=2,
+        scaled_by_size_surcharge=True,
     )
 
 

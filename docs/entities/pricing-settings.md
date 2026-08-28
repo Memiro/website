@@ -23,7 +23,7 @@ _Avoid_: настройки цен, конфиг калькулятора.
 | `min_order_total` | [`Money`](../value-objects/money.md) | Минимальная сумма заказа |
 | `max_long_side_mm` | [`Millimeters`](../value-objects/millimeters.md) | Предел по наибольшей стороне |
 | `max_short_side_mm` | [`Millimeters`](../value-objects/millimeters.md) | Предел по второй стороне |
-| `size_surcharges` | `list[SizeSurcharge]` | Ступени наценки за размер |
+| `size_surcharges` | `tuple[SizeSurcharge, ...]` | Ступени наценки за размер |
 | `updated_at` | `datetime` | |
 
 Даты создания у корня нет: строка заводится вместе с сайтом и не рождается

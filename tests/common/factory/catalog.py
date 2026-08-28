@@ -5,6 +5,7 @@ and the tests speak in them by name so an expected price can be checked by
 hand against the workbook.
 """
 
+from collections.abc import Sequence
 from dataclasses import replace
 from decimal import Decimal
 from typing import cast
@@ -14,9 +15,9 @@ from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, A
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
-from memiro.entities.common.measure import Area
+from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
-from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings
+from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings, SizeSurcharge
 
 
 def _id(name: str) -> UUID:
@@ -77,6 +78,7 @@ def demo_blade() -> Attribute:
                 rate=_rate("4500", Unit.SQUARE_METER),
                 scaled_by_shape=True,
                 sort_order=1,
+                scaled_by_size_surcharge=True,
             ),
             AttributeValue(
                 id=GRAPHITE,
@@ -84,6 +86,7 @@ def demo_blade() -> Attribute:
                 rate=_rate("7000", Unit.SQUARE_METER),
                 scaled_by_shape=True,
                 sort_order=2,
+                scaled_by_size_surcharge=True,
             ),
         ],
     )
@@ -375,7 +378,19 @@ def demo_choices() -> dict[AttributeId, list[AttributeValueId]]:
     return {attribute_id: values[attribute_id] for attribute_id in demo_defaults()}
 
 
-def demo_settings() -> PricingSettings:
+def demo_size_surcharge(
+    *,
+    from_long_side_mm: int = 2200,
+    factor: str = "1.25",
+) -> SizeSurcharge:
+    """Build the owner's first size-surcharge tier."""
+    return SizeSurcharge(
+        from_long_side_mm=Millimeters(value=from_long_side_mm),
+        factor=Decimal(factor),
+    )
+
+
+def demo_settings(*, size_surcharges: Sequence[SizeSurcharge] = ()) -> PricingSettings:
     """Build the owner's demo bounds: 0.25 m² of area and 2 000 ₽ of order."""
     return PricingSettings(
         # The known id of the single row: the gateway fetches it by this and
@@ -383,4 +398,5 @@ def demo_settings() -> PricingSettings:
         id=PRICING_SETTINGS_ID,
         min_area=Area(value=Decimal("0.25")),
         min_order_total=Money(amount=Decimal(2000)),
+        _size_surcharges=list(size_surcharges),
     )

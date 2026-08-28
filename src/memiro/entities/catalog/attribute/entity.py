@@ -27,6 +27,7 @@ class AttributeValue(Entity):
     scaled_by_shape: bool
     sort_order: int
     marks_absence: bool = False
+    scaled_by_size_surcharge: bool = False
 
     def is_present(self) -> bool:
         """Tell whether this row names a feature the product actually has."""

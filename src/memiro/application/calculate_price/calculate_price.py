@@ -109,13 +109,14 @@ class SelectionDelta(BaseModel):
 class CalculatedPrice(BaseModel):
     """The truncated projection of ``Quotation`` the storefront is allowed to see.
 
-    The total, the deltas of the chosen add-ons and the machine verdict code —
-    no tariffs, no factors and no lines of blade and edge (decision 56).
+    The total, the deltas, the applied size threshold and the machine verdict
+    code — no tariffs, no factors and no lines of blade and edge (decision 56).
     """
 
     verdict: PricingVerdict
     total: Decimal | None
     selection_deltas: list[SelectionDelta]
+    size_surcharge_from_long_side_mm: int | None = None
 
 
 @interactor
@@ -152,11 +153,17 @@ class CalculatePrice:
             dimensions=dimensions,
             selections=selections,
         )
+        size_surcharge_from_long_side_mm = (
+            quotation.size_surcharge_from_long_side_mm.value
+            if quotation.size_surcharge_from_long_side_mm is not None
+            else None
+        )
         if quotation.verdict is not PricingVerdict.PRICED:
             return CalculatedPrice(
                 verdict=quotation.verdict,
                 total=None,
                 selection_deltas=[],
+                size_surcharge_from_long_side_mm=size_surcharge_from_long_side_mm,
             )
         deltas = selection_deltas(
             product=product,
@@ -180,4 +187,5 @@ class CalculatePrice:
                 for selection in data.selections
                 if selection.attribute_id in deltas
             ],
+            size_surcharge_from_long_side_mm=size_surcharge_from_long_side_mm,
         )

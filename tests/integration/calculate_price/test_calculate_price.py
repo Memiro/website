@@ -47,6 +47,7 @@ from tests.integration.prime import (
     prime_product_publication,
     prime_product_without_paid_values,
     prime_production_limits,
+    prime_size_surcharge,
 )
 
 pytestmark = pytest.mark.usefixtures("catalog")
@@ -70,6 +71,31 @@ async def test_a_customer_sees_the_price_the_workbook_shows(api_client: ApiClien
         verdict=PricingVerdict.PRICED,
         total=Decimal(8900),
         selection_deltas=[],
+    )
+
+
+async def test_a_mirror_costs_more_from_the_first_size_surcharge_threshold(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """The public calculation steps up at 2200 mm and names that threshold without its factor."""
+    await prime_size_surcharge(engine)
+
+    below_response = await api_client.calculate(_form(width_mm=2199, height_mm=600))
+    at_response = await api_client.calculate(_form(width_mm=2200, height_mm=600))
+
+    below = below_response.assert_status(200).ensure_content()
+    at = at_response.assert_status(200).ensure_content()
+    assert below == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(18800),
+        selection_deltas=[],
+    )
+    assert at == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(20300),
+        selection_deltas=[],
+        size_surcharge_from_long_side_mm=2200,
     )
 
 
@@ -432,14 +458,16 @@ async def test_a_hidden_customer_price_exposes_neither_total_nor_deltas(
 ) -> None:
     """HIDDEN completes pricing internally but its public projection carries no amounts."""
     await prime_hidden_calculated_price(engine)
+    await prime_size_surcharge(engine)
     selection = Selection(attribute_id=BLADE, value_id=GRAPHITE)
 
-    response = await api_client.calculate(_form(selections=[selection]))
+    response = await api_client.calculate(_form(width_mm=2200, height_mm=600, selections=[selection]))
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.HIDDEN,
         total=None,
         selection_deltas=[],
+        size_surcharge_from_long_side_mm=2200,
     )
 
 
