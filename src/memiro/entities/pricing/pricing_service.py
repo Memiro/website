@@ -132,13 +132,7 @@ def _configuration(
     selections: PricingConfiguration,
 ) -> dict[AttributeId, ConfiguredValue]:
     """Lay the customer's choices over what the owner declared for the product."""
-    declared = {
-        declaration.attribute_id: ConfiguredValue(
-            value_id=declaration.value_id,
-            quantity=declaration.quantity,
-        )
-        for declaration in product.declared_values
-    }
+    declared = {declaration.attribute_id: declaration.configured for declaration in product.declared_values}
     selected = {attribute_id: _configured(value) for attribute_id, value in selections.items()}
     return declared | selected
 
@@ -268,7 +262,7 @@ def _configured(
     if isinstance(value, ConfiguredValue):
         return value
     if isinstance(value, DeclaredValue):
-        return ConfiguredValue(value_id=value.value_id, quantity=value.quantity)
+        return value.configured
     return ConfiguredValue(value_id=value, quantity=None)
 
 

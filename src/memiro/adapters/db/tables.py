@@ -12,7 +12,7 @@ from memiro.adapters.db.registry import mapper_registry
 from memiro.adapters.db.types import AreaType, AttributeIdsType, MillimetersType, MoneyType
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
-from memiro.entities.catalog.product.entity import DeclaredValue, Product
+from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
 from memiro.entities.pricing.pricing_settings import PricingSettings
 
 NAME_LENGTH = 255
@@ -109,6 +109,13 @@ mapper_registry.map_imperatively(
 mapper_registry.map_imperatively(
     DeclaredValue,
     product_declared_values_table,
+    properties={
+        "configured": composite(
+            ConfiguredValue,
+            product_declared_values_table.c.value_id,
+            product_declared_values_table.c.quantity,
+        ),
+    },
 )
 
 mapper_registry.map_imperatively(
