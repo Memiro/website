@@ -6,8 +6,7 @@ from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.input_limits import MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
-from memiro.application.manage_products.add_variant import CreatedVariant
-from memiro.application.manage_products.shared import variant_price
+from memiro.application.manage_products.shared import CreatedVariant, variant_price
 from memiro.entities.catalog.product.entity import VariantData
 from memiro.entities.common.identifiers import ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters

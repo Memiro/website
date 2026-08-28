@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from decimal import Decimal
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
@@ -15,24 +16,9 @@ from memiro.entities.errors.product import (
 )
 
 
-def _variant_key(variant: Variant) -> tuple[int, int, tuple[tuple[AttributeId, ConfiguredValue], ...]]:
-    """Canonicalize rotation and override order for the duplicate invariant."""
-    overrides = tuple(
-        sorted(
-            ((override.attribute_id, override.configured) for override in variant.overrides),
-            key=lambda item: str(item[0]),
-        )
-    )
-    return (
-        variant.dimensions.long_side.value,
-        variant.dimensions.short_side.value,
-        overrides,
-    )
-
-
 def _variant_fingerprint(variant: Variant) -> UUID:
     """Build the stable database guard for the exact domain duplicate key."""
-    long_side, short_side, overrides = _variant_key(variant)
+    long_side, short_side, overrides = variant.configuration_key()
     override_key = ";".join(f"{attribute_id}:{_configured_key(configured)}" for attribute_id, configured in overrides)
     return uuid5(NAMESPACE_URL, f"memiro/variant/{long_side}/{short_side}/{override_key}")
 
@@ -81,34 +67,88 @@ class VariantData:
     overrides: tuple[DeclaredValue, ...]
     sort_order: int
 
+    def __post_init__(self) -> None:
+        """Validate the complete owner-controlled child shape."""
+        object.__setattr__(self, "overrides", variant_overrides(self.overrides))
 
-@dataclass
+
+@dataclass(init=False)
 class Variant(Entity):
     """One ready configuration whose price was calculated by the domain service."""
 
     id: VariantId
-    dimensions: Dimensions
-    overrides: tuple[DeclaredValue, ...]
-    price: Money
-    sort_order: int
-    fingerprint: UUID = field(init=False)
+    _dimensions: Dimensions
+    _overrides: tuple[DeclaredValue, ...]
+    _price: Money
+    _sort_order: int
+    _fingerprint: UUID = field(init=False)
+
+    def __init__(
+        self,
+        *,
+        id: VariantId,  # noqa: A002 - the domain field is named id by §6.1.
+        dimensions: Dimensions,
+        overrides: tuple[DeclaredValue, ...],
+        price: Money,
+        sort_order: int,
+    ) -> None:
+        """Keep child state writable only to the aggregate and the ORM."""
+        self.id = id
+        self._dimensions = dimensions
+        self._overrides = variant_overrides(overrides)
+        self._price = price
+        self._sort_order = sort_order
+        self.__post_init__()
+
+    @property
+    def dimensions(self) -> Dimensions:
+        """Return the immutable dimensions value object."""
+        return self._dimensions
+
+    @property
+    def overrides(self) -> tuple[DeclaredValue, ...]:
+        """Return copies so a caller cannot mutate the aggregate through a child."""
+        return tuple(
+            DeclaredValue(attribute_id=override.attribute_id, configured=override.configured)
+            for override in self._overrides
+        )
+
+    @property
+    def price(self) -> Money:
+        """Return the system-calculated price."""
+        return self._price
+
+    @property
+    def sort_order(self) -> int:
+        """Return the order chosen by the owner."""
+        return self._sort_order
 
     def __post_init__(self) -> None:
         """Reject a child whose owner order cannot be represented."""
-        if self.sort_order < 0:
+        if self._sort_order < 0:
             raise InvalidVariantSortOrderError
-        attribute_ids = [override.attribute_id for override in self.overrides]
-        if len(set(attribute_ids)) != len(attribute_ids):
-            raise InvalidVariantConfigurationError(
-                message="A variant can override an attribute only once",
+        self._fingerprint = _variant_fingerprint(self)
+
+    def ensure_stored_fingerprint(self) -> None:
+        """Refuse persisted child state whose uniqueness guard is stale or corrupt."""
+        expected = _variant_fingerprint(self)
+        if self._fingerprint != expected:
+            msg = f"Variant {self.id} has a corrupted fingerprint"
+            raise RuntimeError(msg)
+
+    def configuration_key(self) -> tuple[int, int, tuple[tuple[AttributeId, ConfiguredValue], ...]]:
+        """Return the rotation- and order-independent duplicate identity."""
+        overrides = tuple(
+            sorted(
+                ((override.attribute_id, override.configured) for override in self._overrides),
+                key=lambda item: str(item[0]),
             )
-        if any(
-            override.configured.value_id is None and override.configured.quantity is None for override in self.overrides
-        ):
-            raise InvalidVariantConfigurationError(
-                message="A variant override must name a value or a quantity",
-            )
-        self.fingerprint = _variant_fingerprint(self)
+        )
+        return (
+            self._dimensions.long_side.value,
+            self._dimensions.short_side.value,
+            overrides,
+        )
 
 
 @dataclass
@@ -126,17 +166,22 @@ class Product(Entity):
     is_published: bool
     declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue])
     hides_calculated_price: bool = False
-    price_from: Money | None = field(init=False, default=None)
+    _price_from: Money | None = field(init=False, default=None, repr=False)
     _variants: list[Variant] = field(default_factory=list[Variant], repr=False)
+
+    @property
+    def price_from(self) -> Money | None:
+        """Return the minimum child price derived by aggregate commands."""
+        return self._price_from
 
     @property
     def variants(self) -> tuple[Variant, ...]:
         """Return the precalculated variants without exposing the mutable collection."""
-        return tuple(self._variants)
+        return tuple(sorted(self._variants, key=lambda variant: (variant.sort_order, str(variant.id))))
 
     def add_variant(self, data: VariantData, *, price: Money) -> Variant:
         """Add a priced variant and derive the product price from all variants."""
-        variant = variant_factory(data, price=price)
+        variant = variant_factory(self._canonical_variant_data(data), price=price)
         self._ensure_unique_variant(variant)
         self._variants.append(variant)
         self._settle_price_from()
@@ -144,12 +189,13 @@ class Product(Entity):
 
     def change_variant(self, variant: Variant, data: VariantData, *, price: Money) -> Variant:
         """Replace one loaded child and derive the product price again."""
+        canonical = self._canonical_variant_data(data)
         replacement = Variant(
             id=variant.id,
-            dimensions=data.dimensions,
-            overrides=data.overrides,
+            dimensions=canonical.dimensions,
+            overrides=canonical.overrides,
             price=price,
-            sort_order=data.sort_order,
+            sort_order=canonical.sort_order,
         )
         self._ensure_unique_variant(replacement, excluding=variant.id)
         index = self._variant_index(variant)
@@ -197,12 +243,25 @@ class Product(Entity):
 
     def _settle_price_from(self) -> None:
         """Derive the storefront seam from the children that own its truth."""
-        self.price_from = min((variant.price for variant in self._variants), default=None)
+        self._price_from = min((variant.price for variant in self._variants), default=None)
+
+    def _canonical_variant_data(self, data: VariantData) -> VariantData:
+        """Drop overrides that repeat the product's own configured value."""
+        overrides: list[DeclaredValue] = []
+        for override in data.overrides:
+            declared = self.declared(override.attribute_id)
+            if declared is None or declared.configured != override.configured:
+                overrides.append(override)
+        return VariantData(
+            dimensions=data.dimensions,
+            overrides=tuple(overrides),
+            sort_order=data.sort_order,
+        )
 
     def _ensure_unique_variant(self, candidate: Variant, *, excluding: VariantId | None = None) -> None:
         """Refuse a second child describing the same physical configuration."""
-        candidate_key = _variant_key(candidate)
-        if any(variant.id != excluding and _variant_key(variant) == candidate_key for variant in self._variants):
+        candidate_key = candidate.configuration_key()
+        if any(variant.id != excluding and variant.configuration_key() == candidate_key for variant in self._variants):
             raise DuplicateVariantError
 
     def _variant_index(self, variant: Variant) -> int:
@@ -223,3 +282,18 @@ def variant_factory(data: VariantData, *, price: Money) -> Variant:
         price=price,
         sort_order=data.sort_order,
     )
+
+
+def variant_overrides(values: Iterable[DeclaredValue]) -> tuple[DeclaredValue, ...]:
+    """Construct an immutable override set that preserves its eternal invariants."""
+    overrides = tuple(values)
+    attribute_ids = [override.attribute_id for override in overrides]
+    if len(set(attribute_ids)) != len(attribute_ids):
+        raise InvalidVariantConfigurationError(
+            message="A variant can override an attribute only once",
+        )
+    if any(override.configured.value_id is None and override.configured.quantity is None for override in overrides):
+        raise InvalidVariantConfigurationError(
+            message="A variant override must name a value or a quantity",
+        )
+    return overrides

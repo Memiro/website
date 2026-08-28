@@ -46,3 +46,12 @@ source_modules =
     memiro_common
 forbidden_modules =
     django
+
+[importlinter:contract:manage-products-scenarios]
+name = Product-management scenarios communicate only through their shared module
+type = independence
+modules =
+    memiro.application.manage_products.add_variant
+    memiro.application.manage_products.change_variant
+    memiro.application.manage_products.duplicate_variant_with_size
+    memiro.application.manage_products.remove_variant

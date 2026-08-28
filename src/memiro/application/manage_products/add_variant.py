@@ -1,13 +1,10 @@
-from uuid import UUID
-
 import structlog
-from pydantic import BaseModel
 
 from memiro.application.common.gateway.catalog import AttributeGateway, ProductGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
-from memiro.application.manage_products.shared import VariantForm, variant_data, variant_price
+from memiro.application.manage_products.shared import CreatedVariant, VariantForm, variant_data, variant_price
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
@@ -18,12 +15,6 @@ logger: Logger = structlog.get_logger(__name__)
 
 class AddVariantForm(VariantForm):
     """Owner-controlled fields of the variant being added."""
-
-
-class CreatedVariant(BaseModel):
-    """Identifier of a newly created product variant."""
-
-    id: UUID
 
 
 @interactor

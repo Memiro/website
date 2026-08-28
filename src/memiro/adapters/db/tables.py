@@ -17,6 +17,7 @@ from sqlalchemy import (
     Table,
     UniqueConstraint,
     Uuid,
+    event,
 )
 from sqlalchemy.orm import composite, relationship
 
@@ -29,6 +30,12 @@ from memiro.entities.common.measure import Dimensions
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
 
 NAME_LENGTH = 255
+
+
+def _ensure_variant_fingerprint(variant: Variant, _context: object) -> None:
+    """Recheck the derived database guard after SQLAlchemy hydration."""
+    variant.ensure_stored_fingerprint()
+
 
 attributes_table = Table(
     "attributes",
@@ -166,18 +173,24 @@ mapper_registry.map_imperatively(
     Variant,
     product_variants_table,
     properties={
-        "dimensions": composite(
+        "_dimensions": composite(
             Dimensions,
             product_variants_table.c.width_mm,
             product_variants_table.c.height_mm,
         ),
+        "_fingerprint": product_variants_table.c.fingerprint,
+        "_overrides": product_variants_table.c.overrides,
+        "_price": product_variants_table.c.price,
+        "_sort_order": product_variants_table.c.sort_order,
     },
 )
+event.listen(Variant, "load", _ensure_variant_fingerprint)
 
 mapper_registry.map_imperatively(
     Product,
     products_table,
     properties={
+        "_price_from": products_table.c.price_from,
         "declared_values": relationship(DeclaredValue, lazy="raise_on_sql"),
         "_variants": relationship(
             Variant,

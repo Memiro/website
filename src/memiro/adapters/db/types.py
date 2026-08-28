@@ -6,7 +6,7 @@ from sqlalchemy import Dialect, Integer, Numeric, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.types import TypeDecorator
 
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue
+from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, variant_overrides
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
@@ -16,6 +16,7 @@ from memiro.entities.common.money import Money
 # corrupted row never loads silently (§8.5).
 _MONEY = Numeric(12, 2)
 _AREA = Numeric(10, 4)
+type VariantOverridePayload = dict[str, str | None]
 
 
 class MoneyType(TypeDecorator[Money]):
@@ -86,9 +87,6 @@ class MillimetersType(TypeDecorator[Millimeters]):
         return None if value is None else Millimeters(value=value)
 
 
-type VariantOverridePayload = dict[str, str | None]
-
-
 class VariantOverridesType(TypeDecorator[tuple[DeclaredValue, ...]]):
     """Column type storing a variant's immutable override set as canonical JSONB."""
 
@@ -126,7 +124,7 @@ class VariantOverridesType(TypeDecorator[tuple[DeclaredValue, ...]]):
         """Rebuild every override through its domain constructors."""
         if value is None:
             return None
-        return tuple(
+        return variant_overrides(
             DeclaredValue(
                 attribute_id=UUID(payload["attribute_id"] or ""),
                 configured=ConfiguredValue(
