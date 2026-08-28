@@ -98,7 +98,7 @@ async def database_at_previous_revision(
         await connection.execute(text(f'DROP DATABASE "{database_name}" WITH (FORCE)'))
 
 
-async def test_pricing_gate_migration_preserves_existing_rows(
+async def test_pricing_migrations_preserve_existing_rows(
     database_at_previous_revision: _SeededDatabase,
 ) -> None:
     """Existing pricing rows receive compatible gates and no permanent server defaults."""

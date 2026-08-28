@@ -160,8 +160,16 @@ def test_a_size_surcharge_multiplies_the_blade_but_not_the_frame() -> None:
 
     # Blade: 1.38 m2 x 4500 x 1.25 = 7 762.50; frame stays
     # 5.8 lm x 2200 = 12 760; mount = 500; 21 022.50 -> 21 100.
-    assert quotation.total == Money(amount=Decimal(21100))
-    assert quotation.size_surcharge_from_long_side_mm == Millimeters(value=2200)
+    assert quotation == Quotation(
+        verdict=PricingVerdict.PRICED,
+        total=Money(amount=Decimal(21100)),
+        breakdown=(
+            quotation_line(BLADE, SILVER, "1.38", ("4500", Unit.SQUARE_METER, "6210")),
+            quotation_line(FRAME, ALUMINIUM, "5.8", ("2200", Unit.LINEAR_METER, "12760")),
+            quotation_line(MOUNT, WITH_MOUNT, "1", ("500", Unit.PIECE, "500")),
+        ),
+        size_surcharge_from_long_side_mm=Millimeters(value=2200),
+    )
 
 
 def test_shape_and_size_surcharge_factors_multiply_each_other() -> None:
@@ -176,7 +184,15 @@ def test_shape_and_size_surcharge_factors_multiply_each_other() -> None:
 
     # Blade: 1.38 m2 x 4500 x 1.5 x 1.25 = 11 643.75; mount = 500;
     # 12 143.75 -> 12 200.
-    assert quotation.total == Money(amount=Decimal(12200))
+    assert quotation == Quotation(
+        verdict=PricingVerdict.PRICED,
+        total=Money(amount=Decimal(12200)),
+        breakdown=(
+            quotation_line(BLADE, SILVER, "1.38", ("4500", Unit.SQUARE_METER, "6210")),
+            quotation_line(MOUNT, WITH_MOUNT, "1", ("500", Unit.PIECE, "500")),
+        ),
+        size_surcharge_from_long_side_mm=Millimeters(value=2200),
+    )
 
 
 def test_a_selection_delta_carries_the_size_surcharge_factor() -> None:
