@@ -102,6 +102,7 @@ def selection_deltas(
     a blade cheaper than the default is a discount from the shown price.
     """
     chosen = _exact_total(product, attributes, settings, dimensions, selections)
+    applicable_ids = {attribute.id for attribute in _applicable(product, attributes, selections)[1]}
     return {
         attribute_id: chosen.amount
         - _exact_total(
@@ -112,6 +113,7 @@ def selection_deltas(
             {other: value for other, value in selections.items() if other != attribute_id},
         ).amount
         for attribute_id in selections
+        if attribute_id in applicable_ids
     }
 
 

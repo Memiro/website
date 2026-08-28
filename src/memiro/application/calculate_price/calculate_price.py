@@ -178,5 +178,6 @@ class CalculatePrice:
                     delta=deltas[selection.attribute_id],
                 )
                 for selection in data.selections
+                if selection.attribute_id in deltas
             ],
         )
