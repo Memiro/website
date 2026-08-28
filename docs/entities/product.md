@@ -31,7 +31,7 @@ _Avoid_: продукт, позиция, SKU.
 | `price_from` | [`Money`](../value-objects/money.md) `\| None` | «Цена от», производное поле |
 | `image_keys` | `list[str]` | Ключи фото в `ProductImageStorage` |
 | `declared_values` | `list[DeclaredValue]` | Чем товар заполнен по атрибутам категории |
-| `variants` | `list[Variant]` | Предпосчитанные варианты |
+| `variants` | `tuple[Variant, ...]` | Неизменяемое представление предпосчитанных вариантов |
 | `created_at` | `datetime` | |
 | `updated_at` | `datetime` | |
 

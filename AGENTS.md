@@ -189,6 +189,11 @@ replacement for assertions.
    (when needed at all) is a separate provider appended last. Negative tests
    are one line: `assert_error(status, "CODE")`; positive tests compare the
    whole object.
+   Narrow exception for a management slice that deliberately lands before its
+   Django presentation: open the production dishka container in REQUEST scope,
+   call the interactor directly, and use the real testcontainers Postgres. Do
+   not add a test-only or temporary HTTP route. The presentation ticket adds
+   its own transport and permission tests over the same interactor seam.
 6. The mechanical negative checklist per use case: 401, role missing → 404
    (no existence oracle), interloper → 403, `uuid4()` → 404, every limit at
    `+1` from the production

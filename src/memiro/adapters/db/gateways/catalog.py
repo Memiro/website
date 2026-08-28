@@ -20,15 +20,28 @@ class SAProductGateway(ProductGateway):
         self._session = session
 
     @override
-    async def get(self, product_id: ProductId) -> Product | None:
-        """Load the product together with its declared values in one round trip."""
-        result = await self._session.execute(
+    async def get(
+        self,
+        product_id: ProductId,
+        *,
+        for_update: bool = False,
+        eager_variants: bool = False,
+    ) -> Product | None:
+        """Load declared values and optionally the locked variant collection."""
+        statement = (
             select(Product)
             .where(products_table.c.id == product_id)
-            # Imperative mapping leaves the instrumented attributes invisible
-            # to the type checkers; the relationship exists at runtime.
-            .options(selectinload(Product.declared_values)),  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+            .options(
+                # Imperative mapping leaves the instrumented attributes invisible
+                # to the type checkers; both relationships exist at runtime.
+                selectinload(Product.declared_values),  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+            )
         )
+        if eager_variants:
+            statement = statement.options(selectinload(Product._variants))  # type: ignore[arg-type]  # noqa: SLF001  # pyright: ignore[reportArgumentType,reportPrivateUsage]
+        if for_update:
+            statement = statement.with_for_update()
+        result = await self._session.execute(statement)
         return result.scalar_one_or_none()
 
 

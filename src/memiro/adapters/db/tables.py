@@ -5,14 +5,27 @@ module is what makes the domain tables exist for migrations and for the ORM
 alike.
 """
 
-from sqlalchemy import Boolean, CheckConstraint, Column, Enum, ForeignKey, Integer, Numeric, String, Table, Uuid
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Table,
+    UniqueConstraint,
+    Uuid,
+)
 from sqlalchemy.orm import composite, relationship
 
 from memiro.adapters.db.registry import mapper_registry
-from memiro.adapters.db.types import AreaType, AttributeIdsType, MillimetersType, MoneyType
+from memiro.adapters.db.types import AreaType, AttributeIdsType, MillimetersType, MoneyType, VariantOverridesType
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
+from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product, Variant
+from memiro.entities.common.measure import Dimensions
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
 
 NAME_LENGTH = 255
@@ -56,6 +69,7 @@ products_table = Table(
     Column("slug", String(NAME_LENGTH), nullable=False, unique=True),
     Column("is_published", Boolean(), nullable=False),
     Column("hides_calculated_price", Boolean(), nullable=False),
+    Column("price_from", MoneyType(), nullable=True),
 )
 
 product_declared_values_table = Table(
@@ -72,6 +86,21 @@ product_declared_values_table = Table(
         "value_id IS NULL OR quantity IS NULL",
         name="ck_product_declared_values_at_most_one_representation",
     ),
+)
+
+product_variants_table = Table(
+    "product_variants",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("product_id", Uuid(), ForeignKey("products.id", ondelete="CASCADE"), nullable=False),
+    Column("width_mm", MillimetersType(), nullable=False),
+    Column("height_mm", MillimetersType(), nullable=False),
+    Column("overrides", VariantOverridesType(), nullable=False),
+    Column("price", MoneyType(), nullable=False),
+    Column("sort_order", Integer(), nullable=False),
+    Column("fingerprint", Uuid(), nullable=False),
+    CheckConstraint("sort_order >= 0", name="ck_product_variants_sort_order_non_negative"),
+    UniqueConstraint("product_id", "fingerprint", name="uq_product_variants_product_fingerprint"),
 )
 
 pricing_settings_table = Table(
@@ -134,10 +163,28 @@ mapper_registry.map_imperatively(
 )
 
 mapper_registry.map_imperatively(
+    Variant,
+    product_variants_table,
+    properties={
+        "dimensions": composite(
+            Dimensions,
+            product_variants_table.c.width_mm,
+            product_variants_table.c.height_mm,
+        ),
+    },
+)
+
+mapper_registry.map_imperatively(
     Product,
     products_table,
     properties={
         "declared_values": relationship(DeclaredValue, lazy="raise_on_sql"),
+        "_variants": relationship(
+            Variant,
+            cascade="all, delete-orphan",
+            lazy="raise_on_sql",
+            order_by=(product_variants_table.c.sort_order, product_variants_table.c.id),
+        ),
     },
 )
 

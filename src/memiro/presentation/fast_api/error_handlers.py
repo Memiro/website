@@ -6,11 +6,20 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
+from memiro.application.errors.catalog import (
+    AttributeValueNotFoundError,
+    ProductNotFoundError,
+    VariantNotFoundError,
+)
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import InvalidFactorRateError
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
+from memiro.entities.errors.product import (
+    DuplicateVariantError,
+    InvalidVariantConfigurationError,
+    InvalidVariantSortOrderError,
+)
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
 
@@ -21,6 +30,7 @@ INTERNAL_ERROR_CODE = "INTERNAL_ERROR"
 # design, and it is logged as one. Its human mirror is docs/errors/.
 ERROR_STATUSES: dict[type[AppError], int] = {
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
+    VariantNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,
     PricingSettingsNotFoundError: status.HTTP_404_NOT_FOUND,
     InvalidFactorRateError: status.HTTP_400_BAD_REQUEST,
@@ -28,6 +38,9 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
     InvalidSurchargeFactorError: status.HTTP_400_BAD_REQUEST,
     DuplicateSizeSurchargeError: status.HTTP_400_BAD_REQUEST,
+    InvalidVariantConfigurationError: status.HTTP_400_BAD_REQUEST,
+    InvalidVariantSortOrderError: status.HTTP_400_BAD_REQUEST,
+    DuplicateVariantError: status.HTTP_409_CONFLICT,
 }
 
 logger: Logger = structlog.get_logger(__name__)
