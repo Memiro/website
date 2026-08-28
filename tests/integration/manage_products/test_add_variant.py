@@ -1,0 +1,267 @@
+import asyncio
+from decimal import Decimal
+from uuid import uuid4
+
+import pytest
+from dishka import AsyncContainer
+from fastapi import FastAPI
+from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+from memiro.application.common.gateway.catalog import ProductGateway
+from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
+from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
+from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant
+from memiro.application.manage_products.shared import VariantOverrideForm
+from memiro.entities.catalog.product.entity import Product, Variant
+from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro.entities.common.money import Money
+from memiro.entities.errors.product import (
+    DuplicateVariantError,
+    InvalidVariantConfigurationError,
+    InvalidVariantSortOrderError,
+)
+from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
+from tests.integration.prime import (
+    prime_hidden_calculated_price,
+    prime_incomplete_declaration,
+    prime_product_publication,
+    prime_production_limits,
+    prime_size_surcharge,
+)
+
+pytestmark = pytest.mark.usefixtures("catalog")
+
+
+async def _add(container: AsyncContainer, form: AddVariantForm) -> CreatedVariant:
+    """Execute one add in its own production REQUEST scope."""
+    async with container() as request:
+        interactor = await request.get(AddVariant)
+        return await interactor.execute(PRODUCT, form)
+
+
+async def _load_product(container: AsyncContainer) -> Product | None:
+    """Read the aggregate in a fresh transaction after a command."""
+    async with container() as request:
+        gateway: ProductGateway = await request.get(ProductGateway)
+        return await gateway.get(PRODUCT, eager_variants=True)
+
+
+async def test_the_owner_adds_a_variant_priced_by_the_workbook(
+    app: FastAPI,
+) -> None:
+    """The owner saves the 8,900 rouble workbook variant and its derived product price."""
+    container: AsyncContainer = app.state.dishka_container
+    async with container() as request:
+        interactor = await request.get(AddVariant)
+        result = await interactor.execute(
+            PRODUCT,
+            AddVariantForm(
+                width_mm=800,
+                height_mm=600,
+                overrides=[],
+                sort_order=2,
+            ),
+        )
+    async with container() as request:
+        gateway = await request.get(ProductGateway)
+        product = await gateway.get(PRODUCT, eager_variants=True)
+    assert product is not None
+    variant = product.variants[0]
+
+    assert result == CreatedVariant(id=variant.id)
+    assert product.price_from == Money(amount=Decimal(8900))
+    assert product.variants == (
+        Variant(
+            id=variant.id,
+            dimensions=Dimensions(
+                width=Millimeters(value=800),
+                height=Millimeters(value=600),
+            ),
+            overrides=(),
+            price=Money(amount=Decimal(8900)),
+            sort_order=2,
+        ),
+    )
+
+
+async def test_the_owner_prices_an_unpublished_hidden_variant_beyond_customer_limits(
+    engine: AsyncEngine,
+    app: FastAPI,
+) -> None:
+    """Owner pricing bypasses publication, hiding and production-limit gates."""
+    await prime_product_publication(engine, is_published=False)
+    await prime_hidden_calculated_price(engine)
+    await prime_production_limits(
+        engine,
+        max_long_side_mm=Millimeters(value=500),
+        max_short_side_mm=Millimeters(value=500),
+    )
+    container: AsyncContainer = app.state.dishka_container
+
+    result = await _add(
+        container,
+        AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+    )
+    product = await _load_product(container)
+
+    assert product is not None
+    assert result == CreatedVariant(id=product.variants[0].id)
+    assert product.price_from == Money(amount=Decimal(8900))
+
+
+async def test_the_owner_variant_keeps_the_size_surcharge(
+    engine: AsyncEngine,
+    app: FastAPI,
+) -> None:
+    """Owner pricing applies the same size surcharge as every other pricing caller."""
+    await prime_size_surcharge(engine)
+    container: AsyncContainer = app.state.dishka_container
+
+    await _add(
+        container,
+        AddVariantForm(width_mm=2200, height_mm=600, overrides=[], sort_order=0),
+    )
+    product = await _load_product(container)
+
+    assert product is not None
+    assert product.price_from == Money(amount=Decimal(20300))
+
+
+async def test_concurrent_identical_additions_preserve_variant_uniqueness(
+    app: FastAPI,
+) -> None:
+    """Two competitors produce one variant and one DUPLICATE_VARIANT refusal."""
+    container: AsyncContainer = app.state.dishka_container
+    form = AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0)
+
+    results = await asyncio.gather(
+        _add(container, form),
+        _add(container, form),
+        return_exceptions=True,
+    )
+    product = await _load_product(container)
+
+    assert sorted(type(result).__name__ for result in results) == [
+        "CreatedVariant",
+        "DuplicateVariantError",
+    ]
+    assert product is not None
+    assert len(product.variants) == 1
+
+
+def test_adding_rejects_a_side_above_the_input_limit() -> None:
+    """A side at MAX_SIDE_MM + 1 is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        AddVariantForm(
+            width_mm=MAX_SIDE_MM + 1,
+            height_mm=600,
+            overrides=[],
+            sort_order=0,
+        )
+
+
+def test_adding_rejects_more_than_the_selection_limit() -> None:
+    """Overrides at MAX_SELECTIONS + 1 are rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        AddVariantForm(
+            width_mm=800,
+            height_mm=600,
+            overrides=[VariantOverrideForm(attribute_id=uuid4(), value_id=uuid4()) for _ in range(MAX_SELECTIONS + 1)],
+            sort_order=0,
+        )
+
+
+def test_adding_rejects_two_overrides_of_one_attribute() -> None:
+    """Two overrides of one attribute are rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        AddVariantForm(
+            width_mm=800,
+            height_mm=600,
+            overrides=[
+                VariantOverrideForm(attribute_id=BLADE, value_id=GRAPHITE),
+                VariantOverrideForm(attribute_id=BLADE, value_id=GRAPHITE),
+            ],
+            sort_order=0,
+        )
+
+
+def test_adding_rejects_an_override_with_two_representations() -> None:
+    """An override with a value and quantity is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        VariantOverrideForm(
+            attribute_id=BLADE,
+            value_id=GRAPHITE,
+            quantity=Decimal(1),
+        )
+
+
+async def test_adding_fails_if_the_product_is_not_found(
+    request_container: AsyncContainer,
+) -> None:
+    """An unknown product is rejected with PRODUCT_NOT_FOUND."""
+    interactor = await request_container.get(AddVariant)
+
+    with pytest.raises(ProductNotFoundError):
+        await interactor.execute(
+            uuid4(),
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+        )
+
+
+async def test_adding_fails_if_an_override_is_outside_the_product_dictionary(
+    request_container: AsyncContainer,
+) -> None:
+    """An unknown override is rejected with ATTRIBUTE_VALUE_NOT_FOUND."""
+    interactor = await request_container.get(AddVariant)
+
+    with pytest.raises(AttributeValueNotFoundError):
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(
+                width_mm=800,
+                height_mm=600,
+                overrides=[VariantOverrideForm(attribute_id=uuid4(), value_id=uuid4())],
+                sort_order=0,
+            ),
+        )
+
+
+async def test_adding_fails_if_the_resulting_configuration_is_incomplete(
+    engine: AsyncEngine,
+    request_container: AsyncContainer,
+) -> None:
+    """An incomplete result is rejected with INVALID_VARIANT_CONFIGURATION."""
+    await prime_incomplete_declaration(engine)
+    interactor = await request_container.get(AddVariant)
+
+    with pytest.raises(InvalidVariantConfigurationError):
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+        )
+
+
+async def test_adding_fails_if_the_owner_order_is_negative(
+    request_container: AsyncContainer,
+) -> None:
+    """A negative order is rejected with INVALID_VARIANT_SORT_ORDER."""
+    interactor = await request_container.get(AddVariant)
+
+    with pytest.raises(InvalidVariantSortOrderError):
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=-1),
+        )
+
+
+async def test_adding_fails_if_the_variant_already_exists(
+    app: FastAPI,
+) -> None:
+    """A sequential duplicate is rejected with DUPLICATE_VARIANT."""
+    container: AsyncContainer = app.state.dishka_container
+    form = AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0)
+    await _add(container, form)
+
+    with pytest.raises(DuplicateVariantError):
+        await _add(container, form)

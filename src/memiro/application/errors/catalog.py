@@ -12,6 +12,14 @@ class ProductNotFoundError(AppError):
 
 
 @app_error
+class VariantNotFoundError(AppError):
+    """Raised when a requested child does not belong to the product."""
+
+    code: ClassVar[str] = "VARIANT_NOT_FOUND"
+    message: str = "Variant not found"
+
+
+@app_error
 class AttributeValueNotFoundError(AppError):
     """Raised when a chosen dictionary value cannot be used for this product.
 

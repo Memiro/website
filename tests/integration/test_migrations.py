@@ -129,7 +129,7 @@ async def test_pricing_migrations_preserve_existing_rows(
         product = (
             await connection.execute(
                 text(
-                    """SELECT category_id, is_published, hides_calculated_price
+                    """SELECT category_id, is_published, hides_calculated_price, price_from
                        FROM products WHERE id = :id"""
                 ),
                 {"id": seeded.product_id},
@@ -159,14 +159,30 @@ async def test_pricing_migrations_preserve_existing_rows(
                 )
             )
         ).scalar_one()
+        variant_table = (await connection.execute(text("SELECT to_regclass('public.product_variants')"))).scalar_one()
+        variant_constraints = set(
+            (
+                await connection.execute(
+                    text(
+                        """SELECT constraint_name FROM information_schema.table_constraints
+                           WHERE table_schema = 'public'
+                             AND table_name = 'product_variants'"""
+                    )
+                )
+            ).scalars()
+        )
     await engine.dispose()
 
     assert attribute == (product.category_id, "SELECT", [], True)
     assert value == (False,)
     assert product.is_published
     assert not product.hides_calculated_price
+    assert product.price_from is None
     assert declaration == (seeded.value_id, None)
     assert temporary_defaults == 0
+    assert variant_table == "product_variants"
+    assert "ck_product_variants_sort_order_non_negative" in variant_constraints
+    assert "uq_product_variants_product_fingerprint" in variant_constraints
 
 
 async def test_pricing_gate_downgrade_refuses_unrepresentable_declarations(
