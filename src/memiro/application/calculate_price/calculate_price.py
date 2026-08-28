@@ -135,7 +135,7 @@ class CalculatePrice:
         if product is None:
             logger.warning("Pricing asked for an unknown product", product_id=product_id)
             raise ProductNotFoundError
-        settings = await self.pricing_settings_gateway.get()
+        settings = await self.pricing_settings_gateway.get_with_surcharges()
         if settings is None:
             logger.warning("Pricing asked before the settings were created", product_id=product_id)
             raise PricingSettingsNotFoundError

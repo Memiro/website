@@ -17,7 +17,7 @@ class SAPricingSettingsGateway(PricingSettingsGateway):
         self._session = session
 
     @override
-    async def get(self) -> PricingSettings | None:
+    async def get_with_surcharges(self) -> PricingSettings | None:
         """Load the settings and its ordered tiers by the site's known id."""
         result = await self._session.execute(
             select(PricingSettings)

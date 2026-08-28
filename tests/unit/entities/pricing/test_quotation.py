@@ -34,7 +34,12 @@ def test_a_hidden_quotation_keeps_the_applied_size_surcharge_threshold() -> None
         size_surcharge_from_long_side_mm=Millimeters(value=2200),
     )
 
-    assert quotation.size_surcharge_from_long_side_mm == Millimeters(value=2200)
+    assert quotation == Quotation(
+        verdict=PricingVerdict.HIDDEN,
+        total=Money(amount=Decimal(8900)),
+        breakdown=(),
+        size_surcharge_from_long_side_mm=Millimeters(value=2200),
+    )
 
 
 def test_a_beyond_limits_quotation_carries_no_total() -> None:
@@ -59,7 +64,7 @@ def test_a_priced_quotation_without_a_total_is_a_defect() -> None:
 
 def test_a_refusing_quotation_cannot_claim_an_applied_size_surcharge() -> None:
     """A refusal that did no arithmetic cannot carry a size-surcharge threshold."""
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="cannot carry a size-surcharge threshold"):
         Quotation(
             verdict=PricingVerdict.NOT_PRICEABLE,
             total=None,
