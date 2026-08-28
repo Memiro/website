@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from memiro.application.common.gateway.catalog import ProductGateway
 from memiro.application.common.input_limits import MAX_SIDE_MM
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
+from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import (
     AddVariant,
     AddVariantForm,
@@ -23,7 +24,7 @@ from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import DuplicateVariantError, InvalidVariantConfigurationError
 from tests.common.factory.catalog import PRODUCT
-from tests.integration.prime import prime_incomplete_declaration, prime_size_surcharge
+from tests.integration.prime import prime_incomplete_declaration, prime_no_pricing_settings, prime_size_surcharge
 
 pytestmark = pytest.mark.usefixtures("catalog")
 TWO_VARIANTS = 2
@@ -138,6 +139,41 @@ def test_duplication_rejects_a_side_above_the_input_limit() -> None:
         DuplicateVariantWithSizeForm(width_mm=MAX_SIDE_MM + 1, height_mm=600)
 
 
+async def test_duplication_fails_if_pricing_settings_are_not_found(
+    app: FastAPI,
+    engine: AsyncEngine,
+) -> None:
+    """Missing pricing settings are rejected with PRICING_SETTINGS_NOT_FOUND."""
+    container: AsyncContainer = app.state.dishka_container
+    source = await _add_source(container)
+    await prime_no_pricing_settings(engine)
+
+    with pytest.raises(PricingSettingsNotFoundError):
+        await _duplicate(container, source)
+
+
+async def test_duplication_fails_if_the_product_became_incomplete(
+    app: FastAPI,
+    engine: AsyncEngine,
+) -> None:
+    """A no-longer-priceable source is rejected with INVALID_VARIANT_CONFIGURATION."""
+    container: AsyncContainer = app.state.dishka_container
+    source = await _add_source(container)
+    await prime_incomplete_declaration(engine)
+
+    with pytest.raises(InvalidVariantConfigurationError):
+        await _duplicate(container, source)
+
+
+async def test_duplication_fails_if_the_new_size_is_a_rotated_duplicate(app: FastAPI) -> None:
+    """A rotated copy of the source is rejected with DUPLICATE_VARIANT."""
+    container: AsyncContainer = app.state.dishka_container
+    source = await _add_source(container)
+
+    with pytest.raises(DuplicateVariantError):
+        await _duplicate(container, source, width_mm=600, height_mm=800)
+
+
 async def test_duplication_fails_if_the_product_is_not_found(
     request_container: AsyncContainer,
 ) -> None:
@@ -165,25 +201,3 @@ async def test_duplication_fails_if_the_variant_is_not_found(app: FastAPI) -> No
                 uuid4(),
                 DuplicateVariantWithSizeForm(width_mm=2200, height_mm=600),
             )
-
-
-async def test_duplication_fails_if_the_product_became_incomplete(
-    app: FastAPI,
-    engine: AsyncEngine,
-) -> None:
-    """A no-longer-priceable source is rejected with INVALID_VARIANT_CONFIGURATION."""
-    container: AsyncContainer = app.state.dishka_container
-    source = await _add_source(container)
-    await prime_incomplete_declaration(engine)
-
-    with pytest.raises(InvalidVariantConfigurationError):
-        await _duplicate(container, source)
-
-
-async def test_duplication_fails_if_the_new_size_is_a_rotated_duplicate(app: FastAPI) -> None:
-    """A rotated copy of the source is rejected with DUPLICATE_VARIANT."""
-    container: AsyncContainer = app.state.dishka_container
-    source = await _add_source(container)
-
-    with pytest.raises(DuplicateVariantError):
-        await _duplicate(container, source, width_mm=600, height_mm=800)

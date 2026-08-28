@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator, Iterator
 
 import pytest
 from asgi_lifespan import LifespanManager
+from dishka import AsyncContainer
 from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -15,6 +16,7 @@ from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.fast_api import create_app
 from memiro_common.observability.config import ObservabilityConfig
 from tests.integration.api_client import ApiClient
+from tests.integration.prime import prime_dictionary, prime_pricing_settings
 
 TEMPLATE_DATABASE = "memiro_template"
 
@@ -86,6 +88,26 @@ async def app(config: Config) -> AsyncIterator[FastAPI]:
     application = create_app(config)
     async with LifespanManager(application):
         yield application
+
+
+@pytest.fixture
+async def engine(app: FastAPI) -> AsyncEngine:
+    """Take the app's own engine out of its production container."""
+    container: AsyncContainer = app.state.dishka_container
+    return await container.get(AsyncEngine)
+
+
+@pytest.fixture
+async def dictionary(engine: AsyncEngine) -> None:
+    """Put the demo dictionary and canonical product into the database."""
+    await prime_dictionary(engine)
+
+
+@pytest.fixture
+async def catalog(engine: AsyncEngine) -> None:
+    """Put the priceable demo catalogue into the database."""
+    await prime_dictionary(engine)
+    await prime_pricing_settings(engine)
 
 
 @pytest.fixture

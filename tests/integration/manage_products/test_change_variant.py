@@ -15,6 +15,7 @@ from memiro.application.errors.catalog import (
     ProductNotFoundError,
     VariantNotFoundError,
 )
+from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import (
     AddVariant,
     AddVariantForm,
@@ -31,7 +32,7 @@ from memiro.entities.errors.product import (
     InvalidVariantSortOrderError,
 )
 from tests.common.factory.catalog import PRODUCT
-from tests.integration.prime import prime_incomplete_declaration
+from tests.integration.prime import prime_incomplete_declaration, prime_no_pricing_settings
 
 pytestmark = pytest.mark.usefixtures("catalog")
 TWO_VARIANTS = 2
@@ -152,32 +153,22 @@ def test_changing_rejects_a_side_above_the_input_limit() -> None:
         )
 
 
-async def test_changing_fails_if_the_product_is_not_found(
-    request_container: AsyncContainer,
+async def test_changing_fails_if_pricing_settings_are_not_found(
+    app: FastAPI,
+    engine: AsyncEngine,
 ) -> None:
-    """An unknown product is rejected with PRODUCT_NOT_FOUND."""
-    change = await request_container.get(ChangeVariant)
-
-    with pytest.raises(ProductNotFoundError):
-        await change.execute(
-            uuid4(),
-            uuid4(),
-            ChangeVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
-        )
-
-
-async def test_changing_fails_if_the_variant_is_not_found(app: FastAPI) -> None:
-    """An unknown child is rejected with VARIANT_NOT_FOUND."""
+    """Missing pricing settings are rejected with PRICING_SETTINGS_NOT_FOUND."""
     container: AsyncContainer = app.state.dishka_container
-    await _add_variant(container)
+    variant = await _add_variant(container)
+    await prime_no_pricing_settings(engine)
     async with container() as request:
-        change = await request.get(ChangeVariant)
+        interactor = await request.get(ChangeVariant)
 
-        with pytest.raises(VariantNotFoundError):
-            await change.execute(
+        with pytest.raises(PricingSettingsNotFoundError):
+            await interactor.execute(
                 PRODUCT,
-                uuid4(),
-                ChangeVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+                variant.id,
+                ChangeVariantForm(width_mm=1200, height_mm=800, overrides=[], sort_order=0),
             )
 
 
@@ -262,3 +253,32 @@ async def test_changing_fails_if_it_duplicates_a_neighbour(app: FastAPI) -> None
     assert product is not None
 
     assert product.variant(changed.id) == changed
+
+
+async def test_changing_fails_if_the_product_is_not_found(
+    request_container: AsyncContainer,
+) -> None:
+    """An unknown product is rejected with PRODUCT_NOT_FOUND."""
+    change = await request_container.get(ChangeVariant)
+
+    with pytest.raises(ProductNotFoundError):
+        await change.execute(
+            uuid4(),
+            uuid4(),
+            ChangeVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+        )
+
+
+async def test_changing_fails_if_the_variant_is_not_found(app: FastAPI) -> None:
+    """An unknown child is rejected with VARIANT_NOT_FOUND."""
+    container: AsyncContainer = app.state.dishka_container
+    await _add_variant(container)
+    async with container() as request:
+        change = await request.get(ChangeVariant)
+
+        with pytest.raises(VariantNotFoundError):
+            await change.execute(
+                PRODUCT,
+                uuid4(),
+                ChangeVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+            )

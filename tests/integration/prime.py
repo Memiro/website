@@ -121,6 +121,12 @@ async def prime_pricing_settings(engine: AsyncEngine) -> None:
         )
 
 
+async def prime_no_pricing_settings(engine: AsyncEngine) -> None:
+    """Remove pricing settings to arrange the pre-setup refusal."""
+    async with engine.begin() as connection:
+        await connection.execute(delete(pricing_settings_table))
+
+
 async def prime_product_publication(engine: AsyncEngine, *, is_published: bool) -> None:
     """Set whether the canonical product is published."""
     async with engine.begin() as connection:

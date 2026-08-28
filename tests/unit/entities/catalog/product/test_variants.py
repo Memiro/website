@@ -10,7 +10,7 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
-from tests.common.factory.catalog import BLADE, FRAME, NO_FRAME, SILVER, demo_product
+from tests.common.factory.catalog import BLADE, FRAME, GRAPHITE, NO_FRAME, SILVER, demo_product
 
 TWO_VARIANTS = 2
 
@@ -45,6 +45,30 @@ def test_a_product_derives_its_price_from_the_cheapest_variant() -> None:
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
     )
+
+    assert product.price_from == Money(amount=Decimal(2000))
+
+
+def test_a_product_does_not_let_its_derived_price_be_assigned() -> None:
+    """The derived price has no external assignment path."""
+    product = demo_product()
+
+    with pytest.raises(AttributeError):
+        product.price_from = Money(amount=Decimal(1))  # type: ignore[misc]
+
+    assert product.price_from is None
+
+
+def test_a_product_does_not_expose_mutable_variant_state() -> None:
+    """A child price can change only through a Product command."""
+    product = demo_product()
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+    )
+
+    with pytest.raises(AttributeError):
+        variant.price = Money(amount=Decimal(1))  # type: ignore[misc]
 
     assert product.price_from == Money(amount=Decimal(2000))
 
@@ -132,7 +156,7 @@ def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> Non
     )
     variants_before = product.variants
 
-    with pytest.raises(DuplicateVariantError, match="same size and overrides"):
+    with pytest.raises(DuplicateVariantError, match="same size and configured values"):
         product.add_variant(
             _variant_data(width_mm=400, height_mm=600, overrides=(frame, blade)),
             price=Money(amount=Decimal(2000)),
@@ -142,12 +166,33 @@ def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> Non
     assert product.price_from == Money(amount=Decimal(2000))
 
 
+def test_a_product_rejects_a_duplicate_disguised_as_a_default_override() -> None:
+    """A no-op override is rejected as the same effective DUPLICATE_VARIANT."""
+    product = demo_product()
+    default_blade = DeclaredValue(
+        attribute_id=BLADE,
+        configured=ConfiguredValue(value_id=SILVER, quantity=None),
+    )
+    product.add_variant(
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+    )
+
+    with pytest.raises(DuplicateVariantError, match="same size and configured values"):
+        product.add_variant(
+            _variant_data(width_mm=600, height_mm=400, overrides=(default_blade,)),
+            price=Money(amount=Decimal(2000)),
+        )
+
+    assert len(product.variants) == 1
+
+
 def test_a_product_allows_one_size_with_different_overrides() -> None:
     """Different override sets describe different variants at the same size."""
     product = demo_product()
     blade = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=SILVER, quantity=None),
+        configured=ConfiguredValue(value_id=GRAPHITE, quantity=None),
     )
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
@@ -160,6 +205,22 @@ def test_a_product_allows_one_size_with_different_overrides() -> None:
     )
 
     assert len(product.variants) == TWO_VARIANTS
+
+
+def test_a_product_exposes_variants_in_the_owner_order() -> None:
+    """The lowest owner order is first even before the aggregate is reloaded."""
+    product = demo_product()
+    later = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400, sort_order=2),
+        price=Money(amount=Decimal(2000)),
+    )
+
+    earlier = product.add_variant(
+        _variant_data(width_mm=1200, height_mm=800, sort_order=1),
+        price=Money(amount=Decimal(9000)),
+    )
+
+    assert product.variants == (earlier, later)
 
 
 def test_changing_a_variant_cannot_duplicate_its_neighbour() -> None:
@@ -175,7 +236,7 @@ def test_changing_a_variant_cannot_duplicate_its_neighbour() -> None:
     )
     variants_before = product.variants
 
-    with pytest.raises(DuplicateVariantError, match="same size and overrides"):
+    with pytest.raises(DuplicateVariantError, match="same size and configured values"):
         product.change_variant(
             changed,
             _variant_data(width_mm=400, height_mm=600),
@@ -199,7 +260,7 @@ def test_duplicating_to_an_existing_size_changes_nothing() -> None:
     )
     variants_before = product.variants
 
-    with pytest.raises(DuplicateVariantError, match="same size and overrides"):
+    with pytest.raises(DuplicateVariantError, match="same size and configured values"):
         product.duplicate_variant_with_size(
             source,
             Dimensions(width=existing.dimensions.height, height=existing.dimensions.width),

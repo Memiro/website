@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from decimal import Decimal
-from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -10,7 +9,7 @@ from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, 
 from memiro.application.errors.catalog import AttributeValueNotFoundError
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product, VariantData
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import InvalidVariantConfigurationError
@@ -49,8 +48,8 @@ def _overrides(
 class VariantOverrideForm(BaseModel):
     """One dictionary value or numeric quantity replacing the product's declaration."""
 
-    attribute_id: UUID
-    value_id: UUID | None = None
+    attribute_id: AttributeId
+    value_id: AttributeValueId | None = None
     quantity: Decimal | None = None
 
     @model_validator(mode="after")
@@ -81,6 +80,12 @@ class VariantForm(BaseModel):
             msg = "A variant can override an attribute only once"
             raise ValueError(msg)
         return self
+
+
+class CreatedVariant(BaseModel):
+    """Identifier of a newly created product variant."""
+
+    id: VariantId
 
 
 def variant_data(

@@ -5,10 +5,10 @@ from memiro_common.errors import AppError, app_error
 
 @app_error
 class DuplicateVariantError(AppError):
-    """Raised when a product already has the same size and overrides."""
+    """Raised when a product already has the same size and effective values."""
 
     code: ClassVar[str] = "DUPLICATE_VARIANT"
-    message: str = "A product cannot have two variants with the same size and overrides"
+    message: str = "A product cannot have two variants with the same size and configured values"
 
 
 @app_error

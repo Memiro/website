@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from memiro.application.common.gateway.catalog import ProductGateway
 from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
+from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant
 from memiro.application.manage_products.shared import VariantOverrideForm
 from memiro.entities.catalog.product.entity import Product, Variant
@@ -25,6 +26,7 @@ from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
 from tests.integration.prime import (
     prime_hidden_calculated_price,
     prime_incomplete_declaration,
+    prime_no_pricing_settings,
     prime_product_publication,
     prime_production_limits,
     prime_size_surcharge,
@@ -196,15 +198,17 @@ def test_adding_rejects_an_override_with_two_representations() -> None:
         )
 
 
-async def test_adding_fails_if_the_product_is_not_found(
+async def test_adding_fails_if_pricing_settings_are_not_found(
+    engine: AsyncEngine,
     request_container: AsyncContainer,
 ) -> None:
-    """An unknown product is rejected with PRODUCT_NOT_FOUND."""
+    """Missing pricing settings are rejected with PRICING_SETTINGS_NOT_FOUND."""
+    await prime_no_pricing_settings(engine)
     interactor = await request_container.get(AddVariant)
 
-    with pytest.raises(ProductNotFoundError):
+    with pytest.raises(PricingSettingsNotFoundError):
         await interactor.execute(
-            uuid4(),
+            PRODUCT,
             AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
         )
 
@@ -265,3 +269,16 @@ async def test_adding_fails_if_the_variant_already_exists(
 
     with pytest.raises(DuplicateVariantError):
         await _add(container, form)
+
+
+async def test_adding_fails_if_the_product_is_not_found(
+    request_container: AsyncContainer,
+) -> None:
+    """An unknown product is rejected with PRODUCT_NOT_FOUND."""
+    interactor = await request_container.get(AddVariant)
+
+    with pytest.raises(ProductNotFoundError):
+        await interactor.execute(
+            uuid4(),
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+        )
