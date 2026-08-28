@@ -75,7 +75,7 @@ async def test_the_owner_adds_a_variant_priced_by_the_workbook(
     assert product.price_from == Money(amount=Decimal(8900))
     assert product.variants == (
         Variant(
-            id=variant.id,
+            variant.id,
             dimensions=Dimensions(
                 width=Millimeters(value=800),
                 height=Millimeters(value=600),

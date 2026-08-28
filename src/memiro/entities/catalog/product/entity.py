@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Self
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from memiro.entities.common.entity import Entity
@@ -59,6 +60,28 @@ class DeclaredValue(Entity):
     configured: ConfiguredValue
 
 
+class VariantOverrides(tuple[DeclaredValue, ...]):
+    """Immutable validated copies of a variant's value overrides."""
+
+    __slots__ = ()
+
+    def __new__(cls, values: Iterable[DeclaredValue] = ()) -> Self:
+        """Copy children and preserve the eternal override invariants."""
+        overrides = tuple(
+            DeclaredValue(attribute_id=value.attribute_id, configured=value.configured) for value in values
+        )
+        attribute_ids = [override.attribute_id for override in overrides]
+        if len(set(attribute_ids)) != len(attribute_ids):
+            raise InvalidVariantConfigurationError(
+                message="A variant can override an attribute only once",
+            )
+        if any(override.configured.value_id is None and override.configured.quantity is None for override in overrides):
+            raise InvalidVariantConfigurationError(
+                message="A variant override must name a value or a quantity",
+            )
+        return super().__new__(cls, overrides)
+
+
 @dataclass(frozen=True, slots=True)
 class VariantData:
     """Owner-controlled fields of one precalculated product variant."""
@@ -69,7 +92,7 @@ class VariantData:
 
     def __post_init__(self) -> None:
         """Validate the complete owner-controlled child shape."""
-        object.__setattr__(self, "overrides", variant_overrides(self.overrides))
+        object.__setattr__(self, "overrides", VariantOverrides(self.overrides))
 
 
 @dataclass(init=False)
@@ -78,15 +101,15 @@ class Variant(Entity):
 
     id: VariantId
     _dimensions: Dimensions
-    _overrides: tuple[DeclaredValue, ...]
+    _overrides: VariantOverrides
     _price: Money
     _sort_order: int
     _fingerprint: UUID = field(init=False)
 
     def __init__(
         self,
-        *,
         id: VariantId,  # noqa: A002 - the domain field is named id by §6.1.
+        *,
         dimensions: Dimensions,
         overrides: tuple[DeclaredValue, ...],
         price: Money,
@@ -95,7 +118,7 @@ class Variant(Entity):
         """Keep child state writable only to the aggregate and the ORM."""
         self.id = id
         self._dimensions = dimensions
-        self._overrides = variant_overrides(overrides)
+        self._overrides = VariantOverrides(overrides)
         self._price = price
         self._sort_order = sort_order
         self.__post_init__()
@@ -191,7 +214,7 @@ class Product(Entity):
         """Replace one loaded child and derive the product price again."""
         canonical = self._canonical_variant_data(data)
         replacement = Variant(
-            id=variant.id,
+            variant.id,
             dimensions=canonical.dimensions,
             overrides=canonical.overrides,
             price=price,
@@ -276,24 +299,9 @@ class Product(Entity):
 def variant_factory(data: VariantData, *, price: Money) -> Variant:
     """Create a priced child with an unforgeable identifier."""
     return Variant(
-        id=uuid4(),
+        uuid4(),
         dimensions=data.dimensions,
         overrides=data.overrides,
         price=price,
         sort_order=data.sort_order,
     )
-
-
-def variant_overrides(values: Iterable[DeclaredValue]) -> tuple[DeclaredValue, ...]:
-    """Construct an immutable override set that preserves its eternal invariants."""
-    overrides = tuple(values)
-    attribute_ids = [override.attribute_id for override in overrides]
-    if len(set(attribute_ids)) != len(attribute_ids):
-        raise InvalidVariantConfigurationError(
-            message="A variant can override an attribute only once",
-        )
-    if any(override.configured.value_id is None and override.configured.quantity is None for override in overrides):
-        raise InvalidVariantConfigurationError(
-            message="A variant override must name a value or a quantity",
-        )
-    return overrides

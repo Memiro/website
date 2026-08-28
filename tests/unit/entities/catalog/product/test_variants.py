@@ -73,6 +73,28 @@ def test_a_product_does_not_expose_mutable_variant_state() -> None:
     assert product.price_from == Money(amount=Decimal(2000))
 
 
+def test_a_product_copies_an_override_before_accepting_it() -> None:
+    """A caller cannot stale a child fingerprint through an accepted input object."""
+    product = demo_product()
+    override = DeclaredValue(
+        attribute_id=BLADE,
+        configured=ConfiguredValue(value_id=GRAPHITE, quantity=None),
+    )
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400, overrides=(override,)),
+        price=Money(amount=Decimal(3000)),
+    )
+
+    override.configured = ConfiguredValue(value_id=SILVER, quantity=None)
+
+    assert variant.overrides == (
+        DeclaredValue(
+            attribute_id=BLADE,
+            configured=ConfiguredValue(value_id=GRAPHITE, quantity=None),
+        ),
+    )
+
+
 def test_changing_the_cheapest_variant_rederives_the_product_price() -> None:
     """Changing the cheapest variant can make another variant the product price."""
     product = demo_product()
@@ -131,7 +153,7 @@ def test_a_duplicated_variant_keeps_everything_but_its_size_and_price() -> None:
 
     assert duplicate.id != source.id
     assert duplicate == Variant(
-        id=duplicate.id,
+        duplicate.id,
         dimensions=new_dimensions,
         overrides=source.overrides,
         price=Money(amount=Decimal(9000)),

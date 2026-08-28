@@ -78,7 +78,7 @@ async def test_the_owner_duplicates_a_variant_with_a_new_size_and_price(app: Fas
 
     assert result.id != source.id
     assert duplicated == Variant(
-        id=result.id,
+        result.id,
         dimensions=Dimensions(
             width=Millimeters(value=2200),
             height=Millimeters(value=600),
