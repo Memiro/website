@@ -6,12 +6,13 @@ hand against the workbook.
 """
 
 from decimal import Decimal
+from typing import cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from memiro.entities.catalog.attribute.entity import Attribute, AttributeValue
+from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import DeclaredValue, Product
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
 from memiro.entities.common.measure import Area
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings
@@ -48,6 +49,10 @@ HEATING: AttributeId = _id("heating")
 WITH_HEATING: AttributeValueId = _id("with-heating")
 NO_HEATING: AttributeValueId = _id("no-heating")
 
+CUTOUTS: AttributeId = _id("cut-outs")
+CUTOUT: AttributeValueId = _id("cut-out")
+
+CATEGORY: CategoryId = _id("mirrors")
 PRODUCT: ProductId = _id("mirror-in-a-frame")
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
@@ -61,6 +66,7 @@ def demo_blade() -> Attribute:
     """Build the blade attribute: silver at 4 500 and graphite at 7 000 per square metre."""
     return Attribute(
         id=BLADE,
+        category_id=CATEGORY,
         name="Тип полотна",
         sort_order=1,
         values=[
@@ -86,6 +92,7 @@ def demo_shape() -> Attribute:
     """Build the shape attribute: a rectangle costs what it costs, a circle one and a half of it."""
     return Attribute(
         id=SHAPE,
+        category_id=CATEGORY,
         name="Форма",
         sort_order=2,
         values=[
@@ -111,6 +118,7 @@ def demo_frame() -> Attribute:
     """Build the frame attribute: aluminium at 2 200 per linear metre, or no frame at all."""
     return Attribute(
         id=FRAME,
+        category_id=CATEGORY,
         name="Рама",
         sort_order=3,
         values=[
@@ -121,7 +129,14 @@ def demo_frame() -> Attribute:
                 scaled_by_shape=True,
                 sort_order=1,
             ),
-            AttributeValue(id=NO_FRAME, name="Без рамы", rate=FREE, scaled_by_shape=False, sort_order=2),
+            AttributeValue(
+                id=NO_FRAME,
+                name="Без рамы",
+                rate=FREE,
+                scaled_by_shape=False,
+                sort_order=2,
+                marks_absence=True,
+            ),
         ],
     )
 
@@ -130,6 +145,7 @@ def demo_backlight() -> Attribute:
     """Build the backlight attribute: a contour tape at 2 500 per linear metre, or none."""
     return Attribute(
         id=BACKLIGHT,
+        category_id=CATEGORY,
         name="Подсветка",
         sort_order=4,
         values=[
@@ -142,7 +158,14 @@ def demo_backlight() -> Attribute:
                 scaled_by_shape=False,
                 sort_order=1,
             ),
-            AttributeValue(id=NO_BACKLIGHT, name="Без подсветки", rate=FREE, scaled_by_shape=False, sort_order=2),
+            AttributeValue(
+                id=NO_BACKLIGHT,
+                name="Без подсветки",
+                rate=FREE,
+                scaled_by_shape=False,
+                sort_order=2,
+                marks_absence=True,
+            ),
         ],
     )
 
@@ -151,6 +174,7 @@ def demo_mount() -> Attribute:
     """Build the mount attribute: 500 for the piece, or nothing for none."""
     return Attribute(
         id=MOUNT,
+        category_id=CATEGORY,
         name="Крепление",
         sort_order=5,
         values=[
@@ -161,7 +185,14 @@ def demo_mount() -> Attribute:
                 scaled_by_shape=False,
                 sort_order=1,
             ),
-            AttributeValue(id=NO_MOUNT, name="Без крепления", rate=FREE, scaled_by_shape=False, sort_order=2),
+            AttributeValue(
+                id=NO_MOUNT,
+                name="Без крепления",
+                rate=FREE,
+                scaled_by_shape=False,
+                sort_order=2,
+                marks_absence=True,
+            ),
         ],
     )
 
@@ -170,7 +201,11 @@ def demo_heating() -> Attribute:
     """Build the heating attribute — the one the canonical mirror does not declare."""
     return Attribute(
         id=HEATING,
+        category_id=CATEGORY,
         name="Подогрев",
+        kind=AttributeKind.SELECT,
+        parent_ids=(BACKLIGHT,),
+        is_customer_changeable=True,
         sort_order=6,
         values=[
             AttributeValue(
@@ -180,7 +215,36 @@ def demo_heating() -> Attribute:
                 scaled_by_shape=False,
                 sort_order=1,
             ),
-            AttributeValue(id=NO_HEATING, name="Без подогрева", rate=FREE, scaled_by_shape=False, sort_order=2),
+            AttributeValue(
+                id=NO_HEATING,
+                name="Без подогрева",
+                rate=FREE,
+                scaled_by_shape=False,
+                sort_order=2,
+                marks_absence=True,
+            ),
+        ],
+    )
+
+
+def demo_cutouts() -> Attribute:
+    """Build the numeric cut-out attribute: one hundred roubles for each cut-out."""
+    return Attribute(
+        id=CUTOUTS,
+        category_id=CATEGORY,
+        name="Вырезы",
+        kind=AttributeKind.NUMBER,
+        parent_ids=(),
+        is_customer_changeable=True,
+        sort_order=7,
+        values=[
+            AttributeValue(
+                id=CUTOUT,
+                name="Вырез",
+                rate=_rate("100", Unit.PIECE),
+                scaled_by_shape=False,
+                sort_order=1,
+            )
         ],
     )
 
@@ -201,8 +265,11 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
     """Build the canonical mirror: silver blade, aluminium frame, a mount, no backlight."""
     return Product(
         id=PRODUCT,
+        category_id=CATEGORY,
         name="Зеркало в раме",
         slug="zerkalo-v-rame",
+        is_published=True,
+        hides_calculated_price=False,
         declared_values=[
             DeclaredValue(attribute_id=BLADE, value_id=blade),
             DeclaredValue(attribute_id=SHAPE, value_id=RECTANGULAR),
@@ -213,9 +280,27 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
     )
 
 
+def demo_numeric_product(*, quantity: Decimal) -> Product:
+    """Build a product whose only priced declaration is a fractional count of cut-outs."""
+    return Product(
+        id=PRODUCT,
+        category_id=CATEGORY,
+        name="Зеркало с вырезами",
+        slug="zerkalo-s-vyrezami",
+        is_published=True,
+        hides_calculated_price=False,
+        declared_values=[
+            DeclaredValue(attribute_id=CUTOUTS, value_id=None, quantity=quantity),
+        ],
+    )
+
+
 def demo_defaults() -> dict[AttributeId, AttributeValueId]:
     """Tell what the canonical mirror declares — the configuration a customer starts from."""
-    return {declaration.attribute_id: declaration.value_id for declaration in demo_product().declared_values}
+    return {
+        declaration.attribute_id: cast("AttributeValueId", declaration.value_id)
+        for declaration in demo_product().declared_values
+    }
 
 
 def demo_choices() -> dict[AttributeId, list[AttributeValueId]]:

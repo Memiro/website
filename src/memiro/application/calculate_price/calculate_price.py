@@ -10,11 +10,11 @@ from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
-from memiro.entities.catalog.attribute.entity import Attribute
-from memiro.entities.catalog.product.entity import Product
+from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind
+from memiro.entities.catalog.product.entity import ConfiguredValue, Product
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
 from memiro.entities.common.measure import Dimensions, Millimeters
-from memiro.entities.pricing.pricing_service import price_product, selection_deltas
+from memiro.entities.pricing.pricing_service import price_product_for_customer, selection_deltas
 from memiro.entities.pricing.quotation import PricingVerdict
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
@@ -28,7 +28,7 @@ def _selections(
     # The models are declared below the helpers (§13.4), so the form's type
     # is a forward reference here (§13.5).
     selections: Sequence["Selection"],
-) -> dict[AttributeId, AttributeValueId]:
+) -> dict[AttributeId, ConfiguredValue]:
     """Check every choice against the dictionary and the product, then index it by attribute.
 
     The customer *replaces* the product's own value, he does not introduce a
@@ -36,20 +36,31 @@ def _selections(
     price would have nothing to be counted from (ADR-0007).
     """
     index = {attribute.id: attribute for attribute in attributes}
-    chosen: dict[AttributeId, AttributeValueId] = {}
+    chosen: dict[AttributeId, ConfiguredValue] = {}
     for selection in selections:
         attribute_id: AttributeId = selection.attribute_id
-        value_id: AttributeValueId = selection.value_id
         attribute = index.get(attribute_id)
-        if attribute is None or attribute.value(value_id) is None or product.declared(attribute_id) is None:
+        declaration = product.declared(attribute_id)
+        configured: ConfiguredValue | None = None
+        if attribute is not None and declaration is not None:
+            value_id: AttributeValueId | None = selection.value_id
+            if (
+                attribute.kind is AttributeKind.SELECT
+                and value_id is not None
+                and attribute.value(value_id) is not None
+            ):
+                configured = ConfiguredValue(value_id=value_id, quantity=None)
+            elif attribute.kind is AttributeKind.NUMBER and selection.quantity is not None:
+                configured = ConfiguredValue(value_id=None, quantity=selection.quantity)
+        if configured is None:
             logger.warning(
                 "A choice outside the product's dictionary",
                 product_id=product.id,
                 attribute_id=attribute_id,
-                value_id=value_id,
+                value_id=selection.value_id,
             )
             raise AttributeValueNotFoundError
-        chosen[attribute_id] = value_id
+        chosen[attribute_id] = configured
     return chosen
 
 
@@ -57,7 +68,16 @@ class Selection(BaseModel):
     """One choice of the customer: what he put in place of the product's own value."""
 
     attribute_id: UUID
-    value_id: UUID
+    value_id: UUID | None = None
+    quantity: Decimal | None = None
+
+    @model_validator(mode="after")
+    def _one_representation(self) -> "Selection":
+        """Require a dictionary row or a numeric quantity, but never both."""
+        if (self.value_id is None) is (self.quantity is None):
+            msg = "A selection must name exactly one of value_id and quantity"
+            raise ValueError(msg)
+        return self
 
 
 class CalculatePriceForm(BaseModel):
@@ -82,7 +102,7 @@ class SelectionDelta(BaseModel):
     """What one choice of the customer cost, against the product's own default."""
 
     attribute_id: UUID
-    value_id: UUID
+    value_id: UUID | None
     delta: Decimal
 
 
@@ -94,7 +114,7 @@ class CalculatedPrice(BaseModel):
     """
 
     verdict: PricingVerdict
-    total: Decimal
+    total: Decimal | None
     selection_deltas: list[SelectionDelta]
 
 
@@ -125,13 +145,19 @@ class CalculatePrice:
             width=Millimeters(value=data.width_mm),
             height=Millimeters(value=data.height_mm),
         )
-        quotation = price_product(
+        quotation = price_product_for_customer(
             product=product,
             attributes=attributes,
             settings=settings,
             dimensions=dimensions,
             selections=selections,
         )
+        if quotation.verdict is not PricingVerdict.PRICED:
+            return CalculatedPrice(
+                verdict=quotation.verdict,
+                total=None,
+                selection_deltas=[],
+            )
         deltas = selection_deltas(
             product=product,
             attributes=attributes,
