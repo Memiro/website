@@ -14,6 +14,7 @@ from memiro.entities.pricing.pricing_service import (
     price_product,
     selection_deltas,
 )
+from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro.entities.pricing.quotation import PricingVerdict, Quotation, QuotationLine
 from tests.common.factory.catalog import (
     ALUMINIUM,
@@ -36,6 +37,7 @@ from tests.common.factory.catalog import (
     demo_frame,
     demo_product,
     demo_settings,
+    demo_size_surcharge,
 )
 from tests.common.pricing_expected import canonical_quotation, quotation_line
 from tests.unit.composite import (
@@ -47,6 +49,10 @@ from tests.unit.composite import (
 
 def _dimensions(width: int, height: int) -> Dimensions:
     return Dimensions(width=Millimeters(value=width), height=Millimeters(value=height))
+
+
+def _settings_with_size_surcharge() -> PricingSettings:
+    return demo_settings(size_surcharges=(demo_size_surcharge(),))
 
 
 def _line_units(lines: tuple[QuotationLine, ...]) -> set[Unit]:
@@ -140,6 +146,51 @@ def test_a_mirror_in_a_frame_costs_what_the_workbook_says() -> None:
     # The same numbers live in docs/usecase/calculate_price/calculate-price.md.
     assert quotation.total == Money(amount=Decimal(8900))
     assert quotation.verdict is PricingVerdict.PRICED
+
+
+def test_a_size_surcharge_multiplies_the_blade_but_not_the_frame() -> None:
+    """At 2300 mm only the marked blade receives the 1.25 size factor."""
+    quotation = price_product(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=_settings_with_size_surcharge(),
+        dimensions=_dimensions(2300, 600),
+        selections={},
+    )
+
+    # Blade: 1.38 m2 x 4500 x 1.25 = 7 762.50; frame stays
+    # 5.8 lm x 2200 = 12 760; mount = 500; 21 022.50 -> 21 100.
+    assert quotation.total == Money(amount=Decimal(21100))
+    assert quotation.size_surcharge_from_long_side_mm == Millimeters(value=2200)
+
+
+def test_shape_and_size_surcharge_factors_multiply_each_other() -> None:
+    """A curved large blade receives both independent factors while an unmarked piece does not."""
+    quotation = price_product(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=_settings_with_size_surcharge(),
+        dimensions=_dimensions(2300, 600),
+        selections={SHAPE: ROUND, FRAME: NO_FRAME},
+    )
+
+    # Blade: 1.38 m2 x 4500 x 1.5 x 1.25 = 11 643.75; mount = 500;
+    # 12 143.75 -> 12 200.
+    assert quotation.total == Money(amount=Decimal(12200))
+
+
+def test_a_selection_delta_carries_the_size_surcharge_factor() -> None:
+    """A large graphite blade costs its exact tariff difference with the active size factor."""
+    deltas = selection_deltas(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=_settings_with_size_surcharge(),
+        dimensions=_dimensions(2300, 600),
+        selections={BLADE: GRAPHITE},
+    )
+
+    # (7000 - 4500) x 1.38 m2 x 1.25 = 4 312.50.
+    assert deltas == {BLADE: Decimal("4312.50")}
 
 
 def test_a_curved_cut_multiplies_the_blade_but_not_the_backlight() -> None:

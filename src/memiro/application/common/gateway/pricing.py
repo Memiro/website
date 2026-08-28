@@ -9,5 +9,5 @@ class PricingSettingsGateway(Protocol):
 
     @abstractmethod
     async def get(self) -> PricingSettings | None:
-        """Load the single settings row of the site, or ``None`` if it was never created."""
+        """Load the single settings aggregate with its surcharge tiers, or ``None`` if absent."""
         raise NotImplementedError

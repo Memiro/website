@@ -13,7 +13,7 @@ from memiro.adapters.db.types import AreaType, AttributeIdsType, MillimetersType
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
-from memiro.entities.pricing.pricing_settings import PricingSettings
+from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
 
 NAME_LENGTH = 255
 
@@ -38,6 +38,7 @@ attribute_values_table = Table(
     Column("rate_amount", MoneyType(), nullable=False),
     Column("rate_unit", Enum(Unit, name="unit", native_enum=False, length=NAME_LENGTH), nullable=False),
     Column("scaled_by_shape", Boolean(), nullable=False, default=False),
+    Column("scaled_by_size_surcharge", Boolean(), nullable=False, default=False),
     Column("marks_absence", Boolean(), nullable=False),
     Column("sort_order", Integer(), nullable=False, default=0),
     # The domain refuses a FACTOR of zero (it would annihilate the price
@@ -83,6 +84,20 @@ pricing_settings_table = Table(
     Column("max_short_side_mm", MillimetersType(), nullable=False),
 )
 
+size_surcharges_table = Table(
+    "size_surcharges",
+    mapper_registry.metadata,
+    Column(
+        "pricing_settings_id",
+        Uuid(),
+        ForeignKey("pricing_settings.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("from_long_side_mm", MillimetersType(), primary_key=True),
+    Column("factor", Numeric(), nullable=False),
+    CheckConstraint("factor > 1", name="ck_size_surcharges_factor_above_one"),
+)
+
 mapper_registry.map_imperatively(
     AttributeValue,
     attribute_values_table,
@@ -126,4 +141,25 @@ mapper_registry.map_imperatively(
     },
 )
 
-mapper_registry.map_imperatively(PricingSettings, pricing_settings_table)
+mapper_registry.map_imperatively(
+    SizeSurcharge,
+    size_surcharges_table,
+    properties={
+        "_pricing_settings_id": size_surcharges_table.c.pricing_settings_id,
+        "_from_long_side_mm": size_surcharges_table.c.from_long_side_mm,
+        "_factor": size_surcharges_table.c.factor,
+    },
+)
+
+mapper_registry.map_imperatively(
+    PricingSettings,
+    pricing_settings_table,
+    properties={
+        "_size_surcharges": relationship(
+            SizeSurcharge,
+            cascade="all, delete-orphan",
+            lazy="raise_on_sql",
+            order_by=size_surcharges_table.c.from_long_side_mm,
+        ),
+    },
+)

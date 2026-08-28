@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from decimal import ROUND_CEILING, Decimal
 
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
@@ -7,7 +7,7 @@ from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValu
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
-from memiro.entities.pricing.pricing_settings import PricingSettings
+from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
 from memiro.entities.pricing.quotation import PricingVerdict, Quotation, QuotationLine
 
 _ZERO = Money(amount=Decimal(0))
@@ -63,6 +63,7 @@ def price_product_for_customer(
             verdict=PricingVerdict.HIDDEN,
             total=quotation.total,
             breakdown=quotation.breakdown,
+            size_surcharge_from_long_side_mm=quotation.size_surcharge_from_long_side_mm,
         )
     return quotation
 
@@ -82,8 +83,14 @@ def price_product(
     """
     values = _values(_configuration_for_price(product, attributes, selections), attributes)
     breakdown = _breakdown(values, settings, dimensions)
-    total = _round_up(_apply_min_order(_subtotal(breakdown, values), settings))
-    return Quotation(verdict=PricingVerdict.PRICED, total=total, breakdown=breakdown)
+    size_surcharge = settings.size_surcharge_for(dimensions)
+    total = _round_up(_apply_min_order(_subtotal(breakdown, values, size_surcharge), settings))
+    return Quotation(
+        verdict=PricingVerdict.PRICED,
+        total=total,
+        breakdown=breakdown,
+        size_surcharge_from_long_side_mm=(size_surcharge.from_long_side_mm if size_surcharge is not None else None),
+    )
 
 
 def selection_deltas(
@@ -126,7 +133,11 @@ def _exact_total(
 ) -> Money:
     """Sum the lines of a configuration with no threshold and no rounding applied."""
     values = _values(_configuration_for_price(product, attributes, selections), attributes)
-    return _subtotal(_breakdown(values, settings, dimensions), values)
+    return _subtotal(
+        _breakdown(values, settings, dimensions),
+        values,
+        settings.size_surcharge_for(dimensions),
+    )
 
 
 def _configuration(
@@ -200,13 +211,25 @@ def _line(attribute_id: AttributeId, value: AttributeValue, quantity: Decimal) -
     )
 
 
-def _subtotal(breakdown: tuple[QuotationLine, ...], values: ResolvedValues) -> Money:
-    """Add the lines up, the shape factor multiplying only what is cut along the contour."""
-    factor = _shape_factor(values)
-    scaled = {value.id for _, value, _ in values if value.scaled_by_shape}
-    plain_total = _sum(line.amount for line in breakdown if line.value_id not in scaled)
-    scaled_total = _sum(line.amount for line in breakdown if line.value_id in scaled)
-    return plain_total + scaled_total * factor
+def _subtotal(
+    breakdown: tuple[QuotationLine, ...],
+    values: ResolvedValues,
+    size_surcharge: SizeSurcharge | None,
+) -> Money:
+    """Add the lines, multiplying each only by the independent factors marking it."""
+    shape_factor = _shape_factor(values)
+    size_factor = size_surcharge.factor if size_surcharge is not None else Decimal(1)
+    scaled_by_shape = {value.id for _, value, _ in values if value.scaled_by_shape}
+    scaled_by_size = {value.id for _, value, _ in values if value.scaled_by_size_surcharge}
+    total = _ZERO
+    for line in breakdown:
+        factor = Decimal(1)
+        if line.value_id in scaled_by_shape:
+            factor *= shape_factor
+        if line.value_id in scaled_by_size:
+            factor *= size_factor
+        total = total + line.amount * factor
+    return total
 
 
 def _shape_factor(values: ResolvedValues) -> Decimal:
@@ -344,11 +367,3 @@ def _round_up(total: Money) -> Money:
     """Round the total up to whole hundreds — the last operation of the calculation."""
     steps = (total.amount / ROUNDING_STEP).to_integral_value(rounding=ROUND_CEILING)
     return Money(amount=steps * ROUNDING_STEP)
-
-
-def _sum(amounts: Iterable[Money]) -> Money:
-    """Add up sums, keeping kopecks in full — rounding happens once, at the very end."""
-    total = _ZERO
-    for amount in amounts:
-        total = total + amount
-    return total

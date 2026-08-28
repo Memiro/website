@@ -15,6 +15,8 @@
 | `INVALID_FACTOR_RATE` | 400 | `InvalidFactorRateError` | У значения с единицей `FACTOR` нулевой коэффициент |
 | `NEGATIVE_MEASURE` | 400 | `NegativeMeasureError` | Величина получила отрицательное значение |
 | `EMPTY_DIMENSIONS` | 400 | `EmptyDimensionsError` | Сторона изделия не строго положительна |
+| `INVALID_SURCHARGE_FACTOR` | 400 | `InvalidSurchargeFactorError` | Коэффициент ступени наценки за размер не больше единицы |
+| `DUPLICATE_SIZE_SURCHARGE` | 400 | `DuplicateSizeSurchargeError` | Две ступени наценки за размер начинаются на одной границе |
 | `INTERNAL_ERROR` | 500 | — | Дефект: незамапленная `AppError` или неожиданное исключение |
 
 Пятисотка тоже приходит этой формой: глобальных хендлера три — `AppError`,

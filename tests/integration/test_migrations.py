@@ -117,6 +117,15 @@ async def test_pricing_gate_migration_preserves_existing_rows(
                 {"id": seeded.attribute_id},
             )
         ).one()
+        value = (
+            await connection.execute(
+                text(
+                    """SELECT scaled_by_size_surcharge
+                       FROM attribute_values WHERE id = :id"""
+                ),
+                {"id": seeded.value_id},
+            )
+        ).one()
         product = (
             await connection.execute(
                 text(
@@ -143,7 +152,8 @@ async def test_pricing_gate_migration_preserves_existing_rows(
                          AND column_name IN (
                            'category_id', 'kind', 'parent_ids', 'is_customer_changeable',
                            'marks_absence', 'is_published', 'hides_calculated_price',
-                           'max_long_side_mm', 'max_short_side_mm'
+                           'max_long_side_mm', 'max_short_side_mm',
+                           'scaled_by_size_surcharge'
                          )
                          AND column_default IS NOT NULL"""
                 )
@@ -152,6 +162,7 @@ async def test_pricing_gate_migration_preserves_existing_rows(
     await engine.dispose()
 
     assert attribute == (product.category_id, "SELECT", [], True)
+    assert value == (False,)
     assert product.is_published
     assert not product.hides_calculated_price
     assert declaration == (seeded.value_id, None)
