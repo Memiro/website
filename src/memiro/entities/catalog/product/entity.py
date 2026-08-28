@@ -28,14 +28,7 @@ class DeclaredValue(Entity):
     """
 
     attribute_id: AttributeId
-    value_id: AttributeValueId | None
-    quantity: Decimal | None = None
-
-    def __post_init__(self) -> None:
-        """Reject two simultaneous representations while keeping an unfinished declaration legal."""
-        if self.value_id is not None and self.quantity is not None:
-            msg = "Declared value cannot name both a dictionary row and a quantity"
-            raise RuntimeError(msg)
+    configured: ConfiguredValue
 
 
 @dataclass

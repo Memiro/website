@@ -5,13 +5,14 @@ and the tests speak in them by name so an expected price can be checked by
 hand against the workbook.
 """
 
+from dataclasses import replace
 from decimal import Decimal
 from typing import cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
-from memiro.entities.catalog.product.entity import DeclaredValue, Product
+from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
 from memiro.entities.common.measure import Area
 from memiro.entities.common.money import Money
@@ -271,13 +272,75 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
         is_published=True,
         hides_calculated_price=False,
         declared_values=[
-            DeclaredValue(attribute_id=BLADE, value_id=blade),
-            DeclaredValue(attribute_id=SHAPE, value_id=RECTANGULAR),
-            DeclaredValue(attribute_id=FRAME, value_id=ALUMINIUM),
-            DeclaredValue(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT),
-            DeclaredValue(attribute_id=MOUNT, value_id=WITH_MOUNT),
+            DeclaredValue(attribute_id=BLADE, configured=ConfiguredValue(value_id=blade, quantity=None)),
+            DeclaredValue(
+                attribute_id=SHAPE,
+                configured=ConfiguredValue(value_id=RECTANGULAR, quantity=None),
+            ),
+            DeclaredValue(
+                attribute_id=FRAME,
+                configured=ConfiguredValue(value_id=ALUMINIUM, quantity=None),
+            ),
+            DeclaredValue(
+                attribute_id=BACKLIGHT,
+                configured=ConfiguredValue(value_id=NO_BACKLIGHT, quantity=None),
+            ),
+            DeclaredValue(
+                attribute_id=MOUNT,
+                configured=ConfiguredValue(value_id=WITH_MOUNT, quantity=None),
+            ),
         ],
     )
+
+
+def demo_product_without(attribute_id: AttributeId) -> Product:
+    """Build the canonical mirror without one declaration."""
+    product = demo_product()
+    return replace(
+        product,
+        declared_values=[
+            declaration for declaration in product.declared_values if declaration.attribute_id != attribute_id
+        ],
+    )
+
+
+def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueId | None) -> Product:
+    """Build the canonical mirror with one declaration replaced."""
+    product = demo_product()
+    return replace(
+        product,
+        declared_values=[
+            replace(
+                declaration,
+                configured=ConfiguredValue(value_id=value_id, quantity=None),
+            )
+            if declaration.attribute_id == attribute_id
+            else declaration
+            for declaration in product.declared_values
+        ],
+    )
+
+
+def product_with_added_declaration(product: Product, declaration: DeclaredValue) -> Product:
+    """Build a product copy with one dependent declaration appended."""
+    return replace(product, declared_values=[*product.declared_values, declaration])
+
+
+def demo_attributes_replacing(replacement: Attribute) -> list[Attribute]:
+    """Build the demo dictionary with one aggregate replaced by identifier."""
+    return [replacement if attribute.id == replacement.id else attribute for attribute in demo_attributes()]
+
+
+def demo_attributes_with_changeability(
+    attribute_id: AttributeId,
+    *,
+    is_customer_changeable: bool,
+) -> list[Attribute]:
+    """Build the demo dictionary with one customer-changeability flag replaced."""
+    return [
+        replace(attribute, is_customer_changeable=is_customer_changeable) if attribute.id == attribute_id else attribute
+        for attribute in demo_attributes()
+    ]
 
 
 def demo_numeric_product(*, quantity: Decimal) -> Product:
@@ -290,7 +353,10 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
         is_published=True,
         hides_calculated_price=False,
         declared_values=[
-            DeclaredValue(attribute_id=CUTOUTS, value_id=None, quantity=quantity),
+            DeclaredValue(
+                attribute_id=CUTOUTS,
+                configured=ConfiguredValue(value_id=None, quantity=quantity),
+            ),
         ],
     )
 
@@ -298,7 +364,7 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
 def demo_defaults() -> dict[AttributeId, AttributeValueId]:
     """Tell what the canonical mirror declares — the configuration a customer starts from."""
     return {
-        declaration.attribute_id: cast("AttributeValueId", declaration.value_id)
+        declaration.attribute_id: cast("AttributeValueId", declaration.configured.value_id)
         for declaration in demo_product().declared_values
     }
 
