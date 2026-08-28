@@ -231,6 +231,28 @@ async def test_an_absent_selected_parent_removes_its_paid_child_from_the_price(
     )
 
 
+async def test_an_inapplicable_selected_child_is_absent_from_public_deltas(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A child disabled by another selection is absent from both the total and public deltas."""
+    await prime_paid_heating_declaration(engine)
+    selections = [
+        Selection(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT),
+        Selection(attribute_id=HEATING, value_id=WITH_HEATING),
+    ]
+
+    response = await api_client.calculate(_form(selections=selections))
+
+    assert response.assert_status(200).ensure_content() == CalculatedPrice(
+        verdict=PricingVerdict.PRICED,
+        total=Decimal(8900),
+        selection_deltas=[
+            SelectionDelta(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT, delta=Decimal(-10500)),
+        ],
+    )
+
+
 async def test_rotated_dimensions_use_the_long_and_short_production_limits(
     api_client: ApiClient,
     engine: AsyncEngine,
