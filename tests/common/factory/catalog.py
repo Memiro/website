@@ -57,6 +57,10 @@ CUTOUT: AttributeValueId = _id("cut-out")
 CATEGORY: CategoryId = _id("mirrors")
 PRODUCT: ProductId = _id("mirror-in-a-frame")
 
+SECOND_CATEGORY: CategoryId = _id("cabinets")
+FOREIGN_PRODUCT: ProductId = _id("mirror-cabinet")
+SECOND_PRODUCT: ProductId = _id("mirror-with-a-shelf")
+
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 
 
