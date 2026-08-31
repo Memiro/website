@@ -10,6 +10,7 @@ from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValu
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
+from memiro.entities.errors.product import InvalidVariantConfigurationError
 
 # Money is stored to the kopeck; the area of a mirror to the fourth decimal —
 # a square millimetre. Both deserialize through the domain constructor, so a
@@ -124,13 +125,25 @@ class VariantOverridesType(TypeDecorator[VariantOverrides]):
         """Rebuild every override through its domain constructors."""
         if value is None:
             return None
-        return VariantOverrides(
-            DeclaredValue(
-                attribute_id=UUID(payload["attribute_id"] or ""),
-                configured=ConfiguredValue(
-                    value_id=UUID(payload["value_id"]) if payload["value_id"] is not None else None,
-                    quantity=Decimal(payload["quantity"]) if payload["quantity"] is not None else None,
-                ),
+
+        try:
+            return VariantOverrides(
+                DeclaredValue(
+                    attribute_id=UUID(payload["attribute_id"] or ""),
+                    configured=ConfiguredValue(
+                        value_id=UUID(payload["value_id"]) if payload["value_id"] is not None else None,
+                        quantity=Decimal(payload["quantity"]) if payload["quantity"] is not None else None,
+                    ),
+                )
+                for payload in value
             )
-            for payload in value
-        )
+        except (
+            ArithmeticError,
+            AttributeError,
+            InvalidVariantConfigurationError,
+            KeyError,
+            TypeError,
+            ValueError,
+        ) as error:
+            message = "Stored product variant has corrupted variant overrides"
+            raise RuntimeError(message) from error

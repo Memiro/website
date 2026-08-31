@@ -57,7 +57,7 @@ _Avoid_: комплектация, модификация, готовое реш
 |---|---|---|
 | `id` | `VariantId` | Идентификатор (UUID) |
 | `dimensions` | [`Dimensions`](../value-objects/dimensions.md) | Размер варианта |
-| `overrides` | `tuple[DeclaredValue, ...]` | Чем вариант отличается от товара |
+| `overrides` | `tuple[[DeclaredValue](#declaredvalue--объявленное-значение), ...]` | Чем вариант отличается от товара |
 | `price` | [`Money`](../value-objects/money.md) | Цена, посчитанная системой |
 | `sort_order` | `int` | Порядок, поле владельца |
 

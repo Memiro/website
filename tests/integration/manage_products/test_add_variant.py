@@ -1,6 +1,6 @@
 import asyncio
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from dishka import AsyncContainer
@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.gateway.catalog import ProductGateway
-from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
+from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant
@@ -49,6 +49,27 @@ async def _load_product(container: AsyncContainer) -> Product | None:
         return await gateway.get(PRODUCT, eager_variants=True)
 
 
+def _expected_variant(
+    variant_id: UUID,
+    *,
+    width_mm: int,
+    height_mm: int,
+    price: str,
+    sort_order: int = 0,
+) -> Variant:
+    """Build the complete child state expected from a command."""
+    return Variant(
+        variant_id,
+        dimensions=Dimensions(
+            width=Millimeters(value=width_mm),
+            height=Millimeters(value=height_mm),
+        ),
+        overrides=(),
+        price=Money(amount=Decimal(price)),
+        sort_order=sort_order,
+    )
+
+
 async def test_the_owner_adds_a_variant_priced_by_the_workbook(
     app: FastAPI,
 ) -> None:
@@ -73,18 +94,7 @@ async def test_the_owner_adds_a_variant_priced_by_the_workbook(
 
     assert result == CreatedVariant(id=variant.id)
     assert product.price_from == Money(amount=Decimal(8900))
-    assert product.variants == (
-        Variant(
-            variant.id,
-            dimensions=Dimensions(
-                width=Millimeters(value=800),
-                height=Millimeters(value=600),
-            ),
-            overrides=(),
-            price=Money(amount=Decimal(8900)),
-            sort_order=2,
-        ),
-    )
+    assert product.variants == (_expected_variant(variant.id, width_mm=800, height_mm=600, price="8900", sort_order=2),)
 
 
 async def test_the_owner_prices_an_unpublished_hidden_variant_beyond_customer_limits(
@@ -110,6 +120,7 @@ async def test_the_owner_prices_an_unpublished_hidden_variant_beyond_customer_li
     assert product is not None
     assert result == CreatedVariant(id=product.variants[0].id)
     assert product.price_from == Money(amount=Decimal(8900))
+    assert product.variants == (_expected_variant(result.id, width_mm=800, height_mm=600, price="8900"),)
 
 
 async def test_the_owner_variant_keeps_the_size_surcharge(
@@ -120,7 +131,7 @@ async def test_the_owner_variant_keeps_the_size_surcharge(
     await prime_size_surcharge(engine)
     container: AsyncContainer = app.state.dishka_container
 
-    await _add(
+    result = await _add(
         container,
         AddVariantForm(width_mm=2200, height_mm=600, overrides=[], sort_order=0),
     )
@@ -128,6 +139,7 @@ async def test_the_owner_variant_keeps_the_size_surcharge(
 
     assert product is not None
     assert product.price_from == Money(amount=Decimal(20300))
+    assert product.variants == (_expected_variant(result.id, width_mm=2200, height_mm=600, price="20300"),)
 
 
 async def test_concurrent_identical_additions_preserve_variant_uniqueness(
@@ -149,7 +161,8 @@ async def test_concurrent_identical_additions_preserve_variant_uniqueness(
         "DuplicateVariantError",
     ]
     assert product is not None
-    assert len(product.variants) == 1
+    assert product.price_from == Money(amount=Decimal(8900))
+    assert product.variants == (_expected_variant(product.variants[0].id, width_mm=800, height_mm=600, price="8900"),)
 
 
 def test_adding_rejects_a_side_above_the_input_limit() -> None:
@@ -157,6 +170,17 @@ def test_adding_rejects_a_side_above_the_input_limit() -> None:
     with pytest.raises(ValidationError):
         AddVariantForm(
             width_mm=MAX_SIDE_MM + 1,
+            height_mm=600,
+            overrides=[],
+            sort_order=0,
+        )
+
+
+def test_adding_rejects_a_side_below_the_input_limit() -> None:
+    """A side at MIN_SIDE_MM - 1 is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        AddVariantForm(
+            width_mm=MIN_SIDE_MM - 1,
             height_mm=600,
             overrides=[],
             sort_order=0,
@@ -196,6 +220,12 @@ def test_adding_rejects_an_override_with_two_representations() -> None:
             value_id=GRAPHITE,
             quantity=Decimal(1),
         )
+
+
+def test_adding_rejects_an_override_without_a_representation() -> None:
+    """An override without a value or quantity is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        VariantOverrideForm(attribute_id=BLADE)
 
 
 async def test_adding_fails_if_pricing_settings_are_not_found(

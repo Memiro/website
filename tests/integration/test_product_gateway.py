@@ -15,7 +15,6 @@ from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValu
 from memiro.entities.common.identifiers import VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
-from memiro.entities.errors.product import InvalidVariantConfigurationError
 from memiro_common.uow import UoW
 from tests.common.factory.catalog import BLADE, CUTOUTS, PRODUCT, SILVER
 
@@ -51,8 +50,13 @@ async def _corrupt_fingerprint(engine: AsyncEngine, variant_id: VariantId) -> No
         )
 
 
-async def _corrupt_overrides(engine: AsyncEngine, variant_id: VariantId) -> None:
-    """Store an incomplete override through the named dishonest-state seam."""
+async def _corrupt_overrides(
+    engine: AsyncEngine,
+    variant_id: VariantId,
+    *,
+    overrides: list[dict[str, str | None]],
+) -> None:
+    """Store invalid overrides through the named dishonest-state seam."""
     async with engine.begin() as connection:
         await connection.execute(
             text(
@@ -61,9 +65,7 @@ async def _corrupt_overrides(engine: AsyncEngine, variant_id: VariantId) -> None
                    WHERE id = :variant_id"""
             ),
             {
-                "overrides": json.dumps(
-                    [{"attribute_id": str(BLADE), "value_id": None, "quantity": None}],
-                ),
+                "overrides": json.dumps(overrides),
                 "variant_id": variant_id,
             },
         )
@@ -114,7 +116,7 @@ async def test_the_product_gateway_refuses_corrupted_variant_overrides(
     app: FastAPI,
     engine: AsyncEngine,
 ) -> None:
-    """An incomplete stored override fails through INVALID_VARIANT_CONFIGURATION."""
+    """An incomplete stored override is treated as a system defect."""
     container: AsyncContainer = app.state.dishka_container
     async with container() as request:
         gateway = await request.get(ProductGateway)
@@ -123,10 +125,40 @@ async def test_the_product_gateway_refuses_corrupted_variant_overrides(
         assert product is not None
         variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)))
         await uow.commit()
-    await _corrupt_overrides(engine, variant.id)
+    await _corrupt_overrides(
+        engine,
+        variant.id,
+        overrides=[{"attribute_id": str(BLADE), "value_id": None, "quantity": None}],
+    )
 
     async with container() as request:
         gateway = await request.get(ProductGateway)
 
-        with pytest.raises(InvalidVariantConfigurationError, match="must name"):
+        with pytest.raises(RuntimeError, match="corrupted variant overrides"):
+            await gateway.get(PRODUCT, eager_variants=True)
+
+
+async def test_the_product_gateway_refuses_malformed_variant_override_data(
+    app: FastAPI,
+    engine: AsyncEngine,
+) -> None:
+    """A malformed stored override is treated as a system defect."""
+    container: AsyncContainer = app.state.dishka_container
+    async with container() as request:
+        gateway = await request.get(ProductGateway)
+        uow = await request.get(UoW)
+        product = await gateway.get(PRODUCT, for_update=True, eager_variants=True)
+        assert product is not None
+        variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)))
+        await uow.commit()
+    await _corrupt_overrides(
+        engine,
+        variant.id,
+        overrides=[{"attribute_id": "not-a-uuid", "value_id": None, "quantity": "2"}],
+    )
+
+    async with container() as request:
+        gateway = await request.get(ProductGateway)
+
+        with pytest.raises(RuntimeError, match="corrupted variant overrides"):
             await gateway.get(PRODUCT, eager_variants=True)

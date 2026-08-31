@@ -1,6 +1,6 @@
 import asyncio
 from decimal import Decimal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from dishka import AsyncContainer
@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.gateway.catalog import ProductGateway
-from memiro.application.common.input_limits import MAX_SIDE_MM
+from memiro.application.common.input_limits import MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import (
@@ -57,6 +57,26 @@ async def _duplicate(
         )
 
 
+def _expected_variant(
+    variant_id: UUID,
+    *,
+    width_mm: int,
+    height_mm: int,
+    price: str,
+) -> Variant:
+    """Build the complete child state expected from duplication."""
+    return Variant(
+        variant_id,
+        dimensions=Dimensions(
+            width=Millimeters(value=width_mm),
+            height=Millimeters(value=height_mm),
+        ),
+        overrides=(),
+        price=Money(amount=Decimal(price)),
+        sort_order=7,
+    )
+
+
 async def test_the_owner_duplicates_a_variant_with_a_new_size_and_price(app: FastAPI) -> None:
     """A duplicate preserves configuration and order while receiving a new id and price."""
     container: AsyncContainer = app.state.dishka_container
@@ -77,16 +97,13 @@ async def test_the_owner_duplicates_a_variant_with_a_new_size_and_price(app: Fas
     assert duplicated is not None
 
     assert result.id != source.id
-    assert duplicated == Variant(
-        result.id,
-        dimensions=Dimensions(
-            width=Millimeters(value=2200),
-            height=Millimeters(value=600),
-        ),
-        overrides=(),
-        price=Money(amount=Decimal(18800)),
-        sort_order=7,
+    assert product.variant(source.id) == _expected_variant(
+        source.id,
+        width_mm=800,
+        height_mm=600,
+        price="8900",
     )
+    assert duplicated == _expected_variant(result.id, width_mm=2200, height_mm=600, price="18800")
     assert product.price_from == Money(amount=Decimal(8900))
     assert len(product.variants) == TWO_VARIANTS
 
@@ -108,7 +125,15 @@ async def test_a_duplicated_variant_keeps_the_size_surcharge(
     duplicate = product.variant(created.id)
     assert duplicate is not None
 
-    assert duplicate.price == Money(amount=Decimal(20300))
+    assert product.variant(source.id) == _expected_variant(
+        source.id,
+        width_mm=800,
+        height_mm=600,
+        price="8900",
+    )
+    assert duplicate == _expected_variant(created.id, width_mm=2200, height_mm=600, price="20300")
+    assert product.price_from == Money(amount=Decimal(8900))
+    assert len(product.variants) == TWO_VARIANTS
 
 
 async def test_concurrent_identical_duplications_preserve_variant_uniqueness(app: FastAPI) -> None:
@@ -126,10 +151,22 @@ async def test_concurrent_identical_duplications_preserve_variant_uniqueness(app
         product = await gateway.get(PRODUCT, eager_variants=True)
     assert product is not None
 
-    assert sorted(type(result).__name__ for result in results) == [
-        "CreatedVariant",
-        "DuplicateVariantError",
-    ]
+    created, duplicate_error = sorted(results, key=lambda result: type(result).__name__)
+    assert isinstance(created, CreatedVariant)
+    assert isinstance(duplicate_error, DuplicateVariantError)
+    assert product.variant(source.id) == _expected_variant(
+        source.id,
+        width_mm=800,
+        height_mm=600,
+        price="8900",
+    )
+    assert product.variant(created.id) == _expected_variant(
+        created.id,
+        width_mm=2200,
+        height_mm=600,
+        price="18800",
+    )
+    assert product.price_from == Money(amount=Decimal(8900))
     assert len(product.variants) == TWO_VARIANTS
 
 
@@ -137,6 +174,12 @@ def test_duplication_rejects_a_side_above_the_input_limit() -> None:
     """A side at MAX_SIDE_MM + 1 is rejected with VALIDATION_ERROR."""
     with pytest.raises(ValidationError):
         DuplicateVariantWithSizeForm(width_mm=MAX_SIDE_MM + 1, height_mm=600)
+
+
+def test_duplication_rejects_a_side_below_the_input_limit() -> None:
+    """A side at MIN_SIDE_MM - 1 is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        DuplicateVariantWithSizeForm(width_mm=MIN_SIDE_MM - 1, height_mm=600)
 
 
 async def test_duplication_fails_if_pricing_settings_are_not_found(
