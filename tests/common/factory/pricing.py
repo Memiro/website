@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from polyfactory.factories.pydantic_factory import ModelFactory
 
-from memiro.application.calculate_price import Selection
+from memiro.application.common.customer_selection import Selection
 
 
 class SelectionFactory(ModelFactory[Selection]):

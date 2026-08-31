@@ -2,7 +2,7 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 
-from memiro.application.calculate_price import Selection
+from memiro.application.common.customer_selection import Selection
 from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.submit_inquiry import InquiryItemForm, InquirySource, SubmitInquiryForm
 from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT

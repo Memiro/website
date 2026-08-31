@@ -9,12 +9,10 @@ from memiro.application.calculate_price.calculate_price import (
     CalculatePriceForm,
     SelectionDelta,
 )
-from memiro.application.common.customer_selection import Selection
 
 __all__ = [
     "CalculatePrice",
     "CalculatePriceForm",
     "CalculatedPrice",
-    "Selection",
     "SelectionDelta",
 ]
