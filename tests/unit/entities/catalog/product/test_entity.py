@@ -75,12 +75,13 @@ def test_a_product_requires_an_explicit_publication_state() -> None:
         constructor(id=uuid4(), category_id=CATEGORY, name="Mirror", slug="mirror")
 
 
-def test_a_product_hands_out_declarations_a_caller_cannot_edit_it_through() -> None:
-    """An edit made beside the command method never reaches the aggregate."""
+def test_a_product_copies_the_set_it_was_given_to_declare() -> None:
+    """A list edited after the command ran never leaks a new value into the aggregate."""
     product = demo_product()
-    handed_out = list(product.declared_values)
+    declarations = list(product.declared_values)
+    product.declare_values(declarations)
 
-    handed_out.append(DeclaredValue(attribute_id=HEATING, configured=ConfiguredValue(value_id=None, quantity=None)))
+    declarations.append(DeclaredValue(attribute_id=HEATING, configured=ConfiguredValue(value_id=None, quantity=None)))
 
     assert product.declared(HEATING) is None
 

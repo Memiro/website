@@ -7,9 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from memiro.application.calculate_price import (
     CalculatedPrice,
     CalculatePriceForm,
-    Selection,
     SelectionDelta,
 )
+from memiro.application.common.customer_selection import Selection
 from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.pricing.quotation import PricingVerdict

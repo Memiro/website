@@ -326,14 +326,13 @@ def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueI
 
 
 def product_declaring(product: Product, declarations: Iterable[DeclaredValue]) -> Product:
-    """Build a product copy whose owner declared exactly these values."""
-    copy = replace(product)
-    copy.declare_values(declarations)
-    return copy
+    """Declare exactly these values for the product and hand it back."""
+    product.declare_values(declarations)
+    return product
 
 
 def product_with_added_declaration(product: Product, declaration: DeclaredValue) -> Product:
-    """Build a product copy with one dependent declaration appended."""
+    """Append one dependent declaration to what the product already declares."""
     return product_declaring(product, [*product.declared_values, declaration])
 
 
