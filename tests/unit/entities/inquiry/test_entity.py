@@ -1,26 +1,8 @@
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import override
-
 import pytest
 
 from memiro.entities.errors.inquiry import ConsentRequiredError, EmptyInquiryError
 from memiro.entities.inquiry.entity import InquiryData, InquirySource, inquiry_factory
-from memiro_common.clock import Clock
-
-NOW = datetime(2026, 8, 31, 12, 34, 56, 789012, tzinfo=UTC)
-
-
-@dataclass(frozen=True, slots=True)
-class FakeClock(Clock):
-    """Clock frozen at the one instant this module asserts."""
-
-    instant: datetime
-
-    @override
-    def now(self) -> datetime:
-        """Return the frozen instant."""
-        return self.instant
+from tests.clock import NOW, FakeClock
 
 
 def _data(*, consent: bool = True) -> InquiryData:

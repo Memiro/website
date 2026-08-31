@@ -5,16 +5,17 @@ settings yet — the admin brings them with its own slice — so the arrangement
 of a pricing test goes straight to the tables through named helpers.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
-from sqlalchemy import delete, insert, text, update
+from sqlalchemy import delete, func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.adapters.db.tables import (
     attribute_values_table,
     attributes_table,
     categories_table,
+    inquiries_table,
     pricing_settings_table,
     product_declared_values_table,
     product_images_table,
@@ -23,6 +24,7 @@ from memiro.adapters.db.tables import (
 from memiro.entities.common.identifiers import AttributeValueId
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.common.money import Money
+from memiro_common.clock import SystemClock
 from tests.common.factory.catalog import (
     ALUMINIUM,
     BACKLIGHT,
@@ -45,6 +47,15 @@ from tests.common.factory.catalog import (
     demo_settings,
 )
 
+# The arranged catalogue has been in place for a while; an absolute date
+# written into the row would rot as the calendar moves past it (§14.6.8).
+CATALOG_AGE = timedelta(days=30)
+
+
+def _catalog_created_at() -> datetime:
+    """Return the instant an arranged catalogue row claims it was created at."""
+    return SystemClock().now() - CATALOG_AGE
+
 
 async def prime_dictionary(engine: AsyncEngine) -> None:
     """Insert the demo dictionary and the canonical product it describes."""
@@ -59,8 +70,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "name": "Mirrors",
                     "slug": "mirrors",
                     "sort_order": 1,
-                    "created_at": datetime(2026, 1, 1, tzinfo=UTC),
-                    "updated_at": datetime(2026, 1, 1, tzinfo=UTC),
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 }
             ],
         )
@@ -175,8 +186,8 @@ async def prime_second_category(
                     "name": name,
                     "slug": slug,
                     "sort_order": sort_order,
-                    "created_at": datetime(2026, 1, 1, tzinfo=UTC),
-                    "updated_at": datetime(2026, 1, 1, tzinfo=UTC),
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 }
             ],
         )
@@ -434,11 +445,9 @@ async def prime_numeric_catalog(engine: AsyncEngine) -> None:
 
 
 async def corrupt_a_declaration_directly(engine: AsyncEngine) -> None:
-    """Point the product's blade at a value of another attribute.
-
-    The foreign keys allow it and no use case can produce it: this is what a
-    defect in the data looks like, and the calculation must not price it.
-    """
+    """Point the product's blade at a value of another attribute."""
+    # The foreign keys allow it and no use case can produce it: this is what
+    # a defect in the data looks like, and the calculation must not price it.
     async with engine.begin() as connection:
         await connection.execute(
             update(product_declared_values_table)
@@ -448,3 +457,9 @@ async def corrupt_a_declaration_directly(engine: AsyncEngine) -> None:
             )
             .values(value_id=ALUMINIUM),
         )
+
+
+async def count_inquiries_directly(engine: AsyncEngine) -> int:
+    """Count the stored inquiries to prove what a refused submission did not leave behind."""
+    async with engine.begin() as connection:
+        return (await connection.execute(select(func.count()).select_from(inquiries_table))).scalar_one()

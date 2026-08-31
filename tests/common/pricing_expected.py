@@ -28,6 +28,9 @@ def quotation_line(
 
 def canonical_quotation(verdict: PricingVerdict) -> Quotation:
     """Build the hand-checked workbook result without calling pricing logic."""
+    # Production mirror: ``price_product`` in ``entities/pricing/pricing_service.py``
+    # builds the same breakdown — every number below is copied from the owner's
+    # workbook by hand, so a change there is fixed in two places (rule 010).
     return Quotation(
         verdict=verdict,
         total=Money(amount=Decimal(8900)),
