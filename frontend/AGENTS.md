@@ -10,6 +10,7 @@ Rules for work inside `frontend/`.
 - Put interactive Vue components in `app/islands/` and declare the hydration directive at the Astro call site.
 - Keep server-only helpers in `app/lib/`, reusable presentation in `app/components/`, layouts in `app/layouts/`, pages in `app/pages/`, and global CSS in `app/styles/`.
 - Do not use `any`, suppress type errors, or add dependencies without the owner's approval.
+- No narrating comments and no doc-comment ceremony: a comment states only a "why" the code cannot show (an external constraint, a non-obvious decision), never what the next line does. Any doc comment that survives is one line.
 
 ## Commands
 
