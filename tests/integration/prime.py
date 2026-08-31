@@ -17,6 +17,7 @@ from memiro.adapters.db.tables import (
     categories_table,
     pricing_settings_table,
     product_declared_values_table,
+    product_images_table,
     products_table,
 )
 from memiro.entities.common.identifiers import AttributeValueId
@@ -26,10 +27,14 @@ from tests.common.factory.catalog import (
     ALUMINIUM,
     BACKLIGHT,
     BLADE,
+    CATEGORY,
     CONTOUR,
+    FOREIGN_PRODUCT,
     HEATING,
     NO_HEATING,
     PRODUCT,
+    SECOND_CATEGORY,
+    SECOND_PRODUCT,
     SILVER,
     WITH_HEATING,
     WITH_MOUNT,
@@ -149,6 +154,76 @@ async def prime_product_publication(engine: AsyncEngine, *, is_published: bool) 
     async with engine.begin() as connection:
         await connection.execute(
             update(products_table).where(products_table.c.id == PRODUCT).values(is_published=is_published),
+        )
+
+
+async def prime_second_category(
+    engine: AsyncEngine,
+    *,
+    name: str,
+    slug: str,
+    sort_order: int,
+    is_published: bool,
+) -> None:
+    """Insert one more category holding a single product of the given publication."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(categories_table),
+            [
+                {
+                    "id": SECOND_CATEGORY,
+                    "name": name,
+                    "slug": slug,
+                    "sort_order": sort_order,
+                    "created_at": datetime(2026, 1, 1, tzinfo=UTC),
+                    "updated_at": datetime(2026, 1, 1, tzinfo=UTC),
+                }
+            ],
+        )
+        await connection.execute(
+            insert(products_table),
+            [
+                {
+                    "id": FOREIGN_PRODUCT,
+                    "category_id": SECOND_CATEGORY,
+                    "name": "Зеркальный шкаф",
+                    "slug": f"{slug}-product",
+                    "description": "Another made-to-order mirror.",
+                    "is_published": is_published,
+                    "hides_calculated_price": False,
+                },
+            ],
+        )
+
+
+async def prime_extra_product(engine: AsyncEngine, *, name: str, slug: str, is_published: bool) -> None:
+    """Add one more product to the canonical category."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(products_table),
+            [
+                {
+                    "id": SECOND_PRODUCT,
+                    "category_id": CATEGORY,
+                    "name": name,
+                    "slug": slug,
+                    "description": "Another made-to-order mirror.",
+                    "is_published": is_published,
+                    "hides_calculated_price": False,
+                },
+            ],
+        )
+
+
+async def prime_product_images(engine: AsyncEngine) -> None:
+    """Give the canonical product two photo keys whose owner order is neither alphabetical nor insertion order."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(product_images_table),
+            [
+                {"product_id": PRODUCT, "key": "mirror-front.jpg", "sort_order": 2},
+                {"product_id": PRODUCT, "key": "mirror-side.jpg", "sort_order": 1},
+            ],
         )
 
 
