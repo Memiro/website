@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 
 import { calculatePrice } from "./calculate-price";
 import { inquiryErrorMessage, SubmitInquiryError, submitInquiry } from "./submit-inquiry";
 import type { ProductCard } from "../lib/catalog-api";
-import { calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../lib/calculator-state";
+import { Calculator, HEIGHT_FIELD, WIDTH_FIELD } from "../lib/calculator-state";
 import {
   addInquiryItem,
   canAddCalculatorConfiguration,
@@ -18,9 +18,7 @@ import {
 import type { InquiryItem } from "../lib/inquiry-state";
 
 const props = defineProps<{ product: ProductCard }>();
-const state = ref(initialCalculatorState(props.product));
-const result = ref<ReturnType<typeof pricePresentation> | null>(null);
-const isLoading = ref(false);
+const calculator = reactive(new Calculator(props.product, calculatePrice));
 const items = ref<InquiryItem[]>([]);
 const wish = ref("");
 const name = ref("");
@@ -30,23 +28,12 @@ const consent = ref(false);
 const submitMessage = ref<string | null>(null);
 const isSubmitting = ref(false);
 
-const selectionsByAttribute = computed(() => new Map(state.value.selections.map((selection) => [selection.attributeId, selection])));
-const canAddToInquiry = computed(() => canAddCalculatorConfiguration(result.value?.kind, wish.value));
-const canShowInquiryEditor = computed(() => isInquiryEditorVisible(result.value?.kind));
+const price = computed(() => (calculator.request.status === "done" ? calculator.request.price : null));
+const canAddToInquiry = computed(() => canAddCalculatorConfiguration(price.value?.kind, wish.value));
+const canShowInquiryEditor = computed(() => isInquiryEditorVisible(price.value?.kind));
 
-function selectValue(attributeId: string, valueId: string): void {
-  state.value.selections = state.value.selections.filter((selection) => selection.attributeId !== attributeId);
-  state.value.selections.push({ attributeId, valueId, quantity: null });
-}
-
-function setQuantity(attributeId: string, quantity: string): void {
-  state.value.selections = state.value.selections.filter((selection) => selection.attributeId !== attributeId);
-  state.value.selections.push({ attributeId, valueId: null, quantity });
-}
-
-function selectVariant(index: number): void {
-  state.value = calculatorStateForVariant(props.product, index);
-  void refreshPrice();
+function typed(event: Event): string {
+  return (event.target as HTMLInputElement | HTMLSelectElement).value;
 }
 
 function deltaLabel(attributeId: string, valueId: string | null): string {
@@ -60,29 +47,16 @@ function formatAmount(amount: string): string {
   return `${value > 0 ? "+" : ""}${value.toLocaleString("ru-RU")} ₽`;
 }
 
-async function refreshPrice(): Promise<void> {
-  isLoading.value = true;
-  try {
-    result.value = pricePresentation(await calculatePrice(toCalculateRequest(props.product.id, state.value)));
-  } catch {
-    result.value = {
-      kind: "unavailable",
-      total: null,
-      message: "Не удалось рассчитать стоимость. Попробуйте ещё раз.",
-      deltas: [],
-    };
-  }
-  finally { isLoading.value = false; }
-}
-
 function addToInquiry(): void {
-  if (result.value === null || (result.value.kind !== "priced" && result.value.kind !== "wish")) {
+  const priced = calculator.priced;
+  const kind = price.value?.kind;
+  if (priced === null || (kind !== "priced" && kind !== "wish")) {
     return;
   }
   items.value = addInquiryItem(
     window.localStorage,
     items.value,
-    inquiryItemFromCalculator(props.product, state.value, result.value.kind, wish.value),
+    inquiryItemFromCalculator(props.product, priced, kind, wish.value),
   );
   wish.value = "";
   submitMessage.value = null;
@@ -119,7 +93,7 @@ async function sendInquiry(): Promise<void> {
 
 onMounted(() => {
   items.value = loadInquiryItems(window.localStorage);
-  void refreshPrice();
+  void calculator.refresh();
 });
 </script>
 
@@ -127,19 +101,21 @@ onMounted(() => {
   <section class="calc">
     <h2>Расчёт по вашим размерам</h2>
     <div class="calc-fields">
-      <label v-if="product.variants.length > 1" class="field"><span>Готовый размер</span><select @change="selectVariant(Number(($event.target as HTMLSelectElement).value))"><option v-for="(variant, index) in product.variants" :key="`${variant.width_mm}-${variant.height_mm}-${index}`" :value="index">{{ variant.width_mm }} × {{ variant.height_mm }} мм</option></select></label>
-      <label class="field"><span>Ширина, мм</span><input v-model.number="state.widthMm" type="number" min="1" inputmode="numeric" @change="refreshPrice" /></label>
-      <label class="field"><span>Высота, мм</span><input v-model.number="state.heightMm" type="number" min="1" inputmode="numeric" @change="refreshPrice" /></label>
-      <label v-for="attribute in product.attributes.filter((attribute) => attribute.values.length > 0)" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><select :value="selectionsByAttribute.get(attribute.id)?.valueId ?? ''" @change="selectValue(attribute.id, ($event.target as HTMLSelectElement).value); refreshPrice()"><option v-for="value in attribute.values.filter((value) => value.id !== null)" :key="value.id" :value="value.id">{{ value.name }}</option></select></label>
-      <label v-for="attribute in product.attributes.filter((attribute) => attribute.values.length === 0)" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><input :value="selectionsByAttribute.get(attribute.id)?.quantity ?? ''" type="number" min="0" inputmode="decimal" @change="setQuantity(attribute.id, ($event.target as HTMLInputElement).value); refreshPrice()" /></label>
+      <label v-if="product.variants.length > 1" class="field"><span>Готовый размер</span><select :value="calculator.variantIndex ?? ''" @change="calculator.chooseVariant(Number(typed($event)))"><option v-if="calculator.variantIndex === null" value="" disabled>Свой размер</option><option v-for="(variant, index) in product.variants" :key="`${variant.width_mm}-${variant.height_mm}-${index}`" :value="index">{{ variant.width_mm }} × {{ variant.height_mm }} мм</option></select></label>
+      <label class="field"><span>Ширина, мм</span><input :value="calculator.widthText" :class="{ invalid: calculator.isInvalid(WIDTH_FIELD) }" type="number" min="1" inputmode="numeric" @change="calculator.setWidth(typed($event))" /></label>
+      <label class="field"><span>Высота, мм</span><input :value="calculator.heightText" :class="{ invalid: calculator.isInvalid(HEIGHT_FIELD) }" type="number" min="1" inputmode="numeric" @change="calculator.setHeight(typed($event))" /></label>
+      <label v-for="attribute in product.attributes.filter((attribute) => attribute.values.length > 0)" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><select :value="calculator.chosenValue(attribute.id)" @change="calculator.chooseValue(attribute.id, typed($event))"><option value="">Как в товаре</option><option v-for="value in attribute.values.filter((value) => value.id !== null)" :key="value.id" :value="value.id">{{ value.name }}</option></select></label>
+      <label v-for="attribute in product.attributes.filter((attribute) => attribute.values.length === 0)" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><input :value="calculator.chosenQuantity(attribute.id)" :class="{ invalid: calculator.isInvalid(attribute.id) }" type="number" min="0" inputmode="decimal" @change="calculator.setQuantity(attribute.id, typed($event))" /></label>
     </div>
     <div class="calc-result" aria-live="polite">
-      <p v-if="isLoading" class="calc-note">Считаем стоимость…</p>
-      <template v-else-if="result"><template v-if="result.kind === 'priced'"><strong class="calc-total">{{ Number(result.total).toLocaleString('ru-RU') }} ₽</strong><ul v-if="result.deltas.length > 0" class="calc-additions"><li v-for="delta in result.deltas" :key="`${delta.attributeId}-${delta.valueId}`"><span>{{ deltaLabel(delta.attributeId, delta.valueId) }}</span><b>{{ formatAmount(delta.amount) }}</b></li></ul></template><p v-else class="calc-note">{{ result.message }}</p></template>
+      <p v-if="calculator.request.status === 'loading'" class="calc-note">Считаем стоимость…</p>
+      <p v-else-if="calculator.request.status === 'invalid'" class="calc-note">Проверьте выделенные поля: размер и количество должны быть числами.</p>
+      <p v-else-if="calculator.request.status === 'error'" class="calc-note">Не удалось рассчитать стоимость. Попробуйте ещё раз.</p>
+      <template v-else-if="price"><template v-if="price.kind === 'priced'"><strong class="calc-total">{{ Number(price.total).toLocaleString('ru-RU') }} ₽</strong><ul v-if="price.deltas.length > 0" class="calc-additions"><li v-for="delta in price.deltas" :key="`${delta.attributeId}-${delta.valueId}`"><span>{{ deltaLabel(delta.attributeId, delta.valueId) }}</span><b>{{ formatAmount(delta.amount) }}</b></li></ul></template><p v-else class="calc-note">{{ price.message }}</p></template>
       <p v-else class="calc-note">Измените размер или материалы, чтобы увидеть стоимость.</p>
     </div>
     <div v-if="canShowInquiryEditor" class="inquiry-item-editor">
-      <label v-if="result?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
+      <label v-if="price?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
       <button class="btn btn-primary inquiry-add" :disabled="!canAddToInquiry" type="button" @click="addToInquiry">Добавить в заявку</button>
     </div>
     <section v-if="items.length > 0 || submitMessage !== null" class="inquiry-panel" aria-live="polite">
