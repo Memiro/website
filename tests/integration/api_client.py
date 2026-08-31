@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
+from memiro.application.submit_inquiry import CreatedInquiry, SubmitInquiryForm
 from memiro.presentation.fast_api.error_handlers import ErrorResponse
 from memiro.presentation.fast_api.routers.health import HealthStatus
 
@@ -72,3 +73,8 @@ class ApiClient:
         """Price one configuration of a product."""
         response = await self._client.post("/calculate", json=data.model_dump(mode="json"))
         return ApiResponse(response, CalculatedPrice)
+
+    async def submit_inquiry(self, data: SubmitInquiryForm) -> ApiResponse[CreatedInquiry]:
+        """Submit one visitor inquiry."""
+        response = await self._client.post("/inquiries", json=data.model_dump(mode="json"))
+        return ApiResponse(response, CreatedInquiry)

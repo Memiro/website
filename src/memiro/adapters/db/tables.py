@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Column,
+    DateTime,
     Enum,
     ForeignKey,
     Integer,
@@ -22,12 +23,21 @@ from sqlalchemy import (
 from sqlalchemy.orm import composite, relationship
 
 from memiro.adapters.db.registry import mapper_registry
-from memiro.adapters.db.types import AreaType, AttributeIdsType, MillimetersType, MoneyType, VariantOverridesType
+from memiro.adapters.db.types import (
+    AreaType,
+    AttributeIdsType,
+    InquiryConfigurationType,
+    MillimetersType,
+    MoneyType,
+    VariantOverridesType,
+)
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product, Variant
 from memiro.entities.common.measure import Dimensions
+from memiro.entities.inquiry.entity import Inquiry, InquiryItem, InquirySource
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
+from memiro.entities.pricing.quotation import PricingVerdict
 
 NAME_LENGTH = 255
 
@@ -134,6 +144,38 @@ size_surcharges_table = Table(
     CheckConstraint("factor > 1", name="ck_size_surcharges_factor_above_one"),
 )
 
+inquiries_table = Table(
+    "inquiries",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("source", Enum(InquirySource, name="inquiry_source", native_enum=False, length=NAME_LENGTH), nullable=False),
+    Column("name", String(NAME_LENGTH), nullable=False),
+    Column("phone", String(NAME_LENGTH), nullable=False),
+    Column("email", String(NAME_LENGTH), nullable=True),
+    Column("comment", String(2_000), nullable=False),
+    Column("consent", Boolean(), nullable=False),
+    Column("consent_version", String(NAME_LENGTH), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+)
+
+inquiry_items_table = Table(
+    "inquiry_items",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("inquiry_id", Uuid(), ForeignKey("inquiries.id", ondelete="CASCADE"), nullable=False),
+    Column("product_id", Uuid(), ForeignKey("products.id"), nullable=False),
+    Column("product_name", String(NAME_LENGTH), nullable=False),
+    Column("price_from", MoneyType(), nullable=True),
+    Column("configuration", InquiryConfigurationType(), nullable=True),
+    Column("calculated_price", MoneyType(), nullable=True),
+    Column(
+        "verdict",
+        Enum(PricingVerdict, name="pricing_verdict", native_enum=False, length=NAME_LENGTH),
+        nullable=False,
+    ),
+    Column("wish", String(1_000), nullable=False),
+)
+
 mapper_registry.map_imperatively(
     AttributeValue,
     attribute_values_table,
@@ -142,6 +184,27 @@ mapper_registry.map_imperatively(
         # already deserializes into ``Money``, so the composite assembles the
         # ``Rate`` straight from mapped domain types.
         "rate": composite(Rate, attribute_values_table.c.rate_amount, attribute_values_table.c.rate_unit),
+    },
+)
+
+mapper_registry.map_imperatively(
+    InquiryItem,
+    inquiry_items_table,
+    properties={
+        "configuration": inquiry_items_table.c.configuration,
+    },
+)
+
+mapper_registry.map_imperatively(
+    Inquiry,
+    inquiries_table,
+    properties={
+        "_items": relationship(
+            InquiryItem,
+            cascade="all, delete-orphan",
+            lazy="raise_on_sql",
+            order_by=inquiry_items_table.c.id,
+        ),
     },
 )
 

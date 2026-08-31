@@ -14,6 +14,7 @@ from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.di.container import get_async_container
 from memiro.presentation.fast_api.error_handlers import setup_error_handlers
 from memiro.presentation.fast_api.routers.health import router as health_router
+from memiro.presentation.fast_api.routers.inquiries import router as inquiries_router
 from memiro.presentation.fast_api.routers.pricing import router as pricing_router
 from memiro_common.observability.logs import setup_logging
 from memiro_common.observability.tracing import setup_tracing
@@ -40,6 +41,7 @@ def create_app(config: Config) -> FastAPI:
     container = get_async_container(config)
     setup_dishka(container, app)
     app.include_router(health_router)
+    app.include_router(inquiries_router)
     app.include_router(pricing_router)
     setup_error_handlers(app)
     return app
