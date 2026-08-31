@@ -1,4 +1,4 @@
-import type { CalculatedPrice, CalculateRequest, ProductCard, ProductVariant } from "./catalog-api";
+import type { CalculatedPrice, CalculateRequest, ProductCard } from "./catalog-api";
 
 export interface CalculatorSelection {
   attributeId: string;
@@ -129,12 +129,15 @@ export class Calculator {
     this.generation = 0;
   }
 
+  /** The ready size the current configuration stands on, or null for a size the customer typed. */
   public get variantIndex(): number | null {
     const configuration = this.configuration();
     if (configuration === null) {
       return null;
     }
-    const index = this.product.variants.findIndex((variant) => variantMatches(variant, configuration));
+    const index = this.product.variants.findIndex(
+      (variant) => variant.width_mm === configuration.widthMm && variant.height_mm === configuration.heightMm,
+    );
     return index === -1 ? null : index;
   }
 
@@ -151,6 +154,9 @@ export class Calculator {
   }
 
   public async chooseVariant(index: number): Promise<void> {
+    if (this.product.variants[index] === undefined) {
+      return;
+    }
     const state = calculatorStateForVariant(this.product, index);
     this.widthText = String(state.widthMm);
     this.heightText = String(state.heightMm);
@@ -242,15 +248,6 @@ function withSelection(
 ): CalculatorSelection[] {
   const kept = selections.filter((current) => current.attributeId !== attributeId);
   return selection === null ? kept : [...kept, selection];
-}
-
-function variantMatches(variant: ProductVariant, state: CalculatorState): boolean {
-  return variant.width_mm === state.widthMm
-    && variant.height_mm === state.heightMm
-    && variant.overrides.length === state.selections.length
-    && variant.overrides.every((override) => state.selections.some((selection) => selection.attributeId === override.attribute_id
-      && selection.valueId === override.value_id
-      && selection.quantity === override.quantity));
 }
 
 function isSize(text: string): boolean {
