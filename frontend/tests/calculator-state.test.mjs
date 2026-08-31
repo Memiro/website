@@ -182,6 +182,25 @@ test("the variant select names the variant the configuration actually matches", 
   assert.equal(calculator.variantIndex, 1);
 });
 
+test("choosing another material leaves the ready size the customer picked", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+
+  await calculator.chooseValue("frame", "white");
+
+  assert.equal(calculator.variantIndex, 0);
+});
+
+test("a variant the product does not have leaves the configuration untouched", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+
+  await calculator.chooseVariant(7);
+
+  assert.equal(calculator.widthText, "800");
+  assert.deepEqual(pricing.requests, []);
+});
+
 test("a size the customer typed himself matches no variant", async () => {
   const pricing = recordingPricing();
   const calculator = new Calculator(MIRROR, pricing.calculate);
