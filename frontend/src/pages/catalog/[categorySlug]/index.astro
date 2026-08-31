@@ -1,0 +1,23 @@
+---
+import CatalogCard from "../../../components/CatalogCard.astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { ApiResponseError, CatalogApi, type ProductSummary } from "../../../lib/catalog-api";
+
+const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
+let products: ProductSummary[] = [];
+let categoryWasNotFound = false;
+try {
+  products = await api.categoryProducts(Astro.params.categorySlug ?? "");
+} catch (error) {
+  if (!(error instanceof ApiResponseError) || error.status !== 404) {
+    throw error;
+  }
+  Astro.response.status = 404;
+  categoryWasNotFound = true;
+}
+const categorySlug = Astro.params.categorySlug ?? "";
+---
+
+<BaseLayout title="Каталог зеркал — Memiro">
+  {categoryWasNotFound ? <main class="wrap section"><h1 class="h-section">Категория не найдена</h1></main> : <main class="wrap section"><div class="cat-head"><h1 class="h-section">Каталог зеркал</h1><span class="count">{products.length} товаров</span></div><div class="grid-3">{products.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></main>}
+</BaseLayout>

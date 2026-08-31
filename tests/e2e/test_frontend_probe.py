@@ -16,6 +16,15 @@ async def test_nginx_serves_the_server_rendered_storefront() -> None:
     assert "Мастерская зеркал Memiro" in response.text
 
 
+async def test_nginx_serves_the_server_rendered_catalogue() -> None:
+    """The public contour serves the catalogue as SSR HTML through nginx."""
+    async with httpx.AsyncClient(base_url=PUBLIC_URL) as client:
+        response = await client.get("/catalog/")
+
+    assert response.status_code == OK_STATUS
+    assert "Каталог зеркал" in response.text
+
+
 async def test_nginx_keeps_the_api_under_its_public_prefix() -> None:
     """The public contour keeps the API liveness endpoint under /api/."""
     async with httpx.AsyncClient(base_url=PUBLIC_URL) as client:

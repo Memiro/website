@@ -141,6 +141,7 @@ class SACatalogReadGateway(CatalogReadGateway):
             )
         ).all()
         return ProductModel(
+            id=row["id"],
             name=row["name"],
             slug=row["slug"],
             description=row["description"],

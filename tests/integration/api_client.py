@@ -78,6 +78,10 @@ class ApiClient:
         """List public catalogue categories."""
         return await self._client.get("/catalog/categories")
 
+    async def read_product(self, slug: str) -> httpx.Response:
+        """Read one public product card by its slug."""
+        return await self._client.get(f"/catalog/products/{slug}")
+
     async def submit_inquiry(self, data: SubmitInquiryForm) -> ApiResponse[CreatedInquiry]:
         """Submit one visitor inquiry."""
         response = await self._client.post("/inquiries", json=data.model_dump(mode="json"))

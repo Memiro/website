@@ -5,6 +5,7 @@ import test from "node:test";
 import { CatalogApi } from "../src/lib/catalog-api.ts";
 
 const product = {
+  id: "0a3e0fc0-793d-498f-b1cc-02111ea385d2",
   name: "Лира",
   slug: "lira",
   price_from: "18900",

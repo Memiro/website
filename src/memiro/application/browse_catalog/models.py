@@ -23,6 +23,7 @@ class ProductSummary(BaseModel):
 class ProductModel(ProductSummary):
     """The full public product card projection."""
 
+    id: UUID
     description: str
     attributes: list["ProductAttribute"]
     variants: list["ProductVariant"]

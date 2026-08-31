@@ -38,6 +38,7 @@ export interface ProductVariant {
 }
 
 export interface ProductCard extends ProductSummary {
+  id: string;
   description: string;
   attributes: ProductAttribute[];
   variants: ProductVariant[];

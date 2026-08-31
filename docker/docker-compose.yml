@@ -55,6 +55,8 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+    environment:
+      API_INTERNAL_URL: http://api:8000
     healthcheck:
       test:
         ["CMD", "node", "-e", "fetch('http://localhost:4321').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"]
