@@ -73,3 +73,31 @@ def test_a_product_requires_an_explicit_publication_state() -> None:
 
     with pytest.raises(TypeError):
         constructor(id=uuid4(), category_id=CATEGORY, name="Mirror", slug="mirror")
+
+
+def test_a_product_hands_out_declarations_a_caller_cannot_edit_it_through() -> None:
+    """An edit made beside the command method never reaches the aggregate."""
+    product = demo_product()
+    handed_out = list(product.declared_values)
+
+    handed_out.append(DeclaredValue(attribute_id=HEATING, configured=ConfiguredValue(value_id=None, quantity=None)))
+
+    assert product.declared(HEATING) is None
+
+
+def test_a_product_refuses_a_declaration_set_assigned_from_outside() -> None:
+    """The declared set is not an assignable field: the command method is the only way in."""
+    product = cast("Any", demo_product())
+
+    with pytest.raises(AttributeError):
+        product.declared_values = []
+
+
+def test_a_product_takes_a_new_declaration_set_through_its_command_method() -> None:
+    """Declaring replaces the whole set the owner had declared before."""
+    product = demo_product()
+    heating = DeclaredValue(attribute_id=HEATING, configured=ConfiguredValue(value_id=None, quantity=None))
+
+    product.declare_values([heating])
+
+    assert product.declared_values == (heating,)

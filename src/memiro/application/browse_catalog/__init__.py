@@ -1,3 +1,8 @@
+"""Use case: Browse the catalog.
+
+Actor: the customer (anonymous).
+"""
+
 from memiro.application.browse_catalog.list_categories import ListCategories
 from memiro.application.browse_catalog.list_category_products import ListCategoryProducts
 from memiro.application.browse_catalog.models import CategoryModel, ProductModel, ProductSummary

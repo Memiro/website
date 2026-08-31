@@ -6,7 +6,7 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 
-from memiro.application.common.gateway.catalog import ProductGateway
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant, RemoveVariant
 from memiro.entities.catalog.product.entity import Variant

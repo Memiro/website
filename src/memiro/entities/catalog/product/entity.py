@@ -187,8 +187,8 @@ class Product(Entity):
     name: str
     slug: str
     is_published: bool
-    declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue])
     hides_calculated_price: bool = False
+    _declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue], repr=False)
     _price_from: Money | None = field(init=False, default=None, repr=False)
     _variants: list[Variant] = field(default_factory=list[Variant], repr=False)
 
@@ -196,6 +196,15 @@ class Product(Entity):
     def price_from(self) -> Money | None:
         """Return the minimum child price derived by aggregate commands."""
         return self._price_from
+
+    @property
+    def declared_values(self) -> tuple[DeclaredValue, ...]:
+        """Return what the owner declared without exposing the mutable collection."""
+        return tuple(self._declared_values)
+
+    def declare_values(self, values: Iterable[DeclaredValue]) -> None:
+        """Replace what the owner declared for this product on the attributes of its category."""
+        self._declared_values = list(values)
 
     @property
     def variants(self) -> tuple[Variant, ...]:

@@ -7,9 +7,9 @@ from memiro.application.calculate_price.calculate_price import (
     CalculatedPrice,
     CalculatePrice,
     CalculatePriceForm,
-    Selection,
     SelectionDelta,
 )
+from memiro.application.common.customer_selection import Selection
 
 __all__ = [
     "CalculatePrice",

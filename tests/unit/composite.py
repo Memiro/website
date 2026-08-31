@@ -27,6 +27,7 @@ from tests.common.factory.catalog import (
     demo_product,
     demo_product_with_value,
     demo_settings,
+    product_declaring,
 )
 
 
@@ -114,11 +115,9 @@ def customer_gate_cases(
     if verdict is PricingVerdict.HIDDEN:
         product = replace(product, hides_calculated_price=True)
     elif verdict is PricingVerdict.NOT_PRICEABLE:
-        product = replace(
+        product = product_declaring(
             product,
-            declared_values=[
-                declaration for declaration in product.declared_values if declaration.attribute_id != MOUNT
-            ],
+            [declaration for declaration in product.declared_values if declaration.attribute_id != MOUNT],
         )
     elif verdict is PricingVerdict.BEYOND_LIMITS:
         pricing_settings = replace(
@@ -145,7 +144,7 @@ def complete_products(draw: st.DrawFn) -> Product:
                 ),
             )
         )
-        return replace(product, declared_values=declarations)
+        return product_declaring(product, declarations)
     return product
 
 
@@ -157,10 +156,10 @@ def incomplete_products(draw: st.DrawFn) -> Product:
     if missing_attribute == HEATING:
         declarations = demo_product_with_value(BACKLIGHT, CONTOUR).declared_values
     else:
-        declarations = [
+        declarations = tuple(
             declaration for declaration in product.declared_values if declaration.attribute_id != missing_attribute
-        ]
-    return replace(product, declared_values=declarations)
+        )
+    return product_declaring(product, declarations)
 
 
 @st.composite

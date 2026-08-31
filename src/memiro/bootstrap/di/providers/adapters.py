@@ -16,10 +16,11 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from memiro.adapters.db.config import DbConfig
-from memiro.adapters.db.gateways.catalog import SAAttributeGateway, SAProductGateway
+from memiro.adapters.db.gateways.attribute import SAAttributeGateway
 from memiro.adapters.db.gateways.catalog_read import SACatalogReadGateway
 from memiro.adapters.db.gateways.inquiry import SAInquiryGateway
 from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
+from memiro.adapters.db.gateways.product import SAProductGateway
 from memiro.adapters.smtp.composite import CompositeInquiryNotificationBus
 from memiro.adapters.smtp.config import EmailConfig
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus
