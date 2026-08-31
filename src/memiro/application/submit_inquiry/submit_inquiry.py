@@ -20,6 +20,7 @@ from memiro.application.common.input_limits import (
     MIN_PHONE_LENGTH,
     MIN_SIDE_MM,
 )
+from memiro.application.common.notification import InquiryNotificationBus
 from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.catalog.attribute.entity import Attribute
@@ -92,6 +93,7 @@ class SubmitInquiry:
     product_gateway: ProductGateway
     pricing_settings_gateway: PricingSettingsGateway
     attribute_gateway: AttributeGateway
+    event_bus: InquiryNotificationBus
     clock: Clock
 
     async def execute(self, data: SubmitInquiryForm) -> CreatedInquiry:
@@ -114,6 +116,7 @@ class SubmitInquiry:
         )
         self.uow.add(inquiry)
         await self.uow.commit()
+        await self.event_bus.notify(inquiry.id)
         logger.info("Inquiry submitted", inquiry_id=inquiry.id, item_count=len(inquiry.items))
         return CreatedInquiry(id=inquiry.id)
 

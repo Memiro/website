@@ -10,3 +10,15 @@ database = "memiro"
 
 [observability]
 enabled = false
+
+[email]
+# Delivery is off locally until the owner supplies the manager address and an
+# app password at deployment time. The Yandex sender mailbox is already known.
+enabled = false
+host = "smtp.yandex.ru"
+port = 465
+username = "memiro.ru@yandex.ru"
+password = ""
+from_address = "memiro.ru@yandex.ru"
+manager_address = ""
+timeout_seconds = 10.0

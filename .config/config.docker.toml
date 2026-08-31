@@ -9,3 +9,14 @@ database = "memiro"
 
 [observability]
 enabled = false
+
+[email]
+# The deployment owner fills the manager address and app password outside git.
+enabled = false
+host = "smtp.yandex.ru"
+port = 465
+username = "memiro.ru@yandex.ru"
+password = ""
+from_address = "memiro.ru@yandex.ru"
+manager_address = ""
+timeout_seconds = 10.0
