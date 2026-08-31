@@ -341,7 +341,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 /* ---------- Footer ---------- */
 .footer { margin-top: 112px; background: var(--bg); color: var(--secondary); border-top: 1px solid var(--line); }
 /* Horizontal padding comes from .wrap; only vertical padding belongs here. */
-.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; padding-top: 80px; padding-bottom: 40px; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 48px; padding-top: 80px; padding-bottom: 40px; }
 .footer .wordmark { font-size: 34px; color: var(--text); font-weight: 700; }
 .footer-about { font-size: 15px; line-height: 1.6; margin-top: 18px; max-width: 260px; }
 .footer h4 { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }

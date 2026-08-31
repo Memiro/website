@@ -6,13 +6,16 @@ const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000"
 const categories = (await api.categories()).items;
 ---
 
-<BaseLayout title="Каталог зеркал — Memiro">
+<BaseLayout
+  title="Каталог зеркал — Memiro"
+  description="Каталог интерьерных зеркал мастерской Memiro: категории зеркал с ценой от минимальной конфигурации."
+>
   <div class="wrap">
     <div class="cat-head"><h1>Каталог зеркал</h1></div>
   </div>
-  <main class="wrap section" style="padding-top: 40px;">
+  <div class="wrap section" style="padding-top: 40px;">
     <div class="tiles-grid">
       {categories.map((category, index) => <a class="tile" href={`/catalog/${category.slug}/`}><img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" /><span class="veil"></span><span class="label">{category.name}</span></a>)}
     </div>
-  </main>
+  </div>
 </BaseLayout>
