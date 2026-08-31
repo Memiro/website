@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from collections.abc import Sequence
 from typing import Protocol
 
 from memiro.application.browse_catalog.models import CategoryModel, ProductModel, ProductSummary
@@ -9,13 +8,18 @@ class CatalogReadGateway(Protocol):
     """Read storage port for public catalogue projections."""
 
     @abstractmethod
-    async def list_categories(self) -> Sequence[CategoryModel]:
-        """List categories that have public products."""
+    async def list_categories(self) -> tuple[list[CategoryModel], int]:
+        """List categories that have public products, with the total that match."""
         raise NotImplementedError
 
     @abstractmethod
-    async def list_products(self, slug: str) -> tuple[bool, Sequence[ProductSummary]]:
-        """List public products for a category slug."""
+    async def read_category(self, slug: str) -> CategoryModel | None:
+        """Read a category by its slug, published products or not."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_products_by_category(self, category_slug: str) -> tuple[list[ProductSummary], int]:
+        """List public products of a category slug, with the total that match."""
         raise NotImplementedError
 
     @abstractmethod

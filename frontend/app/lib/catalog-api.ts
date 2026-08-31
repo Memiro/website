@@ -1,5 +1,11 @@
 export type PricingVerdict = "PRICED" | "BEYOND_LIMITS" | "NOT_PRICEABLE" | "HIDDEN";
 
+export interface ListEnvelope<Item> {
+  items: Item[];
+  total: number;
+  page: number;
+}
+
 export interface Category {
   name: string;
   slug: string;
@@ -86,12 +92,12 @@ export class CatalogApi {
     this.baseUrl = baseUrl;
   }
 
-  public async categories(): Promise<Category[]> {
-    return this.get<Category[]>("/catalog/categories");
+  public async categories(): Promise<ListEnvelope<Category>> {
+    return this.get<ListEnvelope<Category>>("/catalog/categories");
   }
 
-  public async categoryProducts(slug: string): Promise<ProductSummary[]> {
-    return this.get<ProductSummary[]>(`/catalog/categories/${encodeURIComponent(slug)}/products`);
+  public async categoryProducts(slug: string): Promise<ListEnvelope<ProductSummary>> {
+    return this.get<ListEnvelope<ProductSummary>>(`/catalog/categories/${encodeURIComponent(slug)}/products`);
   }
 
   public async product(slug: string): Promise<ProductCard> {

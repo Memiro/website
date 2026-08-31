@@ -5,7 +5,7 @@ import httpx
 from fastapi import FastAPI
 from pydantic import TypeAdapter
 
-from memiro.application.browse_catalog import CategoryModel, ProductModel
+from memiro.application.browse_catalog import CategoriesList, ProductModel, ProductsList
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
 from memiro.application.submit_inquiry import CreatedInquiry, SubmitInquiryForm
 from memiro.presentation.fast_api.error_handlers import ErrorResponse
@@ -75,9 +75,14 @@ class ApiClient:
         response = await self._client.post("/calculate", json=data.model_dump(mode="json"))
         return ApiResponse(response, TypeAdapter(CalculatedPrice))
 
-    async def list_categories(self) -> ApiResponse[list[CategoryModel]]:
+    async def list_categories(self) -> ApiResponse[CategoriesList]:
         """List public catalogue categories."""
-        return ApiResponse(await self._client.get("/catalog/categories"), TypeAdapter(list[CategoryModel]))
+        return ApiResponse(await self._client.get("/catalog/categories"), TypeAdapter(CategoriesList))
+
+    async def list_category_products(self, slug: str) -> ApiResponse[ProductsList]:
+        """List the public products of one category."""
+        response = await self._client.get(f"/catalog/categories/{slug}/products")
+        return ApiResponse(response, TypeAdapter(ProductsList))
 
     async def read_product(self, slug: str) -> ApiResponse[ProductModel]:
         """Read one public product card by its slug."""

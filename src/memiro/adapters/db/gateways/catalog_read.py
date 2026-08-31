@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import override
 from uuid import UUID
 
@@ -34,7 +33,8 @@ class SACatalogReadGateway(CatalogReadGateway):
         self._session = session
 
     @override
-    async def list_categories(self) -> Sequence[CategoryModel]:
+    async def list_categories(self) -> tuple[list[CategoryModel], int]:
+        """Read the categories a published product hangs on, in the owner order."""
         published = exists(
             select(products_table.c.id).where(
                 (products_table.c.category_id == categories_table.c.id) & products_table.c.is_published
@@ -44,23 +44,31 @@ class SACatalogReadGateway(CatalogReadGateway):
             await self._session.execute(
                 select(categories_table.c.name, categories_table.c.slug)
                 .where(published)
-                .order_by(categories_table.c.sort_order)
+                .order_by(categories_table.c.sort_order, categories_table.c.id)
             )
         ).all()
-        return [CategoryModel(name=row.name, slug=row.slug) for row in rows]
+        categories = [CategoryModel(name=row.name, slug=row.slug) for row in rows]
+        return categories, len(categories)
 
     @override
-    async def list_products(self, slug: str) -> tuple[bool, Sequence[ProductSummary]]:
-        found = (
-            await self._session.execute(select(categories_table.c.id).where(categories_table.c.slug == slug))
-        ).scalar_one_or_none()
-        if found is None:
-            return False, []
+    async def read_category(self, slug: str) -> CategoryModel | None:
+        """Resolve one category slug, whatever it holds."""
+        row = (
+            await self._session.execute(
+                select(categories_table.c.name, categories_table.c.slug).where(categories_table.c.slug == slug)
+            )
+        ).one_or_none()
+        return CategoryModel(name=row.name, slug=row.slug) if row is not None else None
+
+    @override
+    async def list_products_by_category(self, category_slug: str) -> tuple[list[ProductSummary], int]:
+        """Read the published products of a category, each with its ordered image keys."""
         rows = (
             await self._session.execute(
                 select(products_table.c.id, products_table.c.name, products_table.c.slug, products_table.c.price_from)
-                .where((products_table.c.category_id == found) & products_table.c.is_published)
-                .order_by(products_table.c.name)
+                .join(categories_table, products_table.c.category_id == categories_table.c.id)
+                .where((categories_table.c.slug == category_slug) & products_table.c.is_published)
+                .order_by(products_table.c.name, products_table.c.id)
             )
         ).all()
         products: list[ProductSummary] = []
@@ -84,10 +92,11 @@ class SACatalogReadGateway(CatalogReadGateway):
                     image_keys=list(keys),
                 )
             )
-        return True, products
+        return products, len(products)
 
     @override
     async def read_product(self, slug: str) -> ProductModel | None:
+        """Read the published product row, then its images, variants and declared values."""
         row = (
             (
                 await self._session.execute(

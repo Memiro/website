@@ -1,6 +1,4 @@
-from collections.abc import Sequence
-
-from memiro.application.browse_catalog.models import ProductSummary
+from memiro.application.browse_catalog.models import FIRST_PAGE, ProductsList
 from memiro.application.common.gateway.catalog_read import CatalogReadGateway
 from memiro.application.errors.catalog import CategoryNotFoundError
 from memiro_common.interactor import interactor
@@ -12,9 +10,9 @@ class ListCategoryProducts:
 
     catalog_read_gateway: CatalogReadGateway
 
-    async def execute(self, slug: str) -> Sequence[ProductSummary]:
+    async def execute(self, slug: str) -> ProductsList:
         """Return public products of the category."""
-        found, products = await self.catalog_read_gateway.list_products(slug)
-        if not found:
+        if await self.catalog_read_gateway.read_category(slug) is None:
             raise CategoryNotFoundError
-        return products
+        products, total = await self.catalog_read_gateway.list_products_by_category(slug)
+        return ProductsList(items=products, total=total, page=FIRST_PAGE)

@@ -1,7 +1,12 @@
 from decimal import Decimal
+from typing import Final
 from uuid import UUID
 
 from pydantic import BaseModel
+
+# The storefront asks for whole catalogue lists; the envelope still names the
+# page it answers with, so pagination can arrive without a contract change.
+FIRST_PAGE: Final = 1
 
 
 class CategoryModel(BaseModel):
@@ -11,6 +16,14 @@ class CategoryModel(BaseModel):
     slug: str
 
 
+class CategoriesList(BaseModel):
+    """One page of storefront categories."""
+
+    items: list[CategoryModel]
+    total: int
+    page: int
+
+
 class ProductSummary(BaseModel):
     """The compact product projection used in a category listing."""
 
@@ -18,6 +31,14 @@ class ProductSummary(BaseModel):
     slug: str
     price_from: Decimal | None
     image_keys: list[str]
+
+
+class ProductsList(BaseModel):
+    """One page of a category's public products."""
+
+    items: list[ProductSummary]
+    total: int
+    page: int
 
 
 class ProductModel(ProductSummary):

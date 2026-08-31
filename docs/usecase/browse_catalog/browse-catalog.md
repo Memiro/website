@@ -14,11 +14,13 @@
 
 | Операция | Вход | Выход |
 |---|---|---|
-| Список категорий | Нет | `CategoryModel[]`: название и slug |
-| Товары категории | `category_slug` | `CatalogProducts`: категория и `CatalogProductModel[]` |
+| Список категорий | Нет | `CategoriesList`: конверт `{items, total, page}` с `CategoryModel` — название и slug |
+| Товары категории | `category_slug` | `ProductsList`: конверт `{items, total, page}` с `ProductSummary` |
 | Карточка товара | `product_slug` | `ProductModel`: идентификатор товара, атрибуты, варианты, фото-ключи |
 
-`CatalogProductModel` несёт `name`, `slug`, `price_from` и `image_keys`.
+`ProductSummary` несёт `name`, `slug`, `price_from` и `image_keys`. Списки
+отдаются одним конвертом: `items` — страница, `total` — сколько всего подходит,
+`page` — номер страницы (пока всегда первая, витрина берёт список целиком).
 Карточка несёт UUID `id`, нужный только для следующего публичного вопроса о
 цене, а также `description`, объявленные значения атрибутов и варианты с
 размерами, переопределениями и заранее посчитанной ценой.

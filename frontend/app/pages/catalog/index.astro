@@ -3,7 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { CatalogApi } from "../../lib/catalog-api";
 
 const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
-const categories = await api.categories();
+const categories = (await api.categories()).items;
 ---
 
 <BaseLayout title="Каталог зеркал — Memiro">
