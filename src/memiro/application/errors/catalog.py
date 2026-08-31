@@ -4,6 +4,14 @@ from memiro_common.errors import AppError, app_error
 
 
 @app_error
+class CategoryNotFoundError(AppError):
+    """Raised when the requested category does not exist."""
+
+    code: ClassVar[str] = "CATEGORY_NOT_FOUND"
+    message: str = "Category not found"
+
+
+@app_error
 class ProductNotFoundError(AppError):
     """Raised when the requested product does not exist."""
 

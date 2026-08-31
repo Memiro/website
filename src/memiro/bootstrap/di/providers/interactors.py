@@ -1,5 +1,6 @@
 from dishka import Provider, Scope, provide_all
 
+from memiro.application.browse_catalog import ListCategories, ListCategoryProducts, ReadProduct
 from memiro.application.calculate_price import CalculatePrice
 from memiro.application.manage_products import (
     AddVariant,
@@ -17,6 +18,9 @@ class InteractorProvider(Provider):
 
     interactors = provide_all(
         AddVariant,
+        ListCategories,
+        ListCategoryProducts,
+        ReadProduct,
         CalculatePrice,
         ChangeVariant,
         DuplicateVariantWithSize,

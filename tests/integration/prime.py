@@ -5,6 +5,7 @@ settings yet — the admin brings them with its own slice — so the arrangement
 of a pricing test goes straight to the tables through named helpers.
 """
 
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from sqlalchemy import delete, insert, text, update
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from memiro.adapters.db.tables import (
     attribute_values_table,
     attributes_table,
+    categories_table,
     pricing_settings_table,
     product_declared_values_table,
     products_table,
@@ -44,6 +46,19 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
     attributes = demo_attributes()
     product = demo_product()
     async with engine.begin() as connection:
+        await connection.execute(
+            insert(categories_table),
+            [
+                {
+                    "id": product.category_id,
+                    "name": "Mirrors",
+                    "slug": "mirrors",
+                    "sort_order": 1,
+                    "created_at": datetime(2026, 1, 1, tzinfo=UTC),
+                    "updated_at": datetime(2026, 1, 1, tzinfo=UTC),
+                }
+            ],
+        )
         await connection.execute(
             insert(attributes_table),
             [
@@ -85,6 +100,7 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "category_id": product.category_id,
                     "name": product.name,
                     "slug": product.slug,
+                    "description": "A made-to-order mirror.",
                     "is_published": product.is_published,
                     "hides_calculated_price": product.hides_calculated_price,
                 },

@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import (
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.db.gateways.catalog import SAAttributeGateway, SAProductGateway
+from memiro.adapters.db.gateways.catalog_read import SACatalogReadGateway
 from memiro.adapters.db.gateways.inquiry import SAInquiryGateway
 from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro.adapters.smtp.composite import CompositeInquiryNotificationBus
@@ -34,6 +35,7 @@ class AdapterProvider(Provider):
 
     product_gateway = provide(WithParents[SAProductGateway], scope=Scope.REQUEST)
     attribute_gateway = provide(WithParents[SAAttributeGateway], scope=Scope.REQUEST)
+    catalog_read_gateway = provide(WithParents[SACatalogReadGateway], scope=Scope.REQUEST)
     inquiry_gateway = provide(WithParents[SAInquiryGateway], scope=Scope.REQUEST)
     pricing_settings_gateway = provide(WithParents[SAPricingSettingsGateway], scope=Scope.REQUEST)
     smtp_inquiry_notification_bus = provide(SMTPInquiryNotificationBus, scope=Scope.REQUEST)
