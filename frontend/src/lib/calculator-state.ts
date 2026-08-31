@@ -1,21 +1,4 @@
-export interface VariantOverride {
-  attribute_id: string;
-  value_id: string | null;
-  quantity: string | null;
-}
-
-export interface ProductVariant {
-  width_mm: number;
-  height_mm: number;
-  price: string;
-  overrides: VariantOverride[];
-}
-
-export interface ProductCard {
-  id: string;
-  attributes: unknown[];
-  variants: ProductVariant[];
-}
+import type { CalculatedPrice, ProductCard } from "./catalog-api";
 
 export interface CalculatorSelection {
   attributeId: string;
@@ -27,12 +10,6 @@ export interface CalculatorState {
   widthMm: number;
   heightMm: number;
   selections: CalculatorSelection[];
-}
-
-export interface CalculatedPrice {
-  verdict: "PRICED" | "BEYOND_LIMITS" | "NOT_PRICEABLE" | "HIDDEN";
-  total: string | null;
-  selection_deltas: unknown[];
 }
 
 export interface PricePresentation {
