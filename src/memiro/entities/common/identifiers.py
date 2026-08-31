@@ -8,3 +8,5 @@ type CategoryId = UUID
 type AttributeId = UUID
 type AttributeValueId = UUID
 type PricingSettingsId = UUID
+type InquiryId = UUID
+type InquiryItemId = UUID

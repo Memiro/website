@@ -22,7 +22,7 @@ from memiro_common.logger import Logger
 logger: Logger = structlog.get_logger(__name__)
 
 
-def _selections(
+def customer_selections(
     product: Product,
     attributes: Sequence[Attribute],
     # The models are declared below the helpers (§13.4), so the form's type
@@ -141,7 +141,7 @@ class CalculatePrice:
             raise PricingSettingsNotFoundError
 
         attributes = await self.attribute_gateway.list_with_values()
-        selections = _selections(product, attributes, data.selections)
+        selections = customer_selections(product, attributes, data.selections)
         dimensions = Dimensions(
             width=Millimeters(value=data.width_mm),
             height=Millimeters(value=data.height_mm),

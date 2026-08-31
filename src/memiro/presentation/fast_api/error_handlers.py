@@ -13,6 +13,12 @@ from memiro.application.errors.catalog import (
 )
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import InvalidFactorRateError
+from memiro.entities.errors.inquiry import (
+    ConsentRequiredError,
+    EmptyInquiryError,
+    InquirySourceNotAcceptedError,
+    InvalidInquiryContentsError,
+)
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro.entities.errors.product import (
@@ -41,6 +47,10 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     InvalidVariantConfigurationError: status.HTTP_400_BAD_REQUEST,
     InvalidVariantSortOrderError: status.HTTP_400_BAD_REQUEST,
     DuplicateVariantError: status.HTTP_409_CONFLICT,
+    ConsentRequiredError: status.HTTP_400_BAD_REQUEST,
+    EmptyInquiryError: status.HTTP_400_BAD_REQUEST,
+    InquirySourceNotAcceptedError: status.HTTP_400_BAD_REQUEST,
+    InvalidInquiryContentsError: status.HTTP_400_BAD_REQUEST,
 }
 
 logger: Logger = structlog.get_logger(__name__)

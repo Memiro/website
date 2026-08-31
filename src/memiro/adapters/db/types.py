@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import override
+from typing import TypedDict, override
 from uuid import UUID
 
 from sqlalchemy import Dialect, Integer, Numeric, Uuid
@@ -8,9 +8,10 @@ from sqlalchemy.types import TypeDecorator
 
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, VariantOverrides
 from memiro.entities.common.identifiers import AttributeId
-from memiro.entities.common.measure import Area, Millimeters
+from memiro.entities.common.measure import Area, Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import InvalidVariantConfigurationError
+from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfiguration
 
 # Money is stored to the kopeck; the area of a mirror to the fourth decimal —
 # a square millimetre. Both deserialize through the domain constructor, so a
@@ -18,6 +19,22 @@ from memiro.entities.errors.product import InvalidVariantConfigurationError
 _MONEY = Numeric(12, 2)
 _AREA = Numeric(10, 4)
 type VariantOverridePayload = dict[str, str | None]
+
+
+class InquiryConfigurationValuePayload(TypedDict):
+    """Serialized named customer selection in one inquiry snapshot."""
+
+    attribute_name: str
+    value_name: str | None
+    quantity: str | None
+
+
+class InquiryConfigurationPayload(TypedDict):
+    """Serialized immutable configuration stored in JSONB."""
+
+    width_mm: int
+    height_mm: int
+    values: list[InquiryConfigurationValuePayload]
 
 
 class MoneyType(TypeDecorator[Money]):
@@ -146,4 +163,63 @@ class VariantOverridesType(TypeDecorator[VariantOverrides]):
             ValueError,
         ) as error:
             message = "Stored product variant has corrupted variant overrides"
+            raise RuntimeError(message) from error
+
+
+class InquiryConfigurationType(TypeDecorator[InquiryConfiguration]):
+    """Column type storing an inquiry configuration as its self-contained JSONB snapshot."""
+
+    impl = JSONB
+    cache_ok = True
+
+    @override
+    def process_bind_param(
+        self,
+        value: InquiryConfiguration | None,
+        dialect: Dialect,
+    ) -> InquiryConfigurationPayload | None:
+        """Flatten the snapshot without retaining dictionary identifiers."""
+        if value is None:
+            return None
+        return {
+            "width_mm": value.dimensions.width.value,
+            "height_mm": value.dimensions.height.value,
+            "values": [
+                {
+                    "attribute_name": configured.attribute_name,
+                    "value_name": configured.value_name,
+                    "quantity": (
+                        format(configured.quantity.normalize(), "f") if configured.quantity is not None else None
+                    ),
+                }
+                for configured in value.values
+            ],
+        }
+
+    @override
+    def process_result_value(
+        self,
+        value: InquiryConfigurationPayload | None,
+        dialect: Dialect,
+    ) -> InquiryConfiguration | None:
+        """Rebuild snapshots through the domain constructors when rows are loaded."""
+        if value is None:
+            return None
+        try:
+            return InquiryConfiguration(
+                dimensions=Dimensions(
+                    width=Millimeters(value["width_mm"]),
+                    height=Millimeters(value["height_mm"]),
+                ),
+                values=tuple(
+                    ConfigurationValue(
+                        attribute_name=str(configured["attribute_name"]),
+                        value_name=configured["value_name"],
+                        quantity=Decimal(configured["quantity"]) if configured["quantity"] is not None else None,
+                    )
+                    for configured in value["values"]
+                ),
+            )
+        except (ArithmeticError, KeyError, TypeError, ValueError) as error:
+            message = "Stored inquiry has a corrupted configuration snapshot"
             raise RuntimeError(message) from error

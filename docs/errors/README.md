@@ -21,6 +21,10 @@
 | `INVALID_VARIANT_CONFIGURATION` | 400 | `InvalidVariantConfigurationError` | Конфигурация варианта не описывает полностью считаемый товар |
 | `INVALID_VARIANT_SORT_ORDER` | 400 | `InvalidVariantSortOrderError` | Порядок варианта отрицательный |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
+| `CONSENT_REQUIRED` | 400 | `ConsentRequiredError` | Посетитель не согласился на обработку ПД |
+| `EMPTY_INQUIRY` | 400 | `EmptyInquiryError` | Подборка не содержит позиции |
+| `INQUIRY_SOURCE_NOT_ACCEPTED` | 400 | `InquirySourceNotAcceptedError` | Новый запрос использовал исторический источник `PRODUCT_CARD` |
+| `INVALID_INQUIRY_CONTENTS` | 400 | `InvalidInquiryContentsError` | Поля заявки не соответствуют её источнику |
 | `INTERNAL_ERROR` | 500 | — | Дефект: незамапленная `AppError` или неожиданное исключение |
 
 Пятисотка тоже приходит этой формой: глобальных хендлера три — `AppError`,

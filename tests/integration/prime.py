@@ -17,6 +17,7 @@ from memiro.adapters.db.tables import (
     product_declared_values_table,
     products_table,
 )
+from memiro.entities.common.identifiers import AttributeValueId
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.common.money import Money
 from tests.common.factory.catalog import (
@@ -132,6 +133,14 @@ async def prime_product_publication(engine: AsyncEngine, *, is_published: bool) 
     async with engine.begin() as connection:
         await connection.execute(
             update(products_table).where(products_table.c.id == PRODUCT).values(is_published=is_published),
+        )
+
+
+async def update_attribute_value_rate_directly(engine: AsyncEngine, value_id: AttributeValueId, rate: Money) -> None:
+    """Change a tariff directly to prove a stored inquiry snapshot does not recalculate."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            update(attribute_values_table).where(attribute_values_table.c.id == value_id).values(rate_amount=rate),
         )
 
 
