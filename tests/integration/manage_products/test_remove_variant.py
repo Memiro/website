@@ -9,7 +9,9 @@ from fastapi import FastAPI
 from memiro.application.common.gateway.catalog import ProductGateway
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant, RemoveVariant
+from memiro.entities.catalog.product.entity import Variant
 from memiro.entities.common.identifiers import VariantId
+from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from tests.common.factory.catalog import PRODUCT
 
@@ -42,7 +44,7 @@ async def test_removing_the_cheapest_variant_raises_the_product_price(app: FastA
     """Removing the cheapest variant derives the price from the remaining child."""
     container: AsyncContainer = app.state.dishka_container
     cheapest = await _add(container, width_mm=800, height_mm=600)
-    await _add(container, width_mm=1200, height_mm=800)
+    remaining = await _add(container, width_mm=1200, height_mm=800)
     async with container() as request:
         interactor = await request.get(RemoveVariant)
 
@@ -53,7 +55,18 @@ async def test_removing_the_cheapest_variant_raises_the_product_price(app: FastA
     assert product is not None
 
     assert product.price_from == Money(amount=Decimal(13700))
-    assert len(product.variants) == 1
+    assert product.variants == (
+        Variant(
+            remaining.id,
+            dimensions=Dimensions(
+                width=Millimeters(value=1200),
+                height=Millimeters(value=800),
+            ),
+            overrides=(),
+            price=Money(amount=Decimal(13700)),
+            sort_order=0,
+        ),
+    )
 
 
 async def test_removing_the_last_variant_leaves_the_product_without_a_price(app: FastAPI) -> None:

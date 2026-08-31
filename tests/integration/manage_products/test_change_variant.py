@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.gateway.catalog import ProductGateway
-from memiro.application.common.input_limits import MAX_SIDE_MM
+from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import (
     AttributeValueNotFoundError,
     ProductNotFoundError,
@@ -31,11 +31,10 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
-from tests.common.factory.catalog import PRODUCT
+from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
 from tests.integration.prime import prime_incomplete_declaration, prime_no_pricing_settings
 
 pytestmark = pytest.mark.usefixtures("catalog")
-TWO_VARIANTS = 2
 
 
 async def _add_variant(container: AsyncContainer) -> Variant:
@@ -76,7 +75,7 @@ async def _add_at(
     return variant
 
 
-async def _change_to(container: AsyncContainer, variant: Variant) -> None:
+async def _change_to(container: AsyncContainer, variant: Variant) -> Variant:
     """Change one competitor to the shared target configuration."""
     async with container() as request:
         change = await request.get(ChangeVariant)
@@ -85,6 +84,7 @@ async def _change_to(container: AsyncContainer, variant: Variant) -> None:
             variant.id,
             ChangeVariantForm(width_mm=1600, height_mm=900, overrides=[], sort_order=0),
         )
+    return variant
 
 
 async def test_the_owner_changes_a_variant_and_its_derived_product_price(app: FastAPI) -> None:
@@ -135,11 +135,50 @@ async def test_concurrent_changes_preserve_variant_uniqueness(app: FastAPI) -> N
         product = await gateway.get(PRODUCT, eager_variants=True)
     assert product is not None
 
-    assert sorted(type(result).__name__ for result in results) == [
-        "DuplicateVariantError",
-        "NoneType",
-    ]
-    assert len(product.variants) == TWO_VARIANTS
+    duplicate_error, winner = sorted(results, key=lambda result: type(result).__name__)
+    assert isinstance(duplicate_error, DuplicateVariantError)
+    assert isinstance(winner, Variant)
+    first_target = Variant(
+        first.id,
+        dimensions=Dimensions(width=Millimeters(value=1600), height=Millimeters(value=900)),
+        overrides=(),
+        price=Money(amount=Decimal(18000)),
+        sort_order=0,
+    )
+    first_original = Variant(
+        first.id,
+        dimensions=Dimensions(width=Millimeters(value=800), height=Millimeters(value=600)),
+        overrides=(),
+        price=Money(amount=Decimal(8900)),
+        sort_order=0,
+    )
+    second_target = Variant(
+        second.id,
+        dimensions=Dimensions(width=Millimeters(value=1600), height=Millimeters(value=900)),
+        overrides=(),
+        price=Money(amount=Decimal(18000)),
+        sort_order=0,
+    )
+    second_original = Variant(
+        second.id,
+        dimensions=Dimensions(width=Millimeters(value=1200), height=Millimeters(value=800)),
+        overrides=(),
+        price=Money(amount=Decimal(13700)),
+        sort_order=0,
+    )
+    expected_product_states = {
+        first.id: (
+            Money(amount=Decimal(13700)),
+            ((first_target, second_original), (second_original, first_target)),
+        ),
+        second.id: (
+            Money(amount=Decimal(8900)),
+            ((first_original, second_target), (second_target, first_original)),
+        ),
+    }
+    expected_price_from, expected_variants = expected_product_states[winner.id]
+    assert product.price_from == expected_price_from
+    assert product.variants in expected_variants
 
 
 def test_changing_rejects_a_side_above_the_input_limit() -> None:
@@ -151,6 +190,54 @@ def test_changing_rejects_a_side_above_the_input_limit() -> None:
             overrides=[],
             sort_order=0,
         )
+
+
+def test_changing_rejects_a_side_below_the_input_limit() -> None:
+    """A side at MIN_SIDE_MM - 1 is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        ChangeVariantForm(
+            width_mm=MIN_SIDE_MM - 1,
+            height_mm=600,
+            overrides=[],
+            sort_order=0,
+        )
+
+
+def test_changing_rejects_more_than_the_selection_limit() -> None:
+    """Overrides at MAX_SELECTIONS + 1 are rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        ChangeVariantForm(
+            width_mm=800,
+            height_mm=600,
+            overrides=[VariantOverrideForm(attribute_id=uuid4(), value_id=uuid4()) for _ in range(MAX_SELECTIONS + 1)],
+            sort_order=0,
+        )
+
+
+def test_changing_rejects_two_overrides_of_one_attribute() -> None:
+    """Two overrides of one attribute are rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        ChangeVariantForm(
+            width_mm=800,
+            height_mm=600,
+            overrides=[
+                VariantOverrideForm(attribute_id=BLADE, value_id=GRAPHITE),
+                VariantOverrideForm(attribute_id=BLADE, value_id=GRAPHITE),
+            ],
+            sort_order=0,
+        )
+
+
+def test_changing_rejects_an_override_with_two_representations() -> None:
+    """An override with a value and quantity is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        VariantOverrideForm(attribute_id=BLADE, value_id=GRAPHITE, quantity=Decimal(1))
+
+
+def test_changing_rejects_an_override_without_a_representation() -> None:
+    """An override without a value or quantity is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        VariantOverrideForm(attribute_id=BLADE)
 
 
 async def test_changing_fails_if_pricing_settings_are_not_found(
