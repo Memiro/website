@@ -25,7 +25,7 @@ const name = ref("");
 const phone = ref("");
 const email = ref("");
 const consent = ref(false);
-const submitMessage = ref<string | null>(null);
+const submitResult = ref<{ text: string; isError: boolean } | null>(null);
 const isSubmitting = ref(false);
 
 const price = computed(() => (calculator.request.status === "done" ? calculator.request.price : null));
@@ -59,7 +59,7 @@ function addToInquiry(): void {
     inquiryItemFromCalculator(props.product, priced, kind, wish.value),
   );
   wish.value = "";
-  submitMessage.value = null;
+  submitResult.value = null;
 }
 
 function removeItem(index: number): void {
@@ -71,7 +71,7 @@ async function sendInquiry(): Promise<void> {
     return;
   }
   isSubmitting.value = true;
-  submitMessage.value = null;
+  submitResult.value = null;
   try {
     await submitInquiry(selectionInquiry(items.value, {
       name: name.value,
@@ -81,11 +81,14 @@ async function sendInquiry(): Promise<void> {
     }));
     items.value = [];
     saveInquiryItems(window.localStorage, items.value);
-    submitMessage.value = "Спасибо! Заявка отправлена, менеджер свяжется с вами.";
+    submitResult.value = { text: "Спасибо! Заявка отправлена, менеджер свяжется с вами.", isError: false };
   } catch (error) {
-    submitMessage.value = error instanceof SubmitInquiryError
-      ? inquiryErrorMessage(error)
-      : "Не удалось отправить заявку. Попробуйте ещё раз.";
+    submitResult.value = {
+      text: error instanceof SubmitInquiryError
+        ? inquiryErrorMessage(error)
+        : "Не удалось отправить заявку. Попробуйте ещё раз.",
+      isError: true,
+    };
   } finally {
     isSubmitting.value = false;
   }
@@ -118,7 +121,7 @@ onMounted(() => {
       <label v-if="price?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
       <button class="btn btn-primary inquiry-add" :disabled="!canAddToInquiry" type="button" @click="addToInquiry">Добавить в заявку</button>
     </div>
-    <section v-if="items.length > 0 || submitMessage !== null" class="inquiry-panel" aria-live="polite">
+    <section v-if="items.length > 0 || submitResult !== null" class="inquiry-panel" aria-live="polite">
       <template v-if="items.length > 0">
         <h2>Ваша заявка</h2>
         <p class="muted">Каждая конфигурация уйдёт менеджеру отдельным техническим заданием.</p>
@@ -132,11 +135,11 @@ onMounted(() => {
           <label class="field"><span>Ваше имя</span><input v-model="name" required autocomplete="name" /></label>
           <label class="field"><span>Телефон</span><input v-model="phone" required autocomplete="tel" inputmode="tel" /></label>
           <label class="field"><span>Email</span><input v-model="email" type="email" autocomplete="email" /></label>
-          <label class="consent"><input v-model="consent" type="checkbox" required /><span>Согласен на обработку персональных данных</span></label>
+          <label class="consent"><input v-model="consent" type="checkbox" required /><span>Согласен на <a href="/privacy/" target="_blank" rel="noopener">обработку персональных данных</a></span></label>
           <button class="btn btn-primary inquiry-submit" :disabled="isSubmitting" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }}</button>
         </form>
       </template>
-      <p v-if="submitMessage !== null" class="inquiry-note" :class="{ error: items.length > 0 }">{{ submitMessage }}</p>
+      <p v-if="submitResult !== null" class="inquiry-note" :class="{ error: submitResult.isError }">{{ submitResult.text }}</p>
     </section>
   </section>
 </template>

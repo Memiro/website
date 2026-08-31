@@ -1,0 +1,21 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+interface Props {
+  heading: string;
+  lead: string;
+  description: string;
+}
+
+const { heading, lead, description } = Astro.props;
+---
+
+<BaseLayout title={`${heading} — Memiro`} description={description}>
+  <div class="wrap page">
+    <h1 class="h-section">{heading}</h1>
+    <div class="page-lead"><p>{lead}</p></div>
+    <div class="error-actions">
+      <slot><a class="btn btn-primary" href="/catalog/">Вернуться в каталог</a></slot>
+    </div>
+  </div>
+</BaseLayout>

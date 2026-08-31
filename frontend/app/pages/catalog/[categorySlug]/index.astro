@@ -1,24 +1,39 @@
 ---
 import CatalogCard from "../../../components/CatalogCard.astro";
+import NotFound from "../../../components/NotFound.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import { ApiResponseError, CatalogApi, type ListEnvelope, type ProductSummary } from "../../../lib/catalog-api";
 
 const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
-let products: ListEnvelope<ProductSummary> = { items: [], total: 0, page: 1 };
-let categoryWasNotFound = false;
-try {
-  products = await api.categoryProducts(Astro.params.categorySlug ?? "");
-} catch (error) {
-  if (!(error instanceof ApiResponseError) || error.status !== 404) {
-    throw error;
-  }
-  Astro.response.status = 404;
-  categoryWasNotFound = true;
-}
 const categorySlug = Astro.params.categorySlug ?? "";
-const category = (await api.categories()).items.find((item) => item.slug === categorySlug);
+let products: ListEnvelope<ProductSummary> | null = null;
+if (categorySlug !== "") {
+  try {
+    products = await api.categoryProducts(categorySlug);
+  } catch (error) {
+    if (!(error instanceof ApiResponseError) || error.status !== 404) {
+      throw error;
+    }
+  }
+}
+if (products === null) {
+  Astro.response.status = 404;
+}
+const category = products === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
 ---
 
-<BaseLayout title="Каталог зеркал — Memiro">
-  {categoryWasNotFound ? <main class="wrap section"><h1 class="h-section">Категория не найдена</h1></main> : <><div class="cat-head wrap"><h1 class="h-section">{category?.name ?? "Каталог зеркал"}</h1><span class="count">{products.total} товаров</span></div><main class="wrap section"><div class="grid-3">{products.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></main></>}
-</BaseLayout>
+{products === null ? (
+  <NotFound
+    heading="Категория не найдена"
+    lead="Возможно, в адресе опечатка или категория больше не производится."
+    description="Такой категории зеркал нет в каталоге Memiro."
+  />
+) : (
+  <BaseLayout
+    title={`${category?.name ?? "Каталог зеркал"} — Memiro`}
+    description={`Зеркала мастерской Memiro в категории «${category?.name ?? "Каталог зеркал"}»: размеры, опции и цена от минимальной конфигурации.`}
+  >
+    <div class="cat-head wrap"><h1 class="h-section">{category?.name ?? "Каталог зеркал"}</h1><span class="count">{products.total} товаров</span></div>
+    <div class="wrap section"><div class="grid-3">{products.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></div>
+  </BaseLayout>
+)}

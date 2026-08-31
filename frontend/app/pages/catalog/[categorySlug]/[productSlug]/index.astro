@@ -1,17 +1,41 @@
 ---
+import NotFound from "../../../../components/NotFound.astro";
 import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
-import { CatalogApi } from "../../../../lib/catalog-api";
+import { ApiResponseError, CatalogApi, type ProductCard } from "../../../../lib/catalog-api";
 
 const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
-const product = await api.product(Astro.params.productSlug ?? "");
-const price = product.price_from === null ? null : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
+const productSlug = Astro.params.productSlug ?? "";
+let product: ProductCard | null = null;
+if (productSlug !== "") {
+  try {
+    product = await api.product(productSlug);
+  } catch (error) {
+    if (!(error instanceof ApiResponseError) || error.status !== 404) {
+      throw error;
+    }
+  }
+}
+if (product === null) {
+  Astro.response.status = 404;
+}
+const price = product === null || product.price_from === null
+  ? null
+  : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 const image = "/img/hero-1.jpg";
 ---
 
-<BaseLayout title={`${product.name} — Memiro`}>
-  <main class="pdp wrap">
-    <div class="gallery solo"><div class="main"><img src={image} alt={product.name} /></div></div>
-    <div class="info"><h1>{product.name}</h1><div class="desc"><p>{product.description}</p></div>{price !== null && <div class="price-row"><span class="price-now">от {price} ₽</span><span class="price-note">цена минимальной конфигурации</span></div>}<div class="variants"><h2>Типовые размеры</h2><table><tbody>{product.variants.map((variant) => <tr><th scope="row">{variant.width_mm} × {variant.height_mm} мм</th><td class="variant-price">{new Intl.NumberFormat("ru-RU").format(Number(variant.price))} ₽</td></tr>)}</tbody></table></div><Calculator client:visible product={product} /><p class="offer-note">Цена носит информационный характер. Окончательную стоимость подтвердит менеджер после согласования деталей заказа.</p><div class="promises"><div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div><div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div><div class="promise"><span class="n">03</span> Доставка и монтаж по Санкт-Петербургу и области</div></div></div>
-  </main>
-</BaseLayout>
+{product === null ? (
+  <NotFound
+    heading="Товар не найден"
+    lead="Возможно, в адресе опечатка или зеркало больше не производится."
+    description="Такого зеркала нет в каталоге Memiro."
+  />
+) : (
+  <BaseLayout title={`${product.name} — Memiro`} description={product.description}>
+    <div class="pdp wrap">
+      <div class="gallery solo"><div class="main"><img src={image} alt={product.name} /></div></div>
+      <div class="info"><h1>{product.name}</h1><div class="desc"><p>{product.description}</p></div>{price !== null && <div class="price-row"><span class="price-now">от {price} ₽</span><span class="price-note">цена минимальной конфигурации</span></div>}<div class="variants"><h2>Типовые размеры</h2><table><tbody>{product.variants.map((variant) => <tr><th scope="row">{variant.width_mm} × {variant.height_mm} мм</th><td class="variant-price">{new Intl.NumberFormat("ru-RU").format(Number(variant.price))} ₽</td></tr>)}</tbody></table></div><Calculator client:visible product={product} /><p class="offer-note">Цена носит информационный характер. Окончательную стоимость подтвердит менеджер после согласования деталей заказа.</p><div class="promises"><div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div><div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div><div class="promise"><span class="n">03</span> Доставка и монтаж по Санкт-Петербургу и области</div></div></div>
+    </div>
+  </BaseLayout>
+)}
