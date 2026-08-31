@@ -1,10 +1,10 @@
 ---
 import CatalogCard from "../../../components/CatalogCard.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { ApiResponseError, CatalogApi, type ProductSummary } from "../../../lib/catalog-api";
+import { ApiResponseError, CatalogApi, type ListEnvelope, type ProductSummary } from "../../../lib/catalog-api";
 
 const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
-let products: ProductSummary[] = [];
+let products: ListEnvelope<ProductSummary> = { items: [], total: 0, page: 1 };
 let categoryWasNotFound = false;
 try {
   products = await api.categoryProducts(Astro.params.categorySlug ?? "");
@@ -16,9 +16,9 @@ try {
   categoryWasNotFound = true;
 }
 const categorySlug = Astro.params.categorySlug ?? "";
-const category = (await api.categories()).find((item) => item.slug === categorySlug);
+const category = (await api.categories()).items.find((item) => item.slug === categorySlug);
 ---
 
 <BaseLayout title="Каталог зеркал — Memiro">
-  {categoryWasNotFound ? <main class="wrap section"><h1 class="h-section">Категория не найдена</h1></main> : <><div class="cat-head wrap"><h1 class="h-section">{category?.name ?? "Каталог зеркал"}</h1><span class="count">{products.length} товаров</span></div><main class="wrap section"><div class="grid-3">{products.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></main></>}
+  {categoryWasNotFound ? <main class="wrap section"><h1 class="h-section">Категория не найдена</h1></main> : <><div class="cat-head wrap"><h1 class="h-section">{category?.name ?? "Каталог зеркал"}</h1><span class="count">{products.total} товаров</span></div><main class="wrap section"><div class="grid-3">{products.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></main></>}
 </BaseLayout>
