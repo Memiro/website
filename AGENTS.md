@@ -65,7 +65,13 @@ descriptions and product-facing docs (`docs/`, ADRs) — Russian.
 - edit domain tables from Django migrations — alembic is the sole owner of
   domain tables; Django migrations own only the service tables (`auth_*`,
   `django_*`);
-- log PII or secrets.
+- log PII or secrets;
+- pad code with narrating comments or bloated docstrings — a `#` comment
+  states only a "why" the code cannot show (an external constraint, a
+  non-obvious decision), never what the next line does or why a change is
+  correct; a docstring is exactly one line (§13.1: imperative for functions,
+  a business formulation for classes — the contract on the port, the short
+  "how" on the implementation). Delete narration instead of committing it.
 
 **Ask the owner first:**
 
