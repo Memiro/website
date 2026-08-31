@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from memiro.application.errors.catalog import (
     AttributeValueNotFoundError,
+    CategoryNotFoundError,
     ProductNotFoundError,
     VariantNotFoundError,
 )
@@ -35,6 +36,7 @@ INTERNAL_ERROR_CODE = "INTERNAL_ERROR"
 # The flat table keyed by exact type: a miss is a code defect, not a 500 by
 # design, and it is logged as one. Its human mirror is docs/errors/.
 ERROR_STATUSES: dict[type[AppError], int] = {
+    CategoryNotFoundError: status.HTTP_404_NOT_FOUND,
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
     VariantNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,

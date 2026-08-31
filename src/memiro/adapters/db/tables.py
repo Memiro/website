@@ -84,9 +84,28 @@ products_table = Table(
     Column("category_id", Uuid(), nullable=False),
     Column("name", String(NAME_LENGTH), nullable=False),
     Column("slug", String(NAME_LENGTH), nullable=False, unique=True),
+    Column("description", String(2_000), nullable=False),
     Column("is_published", Boolean(), nullable=False),
     Column("hides_calculated_price", Boolean(), nullable=False),
     Column("price_from", MoneyType(), nullable=True),
+)
+
+categories_table = Table(
+    "categories",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("name", String(NAME_LENGTH), nullable=False),
+    Column("slug", String(NAME_LENGTH), nullable=False, unique=True),
+    Column("sort_order", Integer(), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+product_images_table = Table(
+    "product_images",
+    mapper_registry.metadata,
+    Column("product_id", Uuid(), ForeignKey("products.id", ondelete="CASCADE"), primary_key=True),
+    Column("key", String(NAME_LENGTH), primary_key=True),
+    Column("sort_order", Integer(), nullable=False),
 )
 
 product_declared_values_table = Table(

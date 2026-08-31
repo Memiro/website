@@ -9,6 +9,7 @@
 | Код | HTTP | Класс | Когда |
 |---|---|---|---|
 | `VALIDATION_ERROR` | 422 | — (FastAPI) | Тело или параметры запроса не прошли границы формы |
+| `CATEGORY_NOT_FOUND` | 404 | `CategoryNotFoundError` | Категории с названным slug нет |
 | `PRODUCT_NOT_FOUND` | 404 | `ProductNotFoundError` | Товара с названным идентификатором нет |
 | `VARIANT_NOT_FOUND` | 404 | `VariantNotFoundError` | Вариант не принадлежит названному товару |
 | `ATTRIBUTE_VALUE_NOT_FOUND` | 404 | `AttributeValueNotFoundError` | Значения нет, оно чужого атрибута или атрибут не объявлен у товара |
