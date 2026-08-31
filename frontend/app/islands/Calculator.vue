@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-import { calculate, type ProductCard } from "../lib/catalog-api";
+import { calculatePrice } from "./calculate-price";
+import type { ProductCard } from "../lib/catalog-api";
 import { calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../lib/calculator-state";
 
 const props = defineProps<{ product: ProductCard }>();
@@ -40,7 +41,7 @@ function formatAmount(amount: string): string {
 async function refreshPrice(): Promise<void> {
   isLoading.value = true;
   try {
-    result.value = pricePresentation(await calculate(toCalculateRequest(props.product.id, state.value)));
+    result.value = pricePresentation(await calculatePrice(toCalculateRequest(props.product.id, state.value)));
   } catch {
     result.value = {
       kind: "unavailable",

@@ -106,15 +106,3 @@ export class CatalogApi {
     return (await response.json()) as ResponseBody;
   }
 }
-
-export async function calculate(request: CalculateRequest): Promise<CalculatedPrice> {
-  const response = await fetch("/api/calculate", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(request),
-  });
-  if (!response.ok) {
-    throw new ApiResponseError(response.status);
-  }
-  return (await response.json()) as CalculatedPrice;
-}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../src/lib/calculator-state.ts";
+import { calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../app/lib/calculator-state.ts";
 
 test("the first product variant opens the calculator with its size and overrides", () => {
   const state = initialCalculatorState({

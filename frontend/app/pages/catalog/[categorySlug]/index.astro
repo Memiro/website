@@ -16,8 +16,9 @@ try {
   categoryWasNotFound = true;
 }
 const categorySlug = Astro.params.categorySlug ?? "";
+const category = (await api.categories()).find((item) => item.slug === categorySlug);
 ---
 
 <BaseLayout title="Каталог зеркал — Memiro">
-  {categoryWasNotFound ? <main class="wrap section"><h1 class="h-section">Категория не найдена</h1></main> : <main class="wrap section"><div class="cat-head"><h1 class="h-section">Каталог зеркал</h1><span class="count">{products.length} товаров</span></div><div class="grid-3">{products.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></main>}
+  {categoryWasNotFound ? <main class="wrap section"><h1 class="h-section">Категория не найдена</h1></main> : <><div class="cat-head wrap"><h1 class="h-section">{category?.name ?? "Каталог зеркал"}</h1><span class="count">{products.length} товаров</span></div><main class="wrap section"><div class="grid-3">{products.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></main></>}
 </BaseLayout>

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import test from "node:test";
 
-import { CatalogApi } from "../src/lib/catalog-api.ts";
+import { CatalogApi } from "../app/lib/catalog-api.ts";
 
 const product = {
   id: "0a3e0fc0-793d-498f-b1cc-02111ea385d2",

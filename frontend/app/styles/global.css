@@ -1,6 +1,5 @@
-/* memiro · визуальный язык handoff-пакета (design/mockups-v2, ADR-0004)
-   Golos Text самохостингом, холодная нейтральная палитра, акцент #3C5B6E,
-   нулевые скругления, без теней — разделение только границами в 1px */
+/* Handoff visual language: self-hosted Golos Text, a cool neutral palette,
+   #3C5B6E accent, square corners, no shadows, and 1px border separation. */
 
 @font-face {
   font-family: "Golos Text";
@@ -43,20 +42,18 @@
   --bg-card: #fafbfc;
   --ink: #15181b;
 
-  /* Разделители: декоративные, к ним порог контраста не применяется */
+  /* Decorative dividers are exempt from the text contrast threshold. */
   --line: #dce0e3;
   --line-card: #e1e5e8;
   --line-panel: #dfe3e7;
   --line-row: #edf0f2;
   --line-spec: #e4e8eb;
-  /* Граница интерактивного контрола — единственное, что его очерчивает,
-     поэтому темнее разделителей: 3:1 к любой из трёх поверхностей.
-     Бывший отдельный --icon-border сравнялся с ней и удалён */
+  /* An interactive control is defined only by its border, so it keeps 3:1
+     contrast against each surface. The duplicate icon border was removed. */
   --control: #828689;
 
-  /* Шкала чернил. Ступеней четыре, а не пять: между 4.5:1 и 8:1 на светлой
-     поверхности пять различимых тонов не помещается, а тон ниже 4.5:1 —
-     нечитаемый текст. Бывший --subtle слился с --muted и удалён */
+  /* Four ink tones fit between 4.5:1 and 8:1 on a light surface; a fifth
+     would either be indistinguishable or unreadable. */
   --text: #15181b;
   --body: #434a50;
   --secondary: #555c62;
@@ -71,15 +68,11 @@
   --on-dark-line: #2b3034;
   --on-dark-line-strong: #60666b;
 
-  /* Единственный текст поверх фотографии — подпись плитки. Вуаль обязана
-     держать 4.5:1 даже под самым светлым кадром, а это alpha ≥ 0.615.
-     Полка задана в px, а не в %: подпись отстоит от низа на фиксированные
-     22px, и от высоты плитки её положение не зависит. Высота полки — под
-     две строки подписи (длинные названия посадочных переносятся) */
+  /* Tile labels need 4.5:1 contrast even over the lightest photo. The shelf
+     is fixed in pixels so two-line labels keep a constant bottom offset. */
   --veil-shelf: 96px;
-  /* Сход вуали к прозрачности оставляет верх кадра чистым. max() держит
-     последний стоп выше полки: иначе на низкой плитке стопы разъедутся,
-     и браузер обрежет сход в резкий край */
+  /* The fade keeps the upper photo clear; max() prevents a short tile from
+     collapsing the final stop into a hard edge. */
   --photo-veil: linear-gradient(
     to top,
     rgba(15, 20, 26, 0.72) 0px,
@@ -104,8 +97,7 @@ a:hover { color: var(--accent); }
 ::selection { background: var(--line); }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* На чернильном фоне акцент даёт 2.47:1 — кольцо пропадает. Светлый акцент
-   держит 7.21:1 к --ink */
+/* The standard accent disappears on ink; the light accent keeps 7.21:1. */
 .dark :focus-visible,
 .mobile-menu :focus-visible,
 .cookie-banner :focus-visible { outline-color: var(--accent-light); }
@@ -114,7 +106,7 @@ p, .name { text-wrap: pretty; }
 .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 var(--pad); }
 .only-mobile { display: none; }
 
-/* ---------- Типографика ---------- */
+/* ---------- Typography ---------- */
 h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .h-display { font-size: clamp(40px, 5.8vw, 84px); line-height: 0.98; letter-spacing: -0.035em; }
 .h-display .lead-word { color: var(--accent); }
@@ -129,7 +121,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .sub { color: var(--body); }
 .muted { color: var(--muted); }
 
-/* ---------- Кнопки ---------- */
+/* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 19px 38px; border: 1px solid transparent; cursor: pointer;
@@ -144,7 +136,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .btn-on-dark:hover { background: var(--on-dark); color: var(--ink); }
 .link-underline { font-size: 15px; font-weight: 600; border-bottom: 1px solid var(--control); padding-bottom: 4px; }
 
-/* ---------- Шапка ---------- */
+/* ---------- Header ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50;
   background: rgba(240, 242, 243, 0.92);
@@ -174,7 +166,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .mobile-menu a:hover { color: var(--accent-light); }
 .mobile-menu .phone { color: var(--accent-light); font-weight: 600; }
 
-/* ---------- Герой ---------- */
+/* ---------- Hero ---------- */
 .hero { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: end; padding-top: 72px; }
 .hero .overline { margin-bottom: 28px; }
 .hero h1 { margin-bottom: 28px; }
@@ -187,28 +179,27 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .hero-pics img { width: 100%; height: 100%; object-fit: cover; background: var(--bg-muted); }
 .hero-pics img:first-child { grid-column: span 2; }
 
-/* ---------- Полоса преимуществ ---------- */
+/* ---------- Benefits strip ---------- */
 .strip { margin-top: 96px; background: var(--bg-muted); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .strip-row { display: flex; align-items: center; justify-content: space-between; gap: 32px; padding-top: 26px; padding-bottom: 26px; font-size: 15px; color: var(--body); }
 .strip-item { display: flex; align-items: center; gap: 12px; }
 .strip-item .n { font-size: 22px; color: var(--accent); }
 
-/* ---------- Заголовок секции ---------- */
+/* ---------- Section heading ---------- */
 .section { padding-top: 104px; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; margin-bottom: 40px; flex-wrap: wrap; }
 .section-note { font-size: 15px; color: var(--muted); max-width: 320px; }
 
-/* ---------- Плитки категорий ---------- */
+/* ---------- Category tiles ---------- */
 .tiles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .tile { position: relative; display: block; overflow: hidden; background: var(--line); aspect-ratio: 4 / 3.2; }
 .tile:hover { opacity: 0.94; }
-/* Своего правила :focus-visible у плитки нет намеренно: общее кольцо лежит
-   снаружи плитки, на фоне страницы (6.42:1), и с фотографией не спорит */
+/* Tiles intentionally use the shared focus ring on the page background. */
 .tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .tile .veil { position: absolute; inset: 0; background: var(--photo-veil); }
 .tile .label { position: absolute; left: 24px; bottom: 22px; color: var(--bg); font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
 
-/* ---------- Карточка товара в сетке ---------- */
+/* ---------- Product cards ---------- */
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .product-card {
@@ -216,26 +207,21 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   background: var(--bg-card); border: 1px solid var(--line-card); overflow: hidden;
 }
 .product-card:hover { border-color: var(--control); color: inherit; }
-/* Ссылка обёрнута вокруг всей плитки, а не вокруг куска (тикет 10),
-   и по высоте ряда тянется она — иначе низ плитки не её и не кликается.
-   outline-offset: -2px — ссылка теперь занимает плитку целиком, а
-   `overflow: hidden` у плитки срезает всё, что вылезает за её края:
-   кольцо фокуса с общим отступом наружу пропало бы у клавиатуры
-   полностью. Внутрь — единственная сторона, где его видно */
+/* The whole tile is the link. Its focus ring is inset because card overflow
+   clips an outward outline. */
 .product-card .card-link { display: flex; flex-direction: column; flex: 1; }
 .product-card .card-link:focus-visible { outline-offset: -2px; }
 .product-card .pic { position: relative; aspect-ratio: 1 / 1.08; background: var(--bg-muted); }
 .product-card .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .product-card .meta { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
 .product-card .name { font-size: 16px; font-weight: 500; line-height: 1.35; }
-/* margin-top: auto — названия разной длины, и без прижатия к низу
-   цены в ряду плиток встали бы на разной высоте */
+/* Auto margin aligns prices despite product names of different lengths. */
 .product-card .price {
   margin-top: auto;
   font-size: 24px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap;
 }
 
-/* ---------- Тёмный блок «О нас» ---------- */
+/* ---------- Dark about section ---------- */
 .dark { margin-top: 112px; background: var(--ink); color: var(--on-dark); }
 .dark-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 72px; align-items: center; padding-top: 96px; padding-bottom: 96px; }
 .dark-grid > img { width: 100%; height: 560px; object-fit: cover; background: var(--on-dark-line); }
@@ -247,7 +233,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .dark-facts .c { font-size: 15px; color: var(--on-dark-muted); margin-top: 8px; }
 .dark .btn-on-dark { margin-top: 44px; }
 
-/* ---------- Шаги ---------- */
+/* ---------- Steps ---------- */
 .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .step {
   background: var(--bg-card); border: 1px solid var(--line-card);
@@ -257,7 +243,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .step h3 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
 .step p { font-size: 15px; line-height: 1.55; color: var(--secondary); }
 
-/* ---------- Вопросы и ответы (тикет 08) ---------- */
+/* ---------- FAQ ---------- */
 .faq { border-top: 1px solid var(--line); }
 .faq-item { border-bottom: 1px solid var(--line); }
 .faq-item summary {
@@ -273,7 +259,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .faq-item summary:hover { color: var(--accent); }
 .faq-item p { padding: 0 40px 26px 0; font-size: 16px; line-height: 1.6; color: var(--secondary); max-width: 78ch; }
 
-/* ---------- Форма заявки (тикет 07) ---------- */
+/* ---------- Inquiry form ---------- */
 .inquiry-block {
   margin-top: 16px; background: var(--bg-muted); border: 1px solid var(--line);
   padding: 72px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start;
@@ -301,12 +287,11 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .consent input { accent-color: var(--accent); width: 18px; height: 18px; margin-top: 2px; flex: none; }
 .inquiry-submit { width: 100%; padding: 20px; }
 .inquiry-note { min-height: 20px; font-size: 14px; color: var(--accent); }
-/* Отказ отличается от подтверждения не только текстом: цвет один на всю
-   палитру, поэтому разводим весом и цветом чернил */
+/* Rejection differs from confirmation through ink colour and weight. */
 .inquiry-note.error { color: var(--text); font-weight: 600; }
 .inquiry-cart-note { font-size: 14px; color: var(--muted); }
 
-/* Сообщения корзины поверх страницы */
+/* Cart messages appear above the page. */
 .shop-note {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
   background: var(--ink); color: var(--bg); padding: 14px 22px; font-size: 14px;
@@ -316,7 +301,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .inquiry-panel h2 { font-size: 21px; font-weight: 600; }
 .inquiry-panel > .muted { font-size: 15px; margin: 10px 0 24px; }
 
-/* ---------- Корзина ---------- */
+/* ---------- Cart ---------- */
 .collection-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 400px; gap: 40px; align-items: start; }
 .cart-list { border: 1px solid var(--line-card); background: var(--bg-card); }
 .cart-row {
@@ -328,19 +313,14 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .cart-pic img { width: 100%; height: 100%; object-fit: cover; }
 .cart-name { font-size: 17px; font-weight: 500; }
 .cart-category { font-size: 13px; color: var(--muted); margin-top: 4px; }
-/* Поле пожелания — одно на сайт: класс общий у карточки товара и у
-   строки подборки, а разводит их место, а не второе имя. Два имени
-   на одно поле разъехались бы на первой же правке вида (тикет 15) */
+/* The same wish-field class is shared by product and collection views. */
 .wish-field { margin-top: 26px; }
 .wish-field textarea { resize: vertical; }
 .wish-hint { margin-top: 8px; font-size: 13px; color: var(--muted); }
-/* В строке подборки поле стоит под названием зеркала, в его же
-   колонке: оно про это зеркало, а не про заявку */
+/* In a collection row, the wish belongs below that product name. */
 .cart-meta .wish-field { margin-top: 14px; max-width: 42ch; }
 .cart-price { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
-/* grid-column: 4 — у товара без вариантов цены нет вовсе (ADR-0007), и её
-   ячейка пустует; без явной колонки «Убрать» съехала бы на её место, и в
-   смешанной корзине ссылки перестали бы стоять в столбик */
+/* The explicit fourth column keeps remove links aligned when price is absent. */
 .cart-drop {
   grid-column: 4;
   background: none; border: none; padding: 6px 0; cursor: pointer;
@@ -349,7 +329,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .cart-drop:hover { color: var(--accent); }
 .collection-empty { margin-top: 40px; font-size: 17px; color: var(--body); }
 
-/* ---------- Счётчик заявки в шапке ---------- */
+/* ---------- Header inquiry counter ---------- */
 .counter-btn { position: relative; }
 .counter {
   position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px;
@@ -357,10 +337,9 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   background: var(--ink); color: var(--bg); font-size: 11px; font-weight: 600;
 }
 
-/* ---------- Подвал ---------- */
+/* ---------- Footer ---------- */
 .footer { margin-top: 112px; background: var(--bg); color: var(--secondary); border-top: 1px solid var(--line); }
-/* Боковые поля берутся из .wrap — здесь только вертикальные:
-   шорткат `padding` затёр бы их, и футер лёг бы вплотную к краю экрана */
+/* Horizontal padding comes from .wrap; only vertical padding belongs here. */
 .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 48px; padding-top: 80px; padding-bottom: 40px; }
 .footer .wordmark { font-size: 34px; color: var(--text); font-weight: 700; }
 .footer-about { font-size: 15px; line-height: 1.6; margin-top: 18px; max-width: 260px; }
@@ -368,12 +347,12 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .footer ul { list-style: none; display: grid; gap: 12px; font-size: 15px; }
 .footer-bottom { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 20px; padding-bottom: 28px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 
-/* ---------- Хлебные крошки ---------- */
+/* ---------- Breadcrumbs ---------- */
 .crumbs { padding-top: 26px; font-size: 13px; color: var(--muted); }
 .crumbs a { color: var(--muted); }
 .crumbs a:hover { color: var(--text); }
 
-/* ---------- Каталог ---------- */
+/* ---------- Catalogue ---------- */
 .cat-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; flex-wrap: wrap; padding-top: 14px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
 .cat-head h1 { font-size: clamp(34px, 4.4vw, 62px); line-height: 1; letter-spacing: -0.035em; }
 .cat-head .count { font-size: 15px; font-weight: 500; color: var(--muted); }
@@ -422,16 +401,16 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .pager a.here { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .pager a:hover:not(.here) { border-color: var(--text); color: var(--text); }
 
-/* ---------- Посадочные (тикет 09) ---------- */
+/* ---------- Landing pages ---------- */
 .landing-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 26px; }
 .landing-links a { text-decoration: none; }
 .landing-text { padding-top: 22px; padding-bottom: 30px; max-width: 76ch; }
 .landing-all { padding-top: 32px; }
 
-/* ---------- Карточка товара ---------- */
+/* ---------- Product detail ---------- */
 .pdp { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: start; padding-top: 22px; }
 .gallery { display: grid; grid-template-columns: 88px 1fr; gap: 12px; position: sticky; top: 104px; }
-/* Без миниатюр колонка под них не нужна — иначе кадр сожмётся в 88px */
+/* A gallery without thumbnails must not reserve their 88px column. */
 .gallery.solo { grid-template-columns: 1fr; }
 .thumbs { display: grid; gap: 10px; align-content: start; }
 .thumbs button { width: 88px; height: 96px; border: 1px solid var(--line-panel); padding: 0; background: none; cursor: pointer; overflow: hidden; }
@@ -446,7 +425,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .info .price-row { margin-top: 26px; padding-top: 26px; border-top: 1px solid var(--line); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 .price-now { font-size: 44px; font-weight: 700; letter-spacing: -0.03em; white-space: nowrap; }
 .price-note { font-size: 13px; color: var(--muted); }
-/* Кнопка одна с тикета 07: раскладка на двух соседей больше не нужна */
+/* The inquiry flow uses one primary action. */
 .buy-row { margin-top: 26px; }
 .buy-row .btn-primary { width: 100%; }
 .promises { margin-top: 30px; background: var(--bg-card); border: 1px solid var(--line-panel); }
@@ -462,7 +441,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .variants td { padding: 13px 0 13px 24px; color: var(--muted); }
 .variants .variant-price { text-align: right; font-weight: 600; color: var(--text); white-space: nowrap; }
 
-/* Калькулятор карточки (тикет 20) */
+/* Product calculator. */
 .calc { margin-top: 26px; padding-top: 26px; border-top: 1px solid var(--line); }
 .calc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; }
 .calc-fields { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
@@ -479,7 +458,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .spec dt { color: var(--muted); }
 .spec dd { color: var(--text); }
 
-/* ---------- Статические страницы ---------- */
+/* ---------- Static pages ---------- */
 .page { padding-top: 14px; }
 .page .overline { margin-bottom: 18px; }
 .page-lead { margin-top: 18px; font-size: 19px; line-height: 1.55; color: var(--body); max-width: 62ch; display: grid; gap: 14px; }
@@ -492,9 +471,8 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .legal-note p, .page-note p { margin-top: 14px; color: var(--body); max-width: 70ch; }
 .page-note { margin-top: 40px; }
 
-/* ---------- Страницы ошибок ---------- */
-/* Тот же `.page`, что у статических, плюс пара выходов. Своей 500-й эти
-   правила не достаются: она везёт стили в себе */
+/* ---------- Error pages ---------- */
+/* Error pages share .page; the standalone 500 page carries its own styles. */
 .error-actions { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 14px; }
 
 .contacts-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px; align-items: start; }
@@ -510,18 +488,16 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .map-placeholder { height: 460px; display: grid; align-content: center; justify-items: center; gap: 18px; padding: 32px; text-align: center; }
 .map-placeholder p { color: var(--secondary); font-size: 15px; max-width: 40ch; }
 
-/* Сетка, а не `columns`: многоколоночный поток заполняет колонку сверху
-   вниз, и ручной порядок владельца читался бы по строкам как 1-3-5 */
+/* Grid preserves the owner-defined row order unlike CSS columns. */
 .works-grid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .work { background: var(--bg-card); border: 1px solid var(--line-card); }
-/* Кадры установок приходят разного размера — режем в общее отношение,
-   как плитки и карточки товара, иначе строка идёт лесенкой */
+/* Installation photos use a shared ratio to keep rows aligned. */
 .work .pic { position: relative; aspect-ratio: 4 / 3.2; background: var(--bg-muted); }
 .work img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .work figcaption { padding: 16px 20px 18px; font-size: 15px; font-weight: 500; }
 
-/* ---------- Юридические блоки ---------- */
-/* Реквизиты продавца: одинаково выглядят в футере и на «Контактах» */
+/* ---------- Legal sections ---------- */
+/* Seller details share the same presentation in the footer and contacts page. */
 .seller-requisites, .legal-contacts { list-style: none; display: grid; gap: 6px; margin-top: 14px; font-size: 14px; line-height: 1.5; }
 .seller-label { color: var(--muted); }
 .footer .seller-requisites { color: var(--muted); }
@@ -529,14 +505,14 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .offer-note { margin-top: 40px; font-size: 13px; line-height: 1.6; color: var(--muted); max-width: 80ch; }
 .info .offer-note { margin-top: 16px; }
 
-/* Политика: единственная страница с длинным текстом и списками */
+/* The policy page is the only page with long-form lists. */
 .legal-page ul { margin-top: 14px; padding-left: 22px; color: var(--body); max-width: 70ch; }
 .legal-page li { margin-top: 6px; }
 .legal-page .legal-note a { border-bottom: 1px solid var(--control); }
 .legal-page .seller-requisites, .legal-page .legal-contacts { padding-left: 0; }
 .consent a { border-bottom: 1px solid var(--control); }
 
-/* Cookie-баннер: перекрывает нижний край страницы, пока не отвечен */
+/* The cookie banner overlays the page until the visitor answers. */
 .cookie-banner {
   position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 70;
   width: min(760px, calc(100vw - 36px));
@@ -554,13 +530,10 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .cookie-banner .btn-ghost { border-color: var(--on-dark-line-strong); color: var(--on-dark-body); }
 .cookie-banner .btn-ghost:hover { border-color: var(--on-dark); color: var(--on-dark); }
 
-/* ---------- Планшет: макета нет, правила выведены из токенов ---------- */
+/* ---------- Tablet ---------- */
 @media (max-width: 1180px) {
   :root { --pad: 28px; }
-  /* Пять пунктов, телефон и иконки в одну строку ниже 1180 не помещаются:
-     ссылки начинали переноситься внутри себя, и шапка росла в две строки.
-     Телефон убираем — он остаётся иконкой связи рядом, в футере
-     и на «Контактах»; сами пункты уплотняем и запрещаем им перенос */
+  /* At this width the navigation, phone, and icons no longer fit in one row. */
   .nav-row { gap: 24px; }
   .nav-links { gap: 20px; margin-left: 0; }
   .nav-links a { white-space: nowrap; }
@@ -585,7 +558,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 }
 
 @media (max-width: 960px) {
-  /* Даже уплотнённые пункты сюда уже не помещаются — меню уходит в бургер */
+  /* The compact navigation now becomes a burger menu. */
   .nav-links { display: none; }
   .nav-burger { display: grid; }
   .layout { grid-template-columns: 1fr; }
@@ -593,9 +566,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .filters {
     position: fixed; inset: 0 auto 0 0; z-index: 30; width: min(320px, 88vw);
     overflow-y: auto; transform: translateX(-102%);
-    /* visibility, а не только transform: уехавший за край drawer иначе остаётся
-       в порядке табуляции, и фокус уходит на контролы, которых не видно.
-       Задержка равна анимации — иначе панель пропадает, не доехав */
+    /* Visibility removes the off-canvas drawer from tab order after transition. */
     visibility: hidden; transition: transform .25s ease, visibility 0s .25s;
   }
   .filters.open { transform: none; visibility: visible; transition-delay: 0s; }
@@ -603,7 +574,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ---------- Мобильная: правила из макета «Мобильная» ---------- */
+/* ---------- Mobile ---------- */
 @media (max-width: 640px) {
   :root { --pad: 18px; }
   .nav-side .icon-row { display: none; }
@@ -627,13 +598,10 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .tiles-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .tile { aspect-ratio: 1 / 1; }
   .tile .label { left: 14px; bottom: 12px; font-size: 14px; }
-  /* Подпись здесь 14px, две строки укладываются в 57px — полка ниже,
-     иначе вуаль съела бы почти всю невысокую плитку */
+  /* Smaller labels need a shorter veil shelf on compact tiles. */
   :root { --veil-shelf: 60px; }
 
-  /* Подборки на главной и в карточке едут каруселью; каталог
-     остаётся списком — иначе выдача уезжает вбок и утаскивает за собой
-     ширину страницы. Поэтому карусель — отдельный класс, а не все сетки */
+  /* Only explicit carousels scroll horizontally; catalogue grids remain lists. */
   .grid-4, .grid-3 { grid-template-columns: 1fr; gap: 8px; }
   .carousel {
     display: grid; grid-template-columns: none;
@@ -645,9 +613,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
   .product-card .meta { padding: 14px 16px 18px; gap: 10px; }
   .product-card .price { font-size: 20px; }
 
-  /* Цена не переносится, поэтому на узком экране она обязана
-     влезать: семизначная в 44px шире колонки, и `overflow-x`
-     у body срезал бы её молча */
+  /* The smaller price size keeps long amounts within the narrow column. */
   .price-now { font-size: 34px; }
 
   .faq-item summary { font-size: 18px; padding: 18px 32px 18px 0; }
