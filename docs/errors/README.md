@@ -26,11 +26,19 @@
 | `EMPTY_INQUIRY` | 400 | `EmptyInquiryError` | Подборка не содержит позиции |
 | `INQUIRY_SOURCE_NOT_ACCEPTED` | 400 | `InquirySourceNotAcceptedError` | Новый запрос использовал исторический источник `PRODUCT_CARD` |
 | `INVALID_INQUIRY_CONTENTS` | 400 | `InvalidInquiryContentsError` | Поля заявки не соответствуют её источнику |
+| `LOCK_TIMEOUT` | 429 | `LockTimeoutError` | Строку агрегата не удалось заблокировать за отведённое ожидание — повторите запрос |
+| `CONCURRENT_CHANGE` | 429 | — (`IntegrityError`) | Гонка проиграна на инварианте базы (уникальный отпечаток варианта) — повторите запрос |
 | `INTERNAL_ERROR` | 500 | — | Дефект: незамапленная `AppError` или неожиданное исключение |
 
-Пятисотка тоже приходит этой формой: глобальных хендлера три — `AppError`,
-ошибка валидации FastAPI и `Exception`, — и `RuntimeError` домена уезжает
-наружу как `{code, message, meta}`, а не текстовой страницей фреймворка.
+Пятисотка тоже приходит этой формой: глобальных хендлера четыре — `AppError`,
+ошибка валидации FastAPI, `IntegrityError` и `Exception`, — и `RuntimeError`
+домена уезжает наружу как `{code, message, meta}`, а не текстовой страницей
+фреймворка.
+
+Конфликт базы — не дефект: `IntegrityError` гейтвеи не глотают, он доезжает до
+глобального хендлера и становится 429; ожидание блокировки ограничено
+настройкой `lock_timeout` соединения (`DbConfig.lock_timeout_ms`), и отказ в
+блокировке гейтвей переводит в `LockTimeoutError` — тоже 429.
 
 Форма ответа одна на всё:
 

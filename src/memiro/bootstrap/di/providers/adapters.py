@@ -54,7 +54,7 @@ class AdapterProvider(Provider):
     @provide(scope=Scope.APP)
     async def get_engine(self, config: DbConfig) -> AsyncIterator[AsyncEngine]:
         """Provide the process-wide engine, disposed on container close."""
-        engine = create_async_engine(config.url)
+        engine = create_async_engine(config.url, connect_args={"server_settings": config.server_settings})
         try:
             yield engine
         finally:

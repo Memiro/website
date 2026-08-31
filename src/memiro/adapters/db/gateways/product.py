@@ -1,13 +1,18 @@
 from typing import override
 
 from sqlalchemy import select
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from memiro.adapters.db.errors import LockTimeoutError
 from memiro.adapters.db.tables import products_table
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.entities.catalog.product.entity import Product
 from memiro.entities.common.identifiers import ProductId
+
+# Postgres reports a lock wait cut short by ``lock_timeout`` as lock_not_available.
+LOCK_NOT_AVAILABLE = "55P03"
 
 
 class SAProductGateway(ProductGateway):
@@ -39,5 +44,15 @@ class SAProductGateway(ProductGateway):
             statement = statement.options(selectinload(Product._variants))  # type: ignore[arg-type]  # noqa: SLF001  # pyright: ignore[reportArgumentType,reportPrivateUsage]
         if for_update:
             statement = statement.with_for_update()
-        result = await self._session.execute(statement)
+        try:
+            result = await self._session.execute(statement)
+        except DBAPIError as error:
+            # A refused lock is a lost race, not a defect: the caller is told
+            # to retry (429), while every other driver failure stays a 500.
+            # The asyncpg dialect re-wraps the driver exception in its own
+            # class, so the SQLSTATE it copies over is the only thing left to
+            # recognise a refused lock by.
+            if getattr(error.orig, "sqlstate", None) != LOCK_NOT_AVAILABLE:
+                raise
+            raise LockTimeoutError from error
         return result.scalar_one_or_none()

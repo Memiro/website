@@ -5,7 +5,9 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
+from memiro.adapters.db.errors import LockTimeoutError
 from memiro.application.errors.catalog import (
     AttributeValueNotFoundError,
     CategoryNotFoundError,
@@ -32,6 +34,7 @@ from memiro_common.logger import Logger
 
 VALIDATION_ERROR_CODE = "VALIDATION_ERROR"
 INTERNAL_ERROR_CODE = "INTERNAL_ERROR"
+CONCURRENT_CHANGE_CODE = "CONCURRENT_CHANGE"
 
 # The flat table keyed by exact type: a miss is a code defect, not a 500 by
 # design, and it is logged as one. Its human mirror is docs/errors/.
@@ -53,6 +56,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     EmptyInquiryError: status.HTTP_400_BAD_REQUEST,
     InquirySourceNotAcceptedError: status.HTTP_400_BAD_REQUEST,
     InvalidInquiryContentsError: status.HTTP_400_BAD_REQUEST,
+    LockTimeoutError: status.HTTP_429_TOO_MANY_REQUESTS,
 }
 
 logger: Logger = structlog.get_logger(__name__)
@@ -105,6 +109,16 @@ def _invalid_fields(exc: Exception) -> list[str]:
     return fields
 
 
+async def _handle_integrity_error(_request: Request, exc: Exception) -> JSONResponse:
+    """Answer a race lost on a database invariant with an honest retry (§8.7)."""
+    logger.info("Request lost a database race", error=type(exc).__name__, status=status.HTTP_429_TOO_MANY_REQUESTS)
+    return _response(
+        status.HTTP_429_TOO_MANY_REQUESTS,
+        CONCURRENT_CHANGE_CODE,
+        "Concurrent change, retry the request",
+    )
+
+
 async def _handle_unexpected_error(_request: Request, exc: Exception) -> JSONResponse:
     """Give a defect the same body as every refusal — the client parses one shape, always."""
     # The handler runs while the exception is being handled, so the traceback
@@ -124,6 +138,7 @@ def setup_error_handlers(app: FastAPI) -> None:
     """Install the global handlers that turn every exception into the one response shape (§10.3)."""
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
+    app.add_exception_handler(IntegrityError, _handle_integrity_error)
     # The catch-all is registered last and is the reason a deliberate
     # RuntimeError from the domain still leaves as {code, message, meta}
     # rather than as the framework's plain-text page (§10.3).
