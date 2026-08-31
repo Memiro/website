@@ -85,6 +85,10 @@ ignore = [
 # The demo dictionary quotes the owner's own value names, and they are
 # Cyrillic; the ambiguous-character rule has nothing to warn about there.
 "tests/common/factory/catalog.py" = ["RUF001"]
+# The manager-facing mail is Russian by product decision; its words and the
+# multiplication sign are intentionally not Latin lookalikes.
+"src/memiro/adapters/smtp/inquiry_notification.py" = ["RUF001"]
+"tests/integration/submit_inquiry/test_notify_manager.py" = ["RUF001"]
 # The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
 "src/memiro_common/interactor.py" = ["ANN401"]
 # Tests speak in asserts (S101); test databases are named with f-strings over

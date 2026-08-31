@@ -1,10 +1,11 @@
 import os
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Self
 
 from memiro.adapters.db.config import DbConfig
+from memiro.adapters.smtp.config import EmailConfig
 from memiro_common.observability.config import ObservabilityConfig
 
 # The only environment variable the application reads.
@@ -17,6 +18,7 @@ class Config:
 
     db: DbConfig
     observability: ObservabilityConfig
+    email: EmailConfig = field(default_factory=EmailConfig)
 
     @classmethod
     def load(cls) -> Self:
@@ -26,4 +28,5 @@ class Config:
         return cls(
             db=DbConfig(**data["db"]),
             observability=ObservabilityConfig(**data["observability"]),
+            email=EmailConfig(**data.get("email", {})),
         )
