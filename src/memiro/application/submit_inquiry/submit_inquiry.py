@@ -4,9 +4,10 @@ from uuid import UUID
 import structlog
 from pydantic import BaseModel, Field, model_validator
 
-from memiro.application.calculate_price.calculate_price import Selection, customer_selections
-from memiro.application.common.gateway.catalog import AttributeGateway, ProductGateway
+from memiro.application.common.customer_selection import Selection, customer_selections
+from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import (
     MAX_COMMENT_LENGTH,
     MAX_EMAIL_LENGTH,

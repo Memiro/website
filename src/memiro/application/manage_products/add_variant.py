@@ -1,7 +1,8 @@
 import structlog
 
-from memiro.application.common.gateway.catalog import AttributeGateway, ProductGateway
+from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products.shared import CreatedVariant, VariantForm, variant_data, variant_price

@@ -23,6 +23,7 @@ from tests.common.factory.catalog import (
     demo_product_with_value,
     demo_product_without,
     demo_shape,
+    product_declaring,
 )
 from tests.unit.composite import complete_products, incomplete_products
 
@@ -54,9 +55,9 @@ def test_a_present_parent_makes_its_child_declaration_required() -> None:
 
 def test_a_product_without_a_paid_declaration_is_not_priceable() -> None:
     """A complete product made only of a free absence value is not priceable."""
-    product = replace(
+    product = product_declaring(
         demo_product(),
-        declared_values=[
+        [
             DeclaredValue(
                 attribute_id=FRAME,
                 configured=ConfiguredValue(value_id=NO_FRAME, quantity=None),
@@ -85,9 +86,9 @@ def test_a_free_present_parent_still_makes_its_child_required() -> None:
 
 def test_a_factor_without_a_money_line_does_not_make_a_product_priceable() -> None:
     """A shape factor alone cannot satisfy the paid-declaration rule."""
-    product = replace(
+    product = product_declaring(
         demo_product(),
-        declared_values=[
+        [
             DeclaredValue(
                 attribute_id=SHAPE,
                 configured=ConfiguredValue(value_id=RECTANGULAR, quantity=None),

@@ -273,7 +273,7 @@ mapper_registry.map_imperatively(
     products_table,
     properties={
         "_price_from": products_table.c.price_from,
-        "declared_values": relationship(DeclaredValue, lazy="raise_on_sql"),
+        "_declared_values": relationship(DeclaredValue, lazy="raise_on_sql"),
         "_variants": relationship(
             Variant,
             cascade="all, delete-orphan",

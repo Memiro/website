@@ -10,7 +10,7 @@ from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.adapters.db.tables import product_variants_table
-from memiro.application.common.gateway.catalog import ProductGateway
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, VariantData
 from memiro.entities.common.identifiers import VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters

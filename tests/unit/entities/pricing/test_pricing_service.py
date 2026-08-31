@@ -38,6 +38,7 @@ from tests.common.factory.catalog import (
     demo_product,
     demo_settings,
     demo_size_surcharge,
+    product_declaring,
 )
 from tests.common.pricing_expected import canonical_quotation, quotation_line
 from tests.unit.composite import (
@@ -85,9 +86,9 @@ def test_the_owner_prices_without_customer_gates() -> None:
 
 def test_the_owner_prices_a_product_without_a_paid_default() -> None:
     """The owner's calculation does not apply the customer's paid-value gate."""
-    product = replace(
+    product = product_declaring(
         demo_product(),
-        declared_values=[
+        [
             DeclaredValue(
                 attribute_id=FRAME,
                 configured=ConfiguredValue(value_id=NO_FRAME, quantity=None),

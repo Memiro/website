@@ -3,6 +3,7 @@
 Actor: the customer (anonymous).
 """
 
+from memiro.application.common.customer_selection import Selection
 from memiro.application.submit_inquiry.submit_inquiry import (
     CreatedInquiry,
     InquiryItemForm,
@@ -15,6 +16,7 @@ __all__ = [
     "CreatedInquiry",
     "InquiryItemForm",
     "InquirySource",
+    "Selection",
     "SubmitInquiry",
     "SubmitInquiryForm",
 ]

@@ -5,7 +5,7 @@ and the tests speak in them by name so an expected price can be checked by
 hand against the workbook.
 """
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from decimal import Decimal
 from typing import cast
@@ -267,14 +267,16 @@ def demo_attributes() -> list[Attribute]:
 
 def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
     """Build the canonical mirror: silver blade, aluminium frame, a mount, no backlight."""
-    return Product(
+    product = Product(
         id=PRODUCT,
         category_id=CATEGORY,
         name="Зеркало в раме",
         slug="zerkalo-v-rame",
         is_published=True,
         hides_calculated_price=False,
-        declared_values=[
+    )
+    product.declare_values(
+        [
             DeclaredValue(attribute_id=BLADE, configured=ConfiguredValue(value_id=blade, quantity=None)),
             DeclaredValue(
                 attribute_id=SHAPE,
@@ -292,27 +294,25 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
                 attribute_id=MOUNT,
                 configured=ConfiguredValue(value_id=WITH_MOUNT, quantity=None),
             ),
-        ],
+        ]
     )
+    return product
 
 
 def demo_product_without(attribute_id: AttributeId) -> Product:
     """Build the canonical mirror without one declaration."""
     product = demo_product()
-    return replace(
-        product,
-        declared_values=[
-            declaration for declaration in product.declared_values if declaration.attribute_id != attribute_id
-        ],
+    product.declare_values(
+        [declaration for declaration in product.declared_values if declaration.attribute_id != attribute_id]
     )
+    return product
 
 
 def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueId | None) -> Product:
     """Build the canonical mirror with one declaration replaced."""
     product = demo_product()
-    return replace(
-        product,
-        declared_values=[
+    product.declare_values(
+        [
             replace(
                 declaration,
                 configured=ConfiguredValue(value_id=value_id, quantity=None),
@@ -320,13 +320,21 @@ def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueI
             if declaration.attribute_id == attribute_id
             else declaration
             for declaration in product.declared_values
-        ],
+        ]
     )
+    return product
+
+
+def product_declaring(product: Product, declarations: Iterable[DeclaredValue]) -> Product:
+    """Build a product copy whose owner declared exactly these values."""
+    copy = replace(product)
+    copy.declare_values(declarations)
+    return copy
 
 
 def product_with_added_declaration(product: Product, declaration: DeclaredValue) -> Product:
     """Build a product copy with one dependent declaration appended."""
-    return replace(product, declared_values=[*product.declared_values, declaration])
+    return product_declaring(product, [*product.declared_values, declaration])
 
 
 def demo_attributes_replacing(replacement: Attribute) -> list[Attribute]:
@@ -348,20 +356,23 @@ def demo_attributes_with_changeability(
 
 def demo_numeric_product(*, quantity: Decimal) -> Product:
     """Build a product whose only priced declaration is a fractional count of cut-outs."""
-    return Product(
+    product = Product(
         id=PRODUCT,
         category_id=CATEGORY,
         name="Зеркало с вырезами",
         slug="zerkalo-s-vyrezami",
         is_published=True,
         hides_calculated_price=False,
-        declared_values=[
+    )
+    product.declare_values(
+        [
             DeclaredValue(
                 attribute_id=CUTOUTS,
                 configured=ConfiguredValue(value_id=None, quantity=quantity),
             ),
-        ],
+        ]
     )
+    return product
 
 
 def demo_defaults() -> dict[AttributeId, AttributeValueId]:

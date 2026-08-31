@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from memiro.application.common.gateway.catalog import ProductGateway
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import (
     AttributeValueNotFoundError,

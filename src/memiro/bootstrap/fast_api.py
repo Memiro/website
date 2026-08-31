@@ -20,6 +20,8 @@ from memiro.presentation.fast_api.routers.pricing import router as pricing_route
 from memiro_common.observability.logs import setup_logging
 from memiro_common.observability.tracing import setup_tracing
 
+ALL_INTERFACES = "0.0.0.0"  # noqa: S104  # nosec B104
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncGenerator[None]:
@@ -65,6 +67,6 @@ def run_api() -> None:
     uvicorn.run(
         "memiro.bootstrap.fast_api:app_factory",
         factory=True,
-        host="0.0.0.0",  # noqa: S104  # nosec B104
+        host=ALL_INTERFACES,
         port=8000,
     )

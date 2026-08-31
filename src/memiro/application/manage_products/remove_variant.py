@@ -1,6 +1,6 @@
 import structlog
 
-from memiro.application.common.gateway.catalog import ProductGateway
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.entities.common.identifiers import ProductId, VariantId
 from memiro_common.interactor import interactor
