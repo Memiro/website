@@ -2,15 +2,37 @@
 import { computed, onMounted, ref } from "vue";
 
 import { calculatePrice } from "./calculate-price";
+import { inquiryErrorMessage, SubmitInquiryError, submitInquiry } from "./submit-inquiry";
 import type { ProductCard } from "../lib/catalog-api";
 import { calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../lib/calculator-state";
+import {
+  addInquiryItem,
+  canAddCalculatorConfiguration,
+  canShowInquiryEditor as isInquiryEditorVisible,
+  inquiryItemFromCalculator,
+  loadInquiryItems,
+  removeInquiryItem,
+  saveInquiryItems,
+  selectionInquiry,
+} from "../lib/inquiry-state";
+import type { InquiryItem } from "../lib/inquiry-state";
 
 const props = defineProps<{ product: ProductCard }>();
 const state = ref(initialCalculatorState(props.product));
 const result = ref<ReturnType<typeof pricePresentation> | null>(null);
 const isLoading = ref(false);
+const items = ref<InquiryItem[]>([]);
+const wish = ref("");
+const name = ref("");
+const phone = ref("");
+const email = ref("");
+const consent = ref(false);
+const submitMessage = ref<string | null>(null);
+const isSubmitting = ref(false);
 
 const selectionsByAttribute = computed(() => new Map(state.value.selections.map((selection) => [selection.attributeId, selection])));
+const canAddToInquiry = computed(() => canAddCalculatorConfiguration(result.value?.kind, wish.value));
+const canShowInquiryEditor = computed(() => isInquiryEditorVisible(result.value?.kind));
 
 function selectValue(attributeId: string, valueId: string): void {
   state.value.selections = state.value.selections.filter((selection) => selection.attributeId !== attributeId);
@@ -53,7 +75,52 @@ async function refreshPrice(): Promise<void> {
   finally { isLoading.value = false; }
 }
 
-onMounted(() => { void refreshPrice(); });
+function addToInquiry(): void {
+  if (result.value === null || (result.value.kind !== "priced" && result.value.kind !== "wish")) {
+    return;
+  }
+  items.value = addInquiryItem(
+    window.localStorage,
+    items.value,
+    inquiryItemFromCalculator(props.product, state.value, result.value.kind, wish.value),
+  );
+  wish.value = "";
+  submitMessage.value = null;
+}
+
+function removeItem(index: number): void {
+  items.value = removeInquiryItem(window.localStorage, items.value, index);
+}
+
+async function sendInquiry(): Promise<void> {
+  if (items.value.length === 0) {
+    return;
+  }
+  isSubmitting.value = true;
+  submitMessage.value = null;
+  try {
+    await submitInquiry(selectionInquiry(items.value, {
+      name: name.value,
+      phone: phone.value,
+      email: email.value,
+      consent: consent.value,
+    }));
+    items.value = [];
+    saveInquiryItems(window.localStorage, items.value);
+    submitMessage.value = "Спасибо! Заявка отправлена, менеджер свяжется с вами.";
+  } catch (error) {
+    submitMessage.value = error instanceof SubmitInquiryError
+      ? inquiryErrorMessage(error)
+      : "Не удалось отправить заявку. Попробуйте ещё раз.";
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+onMounted(() => {
+  items.value = loadInquiryItems(window.localStorage);
+  void refreshPrice();
+});
 </script>
 
 <template>
@@ -71,5 +138,29 @@ onMounted(() => { void refreshPrice(); });
       <template v-else-if="result"><template v-if="result.kind === 'priced'"><strong class="calc-total">{{ Number(result.total).toLocaleString('ru-RU') }} ₽</strong><ul v-if="result.deltas.length > 0" class="calc-additions"><li v-for="delta in result.deltas" :key="`${delta.attributeId}-${delta.valueId}`"><span>{{ deltaLabel(delta.attributeId, delta.valueId) }}</span><b>{{ formatAmount(delta.amount) }}</b></li></ul></template><p v-else class="calc-note">{{ result.message }}</p></template>
       <p v-else class="calc-note">Измените размер или материалы, чтобы увидеть стоимость.</p>
     </div>
+    <div v-if="canShowInquiryEditor" class="inquiry-item-editor">
+      <label v-if="result?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
+      <button class="btn btn-primary inquiry-add" :disabled="!canAddToInquiry" type="button" @click="addToInquiry">Добавить в заявку</button>
+    </div>
+    <section v-if="items.length > 0 || submitMessage !== null" class="inquiry-panel" aria-live="polite">
+      <template v-if="items.length > 0">
+        <h2>Ваша заявка</h2>
+        <p class="muted">Каждая конфигурация уйдёт менеджеру отдельным техническим заданием.</p>
+        <ul class="inquiry-items">
+          <li v-for="(item, index) in items" :key="`${item.productId}-${index}`">
+            <span><b>{{ item.productName }}</b><small>{{ item.widthMm }} × {{ item.heightMm }} мм<span v-if="item.isWish"> · индивидуальное пожелание</span></small></span>
+            <button type="button" class="inquiry-remove" @click="removeItem(index)">Удалить</button>
+          </li>
+        </ul>
+        <form class="inquiry-form" @submit.prevent="sendInquiry">
+          <label class="field"><span>Ваше имя</span><input v-model="name" required autocomplete="name" /></label>
+          <label class="field"><span>Телефон</span><input v-model="phone" required autocomplete="tel" inputmode="tel" /></label>
+          <label class="field"><span>Email</span><input v-model="email" type="email" autocomplete="email" /></label>
+          <label class="consent"><input v-model="consent" type="checkbox" required /><span>Согласен на обработку персональных данных</span></label>
+          <button class="btn btn-primary inquiry-submit" :disabled="isSubmitting" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }}</button>
+        </form>
+      </template>
+      <p v-if="submitMessage !== null" class="inquiry-note" :class="{ error: items.length > 0 }">{{ submitMessage }}</p>
+    </section>
   </section>
 </template>
