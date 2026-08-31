@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from typing import override
+from uuid import UUID
 
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -115,6 +116,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                     product_variants_table.c.width_mm,
                     product_variants_table.c.height_mm,
                     product_variants_table.c.price,
+                    product_variants_table.c.overrides,
                 )
                 .where(product_variants_table.c.product_id == row["id"])
                 .order_by(product_variants_table.c.sort_order)
@@ -127,35 +129,36 @@ class SACatalogReadGateway(CatalogReadGateway):
                     attributes_table.c.name,
                     attribute_values_table.c.id.label("value_id"),
                     attribute_values_table.c.name.label("value_name"),
-                    product_declared_values_table.c.quantity,
+                    attribute_values_table.c.sort_order.label("value_sort_order"),
                 )
                 .select_from(
                     product_declared_values_table.join(
-                        attributes_table, product_declared_values_table.c.attribute_id == attributes_table.c.id
-                    ).outerjoin(
-                        attribute_values_table, product_declared_values_table.c.value_id == attribute_values_table.c.id
+                        attributes_table,
+                        product_declared_values_table.c.attribute_id == attributes_table.c.id,
+                    ).join(
+                        attribute_values_table,
+                        attribute_values_table.c.attribute_id == attributes_table.c.id,
                     )
                 )
                 .where(product_declared_values_table.c.product_id == row["id"])
-                .order_by(attributes_table.c.sort_order)
+                .order_by(attributes_table.c.sort_order, attribute_values_table.c.sort_order)
             )
         ).all()
+        attributes: dict[UUID, ProductAttribute] = {}
+        for item in declared:
+            attribute = attributes.setdefault(
+                item.id,
+                ProductAttribute(id=item.id, name=item.name, values=[]),
+            )
+            attribute.values.append(ProductAttributeValue(id=item.value_id, name=item.value_name, quantity=None))
         return ProductModel(
+            id=row["id"],
             name=row["name"],
             slug=row["slug"],
             description=row["description"],
             price_from=row["price_from"].amount if row["price_from"] else None,
             image_keys=list(images),
-            attributes=[
-                ProductAttribute(
-                    id=item.id,
-                    name=item.name,
-                    values=[ProductAttributeValue(id=item.value_id, name=item.value_name, quantity=item.quantity)]
-                    if item.value_name
-                    else [],
-                )
-                for item in declared
-            ],
+            attributes=list(attributes.values()),
             variants=[
                 ProductVariant(
                     width_mm=item.width_mm.value,

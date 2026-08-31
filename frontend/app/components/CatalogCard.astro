@@ -1,0 +1,15 @@
+---
+import type { ProductSummary } from "../lib/catalog-api";
+
+interface Props { categorySlug: string; product: ProductSummary; }
+const { categorySlug, product } = Astro.props;
+const price = product.price_from === null ? null : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
+const previewImage = "/img/hero-1.jpg";
+---
+
+<article class="product-card">
+  <a class="card-link" href={`/catalog/${categorySlug}/${product.slug}/`}>
+    <div class="pic"><img src={previewImage} alt={product.name} loading="lazy" /></div>
+    <div class="meta"><div class="name">{product.name}</div>{price !== null && <span class="price">от {price} ₽</span>}</div>
+  </a>
+</article>

@@ -41,3 +41,9 @@ htmlcov/
 
 # Frontend (Astro)
 node_modules/
+
+# Local visual brainstorming sessions
+.superpowers/
+
+# Isolated local worktrees
+.worktrees/

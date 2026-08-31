@@ -1,0 +1,18 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { CatalogApi } from "../../lib/catalog-api";
+
+const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
+const categories = await api.categories();
+---
+
+<BaseLayout title="Каталог зеркал — Memiro">
+  <div class="wrap">
+    <div class="cat-head"><h1>Каталог зеркал</h1></div>
+  </div>
+  <main class="wrap section" style="padding-top: 40px;">
+    <div class="tiles-grid">
+      {categories.map((category, index) => <a class="tile" href={`/catalog/${category.slug}/`}><img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" /><span class="veil"></span><span class="label">{category.name}</span></a>)}
+    </div>
+  </main>
+</BaseLayout>

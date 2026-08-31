@@ -10,7 +10,8 @@
     "build": "astro build",
     "check": "astro check",
     "dev": "astro dev",
-    "start": "node ./dist/server/entry.mjs"
+    "start": "node ./dist/server/entry.mjs",
+    "test": "node --test --experimental-strip-types tests/*.test.mjs"
   },
   "dependencies": {
     "@astrojs/node": "11.1.4",

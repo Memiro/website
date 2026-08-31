@@ -6,4 +6,5 @@ export default defineConfig({
   adapter: node({ mode: "standalone" }),
   integrations: [vue()],
   output: "server",
+  srcDir: "./app",
 });

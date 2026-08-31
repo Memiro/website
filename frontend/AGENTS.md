@@ -7,8 +7,8 @@ Rules for work inside `frontend/`.
 - This directory is an Astro SSR storefront. It must not become an SSG build.
 - TypeScript, comments and docstrings must be English. Public storefront copy is Russian.
 - Keep page state local to the island that owns it. Pinia and authentication are not part of this project.
-- Put interactive Vue components in `src/islands/` and declare the hydration directive at the Astro call site.
-- Keep server-only helpers in `src/lib/`, reusable presentation in `src/components/`, layouts in `src/layouts/`, pages in `src/pages/`, and global CSS in `src/styles/`.
+- Put interactive Vue components in `app/islands/` and declare the hydration directive at the Astro call site.
+- Keep server-only helpers in `app/lib/`, reusable presentation in `app/components/`, layouts in `app/layouts/`, pages in `app/pages/`, and global CSS in `app/styles/`.
 - Do not use `any`, suppress type errors, or add dependencies without the owner's approval.
 
 ## Commands
