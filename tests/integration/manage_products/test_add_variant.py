@@ -6,8 +6,11 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from pydantic import ValidationError
+from sqlalchemy import insert, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.adapters.db.tables import product_variants_table
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
@@ -40,6 +43,16 @@ async def _add(container: AsyncContainer, form: AddVariantForm) -> CreatedVarian
     async with container() as request:
         interactor = await request.get(AddVariant)
         return await interactor.execute(PRODUCT, form)
+
+
+async def _copy_variant_row_directly(engine: AsyncEngine, variant_id: UUID) -> None:
+    """Insert a row-for-row copy of one variant under a fresh identifier."""
+    async with engine.begin() as connection:
+        result = await connection.execute(
+            select(product_variants_table).where(product_variants_table.c.id == variant_id),
+        )
+        row = dict(result.mappings().one())
+        await connection.execute(insert(product_variants_table), [{**row, "id": uuid4()}])
 
 
 async def _load_product(container: AsyncContainer) -> Product | None:
@@ -163,6 +176,18 @@ async def test_concurrent_identical_additions_preserve_variant_uniqueness(
     assert product is not None
     assert product.price_from == Money(amount=Decimal(8900))
     assert product.variants == (_expected_variant(product.variants[0].id, width_mm=800, height_mm=600, price="8900"),)
+
+
+async def test_the_database_refuses_a_second_variant_with_the_same_fingerprint(
+    app: FastAPI,
+    engine: AsyncEngine,
+) -> None:
+    """The unique fingerprint constraint stands even when no aggregate lock serialized the writers."""
+    container: AsyncContainer = app.state.dishka_container
+    created = await _add(container, AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0))
+
+    with pytest.raises(IntegrityError):
+        await _copy_variant_row_directly(engine, created.id)
 
 
 def test_adding_rejects_a_side_above_the_input_limit() -> None:

@@ -10,6 +10,14 @@ class DbConfig:
     user: str
     password: str
     database: str
+    # Without a wait limit a queued lock hangs the request forever; the
+    # bounded wait is what makes "retry" (429) an honest answer to a race.
+    lock_timeout_ms: int = 3000
+
+    @property
+    def server_settings(self) -> dict[str, str]:
+        """Session settings asyncpg applies to every connection it opens."""
+        return {"lock_timeout": f"{self.lock_timeout_ms}ms"}
 
     @property
     def url(self) -> str:
