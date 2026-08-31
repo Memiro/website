@@ -1,0 +1,25 @@
+{
+  "name": "memiro-storefront",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25"
+  },
+  "scripts": {
+    "build": "astro build",
+    "check": "astro check",
+    "dev": "astro dev",
+    "start": "node ./dist/server/entry.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "11.1.4",
+    "@astrojs/vue": "7.0.2",
+    "astro": "7.2.9",
+    "vue": "3.5.42"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "typescript": "5.9.3"
+  }
+}
