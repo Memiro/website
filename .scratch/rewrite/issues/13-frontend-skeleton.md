@@ -4,7 +4,7 @@
 
 **Blocked by:** 05 (контур и CI)
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [ ] `just up` поднимает контур с frontend; страница отдаётся SSR через nginx
 - [ ] AGENTS.md фронта написан; описаны команды сборки и запуска

@@ -36,14 +36,12 @@ test-ci:
     uv run pytest -n auto tests/unit tests/integration
 
 # End-to-end tests: full contour up, run, contour down
-test-e2e:
-    just up
-    uv run pytest tests/e2e
-    just down
+test-e2e *args:
+    @set -eu; trap 'just down' EXIT; just up; uv run pytest tests/e2e "$@"
 
 # Local dev stack
 up:
-    docker compose -f docker/docker-compose.yml up -d --wait
+    docker compose -f docker/docker-compose.yml up -d --build --wait
 
 down:
     docker compose -f docker/docker-compose.yml down

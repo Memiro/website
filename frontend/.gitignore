@@ -1,0 +1,7 @@
+# Astro generates these declarations from the source tree.
+.astro/
+
+# Node dependencies and build output stay local or in container layers.
+node_modules/
+dist/
+npm-debug.log

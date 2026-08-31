@@ -35,6 +35,24 @@ jobs:
       - run: uv sync --frozen --extra ci
       - run: just test-ci
 
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+
   # The image is built on release tags only, and only when the tag really sits
   # on main: a tag on a side branch would otherwise ship unreleased code.
   # Publishing it to a registry arrives with the production contour (ticket 23).
