@@ -24,6 +24,7 @@
 | `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
 | `CONSENT_REQUIRED` | 400 | `ConsentRequiredError` | Посетитель не согласился на обработку ПД |
+| `INVALID_PHONE` | 400 | `InvalidPhoneError` | Телефон в заявке не похож на телефон: не 10–15 цифр |
 | `EMPTY_INQUIRY` | 400 | `EmptyInquiryError` | Подборка не содержит позиции |
 | `INQUIRY_SOURCE_NOT_ACCEPTED` | 400 | `InquirySourceNotAcceptedError` | Новый запрос использовал исторический источник `PRODUCT_CARD` |
 | `INVALID_INQUIRY_CONTENTS` | 400 | `InvalidInquiryContentsError` | Поля заявки не соответствуют её источнику |

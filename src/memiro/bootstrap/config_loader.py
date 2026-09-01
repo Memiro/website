@@ -6,6 +6,7 @@ from typing import Self
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
+from memiro.application.submit_inquiry.config import LegalConfig
 from memiro_common.observability.config import ObservabilityConfig
 
 # The only environment variable the application reads.
@@ -18,6 +19,7 @@ class Config:
 
     db: DbConfig
     observability: ObservabilityConfig
+    legal: LegalConfig
     email: EmailConfig = field(default_factory=EmailConfig)
 
     @classmethod
@@ -29,4 +31,5 @@ class Config:
             db=DbConfig(**data["db"]),
             observability=ObservabilityConfig(**data["observability"]),
             email=EmailConfig(**data.get("email", {})),
+            legal=LegalConfig(**data["legal"]),
         )

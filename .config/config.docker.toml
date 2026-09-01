@@ -20,3 +20,8 @@ password = ""
 from_address = "memiro.ru@yandex.ru"
 manager_address = ""
 timeout_seconds = 10.0
+
+[legal]
+# Редакция текста политики обработки ПДн: правится тем же коммитом, что и сам
+# текст, — иначе согласие в заявке перестаёт быть доказательством (ADR-0006).
+consent_version = "2026-08-31"
