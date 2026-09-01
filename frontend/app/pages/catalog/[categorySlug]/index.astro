@@ -2,10 +2,10 @@
 import CatalogCard from "../../../components/CatalogCard.astro";
 import NotFound from "../../../components/NotFound.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { CatalogApi, type ListEnvelope, type ProductSummary } from "../../../lib/catalog-api";
-import { foundOrNull } from "../../../lib/not-found";
+import { internalCatalogApi, type ListEnvelope, type ProductSummary } from "../../../lib/catalog-api.ts";
+import { foundOrNull } from "../../../lib/not-found.ts";
 
-const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
+const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
 const products: ListEnvelope<ProductSummary> | null = await foundOrNull(categorySlug, (slug) =>
   api.categoryProducts(slug),

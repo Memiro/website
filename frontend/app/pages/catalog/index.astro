@@ -1,8 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { CatalogApi } from "../../lib/catalog-api";
+import { internalCatalogApi } from "../../lib/catalog-api.ts";
 
-const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
+const api = internalCatalogApi();
 const categories = (await api.categories()).items;
 ---
 

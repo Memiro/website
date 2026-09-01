@@ -20,6 +20,7 @@ const MIRROR = {
   ],
 };
 
+/** @returns {import("../app/lib/catalog-api.ts").CalculatedPrice} */
 function pricedAt(total) {
   return { verdict: "PRICED", total, selection_deltas: [] };
 }
@@ -251,7 +252,7 @@ test("a configuration that cannot be priced says so instead of showing a price",
 
 test("the first product variant opens the calculator with its size and overrides", () => {
   const state = initialCalculatorState({
-    id: "mirror",
+    ...MIRROR,
     attributes: [],
     variants: [
       {
@@ -300,7 +301,7 @@ test("a priced result keeps every server-calculated selection delta", () => {
 
 test("choosing a product variant replaces the calculator configuration", () => {
   const product = {
-    id: "mirror",
+    ...MIRROR,
     attributes: [],
     variants: [
       { width_mm: 800, height_mm: 600, price: "8900", overrides: [] },

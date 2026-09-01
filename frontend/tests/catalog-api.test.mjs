@@ -29,7 +29,7 @@ test("the SSR client reads catalogue lists as the {items, total, page} envelope"
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify(bodies[request.url]));
   });
-  await new Promise((resolve) => server.listen(0, resolve));
+  await new Promise((resolve) => server.listen(0, () => resolve(undefined)));
   t.after(() => server.close());
 
   const address = server.address();
@@ -48,7 +48,7 @@ test("the SSR client requests a product from its internal API base URL", async (
     response.setHeader("content-type", "application/json");
     response.end(JSON.stringify(product));
   });
-  await new Promise((resolve) => server.listen(0, resolve));
+  await new Promise((resolve) => server.listen(0, () => resolve(undefined)));
   t.after(() => server.close());
 
   const address = server.address();

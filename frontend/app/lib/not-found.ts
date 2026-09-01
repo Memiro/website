@@ -1,4 +1,4 @@
-import { ApiResponseError } from "./catalog-api";
+import { ApiResponseError } from "./http.ts";
 
 /** Resolve a catalogue lookup to null when the slug is empty or the API says 404; other failures still throw. */
 export async function foundOrNull<Result>(slug: string, load: (slug: string) => Promise<Result>): Promise<Result | null> {

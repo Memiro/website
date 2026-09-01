@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 
-import { calculatePrice } from "./calculate-price";
-import { inquiryErrorMessage, SubmitInquiryError, submitInquiry } from "./submit-inquiry";
-import type { ProductCard } from "../lib/catalog-api";
-import { Calculator, HEIGHT_FIELD, WIDTH_FIELD } from "../lib/calculator-state";
+import { calculatePrice } from "./calculate-price.ts";
+import { inquiryErrorMessage, SubmitInquiryError, submitInquiry } from "./submit-inquiry.ts";
+import type { ProductCard } from "../lib/catalog-api.ts";
+import { Calculator, HEIGHT_FIELD, WIDTH_FIELD } from "../lib/calculator-state.ts";
 import {
   addInquiryItem,
   canAddCalculatorConfiguration,
@@ -14,8 +14,8 @@ import {
   removeInquiryItem,
   saveInquiryItems,
   selectionInquiry,
-} from "../lib/inquiry-state";
-import type { InquiryItem } from "../lib/inquiry-state";
+} from "../lib/inquiry-state.ts";
+import type { InquiryItem } from "../lib/inquiry-state.ts";
 
 const props = defineProps<{ product: ProductCard }>();
 const calculator = reactive(new Calculator(props.product, calculatePrice));

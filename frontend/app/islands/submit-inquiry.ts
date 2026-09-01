@@ -1,10 +1,20 @@
-import type { SubmitInquiryRequest } from "../lib/inquiry-state";
+import { ApiResponseError, asRecord, requestJson } from "../lib/http.ts";
+import type { SubmitInquiryRequest } from "../lib/inquiry-state.ts";
+
+const UNKNOWN_REFUSAL = "INTERNAL_ERROR";
+// Sending an inquiry writes: the server stores it and only then notifies the studio, so a
+// short abort would hide a stored inquiry behind "try again" and the retry would duplicate it.
+const SUBMIT_TIMEOUT_MS = 30_000;
+
+export interface AcceptedInquiry {
+  id: string;
+}
 
 export class SubmitInquiryError extends Error {
   public readonly code: string;
 
-  public constructor(code: string) {
-    super(`The inquiry API rejected the request with ${code}`);
+  public constructor(code: string, cause?: unknown) {
+    super(`The inquiry API rejected the request with ${code}`, { cause });
     this.code = code;
   }
 }
@@ -12,17 +22,17 @@ export class SubmitInquiryError extends Error {
 export async function submitInquiry(
   request: SubmitInquiryRequest,
   apiBaseUrl = window.location.origin,
-): Promise<{ id: string }> {
-  const response = await fetch(new URL("/api/inquiries", apiBaseUrl), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(request),
-  });
-  if (!response.ok) {
-    const body = (await response.json()) as { code?: string };
-    throw new SubmitInquiryError(body.code ?? "INTERNAL_ERROR");
+): Promise<AcceptedInquiry> {
+  try {
+    return await requestJson({
+      url: new URL("/api/inquiries", apiBaseUrl),
+      post: request,
+      isBody: isAcceptedInquiry,
+      timeoutMs: SUBMIT_TIMEOUT_MS,
+    });
+  } catch (error) {
+    throw new SubmitInquiryError(error instanceof ApiResponseError ? error.code ?? UNKNOWN_REFUSAL : UNKNOWN_REFUSAL, error);
   }
-  return (await response.json()) as { id: string };
 }
 
 export function inquiryErrorMessage(error: SubmitInquiryError): string {
@@ -36,4 +46,8 @@ export function inquiryErrorMessage(error: SubmitInquiryError): string {
     VALIDATION_ERROR: "Проверьте заполнение формы и попробуйте снова.",
   };
   return messages[error.code] ?? "Не удалось отправить заявку. Попробуйте ещё раз.";
+}
+
+function isAcceptedInquiry(value: unknown): value is AcceptedInquiry {
+  return typeof asRecord(value)?.id === "string";
 }

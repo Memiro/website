@@ -8,9 +8,9 @@
   },
   "scripts": {
     "build": "astro build",
-    "check": "astro check",
+    "check": "astro check && tsc --noEmit -p tsconfig.tests.json",
     "dev": "astro dev",
-    "start": "node ./dist/server/entry.mjs",
+    "start": "node ./server.mjs",
     "test": "node --test --experimental-strip-types tests/*.test.mjs"
   },
   "dependencies": {
@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
+    "@types/node": "24.13.3",
     "typescript": "5.9.3"
   }
 }

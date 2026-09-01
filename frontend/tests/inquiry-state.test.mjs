@@ -6,6 +6,7 @@ import {
   canShowInquiryEditor,
   addInquiryItem,
   inquiryItemFromCalculator,
+  removeInquiryItem,
   loadInquiryItems,
   selectionInquiry,
 } from "../app/lib/inquiry-state.ts";
@@ -15,6 +16,7 @@ test("a beyond-limits calculator configuration becomes a selection wish without 
     {
       id: "mirror",
       name: "Зеркало Loft",
+      slug: "loft",
       attributes: [],
       variants: [],
       description: "",
@@ -82,6 +84,52 @@ test("the inquiry basket keeps configurations while the customer opens another p
 
   assert.deepEqual(loadInquiryItems(storage), items);
 });
+
+test("a browser that refuses to remember the basket still accepts the configuration", () => {
+  const storage = new RefusingStorage();
+  const item = {
+    productId: "first-mirror",
+    productName: "Зеркало Loft",
+    widthMm: 800,
+    heightMm: 600,
+    selections: [],
+    wish: "",
+    isWish: false,
+  };
+
+  const items = addInquiryItem(storage, [], item);
+
+  assert.deepEqual(items, [item]);
+});
+
+test("removing a position drops it from the browser storage too", () => {
+  const storage = new MapStorage();
+  const first = { productId: "first", productName: "Первое", widthMm: 800, heightMm: 600, selections: [], wish: "", isWish: false };
+  const second = { productId: "second", productName: "Второе", widthMm: 900, heightMm: 700, selections: [], wish: "", isWish: false };
+  const items = addInquiryItem(storage, addInquiryItem(storage, [], first), second);
+
+  const kept = removeInquiryItem(storage, items, 0);
+
+  assert.deepEqual(kept, [second]);
+  assert.deepEqual(loadInquiryItems(storage), [second]);
+});
+
+test("a broken basket in storage is read as an empty basket", () => {
+  const storage = new MapStorage();
+  storage.setItem("memiro.inquiry-items", "{not json");
+
+  assert.deepEqual(loadInquiryItems(storage), []);
+});
+
+class RefusingStorage {
+  getItem() {
+    return null;
+  }
+
+  setItem() {
+    throw new Error("The browser refuses to store anything in this mode");
+  }
+}
 
 class MapStorage {
   #values = new Map();

@@ -1,4 +1,4 @@
-import type { CalculatedPrice, CalculateRequest, ProductCard } from "./catalog-api";
+import type { CalculatedPrice, CalculateRequest, ProductCard } from "./catalog-api.ts";
 
 export interface CalculatorSelection {
   attributeId: string;

@@ -1,5 +1,5 @@
-import type { CalculatorState, PricePresentation } from "./calculator-state";
-import type { ProductCard } from "./catalog-api";
+import type { CalculatorState, PricePresentation } from "./calculator-state.ts";
+import type { AttributeSelection, ProductCard } from "./catalog-api.ts";
 
 export interface InquiryItem {
   productId: string;
@@ -37,11 +37,7 @@ export interface SubmitInquiryRequest {
     product_id: string;
     width_mm: number;
     height_mm: number;
-    selections: Array<{
-      attribute_id: string;
-      value_id: string | null;
-      quantity: string | null;
-    }>;
+    selections: AttributeSelection[];
     wish: string;
   }>;
 }
@@ -60,20 +56,22 @@ export function canShowInquiryEditor(
 }
 
 export function loadInquiryItems(storage: BrowserStorage): InquiryItem[] {
-  const saved = storage.getItem(INQUIRY_ITEMS_STORAGE_KEY);
-  if (saved === null) {
-    return [];
-  }
   try {
-    const parsed = JSON.parse(saved) as unknown;
+    const saved = storage.getItem(INQUIRY_ITEMS_STORAGE_KEY);
+    const parsed = saved === null ? null : (JSON.parse(saved) as unknown);
     return Array.isArray(parsed) && parsed.every(isInquiryItem) ? parsed : [];
   } catch {
     return [];
   }
 }
 
+// A browser in private mode refuses to store anything: the basket then lives for this page only.
 export function saveInquiryItems(storage: BrowserStorage, items: InquiryItem[]): void {
-  storage.setItem(INQUIRY_ITEMS_STORAGE_KEY, JSON.stringify(items));
+  try {
+    storage.setItem(INQUIRY_ITEMS_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    return;
+  }
 }
 
 export function addInquiryItem(storage: BrowserStorage, items: InquiryItem[], item: InquiryItem): InquiryItem[] {
