@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
-from memiro.entities.catalog.product.entity import DeclaredValue, Variant, VariantData
+from memiro.entities.catalog.product.entity import DeclaredValue, VariantData
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import (
@@ -130,38 +130,6 @@ def test_removing_the_last_variant_leaves_a_product_without_a_price() -> None:
     assert product.price_from is None
 
 
-def test_a_duplicated_variant_keeps_everything_but_its_size_and_price() -> None:
-    """Duplicating by size preserves overrides and owner order but recalculates price."""
-    product = demo_product()
-    override = DeclaredValue(
-        attribute_id=FRAME,
-        chosen=ChosenValue(value_id=NO_FRAME, quantity=None),
-    )
-    source = product.add_variant(
-        _variant_data(width_mm=600, height_mm=400, overrides=(override,), sort_order=7),
-        price=Money(amount=Decimal(2000)),
-    )
-    new_dimensions = Dimensions(
-        width=Millimeters(value=1200),
-        height=Millimeters(value=800),
-    )
-
-    duplicate = product.duplicate_variant_with_size(
-        source,
-        new_dimensions,
-        price=Money(amount=Decimal(9000)),
-    )
-
-    assert duplicate.id != source.id
-    assert duplicate == Variant(
-        duplicate.id,
-        dimensions=new_dimensions,
-        overrides=source.overrides,
-        price=Money(amount=Decimal(9000)),
-        sort_order=source.sort_order,
-    )
-
-
 def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> None:
     """The same rotated size and overrides are rejected with DUPLICATE_VARIANT."""
     product = demo_product()
@@ -270,23 +238,25 @@ def test_changing_a_variant_cannot_duplicate_its_neighbour() -> None:
     assert product.price_from == Money(amount=Decimal(2000))
 
 
-def test_duplicating_to_an_existing_size_changes_nothing() -> None:
-    """A conflicting duplicate is rejected with DUPLICATE_VARIANT and changes no state."""
+def test_adding_an_existing_size_changes_nothing() -> None:
+    """A conflicting child is rejected with DUPLICATE_VARIANT and changes no state."""
     product = demo_product()
     existing = product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
     )
-    source = product.add_variant(
+    product.add_variant(
         _variant_data(width_mm=1200, height_mm=800),
         price=Money(amount=Decimal(9000)),
     )
     variants_before = product.variants
 
     with pytest.raises(DuplicateVariantError, match="same size and configured values"):
-        product.duplicate_variant_with_size(
-            source,
-            Dimensions(width=existing.dimensions.height, height=existing.dimensions.width),
+        product.add_variant(
+            _variant_data(
+                width_mm=existing.dimensions.height.value,
+                height_mm=existing.dimensions.width.value,
+            ),
             price=Money(amount=Decimal(2000)),
         )
 

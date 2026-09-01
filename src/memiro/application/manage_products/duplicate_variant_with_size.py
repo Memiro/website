@@ -69,11 +69,7 @@ class DuplicateVariantWithSize:
             attributes=attributes,
             settings=settings,
         )
-        duplicate = product.duplicate_variant_with_size(
-            variant,
-            duplicate_data.dimensions,
-            price=price,
-        )
+        duplicate = product.add_variant(duplicate_data, price=price)
         await self.uow.commit()
         logger.info("Product variant duplicated", product_id=product_id, variant_id=duplicate.id)
         return CreatedVariant(id=duplicate.id)
