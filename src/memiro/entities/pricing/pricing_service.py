@@ -1,4 +1,5 @@
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal
 
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
@@ -255,7 +256,7 @@ def _values(
     come out in a different order on every request (§8.4).
     """
     index = {attribute.id: attribute for attribute in attributes}
-    resolved: list[tuple[Attribute, AttributeValue, Decimal | None]] = []
+    resolved: list[_ResolvedValue] = []
     for attribute_id, chosen in chosen_values.items():
         attribute = index.get(attribute_id)
         if attribute is None:
@@ -264,14 +265,28 @@ def _values(
             msg = f"Attribute {attribute_id} is not in the pricing dictionary"
             raise RuntimeError(msg)
         value = _resolve(attribute, chosen)
-        resolved.append((attribute, value, chosen.quantity if attribute.kind is AttributeKind.NUMBER else None))
-    return tuple((attribute.id, value, quantity) for attribute, value, quantity in sorted(resolved, key=_owner_order))
+        resolved.append(
+            _ResolvedValue(
+                attribute=attribute,
+                value=value,
+                quantity=chosen.quantity if attribute.kind is AttributeKind.NUMBER else None,
+            )
+        )
+    return tuple((row.attribute.id, row.value, row.quantity) for row in sorted(resolved, key=_owner_order))
 
 
-def _owner_order(row: tuple[Attribute, AttributeValue, Decimal | None]) -> tuple[int, int, str]:
+@dataclass(frozen=True, slots=True)
+class _ResolvedValue:
+    """One chosen value paired with the attribute it belongs to and its consumption."""
+
+    attribute: Attribute
+    value: AttributeValue
+    quantity: Decimal | None
+
+
+def _owner_order(row: _ResolvedValue) -> tuple[int, int, str]:
     """Order one resolved row by the owner's two sort fields, breaking a tie by identifier."""
-    attribute, value, _ = row
-    return (attribute.sort_order, value.sort_order, str(value.id))
+    return (row.attribute.sort_order, row.value.sort_order, str(row.value.id))
 
 
 def _resolve(attribute: Attribute, chosen: ChosenValue) -> AttributeValue:

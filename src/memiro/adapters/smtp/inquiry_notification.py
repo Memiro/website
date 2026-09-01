@@ -111,8 +111,8 @@ class SMTPInquiryNotificationBus(InquiryNotificationBus):
         """Swallow every SMTP failure so the delivery cannot change the committed outcome."""
         try:
             await self._send_to_manager(inquiry_id)
-        except Exception:  # noqa: BLE001 -- an external notification must never fail the inquiry.
-            logger.warning("Inquiry notification delivery failed")
+        except Exception:
+            logger.warning("Inquiry notification delivery failed", inquiry_id=str(inquiry_id), exc_info=True)
 
     async def _send_to_manager(self, inquiry_id: InquiryId) -> None:
         """Send an email built exclusively from the saved inquiry snapshot."""
