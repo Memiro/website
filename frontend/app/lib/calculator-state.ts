@@ -25,8 +25,11 @@ export interface PriceDelta {
   amount: string;
 }
 
-export function initialCalculatorState(product: ProductCard): CalculatorState {
-  return calculatorStateForVariant(product, 0);
+// A product may legitimately carry no ready sizes: the owner priced none yet,
+// or removed the last one. Then there is no size to open on and the customer
+// types his own — the calculator must not refuse to exist.
+export function initialCalculatorState(product: ProductCard): CalculatorState | null {
+  return product.variants.length === 0 ? null : calculatorStateForVariant(product, 0);
 }
 
 export function calculatorStateForVariant(product: ProductCard, index: number): CalculatorState {
@@ -121,9 +124,9 @@ export class Calculator {
     const state = initialCalculatorState(product);
     this.product = product;
     this.calculate = calculate;
-    this.widthText = String(state.widthMm);
-    this.heightText = String(state.heightMm);
-    this.selections = state.selections;
+    this.widthText = state === null ? "" : String(state.widthMm);
+    this.heightText = state === null ? "" : String(state.heightMm);
+    this.selections = state === null ? [] : state.selections;
     this.request = { status: "idle" };
     this.priced = null;
     this.generation = 0;
