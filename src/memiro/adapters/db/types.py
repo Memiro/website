@@ -106,8 +106,8 @@ class PhoneType(TypeDecorator[Phone]):
         except InvalidPhoneError as error:
             # A stored number that is not a number is a defect of the row, not
             # a visitor's mistake: it leaves as a 500 and not as a refusal.
-            message = "Stored inquiry has a corrupted phone number"
-            raise RuntimeError(message) from error
+            msg = "Stored inquiry has a corrupted phone number"
+            raise RuntimeError(msg) from error
 
 
 class AttributeIdsType(TypeDecorator[tuple[AttributeId, ...]]):

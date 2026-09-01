@@ -37,8 +37,8 @@ from memiro.entities.inquiry.entity import (
     InquirySource,
     ensure_new_inquiry_shape,
     inquiry_factory,
-    inquiry_item_snapshot,
 )
+from memiro.entities.inquiry.inquiry_service import inquiry_item_snapshot
 from memiro.entities.inquiry.phone import normalized_phone
 from memiro.entities.pricing.pricing_service import price_product_for_customer
 from memiro.entities.pricing.pricing_settings import PricingSettings
