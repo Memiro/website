@@ -255,7 +255,7 @@ def _values(
     come out in a different order on every request (§8.4).
     """
     index = {attribute.id: attribute for attribute in attributes}
-    resolved: list[tuple[int, int, str, AttributeId, AttributeValue, Decimal | None]] = []
+    resolved: list[tuple[Attribute, AttributeValue, Decimal | None]] = []
     for attribute_id, chosen in chosen_values.items():
         attribute = index.get(attribute_id)
         if attribute is None:
@@ -264,23 +264,14 @@ def _values(
             msg = f"Attribute {attribute_id} is not in the pricing dictionary"
             raise RuntimeError(msg)
         value = _resolve(attribute, chosen)
-        resolved.append(
-            (
-                attribute.sort_order,
-                value.sort_order,
-                str(value.id),
-                attribute_id,
-                value,
-                chosen.quantity if attribute.kind is AttributeKind.NUMBER else None,
-            )
-        )
-    return tuple(
-        (attribute_id, value, quantity)
-        for _, _, _, attribute_id, value, quantity in sorted(
-            resolved,
-            key=lambda row: (row[0], row[1], row[2]),
-        )
-    )
+        resolved.append((attribute, value, chosen.quantity if attribute.kind is AttributeKind.NUMBER else None))
+    return tuple((attribute.id, value, quantity) for attribute, value, quantity in sorted(resolved, key=_owner_order))
+
+
+def _owner_order(row: tuple[Attribute, AttributeValue, Decimal | None]) -> tuple[int, int, str]:
+    """Order one resolved row by the owner's two sort fields, breaking a tie by identifier."""
+    attribute, value, _ = row
+    return (attribute.sort_order, value.sort_order, str(value.id))
 
 
 def _resolve(attribute: Attribute, chosen: ChosenValue) -> AttributeValue:

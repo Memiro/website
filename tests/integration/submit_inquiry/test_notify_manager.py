@@ -64,6 +64,19 @@ async def test_a_committed_inquiry_uses_the_enabled_port_configured_smtp_channel
     assert "10 100" in received_emails[0]
 
 
+async def test_a_switched_off_channel_sends_nothing(
+    silent_api_client: ApiClient,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """An email channel switched off by configuration delivers no message at all."""
+    response = await silent_api_client.submit_inquiry(_ONE_ITEM_FORM)
+
+    _, received_emails = smtp_server
+
+    assert response.assert_status(200).ensure_content().id
+    assert received_emails == []
+
+
 async def test_an_smtp_failure_keeps_the_saved_inquiry(
     failing_api_client: ApiClient,
     failing_app: FastAPI,

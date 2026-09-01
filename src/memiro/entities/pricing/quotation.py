@@ -67,3 +67,16 @@ class Quotation:
         if self.total is None and self.size_surcharge_from_long_side_mm is not None:
             msg = f"Verdict {self.verdict} did no pricing and cannot carry a size-surcharge threshold"
             raise RuntimeError(msg)
+
+    def settled_total(self) -> Money:
+        """Give the total of a verdict that priced the mirror; its absence is a defect (§12.3)."""
+        if self.total is None:
+            msg = f"Verdict {self.verdict} left the calculation with no total"
+            raise RuntimeError(msg)
+        return self.total
+
+    def customer_total(self) -> Money | None:
+        """Give the total the storefront may name: a hidden price and a refusal name none (ADR-0008)."""
+        if self.verdict is not PricingVerdict.PRICED:
+            return None
+        return self.settled_total()
