@@ -29,6 +29,7 @@ from memiro.adapters.db.types import (
     InquiryConfigurationType,
     MillimetersType,
     MoneyType,
+    RateAmountType,
     VariantOverridesType,
 )
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
@@ -65,7 +66,7 @@ attribute_values_table = Table(
     Column("id", Uuid(), primary_key=True),
     Column("attribute_id", Uuid(), ForeignKey("attributes.id", ondelete="CASCADE"), nullable=False),
     Column("name", String(NAME_LENGTH), nullable=False),
-    Column("rate_amount", MoneyType(), nullable=False),
+    Column("rate_amount", RateAmountType(), nullable=False),
     Column("rate_unit", Enum(Unit, name="unit", native_enum=False, length=NAME_LENGTH), nullable=False),
     Column("scaled_by_shape", Boolean(), nullable=False, default=False),
     Column("scaled_by_size_surcharge", Boolean(), nullable=False, default=False),

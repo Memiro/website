@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field, model_validator
 
-from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
+from memiro.application.common.input_limits import MAX_QUANTITY, MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
 from memiro.application.errors.catalog import AttributeValueNotFoundError
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product, VariantData
@@ -50,7 +50,7 @@ class VariantOverrideForm(BaseModel):
 
     attribute_id: AttributeId
     value_id: AttributeValueId | None = None
-    quantity: Decimal | None = None
+    quantity: Decimal | None = Field(default=None, ge=0, le=MAX_QUANTITY)
 
     @model_validator(mode="after")
     def _one_representation(self) -> VariantOverrideForm:

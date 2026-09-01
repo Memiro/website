@@ -18,6 +18,10 @@ from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfigurat
 # corrupted row never loads silently (§8.5).
 _MONEY = Numeric(12, 2)
 _AREA = Numeric(10, 4)
+# A tariff column doubles as the multiplier of a ``FACTOR`` rate, which is not
+# money and does not stop at the kopeck: at two decimals a shape factor of
+# 1.125 became 1.13 and the round mirror drifted from the workbook.
+_RATE = Numeric(12, 4)
 type VariantOverridePayload = dict[str, str | None]
 
 
@@ -52,6 +56,13 @@ class MoneyType(TypeDecorator[Money]):
     def process_result_value(self, value: Decimal | None, dialect: Dialect) -> Money | None:
         """Rebuild the sum through the domain constructor."""
         return None if value is None else Money(amount=value)
+
+
+class RateAmountType(MoneyType):
+    """Column type storing a tariff, which is money per unit or a bare multiplier."""
+
+    impl = _RATE
+    cache_ok = True
 
 
 class AreaType(TypeDecorator[Area]):

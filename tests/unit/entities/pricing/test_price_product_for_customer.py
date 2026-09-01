@@ -1,5 +1,6 @@
 from dataclasses import replace
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 from hypothesis import given, settings
@@ -263,3 +264,16 @@ def test_one_thousand_fractional_numeric_prices_keep_exact_consumption(
     )
 
     assert quotation.breakdown[0].quantity == quantity
+
+
+def test_a_selection_naming_an_attribute_outside_the_dictionary_is_not_priceable() -> None:
+    """A choice the dictionary never heard of refuses the configuration, it does not raise KeyError."""
+    quotation = price_product_for_customer(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=demo_settings(),
+        dimensions=_dimensions(800, 600),
+        selections={uuid4(): ConfiguredValue(value_id=SILVER, quantity=None)},
+    )
+
+    assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())

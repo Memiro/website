@@ -21,6 +21,7 @@
 | `DUPLICATE_SIZE_SURCHARGE` | 400 | `DuplicateSizeSurchargeError` | Две ступени наценки за размер начинаются на одной границе |
 | `INVALID_VARIANT_CONFIGURATION` | 400 | `InvalidVariantConfigurationError` | Конфигурация варианта не описывает полностью считаемый товар |
 | `INVALID_VARIANT_SORT_ORDER` | 400 | `InvalidVariantSortOrderError` | Порядок варианта отрицательный |
+| `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
 | `CONSENT_REQUIRED` | 400 | `ConsentRequiredError` | Посетитель не согласился на обработку ПД |
 | `EMPTY_INQUIRY` | 400 | `EmptyInquiryError` | Подборка не содержит позиции |

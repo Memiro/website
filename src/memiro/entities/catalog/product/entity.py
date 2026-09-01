@@ -12,6 +12,7 @@ from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import (
     DuplicateVariantError,
+    InvalidQuantityError,
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
@@ -42,10 +43,15 @@ class ConfiguredValue:
     quantity: Decimal | None
 
     def __post_init__(self) -> None:
-        """Reject two simultaneous representations as a programmer defect."""
+        """Reject two simultaneous representations, and a consumption below zero."""
         if self.value_id is not None and self.quantity is not None:
             msg = "Configured value cannot name both a dictionary row and a quantity"
             raise RuntimeError(msg)
+        # Zero is a declaration ("no cutouts"), below zero is not: it would
+        # reach ``Rate.charge`` and leave as a 500 from ``Money`` — a refusal
+        # the customer is owed as a 4xx instead.
+        if self.quantity is not None and self.quantity < 0:
+            raise InvalidQuantityError
 
 
 @dataclass

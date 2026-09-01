@@ -5,9 +5,9 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
-from memiro.adapters.db.errors import LockTimeoutError
+from memiro.adapters.db.errors import LOCK_NOT_AVAILABLE, RETRYABLE_VIOLATIONS, LockTimeoutError, sqlstate_of
 from memiro.application.errors.catalog import (
     AttributeValueNotFoundError,
     CategoryNotFoundError,
@@ -26,6 +26,7 @@ from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasure
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro.entities.errors.product import (
     DuplicateVariantError,
+    InvalidQuantityError,
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
@@ -51,6 +52,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     DuplicateSizeSurchargeError: status.HTTP_400_BAD_REQUEST,
     InvalidVariantConfigurationError: status.HTTP_400_BAD_REQUEST,
     InvalidVariantSortOrderError: status.HTTP_400_BAD_REQUEST,
+    InvalidQuantityError: status.HTTP_400_BAD_REQUEST,
     DuplicateVariantError: status.HTTP_409_CONFLICT,
     ConsentRequiredError: status.HTTP_400_BAD_REQUEST,
     EmptyInquiryError: status.HTTP_400_BAD_REQUEST,
@@ -109,14 +111,33 @@ def _invalid_fields(exc: Exception) -> list[str]:
     return fields
 
 
-async def _handle_integrity_error(_request: Request, exc: Exception) -> JSONResponse:
-    """Answer a race lost on a database invariant with an honest retry (§8.7)."""
+async def _handle_integrity_error(request: Request, exc: Exception) -> JSONResponse:
+    """Answer a race lost on a database invariant with an honest retry (§8.7).
+
+    Only a uniqueness or exclusion failure is a race. A broken reference or a
+    failed check is a defect, and answering it "retry the request" would leave
+    the client looping on a 429 forever while nothing in monitoring fires.
+    """
+    if sqlstate_of(exc) not in RETRYABLE_VIOLATIONS:
+        return await _handle_unexpected_error(request, exc)
     logger.info("Request lost a database race", error=type(exc).__name__, status=status.HTTP_429_TOO_MANY_REQUESTS)
     return _response(
         status.HTTP_429_TOO_MANY_REQUESTS,
         CONCURRENT_CHANGE_CODE,
         "Concurrent change, retry the request",
     )
+
+
+async def _handle_dbapi_error(request: Request, exc: Exception) -> JSONResponse:
+    """Answer a lock refused anywhere — not only in the gateway — with the retry it deserves.
+
+    ``SAProductGateway`` translates the lock it takes itself, but the same wait
+    is refused from ``flush`` and ``commit`` too, and there the driver failure
+    arrives here as a plain ``DBAPIError``.
+    """
+    if sqlstate_of(exc) != LOCK_NOT_AVAILABLE:
+        return await _handle_unexpected_error(request, exc)
+    return await _handle_app_error(request, LockTimeoutError())
 
 
 async def _handle_unexpected_error(_request: Request, exc: Exception) -> JSONResponse:
@@ -139,6 +160,7 @@ def setup_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _handle_app_error)
     app.add_exception_handler(RequestValidationError, _handle_validation_error)
     app.add_exception_handler(IntegrityError, _handle_integrity_error)
+    app.add_exception_handler(DBAPIError, _handle_dbapi_error)
     # The catch-all is registered last and is the reason a deliberate
     # RuntimeError from the domain still leaves as {code, message, meta}
     # rather than as the framework's plain-text page (§10.3).

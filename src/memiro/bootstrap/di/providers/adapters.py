@@ -23,7 +23,7 @@ from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro.adapters.db.gateways.product import SAProductGateway
 from memiro.adapters.smtp.composite import CompositeInquiryNotificationBus
 from memiro.adapters.smtp.config import EmailConfig
-from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus
+from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus, Transport, smtp_transport
 from memiro.application.common.notification import InquiryNotificationBus
 from memiro_common.clock import SystemClock
 from memiro_common.uow import UoW
@@ -40,6 +40,11 @@ class AdapterProvider(Provider):
     inquiry_gateway = provide(WithParents[SAInquiryGateway], scope=Scope.REQUEST)
     pricing_settings_gateway = provide(WithParents[SAPricingSettingsGateway], scope=Scope.REQUEST)
     smtp_inquiry_notification_bus = provide(SMTPInquiryNotificationBus, scope=Scope.REQUEST)
+
+    @provide(scope=Scope.APP)
+    def get_email_transport(self) -> Transport:
+        """Hand the bus the blocking SMTP send it runs off the event loop."""
+        return smtp_transport
 
     @provide(scope=Scope.REQUEST, provides=InquiryNotificationBus)
     def get_inquiry_notification_bus(
