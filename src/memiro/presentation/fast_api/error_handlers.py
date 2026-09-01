@@ -112,12 +112,11 @@ def _invalid_fields(exc: Exception) -> list[str]:
 
 
 async def _handle_integrity_error(request: Request, exc: Exception) -> JSONResponse:
-    """Answer a race lost on a database invariant with an honest retry (§8.7).
-
-    Only a uniqueness or exclusion failure is a race. A broken reference or a
-    failed check is a defect, and answering it "retry the request" would leave
-    the client looping on a 429 forever while nothing in monitoring fires.
-    """
+    """Answer a race lost on a database invariant with an honest retry (§8.7)."""
+    # Only a uniqueness or exclusion failure is a race. A broken reference or
+    # a failed check is a defect, and answering it "retry the request" would
+    # leave the client looping on a 429 forever while nothing in monitoring
+    # ever fires.
     if sqlstate_of(exc) not in RETRYABLE_VIOLATIONS:
         return await _handle_unexpected_error(request, exc)
     logger.info("Request lost a database race", error=type(exc).__name__, status=status.HTTP_429_TOO_MANY_REQUESTS)
@@ -129,12 +128,10 @@ async def _handle_integrity_error(request: Request, exc: Exception) -> JSONRespo
 
 
 async def _handle_dbapi_error(request: Request, exc: Exception) -> JSONResponse:
-    """Answer a lock refused anywhere — not only in the gateway — with the retry it deserves.
-
-    ``SAProductGateway`` translates the lock it takes itself, but the same wait
-    is refused from ``flush`` and ``commit`` too, and there the driver failure
-    arrives here as a plain ``DBAPIError``.
-    """
+    """Answer a lock refused anywhere, not only in the gateway, with the retry it deserves."""
+    # ``SAProductGateway`` translates the lock it takes itself, but the same
+    # wait is refused from ``flush`` and ``commit`` too, and there the driver
+    # failure arrives as a plain ``DBAPIError``.
     if sqlstate_of(exc) != LOCK_NOT_AVAILABLE:
         return await _handle_unexpected_error(request, exc)
     return await _handle_app_error(request, LockTimeoutError())

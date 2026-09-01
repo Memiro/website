@@ -30,3 +30,8 @@ test("the catalogue link is not current on the home page", () => {
 test("the catalogue link is not current on a page whose address merely starts alike", () => {
   assert.equal(isCurrentPath("/catalogue-of-something/", "/catalog/"), false);
 });
+
+test("the home link is current only on the home page, not on every page beneath it", () => {
+  assert.equal(isCurrentPath("/", "/"), true);
+  assert.equal(isCurrentPath("/catalog/", "/"), false);
+});

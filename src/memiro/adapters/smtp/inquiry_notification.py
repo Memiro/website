@@ -121,9 +121,9 @@ class SMTPInquiryNotificationBus(InquiryNotificationBus):
         # connection, and ``smtplib``'s timeout is per socket operation: a hung
         # host would hold that connection idle-in-transaction for the whole
         # wait, and enough of them exhaust the pool for every other route.
-        # Committing rather than rolling back: the session is built with
-        # expire_on_commit=False, so the interactor keeps reading the aggregate
-        # it already committed, while a rollback would expire it and turn the
-        # next attribute read into lazy IO outside the greenlet.
-        await self._session.commit()
+        # Closing, not committing: a best-effort email must never be what
+        # commits somebody else's pending work. Unlike a rollback, closing
+        # detaches the loaded aggregate instead of expiring it, so the
+        # interactor's own reads after this line stay in memory.
+        await self._session.close()
         await asyncio.to_thread(self._send, self._config, message)

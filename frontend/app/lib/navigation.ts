@@ -19,7 +19,9 @@ export const SITE_LINKS: readonly NavigationLink[] = [
   ...FOOTER_LEGAL_LINKS,
 ];
 
+// A section link is current for everything beneath it, but the root is not a
+// section: by prefix alone "/" would light up on every page of the site.
 export function isCurrentPath(pathname: string, href: string): boolean {
   const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`;
-  return normalized.startsWith(href);
+  return href === "/" ? normalized === "/" : normalized.startsWith(href);
 }
