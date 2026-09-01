@@ -59,8 +59,14 @@ function declaredQuantities(product: ProductCard, chosen: CalculatorSelection[])
     .flatMap((attribute) =>
       attribute.values
         .filter((value) => value.quantity !== null)
-        .map((value) => ({ attributeId: attribute.id, valueId: null, quantity: value.quantity })),
+        .map((value) => ({ attributeId: attribute.id, valueId: null, quantity: readableCount(value.quantity) })),
     );
+}
+
+// The wire carries the count in the scale the database keeps it in ("1.0000").
+// The field is for a customer, and he counts cut-outs in whole ones.
+function readableCount(quantity: string | null): string | null {
+  return quantity === null ? null : quantity.replace(/\.0+$|(\.\d*[1-9])0+$/, "$1");
 }
 
 export function toCalculateRequest(productId: string, state: CalculatorState): CalculateRequest {
@@ -199,8 +205,11 @@ export class Calculator {
 
   public async setQuantity(attributeId: string, quantity: string): Promise<void> {
     // A Russian keyboard spells a fraction with a comma; the wire speaks dots.
-    const typed = quantity.trim().replace(",", ".");
-    this.selections = withSelection(this.selections, attributeId, typed === "" ? null : { attributeId, valueId: null, quantity: typed });
+    const typed = quantity.trim().replaceAll(",", ".");
+    // An empty field is not "no cut-outs": dropping the selection would let the
+    // product's declared count price the mirror while the field reads as none.
+    // The field stands invalid until the customer names a number — zero included.
+    this.selections = withSelection(this.selections, attributeId, { attributeId, valueId: null, quantity: typed });
     await this.refresh();
   }
 

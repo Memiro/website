@@ -163,8 +163,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                 ProductAttribute(id=item.id, name=item.name, kind=item.kind, values=[]),
             )
             # The single row of a numeric attribute is its tariff, not an
-            # option to pick: the card hands over the declared count instead,
-            # so the storefront opens the field on the price it quotes.
+            # option to pick.
             attribute.values.append(
                 ProductAttributeValue(id=None, name=item.value_name, quantity=item.declared_quantity)
                 if item.kind is AttributeKind.NUMBER

@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 
 import pytest
@@ -182,7 +183,14 @@ async def test_the_kind_of_an_attribute_reaches_the_storefront_in_the_spelling_i
 
     body = (await api_client.read_product("zerkalo-s-vyrezami")).assert_status(status.HTTP_200_OK).text
 
-    assert '"kind":"number"' in body
+    assert json.loads(body)["attributes"] == [
+        {
+            "id": str(CUTOUTS),
+            "name": "Вырезы",
+            "kind": "number",
+            "values": [{"id": None, "name": "Вырез", "quantity": "1.0000"}],
+        }
+    ]
 
 
 async def test_reading_fails_if_no_product_carries_the_slug(api_client: ApiClient) -> None:
