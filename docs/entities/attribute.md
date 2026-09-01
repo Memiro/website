@@ -30,8 +30,8 @@ _Avoid_: свойство, характеристика, опция, настр�
 | `is_filterable` | `bool` | Строит фильтр каталога |
 | `sort_order` | `int` | Порядок, поле владельца |
 | `values` | `list[AttributeValue]` | Значения справочника, дети агрегата |
-| `created_at` | `datetime` | |
-| `updated_at` | `datetime` | |
+| `created_at` | `datetime` | Когда атрибут заведён |
+| `updated_at` | `datetime` | Когда атрибут менялся в последний раз |
 
 ### AttributeValue — значение справочника
 

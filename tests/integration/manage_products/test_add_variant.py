@@ -113,14 +113,17 @@ async def test_the_owner_adds_a_variant_priced_by_the_workbook(
 async def test_adding_a_variant_marks_the_stored_product_as_changed(
     app: FastAPI,
 ) -> None:
-    """The audit date a variant command moves travels to the database."""
+    """The audit date a variant command moves travels to the database, and the creation date stays."""
     container: AsyncContainer = app.state.dishka_container
+    before = await _load_product(container)
+    assert before is not None
 
     await _add(container, AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0))
 
-    product = await _load_product(container)
-    assert product is not None
-    assert product.updated_at > product.created_at
+    after = await _load_product(container)
+    assert after is not None
+    assert after.created_at == before.created_at
+    assert after.updated_at > before.updated_at
 
 
 async def test_the_owner_prices_an_unpublished_hidden_variant_beyond_customer_limits(

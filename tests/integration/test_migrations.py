@@ -272,6 +272,10 @@ async def test_migrations_stamp_existing_catalogue_rows_with_audit_dates(
 ) -> None:
     """Rows that predate the audit columns are backfilled, not left null."""
     seeded = database_at_previous_revision
+    engine = create_async_engine(seeded.url)
+    async with engine.connect() as connection:
+        before = (await connection.execute(text("SELECT now()"))).scalar_one()
+    await engine.dispose()
 
     await asyncio.to_thread(_upgrade, seeded.url, "head")
 
@@ -292,8 +296,8 @@ async def test_migrations_stamp_existing_catalogue_rows_with_audit_dates(
         settings_updated_at = (await connection.execute(text("SELECT updated_at FROM pricing_settings"))).scalar_one()
     await engine.dispose()
 
-    assert product.created_at is not None
-    assert product.updated_at is not None
-    assert attribute.created_at is not None
-    assert attribute.updated_at is not None
-    assert settings_updated_at is not None
+    assert product.created_at >= before
+    assert product.updated_at >= before
+    assert attribute.created_at >= before
+    assert attribute.updated_at >= before
+    assert settings_updated_at >= before

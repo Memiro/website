@@ -24,7 +24,7 @@ _Avoid_: настройки цен, конфиг калькулятора.
 | `max_long_side_mm` | [`Millimeters`](../value-objects/millimeters.md) | Предел по наибольшей стороне |
 | `max_short_side_mm` | [`Millimeters`](../value-objects/millimeters.md) | Предел по второй стороне |
 | `size_surcharges` | `tuple[SizeSurcharge, ...]` | Ступени наценки за размер |
-| `updated_at` | `datetime` | |
+| `updated_at` | `datetime` | Когда владелец правил границы в последний раз |
 
 Даты создания у корня нет: строка заводится вместе с сайтом и не рождается
 второй раз.
