@@ -6,7 +6,7 @@ from typing import Self
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
-from memiro.application.submit_inquiry.config import LegalConfig
+from memiro.application.submit_inquiry import LegalConfig
 from memiro_common.observability.config import ObservabilityConfig
 
 # The only environment variable the application reads.

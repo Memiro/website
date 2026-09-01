@@ -15,10 +15,9 @@ from memiro.entities.inquiry.entity import (
     InquiryItemData,
     InquirySource,
     inquiry_factory,
-    inquiry_item_snapshot,
 )
 from memiro.entities.inquiry.phone import Phone
-from memiro.entities.pricing.quotation import PricingVerdict, Quotation
+from memiro.entities.pricing.quotation import PricingVerdict
 from tests.clock import NOW, FakeClock
 from tests.common.factory.catalog import demo_product
 
@@ -140,31 +139,11 @@ def test_a_configured_snapshot_cannot_lose_its_configuration() -> None:
         _snapshot(PricingVerdict.BEYOND_LIMITS, None, None)
 
 
-def test_a_stored_item_with_an_impossible_combination_does_not_hydrate_silently() -> None:
-    """A corrupted row is a defect on the way in as much as on the way out."""
+def test_an_item_with_an_impossible_combination_cannot_be_built() -> None:
+    """The stored position holds the same invariant as the data it was made from.
+
+    The row coming back from the database is the pair in
+    ``tests/integration/submit_inquiry/test_inquiry_hydration.py`` (§14.4.3).
+    """
     with pytest.raises(RuntimeError, match="disagrees with the presence of a price"):
         _item(PricingVerdict.BEYOND_LIMITS, _PRICE, _CONFIGURATION)
-
-
-def test_a_snapshot_takes_its_price_and_verdict_from_the_calculation() -> None:
-    """The snapshot is built from the quotation, never from what the browser sent."""
-    snapshot = inquiry_item_snapshot(
-        product=_MIRROR,
-        configuration=_CONFIGURATION,
-        quotation=Quotation(verdict=PricingVerdict.PRICED, total=_PRICE, breakdown=()),
-        wish="",
-    )
-
-    assert snapshot == _snapshot(PricingVerdict.PRICED, _PRICE, _CONFIGURATION)
-
-
-def test_a_snapshot_of_a_not_priceable_product_drops_the_configuration() -> None:
-    """The verdict decides whether a configuration is kept, and it decides in the domain."""
-    snapshot = inquiry_item_snapshot(
-        product=_MIRROR,
-        configuration=_CONFIGURATION,
-        quotation=Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=()),
-        wish="",
-    )
-
-    assert snapshot == _snapshot(PricingVerdict.NOT_PRICEABLE, None, None)
