@@ -14,34 +14,18 @@ from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidS
 PRICING_SETTINGS_ID: PricingSettingsId = UUID("0197c0de-0000-7000-8000-000000000001")
 
 
-@dataclass(init=False)
+@dataclass
 class SizeSurcharge(Entity):
     """One step after which a large product becomes dearer."""
 
-    _from_long_side_mm: Millimeters
-    _factor: Decimal
-
-    def __init__(self, from_long_side_mm: Millimeters, factor: Decimal) -> None:
-        """Create a tier while keeping its fields read-only outside the aggregate."""
-        self._from_long_side_mm = from_long_side_mm
-        self._factor = factor
-        self.__post_init__()
+    from_long_side_mm: Millimeters
+    factor: Decimal
 
     def __post_init__(self) -> None:
         """Require the factor to express a surcharge rather than a second off switch."""
         if self.factor <= 1:
             msg = f"Invalid size-surcharge factor: {self.factor}"
             raise InvalidSurchargeFactorError(message=msg)
-
-    @property
-    def from_long_side_mm(self) -> Millimeters:
-        """Return the inclusive long-side threshold of the tier."""
-        return self._from_long_side_mm
-
-    @property
-    def factor(self) -> Decimal:
-        """Return the factor multiplying marked price lines."""
-        return self._factor
 
 
 @dataclass

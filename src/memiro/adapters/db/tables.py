@@ -299,8 +299,6 @@ mapper_registry.map_imperatively(
     size_surcharges_table,
     properties={
         "_pricing_settings_id": size_surcharges_table.c.pricing_settings_id,
-        "_from_long_side_mm": size_surcharges_table.c.from_long_side_mm,
-        "_factor": size_surcharges_table.c.factor,
     },
 )
 
