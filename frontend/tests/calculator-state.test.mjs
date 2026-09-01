@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { Calculator, calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../app/lib/calculator-state.ts";
 
+/** @type {import("../app/lib/catalog-api.ts").ProductCard} */
 const MIRROR = {
   id: "mirror",
   name: "Зеркало Loft",
@@ -11,8 +12,8 @@ const MIRROR = {
   price_from: null,
   image_keys: [],
   attributes: [
-    { id: "frame", name: "Рама", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
-    { id: "shelves", name: "Полки", values: [] },
+    { id: "frame", name: "Рама", kind: "select", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
   ],
   variants: [
     { width_mm: 800, height_mm: 600, price: "8900", overrides: [{ attribute_id: "frame", value_id: "black", quantity: null }] },
@@ -114,21 +115,53 @@ test("a quantity that is not a number is highlighted under its own attribute", a
   const pricing = queuedPricing();
   const calculator = new Calculator(MIRROR, pricing.calculate);
 
-  await calculator.setQuantity("shelves", "две");
+  await calculator.setQuantity("cut-outs", "две");
 
-  assert.deepEqual(calculator.request, { status: "invalid", fields: ["shelves"] });
-  assert.equal(calculator.isInvalid("shelves"), true);
+  assert.deepEqual(calculator.request, { status: "invalid", fields: ["cut-outs"] });
+  assert.equal(calculator.isInvalid("cut-outs"), true);
   assert.deepEqual(pricing.requests, []);
+});
+
+/** @type {import("../app/lib/catalog-api.ts").ProductCard} */
+const MIRROR_WITH_CUT_OUTS = {
+  ...MIRROR,
+  attributes: [
+    ...MIRROR.attributes.filter((attribute) => attribute.kind === "select"),
+    { id: "cut-outs", name: "Вырезы", kind: "number", values: [{ id: null, name: "Вырез", quantity: "1" }] },
+  ],
+};
+
+test("a numeric attribute opens on the count the product declares", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator(MIRROR_WITH_CUT_OUTS, pricing.calculate);
+
+  await calculator.refresh();
+
+  assert.equal(calculator.chosenQuantity("cut-outs"), "1");
+  assert.deepEqual(pricing.requests[0].selections, [
+    { attribute_id: "cut-outs", value_id: null, quantity: "1" },
+    { attribute_id: "frame", value_id: "black", quantity: null },
+  ]);
+});
+
+test("a quantity typed with a decimal comma is the number it spells", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+
+  await calculator.setQuantity("cut-outs", "2,5");
+
+  assert.equal(calculator.chosenQuantity("cut-outs"), "2.5");
+  assert.deepEqual(pricing.requests[0].selections[1], { attribute_id: "cut-outs", value_id: null, quantity: "2.5" });
 });
 
 test("clearing a quantity drops the choice instead of sending an empty one", async () => {
   const pricing = recordingPricing();
   const calculator = new Calculator(MIRROR, pricing.calculate);
 
-  await calculator.setQuantity("shelves", "2");
-  await calculator.setQuantity("shelves", "");
+  await calculator.setQuantity("cut-outs", "2");
+  await calculator.setQuantity("cut-outs", "");
 
-  assert.equal(calculator.chosenQuantity("shelves"), "");
+  assert.equal(calculator.chosenQuantity("cut-outs"), "");
   assert.deepEqual(pricing.requests[1].selections, [{ attribute_id: "frame", value_id: "black", quantity: null }]);
 });
 

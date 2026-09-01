@@ -37,15 +37,30 @@ export function calculatorStateForVariant(product: ProductCard, index: number): 
   if (variant === undefined) {
     throw new Error("A calculator product must have a variant");
   }
+  const overridden = variant.overrides.map((override) => ({
+    attributeId: override.attribute_id,
+    valueId: override.value_id,
+    quantity: override.quantity,
+  }));
   return {
     widthMm: variant.width_mm,
     heightMm: variant.height_mm,
-    selections: variant.overrides.map((override) => ({
-      attributeId: override.attribute_id,
-      valueId: override.value_id,
-      quantity: override.quantity,
-    })),
+    selections: [...declaredQuantities(product, overridden), ...overridden],
   };
+}
+
+// A number the customer never typed is still priced: the product declares it.
+// The field opens on that count, or it would read as "none" while the total
+// says otherwise.
+function declaredQuantities(product: ProductCard, chosen: CalculatorSelection[]): CalculatorSelection[] {
+  return product.attributes
+    .filter((attribute) => attribute.kind === "number")
+    .filter((attribute) => !chosen.some((selection) => selection.attributeId === attribute.id))
+    .flatMap((attribute) =>
+      attribute.values
+        .filter((value) => value.quantity !== null)
+        .map((value) => ({ attributeId: attribute.id, valueId: null, quantity: value.quantity })),
+    );
 }
 
 export function toCalculateRequest(productId: string, state: CalculatorState): CalculateRequest {
@@ -126,7 +141,7 @@ export class Calculator {
     this.calculate = calculate;
     this.widthText = state === null ? "" : String(state.widthMm);
     this.heightText = state === null ? "" : String(state.heightMm);
-    this.selections = state === null ? [] : state.selections;
+    this.selections = state === null ? declaredQuantities(product, []) : state.selections;
     this.request = { status: "idle" };
     this.priced = null;
     this.generation = 0;
@@ -183,7 +198,8 @@ export class Calculator {
   }
 
   public async setQuantity(attributeId: string, quantity: string): Promise<void> {
-    const typed = quantity.trim();
+    // A Russian keyboard spells a fraction with a comma; the wire speaks dots.
+    const typed = quantity.trim().replace(",", ".");
     this.selections = withSelection(this.selections, attributeId, typed === "" ? null : { attributeId, valueId: null, quantity: typed });
     await this.refresh();
   }

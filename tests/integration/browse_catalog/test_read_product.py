@@ -11,11 +11,13 @@ from memiro.application.browse_catalog.models import (
     ProductVariant,
     VariantOverride,
 )
+from memiro.entities.catalog.attribute.entity import AttributeKind
 from tests.common.factory.catalog import (
     ALUMINIUM,
     BACKLIGHT,
     BLADE,
     CONTOUR,
+    CUTOUTS,
     FRAME,
     GRAPHITE,
     MOUNT,
@@ -32,6 +34,7 @@ from tests.common.factory.catalog import (
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
     prime_hidden_calculated_price,
+    prime_numeric_catalog,
     prime_product_images,
     prime_product_publication,
 )
@@ -69,6 +72,7 @@ def _expected_card(
             ProductAttribute(
                 id=BLADE,
                 name="Тип полотна",
+                kind=AttributeKind.SELECT,
                 values=[
                     ProductAttributeValue(id=SILVER, name="Серебро", quantity=None),  # noqa: RUF001
                     ProductAttributeValue(id=GRAPHITE, name="Графит", quantity=None),
@@ -77,6 +81,7 @@ def _expected_card(
             ProductAttribute(
                 id=SHAPE,
                 name="Форма",
+                kind=AttributeKind.SELECT,
                 values=[
                     ProductAttributeValue(id=RECTANGULAR, name="Прямоугольное", quantity=None),
                     ProductAttributeValue(id=ROUND, name="Круглое", quantity=None),
@@ -85,6 +90,7 @@ def _expected_card(
             ProductAttribute(
                 id=FRAME,
                 name="Рама",
+                kind=AttributeKind.SELECT,
                 values=[
                     ProductAttributeValue(id=ALUMINIUM, name="Алюминий", quantity=None),
                     ProductAttributeValue(id=NO_FRAME, name="Без рамы", quantity=None),
@@ -93,6 +99,7 @@ def _expected_card(
             ProductAttribute(
                 id=BACKLIGHT,
                 name="Подсветка",
+                kind=AttributeKind.SELECT,
                 values=[
                     ProductAttributeValue(id=CONTOUR, name="Контурная", quantity=None),
                     ProductAttributeValue(id=NO_BACKLIGHT, name="Без подсветки", quantity=None),
@@ -101,6 +108,7 @@ def _expected_card(
             ProductAttribute(
                 id=MOUNT,
                 name="Крепление",
+                kind=AttributeKind.SELECT,
                 values=[
                     ProductAttributeValue(id=WITH_MOUNT, name="С креплением", quantity=None),  # noqa: RUF001
                     ProductAttributeValue(id=NO_MOUNT, name="Без крепления", quantity=None),
@@ -144,6 +152,37 @@ async def test_a_hidden_calculated_price_keeps_the_precalculated_variants_visibl
     assert (await api_client.read_product("zerkalo-v-rame")).assert_status(
         status.HTTP_200_OK
     ).ensure_content() == _expected_card(price_from=Decimal(2700), variants=OWNER_ORDERED_VARIANTS)
+
+
+async def test_a_card_names_the_kind_of_an_attribute_the_customer_types_a_number_into(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A numeric attribute arrives as NUMBER with the declared count, not as a one-item list to pick from."""
+    await prime_numeric_catalog(engine)
+
+    response = await api_client.read_product("zerkalo-s-vyrezami")
+
+    assert response.assert_status(status.HTTP_200_OK).ensure_content().attributes == [
+        ProductAttribute(
+            id=CUTOUTS,
+            name="Вырезы",
+            kind=AttributeKind.NUMBER,
+            values=[ProductAttributeValue(id=None, name="Вырез", quantity=Decimal(1))],
+        )
+    ]
+
+
+async def test_the_kind_of_an_attribute_reaches_the_storefront_in_the_spelling_it_reads(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """The wire spells the kind in lower case — exactly what the storefront's own check accepts."""
+    await prime_numeric_catalog(engine)
+
+    body = (await api_client.read_product("zerkalo-s-vyrezami")).assert_status(status.HTTP_200_OK).text
+
+    assert '"kind":"number"' in body
 
 
 async def test_reading_fails_if_no_product_carries_the_slug(api_client: ApiClient) -> None:
