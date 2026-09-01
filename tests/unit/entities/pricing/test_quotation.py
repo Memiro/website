@@ -81,7 +81,7 @@ def test_a_priced_quotation_hands_over_the_total_it_carries() -> None:
 
 
 def test_a_refusal_asked_for_a_total_is_a_defect() -> None:
-    """A refusal has no number to give, and asking for one leaves as a 500."""
+    """A refusal has no number to give, and asking it for one is a defect that leaves as a 500."""
     quotation = Quotation(verdict=PricingVerdict.BEYOND_LIMITS, total=None, breakdown=())
 
     with pytest.raises(RuntimeError, match="left the calculation with no total"):

@@ -65,17 +65,12 @@ async def smtp_server() -> AsyncIterator[tuple[int, list[str]]]:
         await server.wait_closed()
 
 
-@pytest.fixture
-async def notifying_api_client(
-    config: Config,
-    smtp_server: tuple[int, list[str]],
-) -> AsyncIterator[ApiClient]:
-    """Use the production app with its SMTP channel aimed at the local wire fake."""
-    port, _ = smtp_server
-    notifying_config = replace(
+def _aimed_at_the_wire_fake(config: Config, port: int, *, enabled: bool) -> Config:
+    """Address the SMTP channel at the local wire fake, switched on or off."""
+    return replace(
         config,
         email=EmailConfig(
-            enabled=True,
+            enabled=enabled,
             host="127.0.0.1",
             port=port,
             username="",
@@ -84,7 +79,16 @@ async def notifying_api_client(
             timeout_seconds=1.0,
         ),
     )
-    app = create_app(notifying_config)
+
+
+@pytest.fixture
+async def notifying_api_client(
+    config: Config,
+    smtp_server: tuple[int, list[str]],
+) -> AsyncIterator[ApiClient]:
+    """Use the production app with its SMTP channel aimed at the local wire fake."""
+    port, _ = smtp_server
+    app = create_app(_aimed_at_the_wire_fake(config, port, enabled=True))
     async with LifespanManager(app), ApiClient(app) as client:
         yield client
 
@@ -96,19 +100,7 @@ async def silent_api_client(
 ) -> AsyncIterator[ApiClient]:
     """Use the production app whose SMTP channel is switched off but fully addressed."""
     port, _ = smtp_server
-    silent_config = replace(
-        config,
-        email=EmailConfig(
-            enabled=False,
-            host="127.0.0.1",
-            port=port,
-            username="",
-            from_address="site@example.test",
-            manager_address="manager@example.test",
-            timeout_seconds=1.0,
-        ),
-    )
-    app = create_app(silent_config)
+    app = create_app(_aimed_at_the_wire_fake(config, port, enabled=False))
     async with LifespanManager(app), ApiClient(app) as client:
         yield client
 
