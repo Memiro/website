@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
+from memiro.entities.errors.product import InvalidQuantityError
 from tests.common.factory.catalog import ALUMINIUM, CATEGORY, FRAME, HEATING, demo_product
 
 
@@ -102,3 +103,16 @@ def test_a_product_takes_a_new_declaration_set_through_its_command_method() -> N
     product.declare_values([heating])
 
     assert product.declared_values == (heating,)
+
+
+def test_a_configured_value_refuses_a_negative_quantity() -> None:
+    """A consumption below zero is refused with INVALID_QUANTITY, not carried into the arithmetic."""
+    with pytest.raises(InvalidQuantityError):
+        ConfiguredValue(value_id=None, quantity=Decimal(-5))
+
+
+def test_a_configured_value_keeps_a_zero_quantity() -> None:
+    """Zero stays a configured consumption: it is a declaration, not an absence."""
+    configured = ConfiguredValue(value_id=None, quantity=Decimal(0))
+
+    assert configured.quantity == Decimal(0)

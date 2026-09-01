@@ -3,8 +3,9 @@ from decimal import Decimal
 from uuid import UUID
 
 import structlog
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
+from memiro.application.common.input_limits import MAX_QUANTITY
 from memiro.application.errors.catalog import AttributeValueNotFoundError
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind
 from memiro.entities.catalog.product.entity import ConfiguredValue, Product
@@ -19,7 +20,7 @@ class Selection(BaseModel):
 
     attribute_id: UUID
     value_id: UUID | None = None
-    quantity: Decimal | None = None
+    quantity: Decimal | None = Field(default=None, ge=0, le=MAX_QUANTITY)
 
     @model_validator(mode="after")
     def _one_representation(self) -> "Selection":

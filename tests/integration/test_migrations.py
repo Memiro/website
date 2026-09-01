@@ -2,6 +2,7 @@ import asyncio
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from decimal import Decimal
 
 import pytest
 from alembic import command
@@ -204,3 +205,57 @@ async def test_pricing_gate_downgrade_refuses_unrepresentable_declarations(
 
     with pytest.raises(RuntimeError, match="Cannot downgrade pricing gates"):
         await asyncio.to_thread(_downgrade, seeded.url, _PREVIOUS_REVISION)
+
+
+async def test_migrations_leave_every_product_in_a_category_that_exists(
+    database_at_previous_revision: _SeededDatabase,
+) -> None:
+    """The category the backfill stamps on legacy products is a row, not a dangling identifier."""
+    seeded = database_at_previous_revision
+
+    await asyncio.to_thread(_upgrade, seeded.url, "head")
+
+    engine = create_async_engine(seeded.url)
+    async with engine.connect() as connection:
+        orphans = (
+            await connection.execute(
+                text(
+                    """SELECT count(*) FROM products
+                       WHERE category_id NOT IN (SELECT id FROM categories)"""
+                )
+            )
+        ).scalar_one()
+    await engine.dispose()
+
+    assert orphans == 0
+
+
+async def test_migrations_keep_a_shape_factor_that_is_not_whole_kopecks(
+    database_at_previous_revision: _SeededDatabase,
+) -> None:
+    """A FACTOR rate is a multiplier, not money: 1.125 must survive as 1.125, not round to 1.13."""
+    seeded = database_at_previous_revision
+    await asyncio.to_thread(_upgrade, seeded.url, "head")
+    factor_id = uuid.uuid4()
+
+    engine = create_async_engine(seeded.url)
+    async with engine.begin() as connection:
+        await connection.execute(
+            text(
+                """INSERT INTO attribute_values
+                   (id, attribute_id, name, rate_amount, rate_unit, scaled_by_shape, sort_order,
+                    marks_absence, scaled_by_size_surcharge)
+                   VALUES (:id, :attribute_id, 'Round', 1.125, 'FACTOR', false, 2, false, false)"""
+            ),
+            {"id": factor_id, "attribute_id": seeded.attribute_id},
+        )
+    async with engine.connect() as connection:
+        stored = (
+            await connection.execute(
+                text("SELECT rate_amount FROM attribute_values WHERE id = :id"),
+                {"id": factor_id},
+            )
+        ).scalar_one()
+    await engine.dispose()
+
+    assert stored == Decimal("1.125")

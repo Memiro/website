@@ -1,10 +1,12 @@
 import asyncio
 import smtplib
 import ssl
+from collections.abc import Callable
 from email.message import EmailMessage
 from typing import override
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from memiro.adapters.smtp.config import EmailConfig, SMTPEncryption
 from memiro.application.common.gateway.inquiry import InquiryGateway
@@ -15,6 +17,8 @@ from memiro.entities.inquiry.entity import Inquiry, InquiryItem
 from memiro_common.logger import Logger
 
 logger: Logger = structlog.get_logger(__name__)
+
+type Transport = Callable[[EmailConfig, EmailMessage], None]
 
 
 def _smtp_client(config: EmailConfig) -> smtplib.SMTP | smtplib.SMTP_SSL:
@@ -29,7 +33,7 @@ def _smtp_client(config: EmailConfig) -> smtplib.SMTP | smtplib.SMTP_SSL:
     return client
 
 
-def _send(config: EmailConfig, message: EmailMessage) -> None:
+def smtp_transport(config: EmailConfig, message: EmailMessage) -> None:
     """Deliver one ready email through the configured encrypted SMTP transport."""
     with _smtp_client(config) as client:
         if config.username:
@@ -89,10 +93,18 @@ def _money(value: Money | None) -> str:
 class SMTPInquiryNotificationBus(InquiryNotificationBus):
     """SMTP implementation of the manager notification channel."""
 
-    def __init__(self, config: EmailConfig, inquiry_gateway: InquiryGateway) -> None:
+    def __init__(
+        self,
+        config: EmailConfig,
+        inquiry_gateway: InquiryGateway,
+        session: AsyncSession,
+        send: Transport,
+    ) -> None:
         """Keep the SMTP configuration outside the application layer."""
         self._config = config
         self._inquiry_gateway = inquiry_gateway
+        self._session = session
+        self._send = send
 
     @override
     async def notify(self, inquiry_id: InquiryId) -> None:
@@ -105,4 +117,13 @@ class SMTPInquiryNotificationBus(InquiryNotificationBus):
             logger.warning("Manager email notification skipped because the saved inquiry is unavailable")
             return
         message = _message(inquiry, self._config)
-        await asyncio.to_thread(_send, self._config, message)
+        # The read above opened a fresh transaction on the request's pooled
+        # connection, and ``smtplib``'s timeout is per socket operation: a hung
+        # host would hold that connection idle-in-transaction for the whole
+        # wait, and enough of them exhaust the pool for every other route.
+        # Committing rather than rolling back: the session is built with
+        # expire_on_commit=False, so the interactor keeps reading the aggregate
+        # it already committed, while a rollback would expire it and turn the
+        # next attribute read into lazy IO outside the greenlet.
+        await self._session.commit()
+        await asyncio.to_thread(self._send, self._config, message)

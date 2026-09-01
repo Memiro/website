@@ -25,3 +25,11 @@ class InvalidVariantConfigurationError(AppError):
 
     code: ClassVar[str] = "INVALID_VARIANT_CONFIGURATION"
     message: str = "A variant configuration is invalid"
+
+
+@app_error
+class InvalidQuantityError(AppError):
+    """Raised when a configured numeric consumption is below zero."""
+
+    code: ClassVar[str] = "INVALID_QUANTITY"
+    message: str = "A configured quantity cannot be negative"

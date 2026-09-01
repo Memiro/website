@@ -10,7 +10,7 @@ from memiro.application.calculate_price import (
     SelectionDelta,
 )
 from memiro.application.common.customer_selection import Selection
-from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM
+from memiro.application.common.input_limits import MAX_QUANTITY, MAX_SELECTIONS, MAX_SIDE_MM
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.pricing.quotation import PricingVerdict
 from tests.common.factory.catalog import (
@@ -637,6 +637,40 @@ async def test_pricing_fails_if_a_side_is_zero(api_client: ApiClient) -> None:
         width_mm=0,
         height_mm=600,
         selections=[],
+    )
+
+    response = await api_client.calculate(dishonest)
+
+    response.assert_error(422, "VALIDATION_ERROR")
+
+
+async def test_pricing_fails_if_a_quantity_is_negative(api_client: ApiClient, engine: AsyncEngine) -> None:
+    """A consumption below zero is refused with VALIDATION_ERROR instead of dying in the arithmetic."""
+    await prime_numeric_catalog(engine)
+    dishonest = CalculatePriceForm.model_construct(
+        product_id=PRODUCT,
+        width_mm=800,
+        height_mm=600,
+        selections=[Selection.model_construct(attribute_id=CUTOUTS, value_id=None, quantity=Decimal(-5))],
+    )
+
+    response = await api_client.calculate(dishonest)
+
+    response.assert_error(422, "VALIDATION_ERROR")
+
+
+async def test_pricing_fails_if_a_quantity_is_beyond_the_input_bound(
+    api_client: ApiClient, engine: AsyncEngine
+) -> None:
+    """A consumption one unit over the form's bound is refused with VALIDATION_ERROR."""
+    await prime_numeric_catalog(engine)
+    dishonest = CalculatePriceForm.model_construct(
+        product_id=PRODUCT,
+        width_mm=800,
+        height_mm=600,
+        selections=[
+            Selection.model_construct(attribute_id=CUTOUTS, value_id=None, quantity=MAX_QUANTITY + 1),
+        ],
     )
 
     response = await api_client.calculate(dishonest)
