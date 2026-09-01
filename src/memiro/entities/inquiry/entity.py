@@ -4,7 +4,6 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import uuid4
 
-from memiro.entities.catalog.product.entity import Product
 from memiro.entities.common.entity import Entity
 from memiro.entities.common.identifiers import InquiryId, InquiryItemId, ProductId
 from memiro.entities.common.measure import Dimensions
@@ -16,7 +15,7 @@ from memiro.entities.errors.inquiry import (
 )
 from memiro.entities.inquiry.consent import Consent
 from memiro.entities.inquiry.phone import Phone
-from memiro.entities.pricing.quotation import PricingVerdict, Quotation, carries_total
+from memiro.entities.pricing.quotation import PricingVerdict, carries_total
 from memiro_common.clock import Clock
 
 
@@ -79,7 +78,11 @@ class InquiryItem(Entity):
     wish: str
 
     def __post_init__(self) -> None:
-        """Hold the snapshot invariant on a new position and on one hydrated from a row."""
+        """Hold the snapshot invariant on a new position.
+
+        A row hydrated by the ORM never reaches this constructor, so the
+        mapping repeats the same guard on load (§8.5).
+        """
         ensure_the_snapshot_agrees_with_its_verdict(self.verdict, self.calculated_price, self.configuration)
 
 
@@ -98,7 +101,7 @@ class Inquiry(Entity):
     created_at: datetime
 
     def __post_init__(self) -> None:
-        """Hold source-specific shape invariants on new and hydrated entities."""
+        """Hold source-specific shape invariants on a newly built aggregate."""
         if self.source is InquirySource.SELECTION and not self._items:
             raise EmptyInquiryError
         if self.source is InquirySource.FREE_FORM and self._items:
@@ -128,25 +131,6 @@ class InquiryItemData:
     def __post_init__(self) -> None:
         """Hold the snapshot invariant before the position reaches the aggregate."""
         ensure_the_snapshot_agrees_with_its_verdict(self.verdict, self.calculated_price, self.configuration)
-
-
-def inquiry_item_snapshot(
-    *,
-    product: Product,
-    configuration: InquiryConfiguration,
-    quotation: Quotation,
-    wish: str,
-) -> InquiryItemData:
-    """Freeze one repriced configuration into the position snapshot the manager reads."""
-    return InquiryItemData(
-        product_id=product.id,
-        product_name=product.name,
-        price_from=product.price_from,
-        configuration=None if quotation.verdict is PricingVerdict.NOT_PRICEABLE else configuration,
-        calculated_price=quotation.total,
-        verdict=quotation.verdict,
-        wish=wish,
-    )
 
 
 @dataclass(frozen=True, slots=True)

@@ -39,7 +39,12 @@ from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import DeclaredValue, Product, Variant
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.inquiry.consent import Consent
-from memiro.entities.inquiry.entity import Inquiry, InquiryItem, InquirySource
+from memiro.entities.inquiry.entity import (
+    Inquiry,
+    InquiryItem,
+    InquirySource,
+    ensure_the_snapshot_agrees_with_its_verdict,
+)
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
 from memiro.entities.pricing.quotation import PricingVerdict
 
@@ -49,6 +54,11 @@ NAME_LENGTH = 255
 def _ensure_variant_fingerprint(variant: Variant, _context: object) -> None:
     """Recheck the derived database guard after SQLAlchemy hydration."""
     variant.ensure_stored_fingerprint()
+
+
+def _ensure_item_snapshot(item: InquiryItem, _context: object) -> None:
+    """Recheck the snapshot invariant after hydration: the ORM builds a row past ``__init__`` (§8.5)."""
+    ensure_the_snapshot_agrees_with_its_verdict(item.verdict, item.calculated_price, item.configuration)
 
 
 attributes_table = Table(
@@ -216,6 +226,7 @@ mapper_registry.map_imperatively(
         "configuration": inquiry_items_table.c.configuration,
     },
 )
+event.listen(InquiryItem, "load", _ensure_item_snapshot)
 
 mapper_registry.map_imperatively(
     Inquiry,

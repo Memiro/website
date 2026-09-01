@@ -20,7 +20,8 @@ def upgrade() -> None:
     """Apply the migration."""
     # An inquiry cannot be built without consent, so the column could only ever
     # hold true and stored nothing; the accepted revision stays in
-    # consent_version, which is what the consent has to prove.
+    # consent_version, which is what the consent has to prove. Dropping a column
+    # of legal meaning is destructive: the owner confirmed it on 2026-09-01 (§0).
     op.drop_column("inquiries", "consent")
 
 

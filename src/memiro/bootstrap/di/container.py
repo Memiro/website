@@ -4,7 +4,7 @@ from dishka import STRICT_VALIDATION, AsyncContainer, make_async_container
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
-from memiro.application.submit_inquiry.config import LegalConfig
+from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.di.providers.adapters import AdapterProvider
 from memiro.bootstrap.di.providers.config import ConfigProvider

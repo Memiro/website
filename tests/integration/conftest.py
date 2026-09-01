@@ -12,7 +12,7 @@ from testcontainers.community.postgres import PostgresContainer
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.db.migrations import apply_migrations
-from memiro.application.submit_inquiry.config import LegalConfig
+from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.fast_api import create_app
 from memiro_common.observability.config import ObservabilityConfig
