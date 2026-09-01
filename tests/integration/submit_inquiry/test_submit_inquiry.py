@@ -23,11 +23,12 @@ from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfiguration, InquiryItem
 from memiro.entities.pricing.quotation import PricingVerdict
-from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
+from tests.common.factory.catalog import BLADE, CUTOUTS, GRAPHITE, PRODUCT
 from tests.common.factory.pricing import SelectionFactory
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
     count_inquiries_directly,
+    prime_numeric_catalog,
     prime_product_publication,
     prime_production_limits,
     update_attribute_value_rate_directly,
@@ -186,6 +187,38 @@ async def test_an_inquiry_keeps_the_configuration_and_price_it_was_shown(
         ),
         calculated_price=Money(Decimal(10100)),
         wish="Warm light",
+    )
+
+
+async def test_a_customer_orders_a_mirror_with_the_number_of_cut_outs_he_typed(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+    request_container: AsyncContainer,
+) -> None:
+    """A numeric attribute reaches the snapshot as a quantity, without a dictionary row of its own."""
+    await prime_numeric_catalog(engine)
+    form = _form(items=[_item(selections=[Selection(attribute_id=CUTOUTS, quantity=Decimal("2.5"))])])
+
+    created = (await api_client.submit_inquiry(form)).assert_status(200).ensure_content()
+    gateway: InquiryGateway = await request_container.get(InquiryGateway)
+    inquiry = await gateway.get(created.id)
+
+    assert inquiry is not None
+    # Mirror of price_product in entities/pricing/pricing_service.py, by hand:
+    # 2.5 pieces x 100 = 250 -> 300, with the demo minimum order lifted.
+    assert inquiry.items[0] == InquiryItem(
+        id=inquiry.items[0].id,
+        product_id=PRODUCT,
+        product_name="Зеркало с вырезами",  # noqa: RUF001
+        price_from=None,
+        configuration=_configuration(
+            800,
+            600,
+            ConfigurationValue(attribute_name="Вырезы", value_name=None, quantity=Decimal("2.5")),
+        ),
+        calculated_price=Money(Decimal(300)),
+        verdict=PricingVerdict.PRICED,
+        wish="",
     )
 
 

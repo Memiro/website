@@ -37,15 +37,36 @@ export function calculatorStateForVariant(product: ProductCard, index: number): 
   if (variant === undefined) {
     throw new Error("A calculator product must have a variant");
   }
+  const overridden = variant.overrides.map((override) => ({
+    attributeId: override.attribute_id,
+    valueId: override.value_id,
+    quantity: override.quantity,
+  }));
   return {
     widthMm: variant.width_mm,
     heightMm: variant.height_mm,
-    selections: variant.overrides.map((override) => ({
-      attributeId: override.attribute_id,
-      valueId: override.value_id,
-      quantity: override.quantity,
-    })),
+    selections: [...declaredQuantities(product, overridden), ...overridden],
   };
+}
+
+// A number the customer never typed is still priced: the product declares it.
+// The field opens on that count, or it would read as "none" while the total
+// says otherwise.
+function declaredQuantities(product: ProductCard, chosen: CalculatorSelection[]): CalculatorSelection[] {
+  return product.attributes
+    .filter((attribute) => attribute.kind === "number")
+    .filter((attribute) => !chosen.some((selection) => selection.attributeId === attribute.id))
+    .flatMap((attribute) =>
+      attribute.values
+        .filter((value) => value.quantity !== null)
+        .map((value) => ({ attributeId: attribute.id, valueId: null, quantity: readableCount(value.quantity) })),
+    );
+}
+
+// The wire carries the count in the scale the database keeps it in ("1.0000").
+// The field is for a customer, and he counts cut-outs in whole ones.
+function readableCount(quantity: string | null): string | null {
+  return quantity === null ? null : quantity.replace(/\.0+$|(\.\d*[1-9])0+$/, "$1");
 }
 
 export function toCalculateRequest(productId: string, state: CalculatorState): CalculateRequest {
@@ -126,7 +147,7 @@ export class Calculator {
     this.calculate = calculate;
     this.widthText = state === null ? "" : String(state.widthMm);
     this.heightText = state === null ? "" : String(state.heightMm);
-    this.selections = state === null ? [] : state.selections;
+    this.selections = state === null ? declaredQuantities(product, []) : state.selections;
     this.request = { status: "idle" };
     this.priced = null;
     this.generation = 0;
@@ -183,8 +204,12 @@ export class Calculator {
   }
 
   public async setQuantity(attributeId: string, quantity: string): Promise<void> {
-    const typed = quantity.trim();
-    this.selections = withSelection(this.selections, attributeId, typed === "" ? null : { attributeId, valueId: null, quantity: typed });
+    // A Russian keyboard spells a fraction with a comma; the wire speaks dots.
+    const typed = quantity.trim().replaceAll(",", ".");
+    // An empty field is not "no cut-outs": dropping the selection would let the
+    // product's declared count price the mirror while the field reads as none.
+    // The field stands invalid until the customer names a number — zero included.
+    this.selections = withSelection(this.selections, attributeId, { attributeId, valueId: null, quantity: typed });
     await this.refresh();
   }
 

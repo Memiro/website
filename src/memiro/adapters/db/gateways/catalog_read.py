@@ -23,6 +23,7 @@ from memiro.application.browse_catalog.models import (
     VariantOverride,
 )
 from memiro.application.common.gateway.catalog_read import CatalogReadGateway
+from memiro.entities.catalog.attribute.entity import AttributeKind
 
 
 class SACatalogReadGateway(CatalogReadGateway):
@@ -136,9 +137,11 @@ class SACatalogReadGateway(CatalogReadGateway):
                 select(
                     attributes_table.c.id,
                     attributes_table.c.name,
+                    attributes_table.c.kind,
                     attribute_values_table.c.id.label("value_id"),
                     attribute_values_table.c.name.label("value_name"),
                     attribute_values_table.c.sort_order.label("value_sort_order"),
+                    product_declared_values_table.c.quantity.label("declared_quantity"),
                 )
                 .select_from(
                     product_declared_values_table.join(
@@ -157,9 +160,15 @@ class SACatalogReadGateway(CatalogReadGateway):
         for item in declared:
             attribute = attributes.setdefault(
                 item.id,
-                ProductAttribute(id=item.id, name=item.name, values=[]),
+                ProductAttribute(id=item.id, name=item.name, kind=item.kind, values=[]),
             )
-            attribute.values.append(ProductAttributeValue(id=item.value_id, name=item.value_name, quantity=None))
+            # The single row of a numeric attribute is its tariff, not an
+            # option to pick.
+            attribute.values.append(
+                ProductAttributeValue(id=None, name=item.value_name, quantity=item.declared_quantity)
+                if item.kind is AttributeKind.NUMBER
+                else ProductAttributeValue(id=item.value_id, name=item.value_name, quantity=None)
+            )
         return ProductModel(
             id=row["id"],
             name=row["name"],

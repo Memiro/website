@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+from memiro.entities.catalog.attribute.entity import AttributeKind
+
 # The storefront asks for whole catalogue lists; the envelope still names the
 # page it answers with, so pagination can arrive without a contract change.
 FIRST_PAGE: Final = 1
@@ -64,6 +66,7 @@ class ProductAttribute(BaseModel):
 
     id: UUID
     name: str
+    kind: AttributeKind
     values: list["ProductAttributeValue"]
 
 

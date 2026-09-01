@@ -28,9 +28,13 @@ export interface ProductAttributeValue {
   quantity: string | null;
 }
 
+/** How a customer configures an attribute: a dictionary row he picks, or a number he types. */
+export type AttributeKind = "select" | "number";
+
 export interface ProductAttribute {
   id: string;
   name: string;
+  kind: AttributeKind;
   values: ProductAttributeValue[];
 }
 
@@ -162,6 +166,7 @@ function isProductAttribute(value: unknown): value is ProductAttribute {
   }
   return typeof attribute.id === "string"
     && typeof attribute.name === "string"
+    && isAttributeKind(attribute.kind)
     && isArrayOf(attribute.values, isProductAttributeValue);
 }
 
@@ -173,6 +178,10 @@ function isProductAttributeValue(value: unknown): value is ProductAttributeValue
   return isNullableString(attributeValue.id)
     && typeof attributeValue.name === "string"
     && isNullableString(attributeValue.quantity);
+}
+
+function isAttributeKind(value: unknown): value is AttributeKind {
+  return value === "select" || value === "number";
 }
 
 function isProductVariant(value: unknown): value is ProductVariant {
