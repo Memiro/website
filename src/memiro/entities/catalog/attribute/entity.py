@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum, auto
 
@@ -41,8 +42,8 @@ class Attribute(Entity):
     """A characteristic of a product, kept in the admin dictionary.
 
     Aggregate root; the dictionary rows are its children. Ownership of the
-    set (``replace_values``) and the audit dates arrive with the admin write
-    path — this slice only reads the dictionary.
+    set (``replace_values``) arrives with the admin write path — this slice
+    only reads the dictionary.
     """
 
     id: AttributeId
@@ -53,6 +54,8 @@ class Attribute(Entity):
     kind: AttributeKind = AttributeKind.SELECT
     parent_ids: tuple[AttributeId, ...] = ()
     is_customer_changeable: bool = True
+    created_at: datetime = field(kw_only=True)
+    updated_at: datetime = field(kw_only=True)
 
     def __post_init__(self) -> None:
         """Hold dictionary shape invariants and detach parent identifiers."""

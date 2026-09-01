@@ -11,6 +11,7 @@ from memiro.application.manage_products.shared import CreatedVariant, variant_pr
 from memiro.entities.catalog.product.entity import VariantData
 from memiro.entities.common.identifiers import ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
@@ -33,6 +34,7 @@ class DuplicateVariantWithSize:
     product_gateway: ProductGateway
     pricing_settings_gateway: PricingSettingsGateway
     attribute_gateway: AttributeGateway
+    clock: Clock
 
     async def execute(
         self,
@@ -69,7 +71,7 @@ class DuplicateVariantWithSize:
             attributes=attributes,
             settings=settings,
         )
-        duplicate = product.add_variant(duplicate_data, price=price)
+        duplicate = product.add_variant(duplicate_data, price=price, clock=self.clock)
         await self.uow.commit()
         logger.info("Product variant duplicated", product_id=product_id, variant_id=duplicate.id)
         return CreatedVariant(id=duplicate.id)

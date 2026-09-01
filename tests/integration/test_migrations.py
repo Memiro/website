@@ -154,7 +154,7 @@ async def test_pricing_migrations_preserve_existing_rows(
                            'category_id', 'kind', 'parent_ids', 'is_customer_changeable',
                            'marks_absence', 'is_published', 'hides_calculated_price',
                            'max_long_side_mm', 'max_short_side_mm',
-                           'scaled_by_size_surcharge'
+                           'scaled_by_size_surcharge', 'created_at', 'updated_at'
                          )
                          AND column_default IS NOT NULL"""
                 )
@@ -265,3 +265,35 @@ async def test_migrations_keep_a_shape_factor_that_is_not_whole_kopecks(
     await engine.dispose()
 
     assert stored == Decimal("1.125")
+
+
+async def test_migrations_stamp_existing_catalogue_rows_with_audit_dates(
+    database_at_previous_revision: _SeededDatabase,
+) -> None:
+    """Rows that predate the audit columns are backfilled, not left null."""
+    seeded = database_at_previous_revision
+
+    await asyncio.to_thread(_upgrade, seeded.url, "head")
+
+    engine = create_async_engine(seeded.url)
+    async with engine.connect() as connection:
+        product = (
+            await connection.execute(
+                text("SELECT created_at, updated_at FROM products WHERE id = :id"),
+                {"id": seeded.product_id},
+            )
+        ).one()
+        attribute = (
+            await connection.execute(
+                text("SELECT created_at, updated_at FROM attributes WHERE id = :id"),
+                {"id": seeded.attribute_id},
+            )
+        ).one()
+        settings_updated_at = (await connection.execute(text("SELECT updated_at FROM pricing_settings"))).scalar_one()
+    await engine.dispose()
+
+    assert product.created_at is not None
+    assert product.updated_at is not None
+    assert attribute.created_at is not None
+    assert attribute.updated_at is not None
+    assert settings_updated_at is not None

@@ -7,6 +7,7 @@ from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products.shared import CreatedVariant, VariantForm, variant_data, variant_price
 from memiro.entities.common.identifiers import ProductId
+from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
@@ -26,6 +27,7 @@ class AddVariant:
     product_gateway: ProductGateway
     pricing_settings_gateway: PricingSettingsGateway
     attribute_gateway: AttributeGateway
+    clock: Clock
 
     async def execute(self, product_id: ProductId, data: AddVariantForm) -> CreatedVariant:
         """Calculate, add and commit one product variant."""
@@ -46,7 +48,7 @@ class AddVariant:
             attributes=attributes,
             settings=settings,
         )
-        created = product.add_variant(variant, price=price)
+        created = product.add_variant(variant, price=price, clock=self.clock)
         await self.uow.commit()
         logger.info("Product variant added", product_id=product_id, variant_id=created.id)
         return CreatedVariant(id=created.id)

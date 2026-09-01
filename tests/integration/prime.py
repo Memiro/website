@@ -86,6 +86,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "parent_ids": attribute.parent_ids,
                     "is_customer_changeable": attribute.is_customer_changeable,
                     "sort_order": attribute.sort_order,
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 }
                 for attribute in attributes
             ],
@@ -119,6 +121,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "description": "A made-to-order mirror.",
                     "is_published": product.is_published,
                     "hides_calculated_price": product.hides_calculated_price,
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 },
             ],
         )
@@ -149,6 +153,7 @@ async def prime_pricing_settings(engine: AsyncEngine) -> None:
                     "min_order_total": settings.min_order_total,
                     "max_long_side_mm": settings.max_long_side_mm,
                     "max_short_side_mm": settings.max_short_side_mm,
+                    "updated_at": _catalog_created_at(),
                 },
             ],
         )
@@ -202,6 +207,8 @@ async def prime_second_category(
                     "description": "Another made-to-order mirror.",
                     "is_published": is_published,
                     "hides_calculated_price": False,
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 },
             ],
         )
@@ -221,6 +228,8 @@ async def prime_extra_product(engine: AsyncEngine, *, name: str, slug: str, is_p
                     "description": "Another made-to-order mirror.",
                     "is_published": is_published,
                     "hides_calculated_price": False,
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 },
             ],
         )
@@ -396,6 +405,8 @@ async def prime_numeric_catalog(engine: AsyncEngine) -> None:
                     "parent_ids": attribute.parent_ids,
                     "is_customer_changeable": attribute.is_customer_changeable,
                     "sort_order": attribute.sort_order,
+                    "created_at": _catalog_created_at(),
+                    "updated_at": _catalog_created_at(),
                 },
             ],
         )

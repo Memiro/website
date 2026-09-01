@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Self
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
@@ -15,6 +16,7 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
+from memiro_common.clock import Clock
 
 
 def _variant_fingerprint(variant: Variant) -> UUID:
@@ -168,6 +170,8 @@ class Product(Entity):
     _declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue], repr=False)
     _price_from: Money | None = field(init=False, default=None, repr=False)
     _variants: list[Variant] = field(default_factory=list[Variant], repr=False)
+    created_at: datetime = field(kw_only=True)
+    updated_at: datetime = field(kw_only=True)
 
     @property
     def price_from(self) -> Money | None:
@@ -179,24 +183,26 @@ class Product(Entity):
         """Return what the owner declared without exposing the mutable collection."""
         return tuple(self._declared_values)
 
-    def declare_values(self, values: Iterable[DeclaredValue]) -> None:
+    def declare_values(self, values: Iterable[DeclaredValue], *, clock: Clock) -> None:
         """Replace what the owner declared for this product on the attributes of its category."""
         self._declared_values = list(values)
+        self.updated_at = clock.now()
 
     @property
     def variants(self) -> tuple[Variant, ...]:
         """Return the precalculated variants without exposing the mutable collection."""
         return tuple(sorted(self._variants, key=lambda variant: (variant.sort_order, str(variant.id))))
 
-    def add_variant(self, data: VariantData, *, price: Money) -> Variant:
+    def add_variant(self, data: VariantData, *, price: Money, clock: Clock) -> Variant:
         """Add a priced variant and derive the product price from all variants."""
         variant = variant_factory(self._canonical_variant_data(data), price=price)
         self._ensure_unique_variant(variant)
         self._variants.append(variant)
         self._settle_price_from()
+        self.updated_at = clock.now()
         return variant
 
-    def change_variant(self, variant: Variant, data: VariantData, *, price: Money) -> Variant:
+    def change_variant(self, variant: Variant, data: VariantData, *, price: Money, clock: Clock) -> Variant:
         """Replace one loaded child and derive the product price again."""
         canonical = self._canonical_variant_data(data)
         replacement = Variant(
@@ -210,12 +216,14 @@ class Product(Entity):
         index = self._variant_index(variant)
         self._variants[index] = replacement
         self._settle_price_from()
+        self.updated_at = clock.now()
         return replacement
 
-    def remove_variant(self, variant: Variant) -> None:
+    def remove_variant(self, variant: Variant, *, clock: Clock) -> None:
         """Remove one loaded child and derive the product price again."""
         self._variants.pop(self._variant_index(variant))
         self._settle_price_from()
+        self.updated_at = clock.now()
 
     def declared(self, attribute_id: AttributeId) -> DeclaredValue | None:
         """Return what the product declared on the attribute, if it declared anything."""

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -11,9 +12,12 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
+from tests.clock import NOW, FakeClock
 from tests.common.factory.catalog import BLADE, FRAME, GRAPHITE, NO_FRAME, SILVER, demo_product
 
 TWO_VARIANTS = 2
+CLOCK = FakeClock(instant=NOW)
+LATER = NOW + timedelta(minutes=5)
 
 
 def _variant_data(
@@ -40,11 +44,13 @@ def test_a_product_derives_its_price_from_the_cheapest_variant() -> None:
     product.add_variant(
         _variant_data(width_mm=1200, height_mm=800),
         price=Money(amount=Decimal(9000)),
+        clock=CLOCK,
     )
 
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
 
     assert product.price_from == Money(amount=Decimal(2000))
@@ -66,6 +72,7 @@ def test_a_product_does_not_expose_mutable_variant_state() -> None:
     variant = product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
 
     with pytest.raises(AttributeError):
@@ -84,6 +91,7 @@ def test_a_product_copies_an_override_before_accepting_it() -> None:
     variant = product.add_variant(
         _variant_data(width_mm=600, height_mm=400, overrides=(override,)),
         price=Money(amount=Decimal(3000)),
+        clock=CLOCK,
     )
 
     override.chosen = ChosenValue(value_id=SILVER, quantity=None)
@@ -102,16 +110,19 @@ def test_changing_the_cheapest_variant_rederives_the_product_price() -> None:
     cheapest = product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
     product.add_variant(
         _variant_data(width_mm=1200, height_mm=800),
         price=Money(amount=Decimal(9000)),
+        clock=CLOCK,
     )
 
     product.change_variant(
         cheapest,
         _variant_data(width_mm=1400, height_mm=900),
         price=Money(amount=Decimal(12000)),
+        clock=CLOCK,
     )
 
     assert product.price_from == Money(amount=Decimal(9000))
@@ -123,11 +134,61 @@ def test_removing_the_last_variant_leaves_a_product_without_a_price() -> None:
     variant = product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
 
-    product.remove_variant(variant)
+    product.remove_variant(variant, clock=CLOCK)
 
     assert product.price_from is None
+
+
+def test_adding_a_variant_marks_the_product_as_changed() -> None:
+    """A variant command moves the audit date of the aggregate it changed."""
+    product = demo_product()
+
+    product.add_variant(
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+        clock=FakeClock(instant=LATER),
+    )
+
+    assert product.updated_at == LATER
+    assert product.updated_at > product.created_at
+
+
+def test_changing_a_variant_marks_the_product_as_changed() -> None:
+    """Replacing a child moves the audit date of the aggregate it belongs to."""
+    product = demo_product()
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
+    )
+
+    product.change_variant(
+        variant,
+        _variant_data(width_mm=1200, height_mm=800),
+        price=Money(amount=Decimal(9000)),
+        clock=FakeClock(instant=LATER),
+    )
+
+    assert product.updated_at == LATER
+    assert product.updated_at > product.created_at
+
+
+def test_removing_a_variant_marks_the_product_as_changed() -> None:
+    """Dropping a child moves the audit date of the aggregate it belonged to."""
+    product = demo_product()
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
+    )
+
+    product.remove_variant(variant, clock=FakeClock(instant=LATER))
+
+    assert product.updated_at == LATER
+    assert product.updated_at > product.created_at
 
 
 def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> None:
@@ -144,6 +205,7 @@ def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> Non
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400, overrides=(blade, frame)),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
     variants_before = product.variants
 
@@ -151,6 +213,7 @@ def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> Non
         product.add_variant(
             _variant_data(width_mm=400, height_mm=600, overrides=(frame, blade)),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert product.variants == variants_before
@@ -167,12 +230,14 @@ def test_a_product_rejects_a_duplicate_disguised_as_a_default_override() -> None
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
 
     with pytest.raises(DuplicateVariantError, match="same size and configured values"):
         product.add_variant(
             _variant_data(width_mm=600, height_mm=400, overrides=(default_blade,)),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert len(product.variants) == 1
@@ -188,11 +253,13 @@ def test_a_product_allows_one_size_with_different_overrides() -> None:
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
 
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400, overrides=(blade,)),
         price=Money(amount=Decimal(3000)),
+        clock=CLOCK,
     )
 
     assert len(product.variants) == TWO_VARIANTS
@@ -204,11 +271,13 @@ def test_a_product_exposes_variants_in_the_owner_order() -> None:
     later = product.add_variant(
         _variant_data(width_mm=600, height_mm=400, sort_order=2),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
 
     earlier = product.add_variant(
         _variant_data(width_mm=1200, height_mm=800, sort_order=1),
         price=Money(amount=Decimal(9000)),
+        clock=CLOCK,
     )
 
     assert product.variants == (earlier, later)
@@ -220,10 +289,12 @@ def test_changing_a_variant_cannot_duplicate_its_neighbour() -> None:
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
     changed = product.add_variant(
         _variant_data(width_mm=1200, height_mm=800),
         price=Money(amount=Decimal(9000)),
+        clock=CLOCK,
     )
     variants_before = product.variants
 
@@ -232,6 +303,7 @@ def test_changing_a_variant_cannot_duplicate_its_neighbour() -> None:
             changed,
             _variant_data(width_mm=400, height_mm=600),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert product.variants == variants_before
@@ -244,10 +316,12 @@ def test_adding_an_existing_size_changes_nothing() -> None:
     existing = product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
     )
     product.add_variant(
         _variant_data(width_mm=1200, height_mm=800),
         price=Money(amount=Decimal(9000)),
+        clock=CLOCK,
     )
     variants_before = product.variants
 
@@ -258,6 +332,7 @@ def test_adding_an_existing_size_changes_nothing() -> None:
                 height_mm=existing.dimensions.width.value,
             ),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert product.variants == variants_before
@@ -272,6 +347,7 @@ def test_a_variant_rejects_a_negative_owner_order() -> None:
         product.add_variant(
             _variant_data(width_mm=600, height_mm=400, sort_order=-1),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert product.variants == ()
@@ -290,6 +366,7 @@ def test_a_variant_rejects_two_overrides_of_one_attribute() -> None:
         product.add_variant(
             _variant_data(width_mm=600, height_mm=400, overrides=(silver, silver)),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert product.variants == ()
@@ -308,6 +385,7 @@ def test_a_variant_rejects_an_unfinished_override() -> None:
         product.add_variant(
             _variant_data(width_mm=600, height_mm=400, overrides=(unfinished,)),
             price=Money(amount=Decimal(2000)),
+            clock=CLOCK,
         )
 
     assert product.variants == ()

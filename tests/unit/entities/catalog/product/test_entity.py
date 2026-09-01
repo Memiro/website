@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 from typing import Any, cast
 from uuid import uuid4
@@ -6,7 +7,11 @@ import pytest
 
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.product.entity import DeclaredValue, Product
+from tests.clock import NOW, FakeClock
 from tests.common.factory.catalog import ALUMINIUM, CATEGORY, FRAME, HEATING, demo_product
+
+CLOCK = FakeClock(instant=NOW)
+LATER = NOW + timedelta(minutes=5)
 
 
 def test_a_product_tells_what_it_declared_on_an_attribute() -> None:
@@ -74,7 +79,7 @@ def test_a_product_copies_the_set_it_was_given_to_declare() -> None:
     """A list edited after the command ran never leaks a new value into the aggregate."""
     product = demo_product()
     declarations = list(product.declared_values)
-    product.declare_values(declarations)
+    product.declare_values(declarations, clock=CLOCK)
 
     declarations.append(DeclaredValue(attribute_id=HEATING, chosen=ChosenValue(value_id=None, quantity=None)))
 
@@ -94,6 +99,16 @@ def test_a_product_takes_a_new_declaration_set_through_its_command_method() -> N
     product = demo_product()
     heating = DeclaredValue(attribute_id=HEATING, chosen=ChosenValue(value_id=None, quantity=None))
 
-    product.declare_values([heating])
+    product.declare_values([heating], clock=CLOCK)
 
     assert product.declared_values == (heating,)
+
+
+def test_declaring_values_marks_the_product_as_changed() -> None:
+    """A command moves the audit date of the aggregate it changed."""
+    product = demo_product()
+
+    product.declare_values(product.declared_values, clock=FakeClock(instant=LATER))
+
+    assert product.updated_at == LATER
+    assert product.updated_at > product.created_at

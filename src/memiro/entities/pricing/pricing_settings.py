@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -38,6 +39,8 @@ class PricingSettings(Entity):
     max_long_side_mm: Millimeters = field(default_factory=lambda: Millimeters(value=0))
     max_short_side_mm: Millimeters = field(default_factory=lambda: Millimeters(value=0))
     _size_surcharges: list[SizeSurcharge] = field(default_factory=list, repr=False)
+    # No creation date: the row is born with the site and never a second time.
+    updated_at: datetime = field(kw_only=True)
 
     def __post_init__(self) -> None:
         """Detach surcharge tiers and keep their thresholds unambiguous."""
