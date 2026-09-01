@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
-from memiro.entities.errors.product import InvalidQuantityError
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from tests.common.factory.catalog import ALUMINIUM, CATEGORY, FRAME, HEATING, demo_product
 
 
@@ -17,7 +17,7 @@ def test_a_product_tells_what_it_declared_on_an_attribute() -> None:
 
     assert declared == DeclaredValue(
         attribute_id=FRAME,
-        configured=ConfiguredValue(value_id=ALUMINIUM, quantity=None),
+        chosen=ChosenValue(value_id=ALUMINIUM, quantity=None),
     )
 
 
@@ -32,31 +32,25 @@ def test_a_numeric_declaration_keeps_its_fractional_quantity() -> None:
     """A numeric declaration keeps an exact fractional Decimal and names no dictionary row."""
     declaration = DeclaredValue(
         attribute_id=HEATING,
-        configured=ConfiguredValue(value_id=None, quantity=Decimal("2.5")),
+        chosen=ChosenValue(value_id=None, quantity=Decimal("2.5")),
     )
 
     assert declaration == DeclaredValue(
         attribute_id=HEATING,
-        configured=ConfiguredValue(value_id=None, quantity=Decimal("2.5")),
+        chosen=ChosenValue(value_id=None, quantity=Decimal("2.5")),
     )
-
-
-def test_a_configured_value_rejects_two_representations() -> None:
-    """A configured value cannot name a dictionary row and a quantity together."""
-    with pytest.raises(RuntimeError, match="Configured value cannot name both"):
-        ConfiguredValue(value_id=ALUMINIUM, quantity=Decimal("2.5"))
 
 
 def test_an_unfinished_product_declaration_keeps_both_representations_empty() -> None:
     """An unfinished declaration remains representable so the product can answer NOT_PRICEABLE."""
     declaration = DeclaredValue(
         attribute_id=FRAME,
-        configured=ConfiguredValue(value_id=None, quantity=None),
+        chosen=ChosenValue(value_id=None, quantity=None),
     )
 
     assert declaration == DeclaredValue(
         attribute_id=FRAME,
-        configured=ConfiguredValue(value_id=None, quantity=None),
+        chosen=ChosenValue(value_id=None, quantity=None),
     )
 
 
@@ -82,7 +76,7 @@ def test_a_product_copies_the_set_it_was_given_to_declare() -> None:
     declarations = list(product.declared_values)
     product.declare_values(declarations)
 
-    declarations.append(DeclaredValue(attribute_id=HEATING, configured=ConfiguredValue(value_id=None, quantity=None)))
+    declarations.append(DeclaredValue(attribute_id=HEATING, chosen=ChosenValue(value_id=None, quantity=None)))
 
     assert product.declared(HEATING) is None
 
@@ -98,21 +92,8 @@ def test_a_product_refuses_a_declaration_set_assigned_from_outside() -> None:
 def test_a_product_takes_a_new_declaration_set_through_its_command_method() -> None:
     """Declaring replaces the whole set the owner had declared before."""
     product = demo_product()
-    heating = DeclaredValue(attribute_id=HEATING, configured=ConfiguredValue(value_id=None, quantity=None))
+    heating = DeclaredValue(attribute_id=HEATING, chosen=ChosenValue(value_id=None, quantity=None))
 
     product.declare_values([heating])
 
     assert product.declared_values == (heating,)
-
-
-def test_a_configured_value_refuses_a_negative_quantity() -> None:
-    """A consumption below zero is refused with INVALID_QUANTITY, not carried into the arithmetic."""
-    with pytest.raises(InvalidQuantityError):
-        ConfiguredValue(value_id=None, quantity=Decimal(-5))
-
-
-def test_a_configured_value_keeps_a_zero_quantity() -> None:
-    """Zero stays a configured consumption: it is a declaration, not an absence."""
-    configured = ConfiguredValue(value_id=None, quantity=Decimal(0))
-
-    assert configured.quantity == Decimal(0)

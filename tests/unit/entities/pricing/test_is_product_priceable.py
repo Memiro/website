@@ -4,7 +4,8 @@ from uuid import uuid4
 import pytest
 from hypothesis import given, settings
 
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from memiro.entities.pricing.pricing_service import is_product_priceable
 from tests.common.factory.catalog import (
     BACKLIGHT,
@@ -60,7 +61,7 @@ def test_a_product_without_a_paid_declaration_is_not_priceable() -> None:
         [
             DeclaredValue(
                 attribute_id=FRAME,
-                configured=ConfiguredValue(value_id=NO_FRAME, quantity=None),
+                chosen=ChosenValue(value_id=NO_FRAME, quantity=None),
             )
         ],
     )
@@ -91,7 +92,7 @@ def test_a_factor_without_a_money_line_does_not_make_a_product_priceable() -> No
         [
             DeclaredValue(
                 attribute_id=SHAPE,
-                configured=ConfiguredValue(value_id=RECTANGULAR, quantity=None),
+                chosen=ChosenValue(value_id=RECTANGULAR, quantity=None),
             )
         ],
     )

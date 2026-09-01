@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.adapters.db.tables import product_variants_table
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, VariantData
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, VariantData
 from memiro.entities.common.identifiers import VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
@@ -31,11 +32,11 @@ def _variant_data() -> VariantData:
         overrides=(
             DeclaredValue(
                 attribute_id=BLADE,
-                configured=ConfiguredValue(value_id=SILVER, quantity=None),
+                chosen=ChosenValue(value_id=SILVER, quantity=None),
             ),
             DeclaredValue(
                 attribute_id=CUTOUTS,
-                configured=ConfiguredValue(value_id=None, quantity=Decimal("2.50")),
+                chosen=ChosenValue(value_id=None, quantity=Decimal("2.50")),
             ),
         ),
         sort_order=3,

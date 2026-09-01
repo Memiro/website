@@ -8,12 +8,12 @@ hand against the workbook.
 from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from decimal import Decimal
-from typing import cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
+from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
@@ -281,22 +281,22 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
     )
     product.declare_values(
         [
-            DeclaredValue(attribute_id=BLADE, configured=ConfiguredValue(value_id=blade, quantity=None)),
+            DeclaredValue(attribute_id=BLADE, chosen=ChosenValue(value_id=blade, quantity=None)),
             DeclaredValue(
                 attribute_id=SHAPE,
-                configured=ConfiguredValue(value_id=RECTANGULAR, quantity=None),
+                chosen=ChosenValue(value_id=RECTANGULAR, quantity=None),
             ),
             DeclaredValue(
                 attribute_id=FRAME,
-                configured=ConfiguredValue(value_id=ALUMINIUM, quantity=None),
+                chosen=ChosenValue(value_id=ALUMINIUM, quantity=None),
             ),
             DeclaredValue(
                 attribute_id=BACKLIGHT,
-                configured=ConfiguredValue(value_id=NO_BACKLIGHT, quantity=None),
+                chosen=ChosenValue(value_id=NO_BACKLIGHT, quantity=None),
             ),
             DeclaredValue(
                 attribute_id=MOUNT,
-                configured=ConfiguredValue(value_id=WITH_MOUNT, quantity=None),
+                chosen=ChosenValue(value_id=WITH_MOUNT, quantity=None),
             ),
         ]
     )
@@ -319,7 +319,7 @@ def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueI
         [
             replace(
                 declaration,
-                configured=ConfiguredValue(value_id=value_id, quantity=None),
+                chosen=ChosenValue(value_id=value_id, quantity=None),
             )
             if declaration.attribute_id == attribute_id
             else declaration
@@ -371,19 +371,16 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
         [
             DeclaredValue(
                 attribute_id=CUTOUTS,
-                configured=ConfiguredValue(value_id=None, quantity=quantity),
+                chosen=ChosenValue(value_id=None, quantity=quantity),
             ),
         ]
     )
     return product
 
 
-def demo_defaults() -> dict[AttributeId, AttributeValueId]:
-    """Tell what the canonical mirror declares — the configuration a customer starts from."""
-    return {
-        declaration.attribute_id: cast("AttributeValueId", declaration.configured.value_id)
-        for declaration in demo_product().declared_values
-    }
+def demo_defaults() -> dict[AttributeId, ChosenValue]:
+    """Tell what the canonical mirror declares — the values a customer starts from."""
+    return {declaration.attribute_id: declaration.chosen for declaration in demo_product().declared_values}
 
 
 def demo_choices() -> dict[AttributeId, list[AttributeValueId]]:

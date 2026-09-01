@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from decimal import Decimal
 from typing import Self
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.common.entity import Entity
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
+from memiro.entities.common.identifiers import AttributeId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import (
     DuplicateVariantError,
-    InvalidQuantityError,
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
@@ -21,37 +20,18 @@ from memiro.entities.errors.product import (
 def _variant_fingerprint(variant: Variant) -> UUID:
     """Build the stable database guard for the exact domain duplicate key."""
     long_side, short_side, overrides = variant.configuration_key()
-    override_key = ";".join(f"{attribute_id}:{_configured_key(configured)}" for attribute_id, configured in overrides)
+    override_key = ";".join(f"{attribute_id}:{_configured_key(chosen)}" for attribute_id, chosen in overrides)
     return uuid5(NAMESPACE_URL, f"memiro/variant/{long_side}/{short_side}/{override_key}")
 
 
-def _configured_key(configured: ConfiguredValue) -> str:
+def _configured_key(chosen: ChosenValue) -> str:
     """Give equal dictionary and numeric configurations equal canonical text."""
-    if configured.value_id is not None:
-        return f"value/{configured.value_id}"
-    if configured.quantity is None:
+    if chosen.value_id is not None:
+        return f"value/{chosen.value_id}"
+    if chosen.quantity is None:
         msg = "A variant fingerprint needs a complete override"
         raise RuntimeError(msg)
-    return f"quantity/{format(configured.quantity.normalize(), 'f')}"
-
-
-@dataclass(frozen=True, slots=True)
-class ConfiguredValue:
-    """One configured attribute, expressed as either a dictionary row or a quantity."""
-
-    value_id: AttributeValueId | None
-    quantity: Decimal | None
-
-    def __post_init__(self) -> None:
-        """Reject two simultaneous representations, and a consumption below zero."""
-        if self.value_id is not None and self.quantity is not None:
-            msg = "Configured value cannot name both a dictionary row and a quantity"
-            raise RuntimeError(msg)
-        # Zero is a declaration ("no cutouts"), below zero is not: it would
-        # reach ``Rate.charge`` and leave as a 500 from ``Money`` — a refusal
-        # the customer is owed as a 4xx instead.
-        if self.quantity is not None and self.quantity < 0:
-            raise InvalidQuantityError
+    return f"quantity/{format(chosen.quantity.normalize(), 'f')}"
 
 
 @dataclass
@@ -63,7 +43,7 @@ class DeclaredValue(Entity):
     """
 
     attribute_id: AttributeId
-    configured: ConfiguredValue
+    chosen: ChosenValue
 
 
 class VariantOverrides(tuple[DeclaredValue, ...]):
@@ -73,15 +53,13 @@ class VariantOverrides(tuple[DeclaredValue, ...]):
 
     def __new__(cls, values: Iterable[DeclaredValue] = ()) -> Self:
         """Copy children and preserve the eternal override invariants."""
-        overrides = tuple(
-            DeclaredValue(attribute_id=value.attribute_id, configured=value.configured) for value in values
-        )
+        overrides = tuple(DeclaredValue(attribute_id=value.attribute_id, chosen=value.chosen) for value in values)
         attribute_ids = [override.attribute_id for override in overrides]
         if len(set(attribute_ids)) != len(attribute_ids):
             raise InvalidVariantConfigurationError(
                 message="A variant can override an attribute only once",
             )
-        if any(override.configured.value_id is None and override.configured.quantity is None for override in overrides):
+        if any(override.chosen.value_id is None and override.chosen.quantity is None for override in overrides):
             raise InvalidVariantConfigurationError(
                 message="A variant override must name a value or a quantity",
             )
@@ -138,8 +116,7 @@ class Variant(Entity):
     def overrides(self) -> tuple[DeclaredValue, ...]:
         """Return copies so a caller cannot mutate the aggregate through a child."""
         return tuple(
-            DeclaredValue(attribute_id=override.attribute_id, configured=override.configured)
-            for override in self._overrides
+            DeclaredValue(attribute_id=override.attribute_id, chosen=override.chosen) for override in self._overrides
         )
 
     @property
@@ -165,11 +142,11 @@ class Variant(Entity):
             msg = f"Variant {self.id} has a corrupted fingerprint"
             raise RuntimeError(msg)
 
-    def configuration_key(self) -> tuple[int, int, tuple[tuple[AttributeId, ConfiguredValue], ...]]:
+    def configuration_key(self) -> tuple[int, int, tuple[tuple[AttributeId, ChosenValue], ...]]:
         """Return the rotation- and order-independent duplicate identity."""
         overrides = tuple(
             sorted(
-                ((override.attribute_id, override.configured) for override in self._overrides),
+                ((override.attribute_id, override.chosen) for override in self._overrides),
                 key=lambda item: str(item[0]),
             )
         )
@@ -284,11 +261,11 @@ class Product(Entity):
         self._price_from = min((variant.price for variant in self._variants), default=None)
 
     def _canonical_variant_data(self, data: VariantData) -> VariantData:
-        """Drop overrides that repeat the product's own configured value."""
+        """Drop overrides that repeat the product's own chosen value."""
         overrides: list[DeclaredValue] = []
         for override in data.overrides:
             declared = self.declared(override.attribute_id)
-            if declared is None or declared.configured != override.configured:
+            if declared is None or declared.chosen != override.chosen:
                 overrides.append(override)
         return VariantData(
             dimensions=data.dimensions,

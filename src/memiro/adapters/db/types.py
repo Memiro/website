@@ -6,7 +6,8 @@ from sqlalchemy import Dialect, Integer, Numeric, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.types import TypeDecorator
 
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, VariantOverrides
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, VariantOverrides
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Area, Dimensions, Millimeters
 from memiro.entities.common.money import Money
@@ -134,11 +135,9 @@ class VariantOverridesType(TypeDecorator[VariantOverrides]):
         return [
             {
                 "attribute_id": str(override.attribute_id),
-                "value_id": (str(override.configured.value_id) if override.configured.value_id is not None else None),
+                "value_id": (str(override.chosen.value_id) if override.chosen.value_id is not None else None),
                 "quantity": (
-                    format(override.configured.quantity.normalize(), "f")
-                    if override.configured.quantity is not None
-                    else None
+                    format(override.chosen.quantity.normalize(), "f") if override.chosen.quantity is not None else None
                 ),
             }
             for override in sorted(value, key=lambda item: str(item.attribute_id))
@@ -158,7 +157,7 @@ class VariantOverridesType(TypeDecorator[VariantOverrides]):
             return VariantOverrides(
                 DeclaredValue(
                     attribute_id=UUID(payload["attribute_id"] or ""),
-                    configured=ConfiguredValue(
+                    chosen=ChosenValue(
                         value_id=UUID(payload["value_id"]) if payload["value_id"] is not None else None,
                         quantity=Decimal(payload["quantity"]) if payload["quantity"] is not None else None,
                     ),
@@ -197,13 +196,11 @@ class InquiryConfigurationType(TypeDecorator[InquiryConfiguration]):
             "height_mm": value.dimensions.height.value,
             "values": [
                 {
-                    "attribute_name": configured.attribute_name,
-                    "value_name": configured.value_name,
-                    "quantity": (
-                        format(configured.quantity.normalize(), "f") if configured.quantity is not None else None
-                    ),
+                    "attribute_name": chosen.attribute_name,
+                    "value_name": chosen.value_name,
+                    "quantity": (format(chosen.quantity.normalize(), "f") if chosen.quantity is not None else None),
                 }
-                for configured in value.values
+                for chosen in value.values
             ],
         }
 
@@ -224,11 +221,11 @@ class InquiryConfigurationType(TypeDecorator[InquiryConfiguration]):
                 ),
                 values=tuple(
                     ConfigurationValue(
-                        attribute_name=str(configured["attribute_name"]),
-                        value_name=configured["value_name"],
-                        quantity=Decimal(configured["quantity"]) if configured["quantity"] is not None else None,
+                        attribute_name=str(chosen["attribute_name"]),
+                        value_name=chosen["value_name"],
+                        quantity=Decimal(chosen["quantity"]) if chosen["quantity"] is not None else None,
                     )
-                    for configured in value["values"]
+                    for chosen in value["values"]
                 ),
             )
         except (ArithmeticError, KeyError, TypeError, ValueError) as error:

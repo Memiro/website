@@ -111,7 +111,7 @@ async def test_a_customer_submits_multiple_configured_mirrors_in_one_inquiry(
     api_client: ApiClient,
     request_container: AsyncContainer,
 ) -> None:
-    """A SELECTION inquiry stores every configured item in one aggregate."""
+    """A SELECTION inquiry stores every chosen item in one aggregate."""
     form = _form(
         email="anna@example.test",
         items=[

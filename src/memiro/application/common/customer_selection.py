@@ -7,9 +7,10 @@ from pydantic import BaseModel, Field, model_validator
 
 from memiro.application.common.input_limits import MAX_QUANTITY
 from memiro.application.errors.catalog import AttributeValueNotFoundError
-from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind
-from memiro.entities.catalog.product.entity import ConfiguredValue, Product
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.attribute.entity import Attribute
+from memiro.entities.catalog.product.entity import Product
+from memiro.entities.common.identifiers import AttributeId
 from memiro_common.logger import Logger
 
 logger: Logger = structlog.get_logger(__name__)
@@ -35,7 +36,7 @@ def customer_selections(
     product: Product,
     attributes: Sequence[Attribute],
     selections: Sequence[Selection],
-) -> dict[AttributeId, ConfiguredValue]:
+) -> dict[AttributeId, ChosenValue]:
     """Check every choice against the dictionary and the product, then index it by attribute.
 
     The customer *replaces* the product's own value, he does not introduce a
@@ -43,23 +44,17 @@ def customer_selections(
     price would have nothing to be counted from (ADR-0007).
     """
     index = {attribute.id: attribute for attribute in attributes}
-    chosen: dict[AttributeId, ConfiguredValue] = {}
+    values: dict[AttributeId, ChosenValue] = {}
     for selection in selections:
         attribute_id: AttributeId = selection.attribute_id
         attribute = index.get(attribute_id)
         declaration = product.declared(attribute_id)
-        configured: ConfiguredValue | None = None
-        if attribute is not None and declaration is not None:
-            value_id: AttributeValueId | None = selection.value_id
-            if (
-                attribute.kind is AttributeKind.SELECT
-                and value_id is not None
-                and attribute.value(value_id) is not None
-            ):
-                configured = ConfiguredValue(value_id=value_id, quantity=None)
-            elif attribute.kind is AttributeKind.NUMBER and selection.quantity is not None:
-                configured = ConfiguredValue(value_id=None, quantity=selection.quantity)
-        if configured is None:
+        chosen = (
+            attribute.configure(selection.value_id, selection.quantity)
+            if attribute is not None and declaration is not None
+            else None
+        )
+        if chosen is None:
             logger.warning(
                 "A choice outside the product's dictionary",
                 product_id=product.id,
@@ -67,5 +62,5 @@ def customer_selections(
                 value_id=selection.value_id,
             )
             raise AttributeValueNotFoundError
-        chosen[attribute_id] = configured
-    return chosen
+        values[attribute_id] = chosen
+    return values

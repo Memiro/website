@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
+from decimal import Decimal
 from enum import StrEnum, auto
 
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.rate import Rate
 from memiro.entities.common.entity import Entity
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId
@@ -62,3 +64,25 @@ class Attribute(Entity):
     def value(self, value_id: AttributeValueId) -> AttributeValue | None:
         """Find a dictionary row of this attribute, or report that it is not one."""
         return next((value for value in self.values if value.id == value_id), None)
+
+    def row_of(self, chosen: ChosenValue) -> AttributeValue | None:
+        """Return the dictionary row a chosen value is charged by, or nothing if it is not one."""
+        if self.kind is AttributeKind.NUMBER:
+            # The constructor holds the single-row invariant, but the ORM
+            # hydrates an aggregate without running it (§12.3).
+            if len(self.values) != 1:
+                msg = f"Numeric attribute {self.id} needs exactly one tariff row"
+                raise RuntimeError(msg)
+            if chosen.value_id is not None or chosen.quantity is None:
+                return None
+            return self.values[0]
+        if chosen.value_id is None or chosen.quantity is not None:
+            return None
+        return self.value(chosen.value_id)
+
+    def configure(self, value_id: AttributeValueId | None, quantity: Decimal | None) -> ChosenValue | None:
+        """Turn one row of a form into a value of this attribute, or refuse a choice that is not one."""
+        if value_id is not None and quantity is not None:
+            return None
+        chosen = ChosenValue(value_id=value_id, quantity=quantity)
+        return chosen if self.row_of(chosen) is not None else None

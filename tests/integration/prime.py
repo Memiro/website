@@ -128,8 +128,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                 {
                     "product_id": product.id,
                     "attribute_id": declared.attribute_id,
-                    "value_id": declared.configured.value_id,
-                    "quantity": declared.configured.quantity,
+                    "value_id": declared.chosen.value_id,
+                    "quantity": declared.chosen.quantity,
                 }
                 for declared in product.declared_values
             ],
@@ -432,8 +432,8 @@ async def prime_numeric_catalog(engine: AsyncEngine) -> None:
                 {
                     "product_id": product.id,
                     "attribute_id": product.declared_values[0].attribute_id,
-                    "value_id": product.declared_values[0].configured.value_id,
-                    "quantity": product.declared_values[0].configured.quantity,
+                    "value_id": product.declared_values[0].chosen.value_id,
+                    "quantity": product.declared_values[0].chosen.quantity,
                 },
             ],
         )

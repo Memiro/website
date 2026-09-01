@@ -2,7 +2,8 @@ from decimal import Decimal
 
 import pytest
 
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Variant, VariantData
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, Variant, VariantData
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import (
@@ -78,19 +79,19 @@ def test_a_product_copies_an_override_before_accepting_it() -> None:
     product = demo_product()
     override = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=GRAPHITE, quantity=None),
+        chosen=ChosenValue(value_id=GRAPHITE, quantity=None),
     )
     variant = product.add_variant(
         _variant_data(width_mm=600, height_mm=400, overrides=(override,)),
         price=Money(amount=Decimal(3000)),
     )
 
-    override.configured = ConfiguredValue(value_id=SILVER, quantity=None)
+    override.chosen = ChosenValue(value_id=SILVER, quantity=None)
 
     assert variant.overrides == (
         DeclaredValue(
             attribute_id=BLADE,
-            configured=ConfiguredValue(value_id=GRAPHITE, quantity=None),
+            chosen=ChosenValue(value_id=GRAPHITE, quantity=None),
         ),
     )
 
@@ -134,7 +135,7 @@ def test_a_duplicated_variant_keeps_everything_but_its_size_and_price() -> None:
     product = demo_product()
     override = DeclaredValue(
         attribute_id=FRAME,
-        configured=ConfiguredValue(value_id=NO_FRAME, quantity=None),
+        chosen=ChosenValue(value_id=NO_FRAME, quantity=None),
     )
     source = product.add_variant(
         _variant_data(width_mm=600, height_mm=400, overrides=(override,), sort_order=7),
@@ -166,11 +167,11 @@ def test_a_product_rejects_a_rotated_duplicate_with_reordered_overrides() -> Non
     product = demo_product()
     blade = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=SILVER, quantity=None),
+        chosen=ChosenValue(value_id=SILVER, quantity=None),
     )
     frame = DeclaredValue(
         attribute_id=FRAME,
-        configured=ConfiguredValue(value_id=NO_FRAME, quantity=None),
+        chosen=ChosenValue(value_id=NO_FRAME, quantity=None),
     )
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400, overrides=(blade, frame)),
@@ -193,7 +194,7 @@ def test_a_product_rejects_a_duplicate_disguised_as_a_default_override() -> None
     product = demo_product()
     default_blade = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=SILVER, quantity=None),
+        chosen=ChosenValue(value_id=SILVER, quantity=None),
     )
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
@@ -214,7 +215,7 @@ def test_a_product_allows_one_size_with_different_overrides() -> None:
     product = demo_product()
     blade = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=GRAPHITE, quantity=None),
+        chosen=ChosenValue(value_id=GRAPHITE, quantity=None),
     )
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
@@ -312,7 +313,7 @@ def test_a_variant_rejects_two_overrides_of_one_attribute() -> None:
     product = demo_product()
     silver = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=SILVER, quantity=None),
+        chosen=ChosenValue(value_id=SILVER, quantity=None),
     )
 
     with pytest.raises(InvalidVariantConfigurationError, match="only once"):
@@ -330,7 +331,7 @@ def test_a_variant_rejects_an_unfinished_override() -> None:
     product = demo_product()
     unfinished = DeclaredValue(
         attribute_id=BLADE,
-        configured=ConfiguredValue(value_id=None, quantity=None),
+        chosen=ChosenValue(value_id=None, quantity=None),
     )
 
     with pytest.raises(InvalidVariantConfigurationError, match="must name"):

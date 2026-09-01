@@ -5,8 +5,9 @@ from uuid import uuid4
 import pytest
 from hypothesis import given, settings
 
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
+from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeValueId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
@@ -65,7 +66,7 @@ def test_a_customer_choice_that_makes_a_parent_present_requires_its_child() -> N
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={BACKLIGHT: ConfiguredValue(value_id=CONTOUR, quantity=None)},
+        selections={BACKLIGHT: ChosenValue(value_id=CONTOUR, quantity=None)},
     )
 
     assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())
@@ -79,7 +80,7 @@ def test_an_absent_selected_parent_removes_its_child_from_the_price(child_value:
         product,
         DeclaredValue(
             attribute_id=HEATING,
-            configured=ConfiguredValue(value_id=child_value, quantity=None),
+            chosen=ChosenValue(value_id=child_value, quantity=None),
         ),
     )
 
@@ -88,7 +89,7 @@ def test_an_absent_selected_parent_removes_its_child_from_the_price(child_value:
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={BACKLIGHT: ConfiguredValue(value_id=NO_BACKLIGHT, quantity=None)},
+        selections={BACKLIGHT: ChosenValue(value_id=NO_BACKLIGHT, quantity=None)},
     )
 
     assert quotation == canonical_quotation(PricingVerdict.PRICED)
@@ -103,14 +104,14 @@ def test_a_customer_choice_cannot_complete_an_unfinished_owner_declaration() -> 
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={BLADE: ConfiguredValue(value_id=SILVER, quantity=None)},
+        selections={BLADE: ChosenValue(value_id=SILVER, quantity=None)},
     )
 
     assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())
 
 
 def test_a_zero_numeric_quantity_is_complete_and_consumed_exactly() -> None:
-    """Decimal zero is a configured numeric quantity, not a missing declaration."""
+    """Decimal zero is a chosen numeric quantity, not a missing declaration."""
     pricing_settings = replace(demo_settings(), min_order_total=Money(amount=Decimal(0)))
 
     quotation = price_product_for_customer(
@@ -137,7 +138,7 @@ def test_a_customer_cannot_select_a_non_changeable_attribute() -> None:
         attributes=attributes,
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={FRAME: ConfiguredValue(value_id=NO_FRAME, quantity=None)},
+        selections={FRAME: ChosenValue(value_id=NO_FRAME, quantity=None)},
     )
 
     assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())
@@ -186,7 +187,7 @@ def test_a_fractional_numeric_selection_is_charged_as_its_exact_quantity() -> No
         attributes=[demo_cutouts()],
         settings=pricing_settings,
         dimensions=_dimensions(800, 600),
-        selections={CUTOUTS: ConfiguredValue(value_id=None, quantity=Decimal("2.5"))},
+        selections={CUTOUTS: ChosenValue(value_id=None, quantity=Decimal("2.5"))},
     )
 
     assert quotation == Quotation(
@@ -260,7 +261,7 @@ def test_one_thousand_fractional_numeric_prices_keep_exact_consumption(
         attributes=[demo_cutouts()],
         settings=pricing_settings,
         dimensions=_dimensions(800, 600),
-        selections={CUTOUTS: ConfiguredValue(value_id=None, quantity=quantity)},
+        selections={CUTOUTS: ChosenValue(value_id=None, quantity=quantity)},
     )
 
     assert quotation.breakdown[0].quantity == quantity
@@ -273,7 +274,7 @@ def test_a_selection_naming_an_attribute_outside_the_dictionary_is_not_priceable
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={uuid4(): ConfiguredValue(value_id=SILVER, quantity=None)},
+        selections={uuid4(): ChosenValue(value_id=SILVER, quantity=None)},
     )
 
     assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())

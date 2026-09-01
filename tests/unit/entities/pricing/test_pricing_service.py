@@ -4,9 +4,10 @@ from decimal import Decimal
 import pytest
 from hypothesis import given, settings
 
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.catalog.product.entity import DeclaredValue
+from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_service import (
@@ -42,9 +43,9 @@ from tests.common.factory.catalog import (
 )
 from tests.common.pricing_expected import canonical_quotation, quotation_line
 from tests.unit.composite import (
-    configurations,
     dimensions,
     pricing_cases,
+    selections,
 )
 
 
@@ -91,7 +92,7 @@ def test_the_owner_prices_a_product_without_a_paid_default() -> None:
         [
             DeclaredValue(
                 attribute_id=FRAME,
-                configured=ConfiguredValue(value_id=NO_FRAME, quantity=None),
+                chosen=ChosenValue(value_id=NO_FRAME, quantity=None),
             )
         ],
     )
@@ -120,7 +121,7 @@ def test_the_owner_changes_an_attribute_reserved_for_the_owner() -> None:
         attributes=attributes,
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={FRAME: NO_FRAME},
+        selections={FRAME: ChosenValue(value_id=NO_FRAME, quantity=None)},
     )
 
     assert quotation == Quotation(
@@ -180,7 +181,10 @@ def test_shape_and_size_surcharge_factors_multiply_each_other() -> None:
         attributes=demo_attributes(),
         settings=_settings_with_size_surcharge(),
         dimensions=_dimensions(2300, 600),
-        selections={SHAPE: ROUND, FRAME: NO_FRAME},
+        selections={
+            SHAPE: ChosenValue(value_id=ROUND, quantity=None),
+            FRAME: ChosenValue(value_id=NO_FRAME, quantity=None),
+        },
     )
 
     # Blade: 1.38 m2 x 4500 x 1.5 x 1.25 = 11 643.75; mount = 500;
@@ -203,7 +207,7 @@ def test_a_selection_delta_carries_the_size_surcharge_factor() -> None:
         attributes=demo_attributes(),
         settings=_settings_with_size_surcharge(),
         dimensions=_dimensions(2300, 600),
-        selections={BLADE: GRAPHITE},
+        selections={BLADE: ChosenValue(value_id=GRAPHITE, quantity=None)},
     )
 
     # (7000 - 4500) x 1.38 m2 x 1.25 = 4 312.50.
@@ -217,7 +221,11 @@ def test_a_curved_cut_multiplies_the_blade_but_not_the_backlight() -> None:
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(900, 900),
-        selections={SHAPE: ROUND, FRAME: NO_FRAME, BACKLIGHT: CONTOUR},
+        selections={
+            SHAPE: ChosenValue(value_id=ROUND, quantity=None),
+            FRAME: ChosenValue(value_id=NO_FRAME, quantity=None),
+            BACKLIGHT: ChosenValue(value_id=CONTOUR, quantity=None),
+        },
     )
 
     # 0.81 m2 x 4500 x 1.5 = 5 467.50 for the blade, 3.6 lm x 2500 = 9 000 for
@@ -232,7 +240,10 @@ def test_a_small_mirror_is_priced_by_the_minimum_area_and_the_minimum_order() ->
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(400, 300),
-        selections={FRAME: NO_FRAME, MOUNT: NO_MOUNT},
+        selections={
+            FRAME: ChosenValue(value_id=NO_FRAME, quantity=None),
+            MOUNT: ChosenValue(value_id=NO_MOUNT, quantity=None),
+        },
     )
 
     # 0.12 m2 is billed as 0.25 m2 x 4500 = 1 125, raised to the minimum order.
@@ -276,7 +287,7 @@ def test_choosing_a_darker_blade_costs_the_difference_with_the_default() -> None
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={BLADE: GRAPHITE},
+        selections={BLADE: ChosenValue(value_id=GRAPHITE, quantity=None)},
     )
 
     # (7000 - 4500) x 0.48 m2 = 1 200.
@@ -290,7 +301,7 @@ def test_choosing_a_cheaper_blade_gives_a_negative_delta() -> None:
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={BLADE: SILVER},
+        selections={BLADE: ChosenValue(value_id=SILVER, quantity=None)},
     )
 
     assert deltas == {BLADE: Decimal(-1200)}
@@ -303,7 +314,7 @@ def test_keeping_the_products_own_default_costs_nothing() -> None:
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(800, 600),
-        selections={BACKLIGHT: NO_BACKLIGHT},
+        selections={BACKLIGHT: ChosenValue(value_id=NO_BACKLIGHT, quantity=None)},
     )
 
     assert deltas == {BACKLIGHT: Decimal(0)}
@@ -316,7 +327,11 @@ def test_a_delta_is_taken_before_the_minimum_order_threshold() -> None:
         attributes=demo_attributes(),
         settings=demo_settings(),
         dimensions=_dimensions(400, 300),
-        selections={BLADE: GRAPHITE, FRAME: NO_FRAME, MOUNT: NO_MOUNT},
+        selections={
+            BLADE: ChosenValue(value_id=GRAPHITE, quantity=None),
+            FRAME: ChosenValue(value_id=NO_FRAME, quantity=None),
+            MOUNT: ChosenValue(value_id=NO_MOUNT, quantity=None),
+        },
     )
 
     # Both configurations are lifted to 2 000 RUB, yet graphite really costs
@@ -329,7 +344,7 @@ def test_a_delta_is_taken_before_the_minimum_order_threshold() -> None:
 @given(case=pricing_cases())
 def test_one_thousand_prices_are_whole_hundreds_at_or_above_the_minimum_order(
     _example_group: int,
-    case: tuple[Dimensions, dict[AttributeId, AttributeValueId]],
+    case: tuple[Dimensions, dict[AttributeId, ChosenValue]],
 ) -> None:
     """One thousand coherent configurations preserve rounding and the minimum order."""
     size, selections = case
@@ -367,10 +382,10 @@ def test_keeping_every_default_of_the_product_costs_nothing_on_any_size(size: Di
 
 
 @settings(max_examples=25)
-@given(size=dimensions(), selections=configurations())
+@given(size=dimensions(), selections=selections())
 def test_only_a_value_charged_per_unit_ever_becomes_a_line(
     size: Dimensions,
-    selections: dict[AttributeId, AttributeValueId],
+    selections: dict[AttributeId, ChosenValue],
 ) -> None:
     """A free value and a shape factor describe the mirror without a line of their own.
 

@@ -1,12 +1,16 @@
-# ConfiguredValue
+# ChosenValue
 
 ## Назначение
 
-Значение одного настроенного атрибута в единственной форме: строка справочника
-для `SELECT` или дробное количество для `NUMBER`. Эту пару не дублируют
-`DeclaredValue`, выбор покупателя и расчёт — все передают один VO.
+Значение одного атрибута в единственной форме: строка справочника для `SELECT`
+или дробное количество для `NUMBER`. Эту пару не дублируют `DeclaredValue`,
+выбор покупателя и расчёт — все передают один VO. Слово «конфигурация» за ним
+не закреплено: оно принадлежит снимку позиции заявки
+([`Inquiry`](../entities/inquiry.md), ADR-0009).
 
-В коде — `entities/catalog/product/entity.py`.
+В коде — `entities/catalog/attribute/chosen_value.py`: значение принадлежит
+атрибуту, и законность выбора решает он же —
+[`Attribute.configure`](../entities/attribute.md).
 
 ## Состав
 
@@ -30,11 +34,16 @@
    законен: это объявление «столько и не нужно», а не пропуск. Отрицательный
    расход доехал бы до `Rate.charge` и вышел бы из `Money` как 500, тогда как
    покупателю причитается отказ.
-5. Своего идентификатора у VO нет. В таблице деклараций SQLAlchemy собирает его
+5. Сам VO законность выбора не проверяет: «строка формы → значение этого
+   атрибута» — правило атрибута, метод `Attribute.configure`, и один и тот же
+   для калькулятора, заявки и вариантов владельца.
+6. Своего идентификатора у VO нет. В таблице деклараций SQLAlchemy собирает его
    через `composite()` из колонок `value_id` и `quantity`.
 
 ## Где используется
 
 `DeclaredValue` внутри [`Product`](../entities/product.md), выбор покупателя в
 use case [`calculate_price`](../usecase/calculate_price/calculate-price.md) и
-доменный сервис `pricing_service`.
+[`submit_inquiry`](../usecase/submit_inquiry/submit-inquiry.md), переопределения
+варианта в `manage_products` и доменный сервис `pricing_service` — во всех
+подписях один тип `Mapping[AttributeId, ChosenValue]`.

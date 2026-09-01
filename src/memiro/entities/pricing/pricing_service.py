@@ -1,10 +1,11 @@
 from collections.abc import Mapping, Sequence
 from decimal import ROUND_CEILING, Decimal
 
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.catalog.product.entity import Product
+from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
@@ -16,21 +17,20 @@ _ZERO = Money(amount=Decimal(0))
 # owner's rule, not a display convention: the number is what he is paid.
 ROUNDING_STEP = Decimal(100)
 
-type Configuration = Mapping[AttributeId, ConfiguredValue]
-type PricingConfiguration = Mapping[AttributeId, AttributeValueId | ConfiguredValue]
+type Selections = Mapping[AttributeId, ChosenValue]
 type ResolvedValues = tuple[tuple[AttributeId, AttributeValue, Decimal | None], ...]
 
 
 def is_product_priceable(
     product: Product,
     attributes: Sequence[Attribute],
-    selections: PricingConfiguration | None = None,
+    selections: Selections | None = None,
 ) -> bool:
     """Tell whether declarations overlaid with choices form a calculable configuration."""
-    configuration, applicable = _applicable(product, attributes, selections or {})
-    if any(not _has_complete_value(configuration, attribute) for attribute in applicable):
+    chosen_values, applicable = _applicable(product, attributes, selections or {})
+    if any(not _has_complete_value(chosen_values, attribute) for attribute in applicable):
         return False
-    return any(_is_paid(_resolve(attribute, configuration[attribute.id])) for attribute in applicable)
+    return any(_is_paid(_resolve(attribute, chosen_values[attribute.id])) for attribute in applicable)
 
 
 def price_product_for_customer(
@@ -39,7 +39,7 @@ def price_product_for_customer(
     attributes: Sequence[Attribute],
     settings: PricingSettings,
     dimensions: Dimensions,
-    selections: Configuration,
+    selections: Selections,
 ) -> Quotation:
     """Price a customer's question after applying the storefront gates."""
     owner_configuration_is_priceable = is_product_priceable(product, attributes)
@@ -78,14 +78,14 @@ def price_product(
     attributes: Sequence[Attribute],
     settings: PricingSettings,
     dimensions: Dimensions,
-    selections: PricingConfiguration,
+    selections: Selections,
 ) -> Quotation:
     """Price one configuration of a product — the single implementation in the repository.
 
     Pure: the product, the dictionary and the settings all arrive as
     parameters, and the service never goes to the database (decision 28).
     """
-    values = _values(_configuration_for_price(product, attributes, selections), attributes)
+    values = _values(_applicable_values(product, attributes, selections), attributes)
     breakdown = _breakdown(values, settings, dimensions)
     size_surcharge = settings.size_surcharge_for(dimensions)
     total = _round_up(_apply_min_order(_subtotal(breakdown, values, size_surcharge), settings))
@@ -103,7 +103,7 @@ def selection_deltas(
     attributes: Sequence[Attribute],
     settings: PricingSettings,
     dimensions: Dimensions,
-    selections: PricingConfiguration,
+    selections: Selections,
 ) -> dict[AttributeId, Decimal]:
     """Tell what each of the customer's choices cost, against the product's own default.
 
@@ -133,10 +133,10 @@ def _exact_total(
     attributes: Sequence[Attribute],
     settings: PricingSettings,
     dimensions: Dimensions,
-    selections: PricingConfiguration,
+    selections: Selections,
 ) -> Money:
     """Sum the lines of a configuration with no threshold and no rounding applied."""
-    values = _values(_configuration_for_price(product, attributes, selections), attributes)
+    values = _values(_applicable_values(product, attributes, selections), attributes)
     return _subtotal(
         _breakdown(values, settings, dimensions),
         values,
@@ -144,41 +144,40 @@ def _exact_total(
     )
 
 
-def _configuration(
+def _overlay(
     product: Product,
-    selections: PricingConfiguration,
-) -> dict[AttributeId, ConfiguredValue]:
+    selections: Selections,
+) -> dict[AttributeId, ChosenValue]:
     """Lay the customer's choices over what the owner declared for the product."""
-    declared = {declaration.attribute_id: declaration.configured for declaration in product.declared_values}
-    selected = {attribute_id: _configured(value) for attribute_id, value in selections.items()}
-    return declared | selected
+    declared = {declaration.attribute_id: declaration.chosen for declaration in product.declared_values}
+    return declared | dict(selections)
 
 
-def _configuration_for_price(
+def _applicable_values(
     product: Product,
     attributes: Sequence[Attribute],
-    selections: PricingConfiguration,
-) -> dict[AttributeId, ConfiguredValue]:
+    selections: Selections,
+) -> dict[AttributeId, ChosenValue]:
     """Keep only values whose dependency parents are present after choices are applied."""
-    configuration, applicable = _applicable(product, attributes, selections)
-    return {attribute.id: configuration[attribute.id] for attribute in applicable if attribute.id in configuration}
+    chosen_values, applicable = _applicable(product, attributes, selections)
+    return {attribute.id: chosen_values[attribute.id] for attribute in applicable if attribute.id in chosen_values}
 
 
 def _applicable(
     product: Product,
     attributes: Sequence[Attribute],
-    selections: PricingConfiguration,
-) -> tuple[dict[AttributeId, ConfiguredValue], tuple[Attribute, ...]]:
+    selections: Selections,
+) -> tuple[dict[AttributeId, ChosenValue], tuple[Attribute, ...]]:
     """Resolve the customer overlay and the category attributes it makes applicable."""
     category_attributes = tuple(attribute for attribute in attributes if attribute.category_id == product.category_id)
     attribute_index = {attribute.id: attribute for attribute in category_attributes}
-    configuration = _configuration(product, selections)
+    chosen_values = _overlay(product, selections)
     applicable = tuple(
         attribute
         for attribute in category_attributes
-        if _is_applicable(attribute, product, configuration, attribute_index)
+        if _is_applicable(attribute, product, chosen_values, attribute_index)
     )
-    return configuration, applicable
+    return chosen_values, applicable
 
 
 def _breakdown(
@@ -246,10 +245,10 @@ def _shape_factor(values: ResolvedValues) -> Decimal:
 
 
 def _values(
-    configuration: Mapping[AttributeId, ConfiguredValue],
+    chosen_values: Selections,
     attributes: Sequence[Attribute],
 ) -> ResolvedValues:
-    """Resolve the configuration into dictionary rows, in the owner's order.
+    """Resolve the chosen values into dictionary rows, in the owner's order.
 
     The order is the owner's and then the identifier: both sort fields default
     to zero, so a tie is the normal case and the breakdown would otherwise
@@ -257,14 +256,14 @@ def _values(
     """
     index = {attribute.id: attribute for attribute in attributes}
     resolved: list[tuple[int, int, str, AttributeId, AttributeValue, Decimal | None]] = []
-    for attribute_id, configured in configuration.items():
+    for attribute_id, chosen in chosen_values.items():
         attribute = index.get(attribute_id)
         if attribute is None:
-            # The caller validates the configuration against the dictionary;
+            # The caller validates the choices against the dictionary;
             # arriving here means the two disagree, which is a defect (§12.3).
             msg = f"Attribute {attribute_id} is not in the pricing dictionary"
             raise RuntimeError(msg)
-        value = _resolve(attribute, configured)
+        value = _resolve(attribute, chosen)
         resolved.append(
             (
                 attribute.sort_order,
@@ -272,7 +271,7 @@ def _values(
                 str(value.id),
                 attribute_id,
                 value,
-                configured.quantity if attribute.kind is AttributeKind.NUMBER else None,
+                chosen.quantity if attribute.kind is AttributeKind.NUMBER else None,
             )
         )
     return tuple(
@@ -284,51 +283,34 @@ def _values(
     )
 
 
-def _configured(
-    value: AttributeValueId | ConfiguredValue | DeclaredValue | None,
-) -> ConfiguredValue:
-    """Project a declaration or dictionary-row input into one domain shape."""
-    if isinstance(value, ConfiguredValue):
-        return value
-    if isinstance(value, DeclaredValue):
-        return value.configured
-    return ConfiguredValue(value_id=value, quantity=None)
-
-
-def _resolve(attribute: Attribute, configured: ConfiguredValue) -> AttributeValue:
-    """Resolve a select row or the sole dictionary row carrying a numeric tariff."""
-    if attribute.kind is AttributeKind.NUMBER:
-        if len(attribute.values) != 1 or configured.quantity is None:
-            msg = f"Numeric attribute {attribute.id} needs one row and a quantity"
-            raise RuntimeError(msg)
-        return attribute.values[0]
-    if configured.value_id is None:
-        msg = f"Select attribute {attribute.id} needs a dictionary value"
-        raise RuntimeError(msg)
-    value = attribute.value(configured.value_id)
+def _resolve(attribute: Attribute, chosen: ChosenValue) -> AttributeValue:
+    """Resolve one chosen value into the dictionary row that carries its tariff."""
+    value = attribute.row_of(chosen)
     if value is None:
-        msg = f"Value {configured.value_id} is not a row of attribute {attribute.id}"
+        # The caller validates every choice against the dictionary through the
+        # same domain method; arriving here means it did not (§12.3).
+        msg = f"Value {chosen} is not a legal value of attribute {attribute.id}"
         raise RuntimeError(msg)
     return value
 
 
-def _has_complete_value(configuration: Configuration, attribute: Attribute) -> bool:
-    """Tell whether a configuration fills one applicable attribute."""
-    configured = configuration.get(attribute.id)
-    if configured is None:
+def _has_complete_value(chosen_values: Selections, attribute: Attribute) -> bool:
+    """Tell whether the chosen values fill one applicable attribute."""
+    chosen = chosen_values.get(attribute.id)
+    if chosen is None:
         return False
     if attribute.kind is AttributeKind.NUMBER:
-        return configured.quantity is not None
-    return configured.value_id is not None
+        return chosen.quantity is not None
+    return chosen.value_id is not None
 
 
 def _is_applicable(
     attribute: Attribute,
     product: Product,
-    configuration: Configuration,
+    chosen_values: Selections,
     attributes: Mapping[AttributeId, Attribute],
 ) -> bool:
-    """Apply a dependent attribute when at least one configured parent is present."""
+    """Apply a dependent attribute when at least one chosen parent is present."""
     if not attribute.parent_ids:
         return True
     parents: list[Attribute] = []
@@ -341,15 +323,15 @@ def _is_applicable(
             )
             raise RuntimeError(msg)
         parents.append(parent)
-    return any(_configured_value_is_present(configuration, parent) for parent in parents)
+    return any(_chosen_value_is_present(chosen_values, parent) for parent in parents)
 
 
-def _configured_value_is_present(configuration: Configuration, attribute: Attribute) -> bool:
-    """Resolve one configured parent through the dictionary's single absence rule."""
-    configured = configuration.get(attribute.id)
-    if configured is None or not _has_complete_value(configuration, attribute):
+def _chosen_value_is_present(chosen_values: Selections, attribute: Attribute) -> bool:
+    """Resolve one chosen parent through the dictionary's single absence rule."""
+    chosen = chosen_values.get(attribute.id)
+    if chosen is None or not _has_complete_value(chosen_values, attribute):
         return False
-    return _resolve(attribute, configured).is_present()
+    return _resolve(attribute, chosen).is_present()
 
 
 def _is_paid(value: AttributeValue) -> bool:

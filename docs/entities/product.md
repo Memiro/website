@@ -42,7 +42,7 @@ _Avoid_: продукт, позиция, SKU.
 | Поле | Тип | Смысл |
 |---|---|---|
 | `attribute_id` | `AttributeId` | Атрибут категории |
-| `configured` | [`ConfiguredValue`](../value-objects/configured-value.md) | Строка справочника, количество или незавершённая пустота |
+| `chosen` | [`ChosenValue`](../value-objects/chosen-value.md) | Строка справочника, количество или незавершённая пустота |
 
 ### Variant — предпосчитанный вариант
 
@@ -119,7 +119,7 @@ _Avoid_: комплектация, модификация, готовое реш
 Category
   └── Product                     (по category_id)
         ├── DeclaredValue*        (attribute_id → Attribute)
-        │     └── ConfiguredValue (value_id → AttributeValue | quantity)
+        │     └── ChosenValue (value_id → AttributeValue | quantity)
         ├── Variant*              (add / change / remove / duplicate_with_size)
         │     ├── Dimensions
         │     ├── overrides: DeclaredValue*

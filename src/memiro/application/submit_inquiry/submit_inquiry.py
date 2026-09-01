@@ -50,7 +50,7 @@ logger: Logger = structlog.get_logger(__name__)
 
 
 class InquiryItemForm(BaseModel):
-    """One configured product submitted in a visitor selection."""
+    """One chosen product submitted in a visitor selection."""
 
     product_id: UUID
     width_mm: int = Field(ge=MIN_SIDE_MM, le=MAX_SIDE_MM)

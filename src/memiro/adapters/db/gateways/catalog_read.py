@@ -176,8 +176,8 @@ class SACatalogReadGateway(CatalogReadGateway):
                     overrides=[
                         VariantOverride(
                             attribute_id=value.attribute_id,
-                            value_id=value.configured.value_id,
-                            quantity=value.configured.quantity,
+                            value_id=value.chosen.value_id,
+                            quantity=value.chosen.quantity,
                         )
                         for value in item.overrides
                     ],

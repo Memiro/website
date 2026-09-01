@@ -25,7 +25,7 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
-from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
+from tests.common.factory.catalog import BLADE, GRAPHITE, HEATING, PRODUCT, WITH_HEATING
 from tests.integration.prime import (
     prime_hidden_calculated_price,
     prime_incomplete_declaration,
@@ -281,6 +281,24 @@ async def test_adding_fails_if_an_override_is_outside_the_product_dictionary(
                 width_mm=800,
                 height_mm=600,
                 overrides=[VariantOverrideForm(attribute_id=uuid4(), value_id=uuid4())],
+                sort_order=0,
+            ),
+        )
+
+
+async def test_adding_fails_if_an_override_replaces_nothing_the_product_declared(
+    request_container: AsyncContainer,
+) -> None:
+    """An override of an attribute the product never declared is rejected with ATTRIBUTE_VALUE_NOT_FOUND."""
+    interactor = await request_container.get(AddVariant)
+
+    with pytest.raises(AttributeValueNotFoundError):
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(
+                width_mm=800,
+                height_mm=600,
+                overrides=[VariantOverrideForm(attribute_id=HEATING, value_id=WITH_HEATING)],
                 sort_order=0,
             ),
         )

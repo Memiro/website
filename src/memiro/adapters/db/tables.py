@@ -32,9 +32,10 @@ from memiro.adapters.db.types import (
     RateAmountType,
     VariantOverridesType,
 )
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product, Variant
+from memiro.entities.catalog.product.entity import DeclaredValue, Product, Variant
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.inquiry.entity import Inquiry, InquiryItem, InquirySource
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
@@ -244,8 +245,8 @@ mapper_registry.map_imperatively(
     DeclaredValue,
     product_declared_values_table,
     properties={
-        "configured": composite(
-            ConfiguredValue,
+        "chosen": composite(
+            ChosenValue,
             product_declared_values_table.c.value_id,
             product_declared_values_table.c.quantity,
         ),

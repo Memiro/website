@@ -11,8 +11,9 @@ from decimal import Decimal
 from hypothesis import strategies as st
 
 from memiro.application.common.input_limits import MAX_SIDE_MM, MIN_SIDE_MM
-from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, Product
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, Product
+from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro.entities.pricing.quotation import PricingVerdict
@@ -42,11 +43,14 @@ def dimensions(draw: st.DrawFn) -> Dimensions:
 
 
 @st.composite
-def configurations(draw: st.DrawFn) -> dict[AttributeId, AttributeValueId]:
+def selections(draw: st.DrawFn) -> dict[AttributeId, ChosenValue]:
     """Draw what a customer may replace on the canonical mirror: its own attributes, values of theirs."""
     choices = demo_choices()
     attributes = draw(st.lists(st.sampled_from(list(choices)), unique=True, max_size=len(choices)))
-    return {attribute_id: draw(st.sampled_from(choices[attribute_id])) for attribute_id in attributes}
+    return {
+        attribute_id: ChosenValue(value_id=draw(st.sampled_from(choices[attribute_id])), quantity=None)
+        for attribute_id in attributes
+    }
 
 
 @st.composite
@@ -94,9 +98,9 @@ def rotated_limit_cases(
 @st.composite
 def pricing_cases(
     draw: st.DrawFn,
-) -> tuple[Dimensions, dict[AttributeId, AttributeValueId]]:
-    """Draw one coherent size and customer configuration."""
-    return draw(dimensions()), draw(configurations())
+) -> tuple[Dimensions, dict[AttributeId, ChosenValue]]:
+    """Draw one coherent size and set of customer choices."""
+    return draw(dimensions()), draw(selections())
 
 
 @st.composite
@@ -138,7 +142,7 @@ def complete_products(draw: st.DrawFn) -> Product:
         declarations.append(
             DeclaredValue(
                 attribute_id=HEATING,
-                configured=ConfiguredValue(
+                chosen=ChosenValue(
                     value_id=draw(st.sampled_from([WITH_HEATING, NO_HEATING])),
                     quantity=None,
                 ),
