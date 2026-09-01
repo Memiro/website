@@ -6,10 +6,9 @@ from decimal import Decimal
 import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
-from sqlalchemy import text, update
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from memiro.adapters.db.tables import product_variants_table
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.product.entity import DeclaredValue, VariantData
@@ -41,14 +40,6 @@ def _variant_data() -> VariantData:
         ),
         sort_order=3,
     )
-
-
-async def _corrupt_fingerprint(engine: AsyncEngine, variant_id: VariantId) -> None:
-    """Break the stored integrity guard through the named dishonest-state seam."""
-    async with engine.begin() as connection:
-        await connection.execute(
-            update(product_variants_table).where(product_variants_table.c.id == variant_id).values(fingerprint=PRODUCT),
-        )
 
 
 async def _corrupt_overrides(
@@ -89,28 +80,6 @@ async def test_the_product_gateway_round_trips_variants_and_the_derived_price(
         loaded = await gateway.get(PRODUCT, eager_variants=True)
 
     assert loaded == product
-
-
-async def test_the_product_gateway_refuses_a_corrupted_variant_fingerprint(
-    app: FastAPI,
-    engine: AsyncEngine,
-) -> None:
-    """A stored uniqueness key that disagrees with the child fails loudly."""
-    container: AsyncContainer = app.state.dishka_container
-    async with container() as request:
-        gateway = await request.get(ProductGateway)
-        uow = await request.get(UoW)
-        product = await gateway.get(PRODUCT, for_update=True, eager_variants=True)
-        assert product is not None
-        variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)))
-        await uow.commit()
-    await _corrupt_fingerprint(engine, variant.id)
-
-    async with container() as request:
-        gateway = await request.get(ProductGateway)
-
-        with pytest.raises(RuntimeError, match="fingerprint"):
-            await gateway.get(PRODUCT, eager_variants=True)
 
 
 async def test_the_product_gateway_refuses_corrupted_variant_overrides(

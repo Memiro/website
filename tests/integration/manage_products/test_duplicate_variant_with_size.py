@@ -19,11 +19,13 @@ from memiro.application.manage_products import (
     DuplicateVariantWithSize,
     DuplicateVariantWithSizeForm,
 )
-from memiro.entities.catalog.product.entity import Variant
+from memiro.application.manage_products.shared import VariantOverrideForm
+from memiro.entities.catalog.attribute.chosen_value import ChosenValue
+from memiro.entities.catalog.product.entity import DeclaredValue, Variant
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import DuplicateVariantError, InvalidVariantConfigurationError
-from tests.common.factory.catalog import PRODUCT
+from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
 from tests.integration.prime import prime_incomplete_declaration, prime_no_pricing_settings, prime_size_surcharge
 
 pytestmark = pytest.mark.usefixtures("catalog")
@@ -63,6 +65,7 @@ def _expected_variant(
     width_mm: int,
     height_mm: int,
     price: str,
+    overrides: tuple[DeclaredValue, ...] = (),
 ) -> Variant:
     """Build the complete child state expected from duplication."""
     return Variant(
@@ -71,7 +74,7 @@ def _expected_variant(
             width=Millimeters(value=width_mm),
             height=Millimeters(value=height_mm),
         ),
-        overrides=(),
+        overrides=overrides,
         price=Money(amount=Decimal(price)),
         sort_order=7,
     )
@@ -106,6 +109,46 @@ async def test_the_owner_duplicates_a_variant_with_a_new_size_and_price(app: Fas
     assert duplicated == _expected_variant(result.id, width_mm=2200, height_mm=600, price="18800")
     assert product.price_from == Money(amount=Decimal(8900))
     assert len(product.variants) == TWO_VARIANTS
+
+
+async def test_a_duplicated_variant_keeps_the_overrides_of_its_source(app: FastAPI) -> None:
+    """A copy of an overridden child keeps the override and is priced by it."""
+    container: AsyncContainer = app.state.dishka_container
+    async with container() as request:
+        add = await request.get(AddVariant)
+        source = await add.execute(
+            PRODUCT,
+            AddVariantForm(
+                width_mm=800,
+                height_mm=600,
+                overrides=[VariantOverrideForm(attribute_id=BLADE, value_id=GRAPHITE)],
+                sort_order=7,
+            ),
+        )
+
+    created = await _duplicate(container, source)
+    async with container() as request:
+        gateway: ProductGateway = await request.get(ProductGateway)
+        product = await gateway.get(PRODUCT, eager_variants=True)
+    assert product is not None
+    duplicate = product.variant(created.id)
+    assert duplicate is not None
+
+    darker_blade = (DeclaredValue(attribute_id=BLADE, chosen=ChosenValue(value_id=GRAPHITE, quantity=None)),)
+    assert product.variant(source.id) == _expected_variant(
+        source.id,
+        width_mm=800,
+        height_mm=600,
+        price="10100",
+        overrides=darker_blade,
+    )
+    assert duplicate == _expected_variant(
+        created.id,
+        width_mm=2200,
+        height_mm=600,
+        price="22100",
+        overrides=darker_blade,
+    )
 
 
 async def test_a_duplicated_variant_keeps_the_size_surcharge(

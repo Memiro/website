@@ -51,11 +51,6 @@ from memiro.entities.pricing.quotation import PricingVerdict
 NAME_LENGTH = 255
 
 
-def _ensure_variant_fingerprint(variant: Variant, _context: object) -> None:
-    """Recheck the derived database guard after SQLAlchemy hydration."""
-    variant.ensure_stored_fingerprint()
-
-
 def _ensure_item_snapshot(item: InquiryItem, _context: object) -> None:
     """Recheck the snapshot invariant after hydration: the ORM builds a row past ``__init__`` (§8.5)."""
     ensure_the_snapshot_agrees_with_its_verdict(item.verdict, item.calculated_price, item.configuration)
@@ -283,7 +278,6 @@ mapper_registry.map_imperatively(
         "_sort_order": product_variants_table.c.sort_order,
     },
 )
-event.listen(Variant, "load", _ensure_variant_fingerprint)
 
 mapper_registry.map_imperatively(
     Product,

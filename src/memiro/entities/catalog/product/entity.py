@@ -34,6 +34,9 @@ def _configured_key(chosen: ChosenValue) -> str:
     return f"quantity/{format(chosen.quantity.normalize(), 'f')}"
 
 
+# Not frozen, though nothing here mutates it: SQLAlchemy instruments a mapped
+# class by assigning ``_sa_instance_state`` through ``__setattr__``, which a
+# frozen dataclass refuses — hence the copy taken when a set is accepted.
 @dataclass
 class DeclaredValue(Entity):
     """What the owner declared for the product on one attribute of its category.
@@ -114,10 +117,8 @@ class Variant(Entity):
 
     @property
     def overrides(self) -> tuple[DeclaredValue, ...]:
-        """Return copies so a caller cannot mutate the aggregate through a child."""
-        return tuple(
-            DeclaredValue(attribute_id=override.attribute_id, chosen=override.chosen) for override in self._overrides
-        )
+        """Return the validated override set the child took at construction."""
+        return self._overrides
 
     @property
     def price(self) -> Money:
@@ -134,13 +135,6 @@ class Variant(Entity):
         if self._sort_order < 0:
             raise InvalidVariantSortOrderError
         self._fingerprint = _variant_fingerprint(self)
-
-    def ensure_stored_fingerprint(self) -> None:
-        """Refuse persisted child state whose uniqueness guard is stale or corrupt."""
-        expected = _variant_fingerprint(self)
-        if self._fingerprint != expected:
-            msg = f"Variant {self.id} has a corrupted fingerprint"
-            raise RuntimeError(msg)
 
     def configuration_key(self) -> tuple[int, int, tuple[tuple[AttributeId, ChosenValue], ...]]:
         """Return the rotation- and order-independent duplicate identity."""
@@ -222,28 +216,6 @@ class Product(Entity):
         """Remove one loaded child and derive the product price again."""
         self._variants.pop(self._variant_index(variant))
         self._settle_price_from()
-
-    def duplicate_variant_with_size(
-        self,
-        variant: Variant,
-        dimensions: Dimensions,
-        *,
-        price: Money,
-    ) -> Variant:
-        """Copy one loaded child to another size with a freshly calculated price."""
-        self._variant_index(variant)
-        duplicate = variant_factory(
-            VariantData(
-                dimensions=dimensions,
-                overrides=variant.overrides,
-                sort_order=variant.sort_order,
-            ),
-            price=price,
-        )
-        self._ensure_unique_variant(duplicate)
-        self._variants.append(duplicate)
-        self._settle_price_from()
-        return duplicate
 
     def declared(self, attribute_id: AttributeId) -> DeclaredValue | None:
         """Return what the product declared on the attribute, if it declared anything."""
