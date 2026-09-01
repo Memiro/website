@@ -14,11 +14,10 @@ RETRYABLE_VIOLATIONS = frozenset({UNIQUE_VIOLATION, EXCLUSION_VIOLATION})
 
 
 def sqlstate_of(error: BaseException) -> str | None:
-    """Return the SQLSTATE the driver exception carries, if it carries one.
-
-    The asyncpg dialect re-wraps the driver exception in its own class, so the
-    SQLSTATE it copies over is the only thing left to recognise a failure by.
-    """
+    """Return the SQLSTATE the driver exception carries, if it carries one."""
+    # The asyncpg dialect re-wraps the driver exception in its own class, so
+    # the SQLSTATE it copies over is the only thing left to recognise a
+    # failure by.
     return getattr(getattr(error, "orig", None), "sqlstate", None)
 
 

@@ -2,20 +2,12 @@
 import NotFound from "../../../../components/NotFound.astro";
 import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
-import { ApiResponseError, CatalogApi, type ProductCard } from "../../../../lib/catalog-api";
+import { CatalogApi, type ProductCard } from "../../../../lib/catalog-api";
+import { foundOrNull } from "../../../../lib/not-found";
 
 const api = new CatalogApi(import.meta.env.API_INTERNAL_URL ?? "http://api:8000");
 const productSlug = Astro.params.productSlug ?? "";
-let product: ProductCard | null = null;
-if (productSlug !== "") {
-  try {
-    product = await api.product(productSlug);
-  } catch (error) {
-    if (!(error instanceof ApiResponseError) || error.status !== 404) {
-      throw error;
-    }
-  }
-}
+const product: ProductCard | null = await foundOrNull(productSlug, (slug) => api.product(slug));
 if (product === null) {
   Astro.response.status = 404;
 }

@@ -207,6 +207,20 @@ async def test_pricing_gate_downgrade_refuses_unrepresentable_declarations(
         await asyncio.to_thread(_downgrade, seeded.url, _PREVIOUS_REVISION)
 
 
+async def _declare_shape_factor_directly(engine: AsyncEngine, value_id: uuid.UUID, attribute_id: uuid.UUID) -> None:
+    """Write a FACTOR row of 1.125 past the domain, to read back what the column kept."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            text(
+                """INSERT INTO attribute_values
+                   (id, attribute_id, name, rate_amount, rate_unit, scaled_by_shape, sort_order,
+                    marks_absence, scaled_by_size_surcharge)
+                   VALUES (:id, :attribute_id, 'Round', 1.125, 'FACTOR', false, 2, false, false)"""
+            ),
+            {"id": value_id, "attribute_id": attribute_id},
+        )
+
+
 async def test_migrations_leave_every_product_in_a_category_that_exists(
     database_at_previous_revision: _SeededDatabase,
 ) -> None:
@@ -235,20 +249,12 @@ async def test_migrations_keep_a_shape_factor_that_is_not_whole_kopecks(
 ) -> None:
     """A FACTOR rate is a multiplier, not money: 1.125 must survive as 1.125, not round to 1.13."""
     seeded = database_at_previous_revision
-    await asyncio.to_thread(_upgrade, seeded.url, "head")
     factor_id = uuid.uuid4()
 
+    await asyncio.to_thread(_upgrade, seeded.url, "head")
+
     engine = create_async_engine(seeded.url)
-    async with engine.begin() as connection:
-        await connection.execute(
-            text(
-                """INSERT INTO attribute_values
-                   (id, attribute_id, name, rate_amount, rate_unit, scaled_by_shape, sort_order,
-                    marks_absence, scaled_by_size_surcharge)
-                   VALUES (:id, :attribute_id, 'Round', 1.125, 'FACTOR', false, 2, false, false)"""
-            ),
-            {"id": factor_id, "attribute_id": seeded.attribute_id},
-        )
+    await _declare_shape_factor_directly(engine, factor_id, seeded.attribute_id)
     async with engine.connect() as connection:
         stored = (
             await connection.execute(

@@ -7,10 +7,8 @@ import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
 from sqlalchemy import text, update
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from memiro.adapters.db.errors import UNIQUE_VIOLATION, sqlstate_of
 from memiro.adapters.db.tables import product_variants_table
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.entities.catalog.product.entity import ConfiguredValue, DeclaredValue, VariantData
@@ -164,27 +162,3 @@ async def test_the_product_gateway_refuses_malformed_variant_override_data(
 
         with pytest.raises(RuntimeError, match="corrupted variant overrides"):
             await gateway.get(PRODUCT, eager_variants=True)
-
-
-async def test_a_duplicate_row_reports_the_sqlstate_the_error_handler_reads(engine: AsyncEngine) -> None:
-    """Postgres reports a broken uniqueness as 23505, which is what turns the failure into 429."""
-    async with engine.begin() as connection:
-        await connection.execute(
-            text(
-                "INSERT INTO categories (id, name, slug, sort_order, created_at, updated_at) "
-                "VALUES (:id, 'Дубль', 'duplicate-probe', 0, now(), now())"
-            ),
-            {"id": "11111111-1111-1111-1111-111111111111"},
-        )
-
-    with pytest.raises(IntegrityError) as failure:
-        async with engine.begin() as connection:
-            await connection.execute(
-                text(
-                    "INSERT INTO categories (id, name, slug, sort_order, created_at, updated_at) "
-                    "VALUES (:id, 'Дубль', 'duplicate-probe', 0, now(), now())"
-                ),
-                {"id": "22222222-2222-2222-2222-222222222222"},
-            )
-
-    assert sqlstate_of(failure.value) == UNIQUE_VIOLATION

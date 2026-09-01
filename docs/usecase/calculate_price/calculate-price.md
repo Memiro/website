@@ -38,7 +38,7 @@ xlsx и предпосчитанные варианты (ADR-0007, решени�
 | `quantity` | `Decimal \| null` | Количество для `NUMBER`; задано ровно одно из `value_id` и `quantity` |
 
 Границы ввода: сторона от `MIN_SIDE_MM` до `MAX_SIDE_MM`, выборов не больше
-`MAX_SELECTIONS`. Это защита ввода, а не предел производства: предел — данные
+`MAX_SELECTIONS`, количество от нуля до `MAX_QUANTITY`. Это защита ввода, а не предел производства: предел — данные
 [`PricingSettings`](../../entities/pricing-settings.md).
 
 ## Output

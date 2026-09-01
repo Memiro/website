@@ -27,8 +27,9 @@
 ## Business Rules
 
 1. Стороны укладываются в application limits, overrides не больше
-   `MAX_SELECTIONS`, один атрибут назван не больше раза, а override несёт ровно
-   одно из `value_id` и `quantity` — иначе `VALIDATION_ERROR` (422).
+   `MAX_SELECTIONS`, один атрибут назван не больше раза, override несёт ровно
+   одно из `value_id` и `quantity`, а количество лежит от нуля до
+   `MAX_QUANTITY` — иначе `VALIDATION_ERROR` (422).
 2. Товар существует — иначе `PRODUCT_NOT_FOUND` (404).
 3. Параметры расчёта существуют — иначе `PRICING_SETTINGS_NOT_FOUND` (404).
 4. Каждый override разрешается по справочнику категории товара и соответствует
