@@ -91,7 +91,7 @@ def _money(value: Money | None) -> str:
 
 
 class SMTPInquiryNotificationBus(InquiryNotificationBus):
-    """SMTP implementation of the manager notification channel."""
+    """Best-effort email delivery of a saved inquiry to the manager."""
 
     def __init__(
         self,
@@ -108,7 +108,16 @@ class SMTPInquiryNotificationBus(InquiryNotificationBus):
 
     @override
     async def notify(self, inquiry_id: InquiryId) -> None:
+        """Swallow every SMTP failure so the delivery cannot change the committed outcome."""
+        try:
+            await self._send_to_manager(inquiry_id)
+        except Exception:  # noqa: BLE001 -- an external notification must never fail the inquiry.
+            logger.warning("Inquiry notification delivery failed")
+
+    async def _send_to_manager(self, inquiry_id: InquiryId) -> None:
         """Send an email built exclusively from the saved inquiry snapshot."""
+        if not self._config.enabled:
+            return
         if not self._config.manager_address:
             logger.warning("Manager email notification skipped because no recipient is configured")
             return

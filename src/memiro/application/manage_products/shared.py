@@ -125,7 +125,4 @@ def variant_price(
         dimensions=data.dimensions,
         selections=selections,
     )
-    if quotation.total is None:
-        msg = "The owner pricing path returned a quotation without a total"
-        raise RuntimeError(msg)
-    return quotation.total
+    return quotation.settled_total()

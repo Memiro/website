@@ -99,7 +99,8 @@ class CalculatePrice:
             if quotation.size_surcharge_from_long_side_mm is not None
             else None
         )
-        if quotation.verdict is not PricingVerdict.PRICED:
+        total = quotation.customer_total()
+        if total is None:
             return CalculatedPrice(
                 verdict=quotation.verdict,
                 total=None,
@@ -113,12 +114,9 @@ class CalculatePrice:
             dimensions=dimensions,
             selections=selections,
         )
-        if quotation.total is None:
-            msg = f"Verdict {quotation.verdict} left the price with no total"
-            raise RuntimeError(msg)
         return CalculatedPrice(
             verdict=quotation.verdict,
-            total=quotation.total.amount,
+            total=total.amount,
             selection_deltas=[
                 SelectionDelta(
                     attribute_id=selection.attribute_id,

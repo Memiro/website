@@ -71,3 +71,39 @@ def test_a_refusing_quotation_cannot_claim_an_applied_size_surcharge() -> None:
             breakdown=(),
             size_surcharge_from_long_side_mm=Millimeters(value=2200),
         )
+
+
+def test_a_priced_quotation_hands_over_the_total_it_carries() -> None:
+    """A verdict that priced the mirror gives its consumer the number."""
+    quotation = Quotation(verdict=PricingVerdict.PRICED, total=Money(amount=Decimal(8900)), breakdown=())
+
+    assert quotation.settled_total() == Money(amount=Decimal(8900))
+
+
+def test_a_refusal_asked_for_a_total_is_a_defect() -> None:
+    """A refusal has no number to give, and asking for one leaves as a 500."""
+    quotation = Quotation(verdict=PricingVerdict.BEYOND_LIMITS, total=None, breakdown=())
+
+    with pytest.raises(RuntimeError, match="left the calculation with no total"):
+        quotation.settled_total()
+
+
+def test_a_priced_quotation_shows_its_total_to_the_storefront() -> None:
+    """PRICED is the one verdict whose total the storefront may show."""
+    quotation = Quotation(verdict=PricingVerdict.PRICED, total=Money(amount=Decimal(8900)), breakdown=())
+
+    assert quotation.customer_total() == Money(amount=Decimal(8900))
+
+
+def test_a_hidden_quotation_shows_no_total_to_the_storefront() -> None:
+    """HIDDEN keeps its total for the owner and shows none to the storefront (ADR-0008)."""
+    quotation = Quotation(verdict=PricingVerdict.HIDDEN, total=Money(amount=Decimal(8900)), breakdown=())
+
+    assert quotation.customer_total() is None
+
+
+def test_a_beyond_limits_quotation_shows_no_total_to_the_storefront() -> None:
+    """A refusal leaves the storefront without a price to show."""
+    quotation = Quotation(verdict=PricingVerdict.BEYOND_LIMITS, total=None, breakdown=())
+
+    assert quotation.customer_total() is None

@@ -5,10 +5,10 @@ from memiro.entities.common.identifiers import InquiryId
 
 
 class InquiryNotificationBus(Protocol):
-    """Publish a saved inquiry to manager channels without surfacing delivery failures.
+    """Publish a saved inquiry to the manager without surfacing delivery failures.
 
     Implementations load only the aggregate's persisted snapshot by identifier,
-    attempt every configured external channel, and absorb delivery failures.
+    attempt the configured external channel, and absorb delivery failures.
     """
 
     @abstractmethod

@@ -90,6 +90,30 @@ async def notifying_api_client(
 
 
 @pytest.fixture
+async def silent_api_client(
+    config: Config,
+    smtp_server: tuple[int, list[str]],
+) -> AsyncIterator[ApiClient]:
+    """Use the production app whose SMTP channel is switched off but fully addressed."""
+    port, _ = smtp_server
+    silent_config = replace(
+        config,
+        email=EmailConfig(
+            enabled=False,
+            host="127.0.0.1",
+            port=port,
+            username="",
+            from_address="site@example.test",
+            manager_address="manager@example.test",
+            timeout_seconds=1.0,
+        ),
+    )
+    app = create_app(silent_config)
+    async with LifespanManager(app), ApiClient(app) as client:
+        yield client
+
+
+@pytest.fixture
 async def failing_app(config: Config, unused_tcp_port: int) -> AsyncIterator[FastAPI]:
     """Use the production app with an enabled SMTP channel that cannot connect."""
     failing_config = replace(

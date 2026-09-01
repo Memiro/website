@@ -21,10 +21,7 @@ from memiro.adapters.db.gateways.catalog_read import SACatalogReadGateway
 from memiro.adapters.db.gateways.inquiry import SAInquiryGateway
 from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro.adapters.db.gateways.product import SAProductGateway
-from memiro.adapters.smtp.composite import CompositeInquiryNotificationBus
-from memiro.adapters.smtp.config import EmailConfig
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus, Transport, smtp_transport
-from memiro.application.common.notification import InquiryNotificationBus
 from memiro_common.clock import SystemClock
 from memiro_common.uow import UoW
 
@@ -39,22 +36,12 @@ class AdapterProvider(Provider):
     catalog_read_gateway = provide(WithParents[SACatalogReadGateway], scope=Scope.REQUEST)
     inquiry_gateway = provide(WithParents[SAInquiryGateway], scope=Scope.REQUEST)
     pricing_settings_gateway = provide(WithParents[SAPricingSettingsGateway], scope=Scope.REQUEST)
-    smtp_inquiry_notification_bus = provide(SMTPInquiryNotificationBus, scope=Scope.REQUEST)
+    inquiry_notification_bus = provide(WithParents[SMTPInquiryNotificationBus], scope=Scope.REQUEST)
 
     @provide(scope=Scope.APP)
     def get_email_transport(self) -> Transport:
         """Hand the bus the blocking SMTP send it runs off the event loop."""
         return smtp_transport
-
-    @provide(scope=Scope.REQUEST, provides=InquiryNotificationBus)
-    def get_inquiry_notification_bus(
-        self,
-        smtp_inquiry_notification_bus: SMTPInquiryNotificationBus,
-        email: EmailConfig,
-    ) -> CompositeInquiryNotificationBus:
-        """Compose only the manager channels enabled by configuration."""
-        channels: tuple[InquiryNotificationBus, ...] = (smtp_inquiry_notification_bus,) if email.enabled else ()
-        return CompositeInquiryNotificationBus(channels)
 
     @provide(scope=Scope.APP)
     async def get_engine(self, config: DbConfig) -> AsyncIterator[AsyncEngine]:
