@@ -15,6 +15,7 @@ from memiro.entities.catalog.product.entity import DeclaredValue, VariantData
 from memiro.entities.common.identifiers import VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
+from memiro_common.clock import Clock
 from memiro_common.uow import UoW
 from tests.common.factory.catalog import BLADE, CUTOUTS, PRODUCT, SILVER
 
@@ -71,9 +72,10 @@ async def test_the_product_gateway_round_trips_variants_and_the_derived_price(
     async with container() as request:
         gateway = await request.get(ProductGateway)
         uow = await request.get(UoW)
+        clock = await request.get(Clock)
         product = await gateway.get(PRODUCT, for_update=True, eager_variants=True)
         assert product is not None
-        product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)))
+        product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)), clock=clock)
         await uow.commit()
     async with container() as request:
         gateway = await request.get(ProductGateway)
@@ -91,9 +93,10 @@ async def test_the_product_gateway_refuses_corrupted_variant_overrides(
     async with container() as request:
         gateway = await request.get(ProductGateway)
         uow = await request.get(UoW)
+        clock = await request.get(Clock)
         product = await gateway.get(PRODUCT, for_update=True, eager_variants=True)
         assert product is not None
-        variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)))
+        variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)), clock=clock)
         await uow.commit()
     await _corrupt_overrides(
         engine,
@@ -117,9 +120,10 @@ async def test_the_product_gateway_refuses_malformed_variant_override_data(
     async with container() as request:
         gateway = await request.get(ProductGateway)
         uow = await request.get(UoW)
+        clock = await request.get(Clock)
         product = await gateway.get(PRODUCT, for_update=True, eager_variants=True)
         assert product is not None
-        variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)))
+        variant = product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)), clock=clock)
         await uow.commit()
     await _corrupt_overrides(
         engine,

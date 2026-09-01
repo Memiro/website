@@ -18,6 +18,7 @@ from memiro.entities.common.identifiers import AttributeId, AttributeValueId, Ca
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings, SizeSurcharge
+from tests.clock import CLOCK, NOW
 
 
 def _id(name: str) -> UUID:
@@ -93,6 +94,8 @@ def demo_blade() -> Attribute:
                 scaled_by_size_surcharge=True,
             ),
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -119,6 +122,8 @@ def demo_shape() -> Attribute:
                 sort_order=2,
             ),
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -146,6 +151,8 @@ def demo_frame() -> Attribute:
                 marks_absence=True,
             ),
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -175,6 +182,8 @@ def demo_backlight() -> Attribute:
                 marks_absence=True,
             ),
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -202,6 +211,8 @@ def demo_mount() -> Attribute:
                 marks_absence=True,
             ),
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -232,6 +243,8 @@ def demo_heating() -> Attribute:
                 marks_absence=True,
             ),
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -254,6 +267,8 @@ def demo_cutouts() -> Attribute:
                 sort_order=1,
             )
         ],
+        created_at=NOW,
+        updated_at=NOW,
     )
 
 
@@ -278,6 +293,8 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
         slug="zerkalo-v-rame",
         is_published=True,
         hides_calculated_price=False,
+        created_at=NOW,
+        updated_at=NOW,
     )
     product.declare_values(
         [
@@ -298,7 +315,8 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
                 attribute_id=MOUNT,
                 chosen=ChosenValue(value_id=WITH_MOUNT, quantity=None),
             ),
-        ]
+        ],
+        clock=CLOCK,
     )
     return product
 
@@ -307,7 +325,8 @@ def demo_product_without(attribute_id: AttributeId) -> Product:
     """Build the canonical mirror without one declaration."""
     product = demo_product()
     product.declare_values(
-        [declaration for declaration in product.declared_values if declaration.attribute_id != attribute_id]
+        [declaration for declaration in product.declared_values if declaration.attribute_id != attribute_id],
+        clock=CLOCK,
     )
     return product
 
@@ -324,14 +343,15 @@ def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueI
             if declaration.attribute_id == attribute_id
             else declaration
             for declaration in product.declared_values
-        ]
+        ],
+        clock=CLOCK,
     )
     return product
 
 
 def product_declaring(product: Product, declarations: Iterable[DeclaredValue]) -> Product:
     """Declare exactly these values for the product and hand it back."""
-    product.declare_values(declarations)
+    product.declare_values(declarations, clock=CLOCK)
     return product
 
 
@@ -366,6 +386,8 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
         slug="zerkalo-s-vyrezami",
         is_published=True,
         hides_calculated_price=False,
+        created_at=NOW,
+        updated_at=NOW,
     )
     product.declare_values(
         [
@@ -373,7 +395,8 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
                 attribute_id=CUTOUTS,
                 chosen=ChosenValue(value_id=None, quantity=quantity),
             ),
-        ]
+        ],
+        clock=CLOCK,
     )
     return product
 
@@ -410,4 +433,5 @@ def demo_settings(*, size_surcharges: Sequence[SizeSurcharge] = ()) -> PricingSe
         min_area=Area(value=Decimal("0.25")),
         min_order_total=Money(amount=Decimal(2000)),
         _size_surcharges=list(size_surcharges),
+        updated_at=NOW,
     )

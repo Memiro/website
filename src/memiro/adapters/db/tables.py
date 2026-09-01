@@ -66,6 +66,8 @@ attributes_table = Table(
     Column("parent_ids", AttributeIdsType(), nullable=False),
     Column("is_customer_changeable", Boolean(), nullable=False),
     Column("sort_order", Integer(), nullable=False, default=0),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
 attribute_values_table = Table(
@@ -97,6 +99,8 @@ products_table = Table(
     Column("is_published", Boolean(), nullable=False),
     Column("hides_calculated_price", Boolean(), nullable=False),
     Column("price_from", MoneyType(), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
 categories_table = Table(
@@ -156,6 +160,7 @@ pricing_settings_table = Table(
     Column("min_order_total", MoneyType(), nullable=False),
     Column("max_long_side_mm", MillimetersType(), nullable=False),
     Column("max_short_side_mm", MillimetersType(), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
 )
 
 size_surcharges_table = Table(

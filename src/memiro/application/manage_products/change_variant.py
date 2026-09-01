@@ -7,6 +7,7 @@ from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFo
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products.shared import VariantForm, variant_data, variant_price
 from memiro.entities.common.identifiers import ProductId, VariantId
+from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
@@ -26,6 +27,7 @@ class ChangeVariant:
     product_gateway: ProductGateway
     pricing_settings_gateway: PricingSettingsGateway
     attribute_gateway: AttributeGateway
+    clock: Clock
 
     async def execute(
         self,
@@ -55,6 +57,6 @@ class ChangeVariant:
             attributes=attributes,
             settings=settings,
         )
-        product.change_variant(variant, replacement, price=price)
+        product.change_variant(variant, replacement, price=price, clock=self.clock)
         await self.uow.commit()
         logger.info("Product variant changed", product_id=product_id, variant_id=variant_id)

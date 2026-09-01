@@ -3,6 +3,7 @@ import structlog
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.entities.common.identifiers import ProductId, VariantId
+from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
@@ -16,6 +17,7 @@ class RemoveVariant:
 
     uow: UoW
     product_gateway: ProductGateway
+    clock: Clock
 
     async def execute(self, product_id: ProductId, variant_id: VariantId) -> None:
         """Remove and commit one product variant."""
@@ -28,6 +30,6 @@ class RemoveVariant:
         if variant is None:
             logger.warning("An unknown product variant was removed", product_id=product_id, variant_id=variant_id)
             raise VariantNotFoundError
-        product.remove_variant(variant)
+        product.remove_variant(variant, clock=self.clock)
         await self.uow.commit()
         logger.info("Product variant removed", product_id=product_id, variant_id=variant_id)
