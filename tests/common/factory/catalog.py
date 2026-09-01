@@ -18,11 +18,7 @@ from memiro.entities.common.identifiers import AttributeId, AttributeValueId, Ca
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings, SizeSurcharge
-from tests.clock import NOW, FakeClock
-
-# The demo catalogue is arranged, not lived through: its rows are born at
-# the one instant the unit tests share.
-_CLOCK = FakeClock(instant=NOW)
+from tests.clock import CLOCK, NOW
 
 
 def _id(name: str) -> UUID:
@@ -320,7 +316,7 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
                 chosen=ChosenValue(value_id=WITH_MOUNT, quantity=None),
             ),
         ],
-        clock=_CLOCK,
+        clock=CLOCK,
     )
     return product
 
@@ -330,7 +326,7 @@ def demo_product_without(attribute_id: AttributeId) -> Product:
     product = demo_product()
     product.declare_values(
         [declaration for declaration in product.declared_values if declaration.attribute_id != attribute_id],
-        clock=_CLOCK,
+        clock=CLOCK,
     )
     return product
 
@@ -348,14 +344,14 @@ def demo_product_with_value(attribute_id: AttributeId, value_id: AttributeValueI
             else declaration
             for declaration in product.declared_values
         ],
-        clock=_CLOCK,
+        clock=CLOCK,
     )
     return product
 
 
 def product_declaring(product: Product, declarations: Iterable[DeclaredValue]) -> Product:
     """Declare exactly these values for the product and hand it back."""
-    product.declare_values(declarations, clock=_CLOCK)
+    product.declare_values(declarations, clock=CLOCK)
     return product
 
 
@@ -400,7 +396,7 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
                 chosen=ChosenValue(value_id=None, quantity=quantity),
             ),
         ],
-        clock=_CLOCK,
+        clock=CLOCK,
     )
     return product
 

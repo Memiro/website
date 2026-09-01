@@ -1,4 +1,3 @@
-from datetime import timedelta
 from decimal import Decimal
 from typing import Any, cast
 from uuid import uuid4
@@ -7,11 +6,8 @@ import pytest
 
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.product.entity import DeclaredValue, Product
-from tests.clock import NOW, FakeClock
+from tests.clock import CLOCK, LATER, LATER_CLOCK
 from tests.common.factory.catalog import ALUMINIUM, CATEGORY, FRAME, HEATING, demo_product
-
-CLOCK = FakeClock(instant=NOW)
-LATER = NOW + timedelta(minutes=5)
 
 
 def test_a_product_tells_what_it_declared_on_an_attribute() -> None:
@@ -108,7 +104,7 @@ def test_declaring_values_marks_the_product_as_changed() -> None:
     """A command moves the audit date of the aggregate it changed."""
     product = demo_product()
 
-    product.declare_values(product.declared_values, clock=FakeClock(instant=LATER))
+    product.declare_values(product.declared_values, clock=LATER_CLOCK)
 
     assert product.updated_at == LATER
     assert product.updated_at > product.created_at

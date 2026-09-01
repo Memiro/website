@@ -53,7 +53,7 @@ CATALOG_AGE = timedelta(days=30)
 
 # One instant for the whole arrangement: a row that was created and last
 # changed at the same moment is what an untouched catalogue looks like.
-CATALOG_CREATED_AT: datetime = SystemClock().now() - CATALOG_AGE
+CATALOG_STAMP: datetime = SystemClock().now() - CATALOG_AGE
 
 
 async def prime_dictionary(engine: AsyncEngine) -> None:
@@ -69,8 +69,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "name": "Mirrors",
                     "slug": "mirrors",
                     "sort_order": 1,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 }
             ],
         )
@@ -85,8 +85,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "parent_ids": attribute.parent_ids,
                     "is_customer_changeable": attribute.is_customer_changeable,
                     "sort_order": attribute.sort_order,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 }
                 for attribute in attributes
             ],
@@ -120,8 +120,8 @@ async def prime_dictionary(engine: AsyncEngine) -> None:
                     "description": "A made-to-order mirror.",
                     "is_published": product.is_published,
                     "hides_calculated_price": product.hides_calculated_price,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 },
             ],
         )
@@ -152,7 +152,7 @@ async def prime_pricing_settings(engine: AsyncEngine) -> None:
                     "min_order_total": settings.min_order_total,
                     "max_long_side_mm": settings.max_long_side_mm,
                     "max_short_side_mm": settings.max_short_side_mm,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "updated_at": CATALOG_STAMP,
                 },
             ],
         )
@@ -190,8 +190,8 @@ async def prime_second_category(
                     "name": name,
                     "slug": slug,
                     "sort_order": sort_order,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 }
             ],
         )
@@ -206,8 +206,8 @@ async def prime_second_category(
                     "description": "Another made-to-order mirror.",
                     "is_published": is_published,
                     "hides_calculated_price": False,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 },
             ],
         )
@@ -227,8 +227,8 @@ async def prime_extra_product(engine: AsyncEngine, *, name: str, slug: str, is_p
                     "description": "Another made-to-order mirror.",
                     "is_published": is_published,
                     "hides_calculated_price": False,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 },
             ],
         )
@@ -404,8 +404,8 @@ async def prime_numeric_catalog(engine: AsyncEngine) -> None:
                     "parent_ids": attribute.parent_ids,
                     "is_customer_changeable": attribute.is_customer_changeable,
                     "sort_order": attribute.sort_order,
-                    "created_at": CATALOG_CREATED_AT,
-                    "updated_at": CATALOG_CREATED_AT,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
                 },
             ],
         )

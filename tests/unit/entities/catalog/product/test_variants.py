@@ -1,4 +1,3 @@
-from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -12,12 +11,10 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
-from tests.clock import NOW, FakeClock
+from tests.clock import CLOCK, LATER, LATER_CLOCK
 from tests.common.factory.catalog import BLADE, FRAME, GRAPHITE, NO_FRAME, SILVER, demo_product
 
 TWO_VARIANTS = 2
-CLOCK = FakeClock(instant=NOW)
-LATER = NOW + timedelta(minutes=5)
 
 
 def _variant_data(
@@ -149,7 +146,7 @@ def test_adding_a_variant_marks_the_product_as_changed() -> None:
     product.add_variant(
         _variant_data(width_mm=600, height_mm=400),
         price=Money(amount=Decimal(2000)),
-        clock=FakeClock(instant=LATER),
+        clock=LATER_CLOCK,
     )
 
     assert product.updated_at == LATER
@@ -169,7 +166,7 @@ def test_changing_a_variant_marks_the_product_as_changed() -> None:
         variant,
         _variant_data(width_mm=1200, height_mm=800),
         price=Money(amount=Decimal(9000)),
-        clock=FakeClock(instant=LATER),
+        clock=LATER_CLOCK,
     )
 
     assert product.updated_at == LATER
@@ -185,7 +182,7 @@ def test_removing_a_variant_marks_the_product_as_changed() -> None:
         clock=CLOCK,
     )
 
-    product.remove_variant(variant, clock=FakeClock(instant=LATER))
+    product.remove_variant(variant, clock=LATER_CLOCK)
 
     assert product.updated_at == LATER
     assert product.updated_at > product.created_at

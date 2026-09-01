@@ -17,7 +17,7 @@ from memiro.application.errors.catalog import AttributeValueNotFoundError, Produ
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant
 from memiro.application.manage_products.shared import VariantOverrideForm
-from memiro.entities.catalog.product.entity import Product, Variant
+from memiro.entities.catalog.product.entity import Product, Variant, VariantData
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import (
@@ -25,6 +25,7 @@ from memiro.entities.errors.product import (
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
+from memiro_common.clock import SystemClock
 from tests.common.factory.catalog import BLADE, GRAPHITE, HEATING, PRODUCT, WITH_HEATING
 from tests.integration.prime import (
     prime_hidden_calculated_price,
@@ -115,15 +116,28 @@ async def test_adding_a_variant_marks_the_stored_product_as_changed(
 ) -> None:
     """The audit date a variant command moves travels to the database, and the creation date stays."""
     container: AsyncContainer = app.state.dishka_container
-    before = await _load_product(container)
-    assert before is not None
+    expected = await _load_product(container)
+    assert expected is not None
+    updated_at_before = expected.updated_at
 
-    await _add(container, AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0))
+    created = await _add(container, AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0))
 
     after = await _load_product(container)
     assert after is not None
-    assert after.created_at == before.created_at
-    assert after.updated_at > before.updated_at
+    assert after.updated_at > updated_at_before
+
+    expected.add_variant(
+        VariantData(
+            dimensions=Dimensions(width=Millimeters(value=800), height=Millimeters(value=600)),
+            overrides=(),
+            sort_order=0,
+        ),
+        price=Money(amount=Decimal(8900)),
+        clock=SystemClock(),
+    )
+    expected.variants[0].id = created.id
+    expected.updated_at = after.updated_at
+    assert after == expected
 
 
 async def test_the_owner_prices_an_unpublished_hidden_variant_beyond_customer_limits(
