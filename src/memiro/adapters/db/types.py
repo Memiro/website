@@ -2,7 +2,7 @@ from decimal import Decimal
 from typing import TypedDict, override
 from uuid import UUID
 
-from sqlalchemy import Dialect, Integer, Numeric, Uuid
+from sqlalchemy import Dialect, Integer, Numeric, String, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.types import TypeDecorator
 
@@ -11,8 +11,10 @@ from memiro.entities.catalog.product.entity import DeclaredValue, VariantOverrid
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Area, Dimensions, Millimeters
 from memiro.entities.common.money import Money
+from memiro.entities.errors.inquiry import InvalidPhoneError
 from memiro.entities.errors.product import InvalidVariantConfigurationError
 from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfiguration
+from memiro.entities.inquiry.phone import Phone
 
 # Money is stored to the kopeck; the area of a mirror to the fourth decimal —
 # a square millimetre. Both deserialize through the domain constructor, so a
@@ -81,6 +83,31 @@ class AreaType(TypeDecorator[Area]):
     def process_result_value(self, value: Decimal | None, dialect: Dialect) -> Area | None:
         """Rebuild the area through the domain constructor."""
         return None if value is None else Area(value=value)
+
+
+class PhoneType(TypeDecorator[Phone]):
+    """Column type storing a telephone number as the digits the studio dials."""
+
+    impl = String
+    cache_ok = True
+
+    @override
+    def process_bind_param(self, value: Phone | None, dialect: Dialect) -> str | None:
+        """Flatten the number into the column."""
+        return None if value is None else value.value
+
+    @override
+    def process_result_value(self, value: str | None, dialect: Dialect) -> Phone | None:
+        """Rebuild the number through the domain constructor."""
+        if value is None:
+            return None
+        try:
+            return Phone(value=value)
+        except InvalidPhoneError as error:
+            # A stored number that is not a number is a defect of the row, not
+            # a visitor's mistake: it leaves as a 500 and not as a refusal.
+            message = "Stored inquiry has a corrupted phone number"
+            raise RuntimeError(message) from error
 
 
 class AttributeIdsType(TypeDecorator[tuple[AttributeId, ...]]):

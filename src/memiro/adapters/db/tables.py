@@ -29,6 +29,7 @@ from memiro.adapters.db.types import (
     InquiryConfigurationType,
     MillimetersType,
     MoneyType,
+    PhoneType,
     RateAmountType,
     VariantOverridesType,
 )
@@ -37,6 +38,7 @@ from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, A
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import DeclaredValue, Product, Variant
 from memiro.entities.common.measure import Dimensions
+from memiro.entities.inquiry.consent import Consent
 from memiro.entities.inquiry.entity import Inquiry, InquiryItem, InquirySource
 from memiro.entities.pricing.pricing_settings import PricingSettings, SizeSurcharge
 from memiro.entities.pricing.quotation import PricingVerdict
@@ -171,10 +173,9 @@ inquiries_table = Table(
     Column("id", Uuid(), primary_key=True),
     Column("source", Enum(InquirySource, name="inquiry_source", native_enum=False, length=NAME_LENGTH), nullable=False),
     Column("name", String(NAME_LENGTH), nullable=False),
-    Column("phone", String(NAME_LENGTH), nullable=False),
+    Column("phone", PhoneType(NAME_LENGTH), nullable=False),
     Column("email", String(NAME_LENGTH), nullable=True),
     Column("comment", String(2_000), nullable=False),
-    Column("consent", Boolean(), nullable=False),
     Column("consent_version", String(NAME_LENGTH), nullable=False),
     Column("created_at", DateTime(timezone=True), nullable=False),
 )
@@ -220,6 +221,9 @@ mapper_registry.map_imperatively(
     Inquiry,
     inquiries_table,
     properties={
+        # Consent is the revision the visitor accepted; the fact of it is an
+        # invariant of the aggregate and has no column of its own.
+        "consent": composite(Consent, inquiries_table.c.consent_version),
         "_items": relationship(
             InquiryItem,
             cascade="all, delete-orphan",

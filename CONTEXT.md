@@ -28,6 +28,8 @@ ADR ссылаются на разделы, которых здесь больш
 | [Area](docs/value-objects/area.md) | Площадь: полотно и обработка кромки |
 | [Perimeter](docs/value-objects/perimeter.md) | Периметр: лента, профиль, багет |
 | [Quotation](docs/value-objects/quotation.md) | Результат расчёта: вердикт, итог, статьи — статьи только внутрь |
+| [Phone](docs/value-objects/phone.md) | Телефон заявки: 10–15 цифр, оформление снимается |
+| [Consent](docs/value-objects/consent.md) | Согласие на обработку ПДн с редакцией текста; без него заявки нет |
 
 ## Слова без своей страницы
 

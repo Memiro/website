@@ -4,17 +4,19 @@ from decimal import Decimal
 from enum import StrEnum
 from uuid import uuid4
 
+from memiro.entities.catalog.product.entity import Product
 from memiro.entities.common.entity import Entity
 from memiro.entities.common.identifiers import InquiryId, InquiryItemId, ProductId
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.errors.inquiry import (
-    ConsentRequiredError,
     EmptyInquiryError,
     InquirySourceNotAcceptedError,
     InvalidInquiryContentsError,
 )
-from memiro.entities.pricing.quotation import PricingVerdict
+from memiro.entities.inquiry.consent import Consent
+from memiro.entities.inquiry.phone import Phone
+from memiro.entities.pricing.quotation import PricingVerdict, Quotation, carries_total
 from memiro_common.clock import Clock
 
 
@@ -49,6 +51,20 @@ class InquiryConfiguration:
     values: tuple[ConfigurationValue, ...]
 
 
+def ensure_the_snapshot_agrees_with_its_verdict(
+    verdict: PricingVerdict,
+    calculated_price: Money | None,
+    configuration: InquiryConfiguration | None,
+) -> None:
+    """Hold the verdict/price/configuration invariant: a mismatch is a defect, not a refusal (§12.3)."""
+    if (calculated_price is not None) is not carries_total(verdict):
+        msg = f"Verdict {verdict} disagrees with the presence of a price"
+        raise RuntimeError(msg)
+    if (configuration is None) is not (verdict is PricingVerdict.NOT_PRICEABLE):
+        msg = f"Verdict {verdict} disagrees with the presence of a configuration"
+        raise RuntimeError(msg)
+
+
 @dataclass
 class InquiryItem(Entity):
     """One product snapshot belonging exclusively to an inquiry."""
@@ -62,6 +78,10 @@ class InquiryItem(Entity):
     verdict: PricingVerdict
     wish: str
 
+    def __post_init__(self) -> None:
+        """Hold the snapshot invariant on a new position and on one hydrated from a row."""
+        ensure_the_snapshot_agrees_with_its_verdict(self.verdict, self.calculated_price, self.configuration)
+
 
 @dataclass
 class Inquiry(Entity):
@@ -70,11 +90,10 @@ class Inquiry(Entity):
     id: InquiryId
     source: InquirySource
     name: str
-    phone: str
+    phone: Phone
     email: str | None
     comment: str
-    consent: bool
-    consent_version: str
+    consent: Consent
     _items: list[InquiryItem]
     created_at: datetime
 
@@ -106,6 +125,29 @@ class InquiryItemData:
     verdict: PricingVerdict
     wish: str
 
+    def __post_init__(self) -> None:
+        """Hold the snapshot invariant before the position reaches the aggregate."""
+        ensure_the_snapshot_agrees_with_its_verdict(self.verdict, self.calculated_price, self.configuration)
+
+
+def inquiry_item_snapshot(
+    *,
+    product: Product,
+    configuration: InquiryConfiguration,
+    quotation: Quotation,
+    wish: str,
+) -> InquiryItemData:
+    """Freeze one repriced configuration into the position snapshot the manager reads."""
+    return InquiryItemData(
+        product_id=product.id,
+        product_name=product.name,
+        price_from=product.price_from,
+        configuration=None if quotation.verdict is PricingVerdict.NOT_PRICEABLE else configuration,
+        calculated_price=quotation.total,
+        verdict=quotation.verdict,
+        wish=wish,
+    )
+
 
 @dataclass(frozen=True, slots=True)
 class InquiryData:
@@ -113,17 +155,16 @@ class InquiryData:
 
     source: InquirySource
     name: str
-    phone: str
+    phone: Phone
     email: str | None
     comment: str
-    consent: bool
-    consent_version: str
+    consent: Consent
     items: tuple[InquiryItemData, ...]
 
 
 def inquiry_factory(data: InquiryData, clock: Clock) -> Inquiry:
     """Create one inquiry and all of its private item snapshots at one instant."""
-    ensure_new_inquiry_is_accepted(data.source, len(data.items), data.comment, consent=data.consent)
+    ensure_new_inquiry_shape(data.source, len(data.items), data.comment)
 
     now = clock.now()
     return Inquiry(
@@ -133,8 +174,7 @@ def inquiry_factory(data: InquiryData, clock: Clock) -> Inquiry:
         phone=data.phone,
         email=data.email,
         comment=data.comment,
-        consent=True,
-        consent_version=data.consent_version,
+        consent=data.consent,
         _items=[
             InquiryItem(
                 id=uuid4(),
@@ -162,16 +202,3 @@ def ensure_new_inquiry_shape(source: InquirySource, item_count: int, comment: st
         raise InvalidInquiryContentsError(message="A free-form inquiry cannot have items")
     if source is InquirySource.SELECTION and comment:
         raise InvalidInquiryContentsError(message="A selection inquiry cannot have a comment")
-
-
-def ensure_new_inquiry_is_accepted(
-    source: InquirySource,
-    item_count: int,
-    comment: str,
-    *,
-    consent: bool,
-) -> None:
-    """Apply the new-inquiry rules in their observable refusal order."""
-    if not consent:
-        raise ConsentRequiredError
-    ensure_new_inquiry_shape(source, item_count, comment)

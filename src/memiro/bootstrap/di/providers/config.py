@@ -2,6 +2,7 @@ from dishka import Provider, Scope, from_context
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
+from memiro.application.submit_inquiry.config import LegalConfig
 from memiro_common.observability.config import ObservabilityConfig
 
 
@@ -12,4 +13,5 @@ class ConfigProvider(Provider):
 
     db = from_context(DbConfig)
     email = from_context(EmailConfig)
+    legal = from_context(LegalConfig)
     observability = from_context(ObservabilityConfig)
