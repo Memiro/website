@@ -330,3 +330,27 @@ test("the calculator sends only its current configuration to the pricing endpoin
     },
   );
 });
+
+test("a product without ready sizes opens the calculator on an empty size instead of failing", () => {
+  const calculator = new Calculator({ ...MIRROR, variants: [] }, recordingPricing().calculate);
+
+  assert.deepEqual(
+    { width: calculator.widthText, height: calculator.heightText, selections: calculator.selections },
+    { width: "", height: "", selections: [] },
+  );
+});
+
+test("a product without ready sizes prices the size the customer types", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator({ ...MIRROR, variants: [] }, pricing.calculate);
+
+  await calculator.setWidth("900");
+  await calculator.setHeight("700");
+
+  assert.deepEqual(pricing.requests.at(-1), {
+    product_id: "mirror",
+    width_mm: 900,
+    height_mm: 700,
+    selections: [],
+  });
+});
