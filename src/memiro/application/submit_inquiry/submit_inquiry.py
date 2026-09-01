@@ -24,27 +24,28 @@ from memiro.application.common.input_limits import (
 from memiro.application.common.notification import InquiryNotificationBus
 from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
+from memiro.application.submit_inquiry.config import LegalConfig
 from memiro.entities.catalog.attribute.entity import Attribute
 from memiro.entities.common.identifiers import AttributeId, ProductId
 from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro.entities.inquiry.consent import given_consent
 from memiro.entities.inquiry.entity import (
     ConfigurationValue,
     InquiryConfiguration,
     InquiryData,
     InquiryItemData,
     InquirySource,
-    ensure_new_inquiry_is_accepted,
+    ensure_new_inquiry_shape,
     inquiry_factory,
+    inquiry_item_snapshot,
 )
+from memiro.entities.inquiry.phone import normalized_phone
 from memiro.entities.pricing.pricing_service import price_product_for_customer
 from memiro.entities.pricing.pricing_settings import PricingSettings
-from memiro.entities.pricing.quotation import PricingVerdict
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
-
-CURRENT_CONSENT_VERSION = "2026-08-31"
 
 logger: Logger = structlog.get_logger(__name__)
 
@@ -96,21 +97,23 @@ class SubmitInquiry:
     attribute_gateway: AttributeGateway
     event_bus: InquiryNotificationBus
     clock: Clock
+    legal: LegalConfig
 
     async def execute(self, data: SubmitInquiryForm) -> CreatedInquiry:
         """Reprice all submitted configurations and commit one inquiry aggregate."""
         logger.debug("Submitting inquiry", source=data.source, item_count=len(data.items))
-        ensure_new_inquiry_is_accepted(data.source, len(data.items), data.comment, consent=data.consent)
+        consent = given_consent(given=data.consent, version=self.legal.consent_version)
+        ensure_new_inquiry_shape(data.source, len(data.items), data.comment)
+        phone = normalized_phone(data.phone)
         items = await self._items(data.items)
         inquiry = inquiry_factory(
             InquiryData(
                 source=data.source,
                 name=data.name,
-                phone=data.phone,
+                phone=phone,
                 email=data.email,
                 comment=data.comment,
-                consent=data.consent,
-                consent_version=CURRENT_CONSENT_VERSION,
+                consent=consent,
                 items=tuple(items),
             ),
             self.clock,
@@ -153,17 +156,10 @@ class SubmitInquiry:
             dimensions=dimensions,
             selections=selections,
         )
-        return InquiryItemData(
-            product_id=product.id,
-            product_name=product.name,
-            price_from=product.price_from,
-            configuration=(
-                None
-                if quotation.verdict is PricingVerdict.NOT_PRICEABLE
-                else _configuration(dimensions, form.selections, attributes)
-            ),
-            calculated_price=quotation.total,
-            verdict=quotation.verdict,
+        return inquiry_item_snapshot(
+            product=product,
+            configuration=_configuration(dimensions, form.selections, attributes),
+            quotation=quotation,
             wish=form.wish,
         )
 

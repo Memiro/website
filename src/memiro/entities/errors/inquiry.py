@@ -28,6 +28,14 @@ class InquirySourceNotAcceptedError(AppError):
 
 
 @app_error
+class InvalidPhoneError(AppError):
+    """Raised when a visitor's telephone number is not one the studio could dial."""
+
+    code: ClassVar[str] = "INVALID_PHONE"
+    message: str = "A phone number must be 10 to 15 digits"
+
+
+@app_error
 class InvalidInquiryContentsError(AppError):
     """Raised when source-specific inquiry fields disagree with the source."""
 

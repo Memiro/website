@@ -1,21 +1,82 @@
+from decimal import Decimal
+from uuid import uuid4
+
 import pytest
 
-from memiro.entities.errors.inquiry import ConsentRequiredError, EmptyInquiryError
-from memiro.entities.inquiry.entity import InquiryData, InquirySource, inquiry_factory
+from memiro.entities.common.identifiers import InquiryItemId, ProductId
+from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro.entities.common.money import Money
+from memiro.entities.errors.inquiry import EmptyInquiryError
+from memiro.entities.inquiry.consent import Consent
+from memiro.entities.inquiry.entity import (
+    InquiryConfiguration,
+    InquiryData,
+    InquiryItem,
+    InquiryItemData,
+    InquirySource,
+    inquiry_factory,
+    inquiry_item_snapshot,
+)
+from memiro.entities.inquiry.phone import Phone
+from memiro.entities.pricing.quotation import PricingVerdict, Quotation
 from tests.clock import NOW, FakeClock
+from tests.common.factory.catalog import demo_product
+
+_MIRROR = demo_product()
+_PRODUCT: ProductId = _MIRROR.id
+_PRICE = Money(amount=Decimal(8900))
+_CONFIGURATION = InquiryConfiguration(
+    dimensions=Dimensions(width=Millimeters(value=800), height=Millimeters(value=600)),
+    values=(),
+)
 
 
-def _data(*, consent: bool = True) -> InquiryData:
+def _data() -> InquiryData:
     """Build a selection request whose fields the test does not otherwise care about."""
     return InquiryData(
         source=InquirySource.SELECTION,
         name="Anna",
-        phone="+79990000000",
+        phone=Phone(value="+79990000000"),
         email=None,
         comment="",
-        consent=consent,
-        consent_version="2026-08-31",
+        consent=Consent(version="2026-08-31"),
         items=(),
+    )
+
+
+def _snapshot(
+    verdict: PricingVerdict,
+    calculated_price: Money | None,
+    configuration: InquiryConfiguration | None,
+) -> InquiryItemData:
+    """Build one item snapshot straight from the combination under test."""
+    return InquiryItemData(
+        product_id=_PRODUCT,
+        product_name="Зеркало в раме",
+        price_from=None,
+        configuration=configuration,
+        calculated_price=calculated_price,
+        verdict=verdict,
+        wish="",
+    )
+
+
+def _item(
+    verdict: PricingVerdict,
+    calculated_price: Money | None,
+    configuration: InquiryConfiguration | None,
+) -> InquiryItem:
+    """Hydrate one stored item snapshot from the combination under test."""
+    item_id: InquiryItemId = uuid4()
+    return InquiryItem(
+        id=item_id,
+        product_id=_PRODUCT,
+        product_name="Зеркало в раме",
+        price_from=None,
+        configuration=configuration,
+        calculated_price=calculated_price,
+        verdict=verdict,
+        wish="",
     )
 
 
@@ -25,7 +86,85 @@ def test_a_selection_without_items_is_rejected() -> None:
         inquiry_factory(_data(), FakeClock(NOW))
 
 
-def test_an_inquiry_without_consent_is_rejected() -> None:
-    """A missing consent is rejected with CONSENT_REQUIRED."""
-    with pytest.raises(ConsentRequiredError, match="Consent is required"):
-        inquiry_factory(_data(consent=False), FakeClock(NOW))
+def test_a_priced_snapshot_keeps_the_price_and_the_configuration_it_was_shown() -> None:
+    """PRICED means the manager reads both what was configured and what it cost."""
+    snapshot = _snapshot(PricingVerdict.PRICED, _PRICE, _CONFIGURATION)
+
+    assert snapshot.calculated_price == _PRICE
+    assert snapshot.configuration == _CONFIGURATION
+
+
+def test_a_hidden_snapshot_keeps_the_price_the_storefront_was_not_told() -> None:
+    """HIDDEN priced the mirror, so the manager reads the price the customer never saw (ADR-0008)."""
+    snapshot = _snapshot(PricingVerdict.HIDDEN, _PRICE, _CONFIGURATION)
+
+    assert snapshot.calculated_price == _PRICE
+    assert snapshot.configuration == _CONFIGURATION
+
+
+def test_a_hidden_snapshot_without_a_price_is_a_defect() -> None:
+    """A verdict that priced the mirror cannot arrive without the price."""
+    with pytest.raises(RuntimeError, match="disagrees with the presence of a price"):
+        _snapshot(PricingVerdict.HIDDEN, None, _CONFIGURATION)
+
+
+def test_a_beyond_limits_snapshot_keeps_the_configuration_without_a_price() -> None:
+    """A size beyond production keeps the customer's configuration and names no price."""
+    snapshot = _snapshot(PricingVerdict.BEYOND_LIMITS, None, _CONFIGURATION)
+
+    assert snapshot.calculated_price is None
+    assert snapshot.configuration == _CONFIGURATION
+
+
+def test_a_priced_snapshot_without_a_price_is_a_defect() -> None:
+    """A verdict disagreeing with the presence of a price cannot happen and leaves as a 500."""
+    with pytest.raises(RuntimeError, match="disagrees with the presence of a price"):
+        _snapshot(PricingVerdict.PRICED, None, _CONFIGURATION)
+
+
+def test_a_refusing_snapshot_with_a_price_is_a_defect() -> None:
+    """A refusal that named no price cannot carry one."""
+    with pytest.raises(RuntimeError, match="disagrees with the presence of a price"):
+        _snapshot(PricingVerdict.BEYOND_LIMITS, _PRICE, _CONFIGURATION)
+
+
+def test_a_not_priceable_snapshot_carries_no_configuration() -> None:
+    """A product outside the calculated set gives the customer nothing to configure."""
+    with pytest.raises(RuntimeError, match="disagrees with the presence of a configuration"):
+        _snapshot(PricingVerdict.NOT_PRICEABLE, None, _CONFIGURATION)
+
+
+def test_a_configured_snapshot_cannot_lose_its_configuration() -> None:
+    """A verdict that priced or refused a configuration must keep it."""
+    with pytest.raises(RuntimeError, match="disagrees with the presence of a configuration"):
+        _snapshot(PricingVerdict.BEYOND_LIMITS, None, None)
+
+
+def test_a_stored_item_with_an_impossible_combination_does_not_hydrate_silently() -> None:
+    """A corrupted row is a defect on the way in as much as on the way out."""
+    with pytest.raises(RuntimeError, match="disagrees with the presence of a price"):
+        _item(PricingVerdict.BEYOND_LIMITS, _PRICE, _CONFIGURATION)
+
+
+def test_a_snapshot_takes_its_price_and_verdict_from_the_calculation() -> None:
+    """The snapshot is built from the quotation, never from what the browser sent."""
+    snapshot = inquiry_item_snapshot(
+        product=_MIRROR,
+        configuration=_CONFIGURATION,
+        quotation=Quotation(verdict=PricingVerdict.PRICED, total=_PRICE, breakdown=()),
+        wish="",
+    )
+
+    assert snapshot == _snapshot(PricingVerdict.PRICED, _PRICE, _CONFIGURATION)
+
+
+def test_a_snapshot_of_a_not_priceable_product_drops_the_configuration() -> None:
+    """The verdict decides whether a configuration is kept, and it decides in the domain."""
+    snapshot = inquiry_item_snapshot(
+        product=_MIRROR,
+        configuration=_CONFIGURATION,
+        quotation=Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=()),
+        wish="",
+    )
+
+    assert snapshot == _snapshot(PricingVerdict.NOT_PRICEABLE, None, None)

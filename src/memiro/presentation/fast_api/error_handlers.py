@@ -21,6 +21,7 @@ from memiro.entities.errors.inquiry import (
     EmptyInquiryError,
     InquirySourceNotAcceptedError,
     InvalidInquiryContentsError,
+    InvalidPhoneError,
 )
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
@@ -58,6 +59,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     EmptyInquiryError: status.HTTP_400_BAD_REQUEST,
     InquirySourceNotAcceptedError: status.HTTP_400_BAD_REQUEST,
     InvalidInquiryContentsError: status.HTTP_400_BAD_REQUEST,
+    InvalidPhoneError: status.HTTP_400_BAD_REQUEST,
     LockTimeoutError: status.HTTP_429_TOO_MANY_REQUESTS,
 }
 

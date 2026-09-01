@@ -53,7 +53,7 @@ def _message(inquiry: Inquiry, config: EmailConfig) -> EmailMessage:
 
 def _body(inquiry: Inquiry) -> str:
     """Render every inquiry item as an independent manager specification."""
-    contacts = f"Имя: {inquiry.name}\nТелефон: {inquiry.phone}\nEmail: {inquiry.email or 'не указан'}"
+    contacts = f"Имя: {inquiry.name}\nТелефон: {inquiry.phone.value}\nEmail: {inquiry.email or 'не указан'}"
     if not inquiry.items:
         return f"Заявка\n{contacts}\n\nКомментарий:\n{inquiry.comment}"
     items = "\n\n".join(_item(index, item) for index, item in enumerate(inquiry.items, start=1))

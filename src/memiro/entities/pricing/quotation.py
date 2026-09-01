@@ -27,6 +27,11 @@ class PricingVerdict(StrEnum):
 _VERDICTS_WITH_TOTAL = frozenset({PricingVerdict.PRICED, PricingVerdict.HIDDEN})
 
 
+def carries_total(verdict: PricingVerdict) -> bool:
+    """Tell whether a verdict is one that priced the mirror."""
+    return verdict in _VERDICTS_WITH_TOTAL
+
+
 @dataclass(frozen=True, slots=True)
 class QuotationLine:
     """One line of the calculation: a dictionary value, its consumption, its tariff and the sum."""
@@ -53,7 +58,7 @@ class Quotation:
 
     def __post_init__(self) -> None:
         """Hold the verdict/total invariant: a mismatch is a defect, not a refusal (§12.3)."""
-        if (self.total is not None) is not (self.verdict in _VERDICTS_WITH_TOTAL):
+        if (self.total is not None) is not carries_total(self.verdict):
             msg = f"Verdict {self.verdict} disagrees with the presence of a total"
             raise RuntimeError(msg)
         if self.total is None and self.breakdown:

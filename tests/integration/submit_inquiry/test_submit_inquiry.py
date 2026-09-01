@@ -255,6 +255,15 @@ async def test_an_inquiry_without_consent_is_rejected_before_its_item_is_read(ap
     response.assert_error(400, "CONSENT_REQUIRED")
 
 
+async def test_an_inquiry_whose_phone_is_not_a_phone_is_rejected(api_client: ApiClient) -> None:
+    """A phone the studio could not dial is refused with INVALID_PHONE — the HTTP pair of the domain rule."""
+    form = _form(phone="x")
+
+    response = await api_client.submit_inquiry(form)
+
+    response.assert_error(400, "INVALID_PHONE")
+
+
 async def test_a_selection_without_items_is_rejected(api_client: ApiClient) -> None:
     """An empty selection is rejected with EMPTY_INQUIRY — the HTTP pair of the domain rule."""
     form = _form(items=[])
