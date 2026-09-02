@@ -67,6 +67,10 @@ class ProductAttribute(BaseModel):
     id: UUID
     name: str
     kind: AttributeKind
+    # What the product itself is made of on this attribute: the storefront
+    # prints the characteristics from it and opens the calculator on it.
+    # A numeric attribute declares a quantity instead, carried by its row.
+    declared_value_id: UUID | None
     values: list["ProductAttributeValue"]
 
 

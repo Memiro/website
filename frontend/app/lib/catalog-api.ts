@@ -35,6 +35,8 @@ export interface ProductAttribute {
   id: string;
   name: string;
   kind: AttributeKind;
+  /** The row the product itself is made of; a numeric attribute declares a quantity instead. */
+  declared_value_id: string | null;
   values: ProductAttributeValue[];
 }
 
@@ -167,6 +169,7 @@ function isProductAttribute(value: unknown): value is ProductAttribute {
   return typeof attribute.id === "string"
     && typeof attribute.name === "string"
     && isAttributeKind(attribute.kind)
+    && isNullableString(attribute.declared_value_id)
     && isArrayOf(attribute.values, isProductAttributeValue);
 }
 

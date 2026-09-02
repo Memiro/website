@@ -9,6 +9,7 @@ import { internalCatalogApi, type ProductCard, type ProductSummary } from "../..
 import { coverImageUrl, productImageUrl } from "../../../../lib/media.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
+import { productSpecs } from "../../../../lib/specs.ts";
 
 const RELATED_SIZE = 4;
 const api = internalCatalogApi();
@@ -23,6 +24,7 @@ const price = product === null || product.price_from === null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 const cover = product === null ? "" : coverImageUrl(product.image_keys);
 const thumbs = product === null ? [] : product.image_keys.map((key) => productImageUrl(key));
+const specs = product === null ? [] : productSpecs(product.attributes);
 const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
 
 let related: ProductSummary[] = [];
@@ -97,6 +99,12 @@ const crumbs = product === null ? [] : [
         )}
         <Calculator client:visible product={product} />
         <OfferNote />
+        {specs.length > 0 && (
+          <div class="specs">
+            <h2>Характеристики</h2>
+            <dl>{specs.map((spec) => <div class="spec"><dt>{spec.name}</dt><dd>{spec.value}</dd></div>)}</dl>
+          </div>
+        )}
         <div class="promises">
           <div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div>
           <div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div>

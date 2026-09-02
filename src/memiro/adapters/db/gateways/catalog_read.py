@@ -141,6 +141,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                     attribute_values_table.c.id.label("value_id"),
                     attribute_values_table.c.name.label("value_name"),
                     attribute_values_table.c.sort_order.label("value_sort_order"),
+                    product_declared_values_table.c.value_id.label("declared_value_id"),
                     product_declared_values_table.c.quantity.label("declared_quantity"),
                 )
                 .select_from(
@@ -160,7 +161,13 @@ class SACatalogReadGateway(CatalogReadGateway):
         for item in declared:
             attribute = attributes.setdefault(
                 item.id,
-                ProductAttribute(id=item.id, name=item.name, kind=item.kind, values=[]),
+                ProductAttribute(
+                    id=item.id,
+                    name=item.name,
+                    kind=item.kind,
+                    declared_value_id=item.declared_value_id,
+                    values=[],
+                ),
             )
             # The single row of a numeric attribute is its tariff, not an
             # option to pick.

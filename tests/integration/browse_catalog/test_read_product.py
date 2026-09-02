@@ -72,6 +72,7 @@ def _expected_card(
         attributes=[
             ProductAttribute(
                 id=BLADE,
+                declared_value_id=SILVER,
                 name="Тип полотна",
                 kind=AttributeKind.SELECT,
                 values=[
@@ -81,6 +82,7 @@ def _expected_card(
             ),
             ProductAttribute(
                 id=SHAPE,
+                declared_value_id=RECTANGULAR,
                 name="Форма",
                 kind=AttributeKind.SELECT,
                 values=[
@@ -90,6 +92,7 @@ def _expected_card(
             ),
             ProductAttribute(
                 id=FRAME,
+                declared_value_id=ALUMINIUM,
                 name="Рама",
                 kind=AttributeKind.SELECT,
                 values=[
@@ -99,6 +102,7 @@ def _expected_card(
             ),
             ProductAttribute(
                 id=BACKLIGHT,
+                declared_value_id=NO_BACKLIGHT,
                 name="Подсветка",
                 kind=AttributeKind.SELECT,
                 values=[
@@ -108,6 +112,7 @@ def _expected_card(
             ),
             ProductAttribute(
                 id=MOUNT,
+                declared_value_id=WITH_MOUNT,
                 name="Крепление",
                 kind=AttributeKind.SELECT,
                 values=[
@@ -130,6 +135,19 @@ async def test_a_product_card_exposes_the_identifier_the_calculator_needs(
     assert (await api_client.read_product("zerkalo-v-rame")).assert_status(
         status.HTTP_200_OK
     ).ensure_content() == _expected_card(image_keys=IMAGE_KEYS)
+
+
+async def test_a_card_names_the_value_the_owner_declared_on_each_attribute(api_client: ApiClient) -> None:
+    """The card tells which row of every attribute the product itself is made of."""
+    card = (await api_client.read_product("zerkalo-v-rame")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert {attribute.id: attribute.declared_value_id for attribute in card.attributes} == {
+        BLADE: SILVER,
+        SHAPE: RECTANGULAR,
+        FRAME: ALUMINIUM,
+        BACKLIGHT: NO_BACKLIGHT,
+        MOUNT: WITH_MOUNT,
+    }
 
 
 async def test_a_card_lists_the_variants_in_the_order_the_owner_gave_them(
@@ -169,6 +187,7 @@ async def test_a_card_names_the_kind_of_an_attribute_the_customer_types_a_number
             id=CUTOUTS,
             name="Вырезы",
             kind=AttributeKind.NUMBER,
+            declared_value_id=None,
             values=[ProductAttributeValue(id=None, name="Вырез", quantity=Decimal(1))],
         )
     ]
@@ -188,6 +207,7 @@ async def test_the_kind_of_an_attribute_reaches_the_storefront_in_the_spelling_i
             "id": str(CUTOUTS),
             "name": "Вырезы",
             "kind": "number",
+            "declared_value_id": None,
             "values": [{"id": None, "name": "Вырез", "quantity": "1.0000"}],
         }
     ]
