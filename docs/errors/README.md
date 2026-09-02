@@ -16,7 +16,7 @@
 | `ATTRIBUTE_NOT_FOUND` | 404 | `AttributeNotFoundError` | Атрибута с названным идентификатором нет |
 | `PRICING_SETTINGS_NOT_FOUND` | 404 | `PricingSettingsNotFoundError` | Параметры расчёта в базе не заведены |
 | `INVALID_FACTOR_RATE` | 400 | `InvalidFactorRateError` | У значения с единицей `FACTOR` нулевой коэффициент |
-| `INVALID_ATTRIBUTE_PARENT` | 400 | `InvalidAttributeParentError` | Родитель атрибута не той категории, это сам атрибут, родство замкнулось в круг или на атрибут ссылается зависимый |
+| `INVALID_ATTRIBUTE_PARENT` | 400 | `InvalidAttributeParentError` | Родитель атрибута не той категории, это сам атрибут или родство замкнулось в круг |
 | `INVALID_ATTRIBUTE_VALUE_SET` | 400 | `InvalidAttributeValueSetError` | Набор значений не описывает справочник этого атрибута |
 | `NEGATIVE_MEASURE` | 400 | `NegativeMeasureError` | Величина получила отрицательное значение |
 | `EMPTY_DIMENSIONS` | 400 | `EmptyDimensionsError` | Сторона изделия не строго положительна |
@@ -27,7 +27,7 @@
 | `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
 | `ATTRIBUTE_VALUE_IN_USE` | 409 | `AttributeValueInUseError` | Удаляемое значение объявлено товарами; `meta.products` — их названия |
-| `ATTRIBUTE_IN_USE` | 409 | `AttributeInUseError` | Удаляемый атрибут объявлен товарами; `meta.products` — их названия |
+| `ATTRIBUTE_IN_USE` | 409 | `AttributeInUseError` | Удаляемый атрибут объявлен товарами или назван родителем другого; `meta.products` и `meta.attributes` — их названия |
 | `CONSENT_REQUIRED` | 400 | `ConsentRequiredError` | Посетитель не согласился на обработку ПД |
 | `INVALID_PHONE` | 400 | `InvalidPhoneError` | Телефон в заявке не похож на телефон: не 10–15 цифр |
 | `EMPTY_INQUIRY` | 400 | `EmptyInquiryError` | Подборка не содержит позиции |

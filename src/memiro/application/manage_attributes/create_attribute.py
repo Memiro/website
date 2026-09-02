@@ -56,6 +56,7 @@ class CreateAttribute:
                 kind=data.kind,
                 parent_ids=tuple(data.parent_ids),
                 is_customer_changeable=data.is_customer_changeable,
+                is_filterable=data.is_filterable,
                 sort_order=data.sort_order,
                 values=value_data(data.values),
             ),

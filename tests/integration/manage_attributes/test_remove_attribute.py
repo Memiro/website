@@ -6,7 +6,6 @@ from dishka import AsyncContainer
 from memiro.application.errors.catalog import AttributeInUseError, AttributeNotFoundError
 from memiro.application.manage_attributes import RemoveAttribute
 from memiro.entities.common.identifiers import AttributeId
-from memiro.entities.errors.attribute import InvalidAttributeParentError
 from tests.common.factory.catalog import BACKLIGHT, BLADE, HEATING, WITH_HEATING
 from tests.integration.manage_attributes.arrange import load_attribute, load_dictionary
 
@@ -44,10 +43,14 @@ async def test_removing_an_attribute_fails_if_there_is_no_such_attribute(contain
         await _remove(container, uuid4())
 
 
-async def test_removing_an_attribute_fails_if_another_one_depends_on_it(container: AsyncContainer) -> None:
-    """INVALID_ATTRIBUTE_PARENT: heating depends on backlight, so backlight stays."""
-    with pytest.raises(InvalidAttributeParentError):
+async def test_removing_an_attribute_fails_and_names_the_attribute_that_depends_on_it(
+    container: AsyncContainer,
+) -> None:
+    """ATTRIBUTE_IN_USE: heating depends on backlight, so backlight stays and says who holds it."""
+    with pytest.raises(AttributeInUseError) as refusal:
         await _remove(container, BACKLIGHT)
+
+    assert refusal.value.meta == {"products": ["Зеркало в раме"], "attributes": ["Подогрев"]}
 
 
 async def test_removing_an_attribute_fails_and_names_the_products_that_declare_it(
@@ -57,7 +60,7 @@ async def test_removing_an_attribute_fails_and_names_the_products_that_declare_i
     with pytest.raises(AttributeInUseError) as refusal:
         await _remove(container, BLADE)
 
-    assert refusal.value.meta == {"products": ["Зеркало в раме"]}
+    assert refusal.value.meta == {"products": ["Зеркало в раме"], "attributes": []}
 
 
 async def test_a_refused_removal_leaves_the_attribute_in_place(container: AsyncContainer) -> None:

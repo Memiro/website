@@ -38,6 +38,7 @@ class AttributeRootForm(BaseModel):
         max_length=MAX_ATTRIBUTE_PARENTS,
     )
     is_customer_changeable: bool = True
+    is_filterable: bool = False
     sort_order: int = Field(default=0, ge=0)
 
 

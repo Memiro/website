@@ -9,12 +9,13 @@ from tests.common.factory.catalog import BACKLIGHT, demo_backlight, demo_cutouts
 PLACE_IN_THE_CARD = 9
 
 
-def _data(
+def _data(  # noqa: PLR0913  # one keyword per root field of the attribute the owner fills in
     *,
     name: str = "Подсветка зеркала",
     kind: AttributeKind = AttributeKind.SELECT,
     parent_ids: tuple[object, ...] = (),
     is_customer_changeable: bool = False,
+    is_filterable: bool = True,
     sort_order: int = PLACE_IN_THE_CARD,
 ) -> ChangeAttributeData:
     """Build the owner's form for the root of an attribute."""
@@ -23,6 +24,7 @@ def _data(
         kind=kind,
         parent_ids=parent_ids,  # type: ignore[arg-type]  # identifiers are plain UUIDs
         is_customer_changeable=is_customer_changeable,
+        is_filterable=is_filterable,
         sort_order=sort_order,
     )
 
@@ -37,6 +39,7 @@ def test_the_owner_restates_the_root_of_an_attribute() -> None:
     assert backlight.kind is AttributeKind.SELECT
     assert backlight.parent_ids == (BACKLIGHT,)
     assert backlight.is_customer_changeable is False
+    assert backlight.is_filterable is True
     assert backlight.sort_order == PLACE_IN_THE_CARD
     assert backlight.updated_at == LATER
 
@@ -55,7 +58,7 @@ def test_an_attribute_fails_if_it_turns_numeric_with_a_dictionary_of_two() -> No
     """INVALID_ATTRIBUTE_VALUE_SET: a numeric attribute charges by exactly one tariff."""
     backlight = demo_backlight()
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="exactly one tariff row"):
         backlight.change(_data(kind=AttributeKind.NUMBER), clock=LATER_CLOCK)
 
 
@@ -72,7 +75,7 @@ def test_a_refused_root_change_leaves_the_attribute_untouched() -> None:
     """A rejected form changes neither the name nor the moment the attribute last moved."""
     backlight = demo_backlight()
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="exactly one tariff row"):
         backlight.change(_data(kind=AttributeKind.NUMBER), clock=LATER_CLOCK)
 
     assert backlight.name == demo_backlight().name

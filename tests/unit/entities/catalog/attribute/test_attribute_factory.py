@@ -39,6 +39,7 @@ def _data(*, kind: AttributeKind = AttributeKind.SELECT, values: tuple[Attribute
         kind=kind,
         parent_ids=(BACKLIGHT,),
         is_customer_changeable=True,
+        is_filterable=True,
         sort_order=PLACE_IN_THE_CARD,
         values=values,
     )
@@ -55,6 +56,7 @@ def test_a_new_attribute_is_born_with_its_dictionary() -> None:
     assert attribute.kind is AttributeKind.SELECT
     assert attribute.parent_ids == (BACKLIGHT,)
     assert attribute.is_customer_changeable is True
+    assert attribute.is_filterable is True
     assert attribute.sort_order == PLACE_IN_THE_CARD
     assert [value.name for value in attribute.values] == ["Контурная"]
 
@@ -82,7 +84,7 @@ def test_a_new_attribute_fails_if_it_claims_a_dictionary_row_of_another() -> Non
     """INVALID_ATTRIBUTE_VALUE_SET: a row that already exists belongs to the attribute that owns it."""
     data = _data(values=(_value(value_id=CONTOUR),))
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="claim a dictionary row of another"):
         attribute_factory(data, clock=CLOCK)
 
 
@@ -93,5 +95,5 @@ def test_a_new_numeric_attribute_fails_if_it_is_given_two_tariff_rows() -> None:
         values=(_value(name="Вырез", sort_order=1), _value(name="Второй вырез", sort_order=2)),
     )
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="exactly one tariff row"):
         attribute_factory(data, clock=CLOCK)

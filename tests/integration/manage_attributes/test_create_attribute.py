@@ -38,6 +38,7 @@ def _form(**overrides: object) -> CreateAttributeForm:
         "kind": AttributeKind.SELECT,
         "parent_ids": [],
         "is_customer_changeable": True,
+        "is_filterable": True,
         "sort_order": PLACE_IN_THE_CARD,
         "values": [value_form(name="Фацет есть"), value_form(name="Без фацета", amount="0", sort_order=2)],
     }
@@ -60,6 +61,7 @@ async def test_the_owner_creates_an_attribute_with_its_dictionary(container: Asy
     assert attribute.name == "Фацет"
     assert attribute.category_id == CATEGORY
     assert attribute.parent_ids == (BACKLIGHT,)
+    assert attribute.is_filterable is True
     assert attribute.sort_order == PLACE_IN_THE_CARD
     assert [(value.name, value.rate) for value in attribute.values] == [
         ("Фацет есть", Rate(amount=Money(amount=Decimal(2500)), unit=Unit.LINEAR_METER)),

@@ -73,6 +73,7 @@ class Attribute(Mirror):
     kind = models.CharField(max_length=NAME_LENGTH, choices=_choices(AttributeKind))
     parent_ids = ArrayField(models.UUIDField())
     is_customer_changeable = models.BooleanField()
+    is_filterable = models.BooleanField()
     sort_order = models.IntegerField()
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()

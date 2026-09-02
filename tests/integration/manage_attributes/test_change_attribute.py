@@ -28,6 +28,7 @@ def _form(**overrides: object) -> ChangeAttributeForm:
         "kind": AttributeKind.SELECT,
         "parent_ids": [],
         "is_customer_changeable": False,
+        "is_filterable": True,
         "sort_order": PLACE_IN_THE_CARD,
     }
     return ChangeAttributeForm.model_validate(fields | overrides)
@@ -49,6 +50,7 @@ async def test_the_owner_restates_the_root_of_an_attribute(container: AsyncConta
     assert attribute.name == "Подсветка зеркала"
     assert attribute.parent_ids == (BLADE,)
     assert attribute.is_customer_changeable is False
+    assert attribute.is_filterable is True
     assert attribute.sort_order == PLACE_IN_THE_CARD
 
 
