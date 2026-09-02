@@ -1,9 +1,12 @@
 ---
+import Breadcrumbs from "../../../components/Breadcrumbs.astro";
 import CatalogCard from "../../../components/CatalogCard.astro";
 import NotFound from "../../../components/NotFound.astro";
+import OfferNote from "../../../components/OfferNote.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ListEnvelope, type ProductSummary } from "../../../lib/catalog-api.ts";
 import { foundOrNull } from "../../../lib/not-found.ts";
+import { productPlural } from "../../../lib/plural.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
@@ -14,6 +17,12 @@ if (products === null) {
   Astro.response.status = 404;
 }
 const category = products === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
+const name = category?.name ?? "Каталог зеркал";
+const crumbs = [
+  { href: "/", label: "Главная" },
+  { href: "/catalog/", label: "Каталог" },
+  { href: `/catalog/${categorySlug}/`, label: name },
+];
 ---
 
 {products === null ? (
@@ -24,10 +33,19 @@ const category = products === null ? undefined : (await api.categories()).items.
   />
 ) : (
   <BaseLayout
-    title={`${category?.name ?? "Каталог зеркал"} — Memiro`}
-    description={`Зеркала мастерской Memiro в категории «${category?.name ?? "Каталог зеркал"}»: размеры, опции и цена от минимальной конфигурации.`}
+    title={`${name} — Memiro`}
+    description={`Зеркала мастерской Memiro в категории «${name}»: размеры, опции и цена от минимальной конфигурации.`}
+    crumbs={crumbs}
   >
-    <div class="cat-head wrap"><h1 class="h-section">{category?.name ?? "Каталог зеркал"}</h1><span class="count">{products.total} товаров</span></div>
-    <div class="wrap section"><div class="grid-3">{products.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div></div>
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="cat-head wrap"><h1 class="h-section">{name}</h1><span class="count">{products.total} {productPlural(products.total)}</span></div>
+    <div class="wrap section">
+      {products.items.length > 0 ? (
+        <div class="grid-3">{products.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div>
+      ) : (
+        <p class="sub">В этой категории пока нет опубликованных зеркал — загляните позже.</p>
+      )}
+      <OfferNote />
+    </div>
   </BaseLayout>
 )}

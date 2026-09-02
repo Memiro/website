@@ -1,0 +1,70 @@
+---
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import SellerRequisites from "../../components/SellerRequisites.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { CONTACTS, SELLER_REQUISITES, SOCIAL_LINKS } from "../../lib/contacts.ts";
+import { businessJsonLd } from "../../lib/seo.ts";
+
+const crumbs = [{ href: "/", label: "Главная" }, { href: "/contacts/", label: "Контакты" }];
+---
+
+<BaseLayout
+  title="Контакты — Memiro"
+  description="Адрес шоурума, телефон и почта мастерской интерьерных зеркал Memiro в Санкт-Петербурге."
+  crumbs={crumbs}
+  jsonLd={[businessJsonLd(Astro.site)]}
+>
+  <Breadcrumbs crumbs={crumbs} />
+  <div class="page wrap">
+    <span class="overline">Шоурум и связь</span>
+    <h1 class="h-section">Контакты</h1>
+
+    <div class="contacts-grid">
+      <div class="contacts-info">
+        <div class="contact-block">
+          <h3>Шоурум</h3>
+          <p>{CONTACTS.address}</p>
+          <p class="muted">{CONTACTS.hours} — напишите или позвоните заранее, встретим и всё покажем.</p>
+        </div>
+        <div class="contact-block">
+          <h3>Телефон</h3>
+          <p><a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a></p>
+        </div>
+        <div class="contact-block">
+          <h3>Почта</h3>
+          <p><a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a></p>
+        </div>
+        {SOCIAL_LINKS.length > 0 && (
+          <div class="contact-block">
+            <h3>Мессенджеры и соцсети</h3>
+            <div class="contact-links">{SOCIAL_LINKS.map((link) => <a href={link.href} target="_blank" rel="noopener">{link.label}</a>)}</div>
+          </div>
+        )}
+        {SELLER_REQUISITES.length > 0 && (
+          <div class="contact-block">
+            <h3>Реквизиты продавца</h3>
+            <SellerRequisites />
+          </div>
+        )}
+        <div class="contact-block">
+          <p class="muted"><a href="/privacy/">Политика обработки персональных данных</a></p>
+        </div>
+      </div>
+      {/* The widget sets cookies of its own, so it arrives on the visitor's click — a local consent, not the analytics banner (ADR-0006). */}
+      {CONTACTS.mapEmbed !== "" && (
+        <div class="contacts-map" data-map data-map-src={CONTACTS.mapEmbed} data-map-title={`Шоурум memiro на карте: ${CONTACTS.address}`}>
+          <div class="map-placeholder">
+            <p>Карта загружается с сервиса Яндекс.Карт: он может сохранять файлы cookie в вашем браузере.</p>
+            <button class="btn btn-primary" type="button" data-map-load>Показать карту</button>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { mountShowroomMap } from "../../islands/map.ts";
+
+  mountShowroomMap(document);
+</script>

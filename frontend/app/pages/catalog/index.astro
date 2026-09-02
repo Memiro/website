@@ -1,21 +1,35 @@
 ---
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi } from "../../lib/catalog-api.ts";
 
 const api = internalCatalogApi();
 const categories = (await api.categories()).items;
+const crumbs = [{ href: "/", label: "Главная" }, { href: "/catalog/", label: "Каталог" }];
 ---
 
 <BaseLayout
   title="Каталог зеркал — Memiro"
   description="Каталог интерьерных зеркал мастерской Memiro: категории зеркал с ценой от минимальной конфигурации."
+  crumbs={crumbs}
 >
+  <Breadcrumbs crumbs={crumbs} />
   <div class="wrap">
     <div class="cat-head"><h1>Каталог зеркал</h1></div>
   </div>
   <div class="wrap section" style="padding-top: 40px;">
-    <div class="tiles-grid">
-      {categories.map((category, index) => <a class="tile" href={`/catalog/${category.slug}/`}><img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" /><span class="veil"></span><span class="label">{category.name}</span></a>)}
-    </div>
+    {categories.length > 0 ? (
+      <div class="tiles-grid">
+        {categories.map((category, index) => (
+          <a class="tile" href={`/catalog/${category.slug}/`}>
+            <img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" loading="lazy" />
+            <span class="veil"></span>
+            <span class="label">{category.name}</span>
+          </a>
+        ))}
+      </div>
+    ) : (
+      <p class="sub">Каталог наполняется — загляните позже.</p>
+    )}
   </div>
 </BaseLayout>

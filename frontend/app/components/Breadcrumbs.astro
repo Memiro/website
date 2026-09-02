@@ -1,0 +1,17 @@
+---
+import type { Crumb } from "../lib/seo.ts";
+
+interface Props { crumbs: Crumb[]; }
+const { crumbs } = Astro.props;
+---
+
+{crumbs.length > 0 && (
+  <nav class="crumbs wrap" aria-label="Хлебные крошки">
+    {crumbs.map((crumb, index) => (
+      <>
+        {index > 0 && " / "}
+        {index === crumbs.length - 1 ? <span>{crumb.label}</span> : <a href={crumb.href}>{crumb.label}</a>}
+      </>
+    ))}
+  </nav>
+)}

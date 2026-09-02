@@ -1,11 +1,18 @@
 ---
+import Breadcrumbs from "../../../../components/Breadcrumbs.astro";
+import CatalogCard from "../../../../components/CatalogCard.astro";
 import NotFound from "../../../../components/NotFound.astro";
+import OfferNote from "../../../../components/OfferNote.astro";
 import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
-import { internalCatalogApi, type ProductCard } from "../../../../lib/catalog-api.ts";
+import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
+import { coverImageUrl, productImageUrl } from "../../../../lib/media.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
+import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
 
+const RELATED_SIZE = 4;
 const api = internalCatalogApi();
+const categorySlug = Astro.params.categorySlug ?? "";
 const productSlug = Astro.params.productSlug ?? "";
 const product: ProductCard | null = await foundOrNull(productSlug, (slug) => api.product(slug));
 if (product === null) {
@@ -14,7 +21,22 @@ if (product === null) {
 const price = product === null || product.price_from === null
   ? null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
-const image = "/img/hero-1.jpg";
+const cover = product === null ? "" : coverImageUrl(product.image_keys);
+const thumbs = product === null ? [] : product.image_keys.map((key) => productImageUrl(key));
+const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
+
+let related: ProductSummary[] = [];
+if (product !== null) {
+  const neighbours = await foundOrNull(categorySlug, (slug) => api.categoryProducts(slug));
+  related = (neighbours?.items ?? []).filter((item) => item.slug !== product.slug).slice(0, RELATED_SIZE);
+}
+
+const crumbs = product === null ? [] : [
+  { href: "/", label: "Главная" },
+  { href: "/catalog/", label: "Каталог" },
+  { href: `/catalog/${categorySlug}/`, label: category?.name ?? "Каталог" },
+  { href: `/catalog/${categorySlug}/${product.slug}/`, label: product.name },
+];
 ---
 
 {product === null ? (
@@ -24,10 +46,79 @@ const image = "/img/hero-1.jpg";
     description="Такого зеркала нет в каталоге Memiro."
   />
 ) : (
-  <BaseLayout title={`${product.name} — Memiro`} description={product.description}>
+  <BaseLayout
+    title={`${product.name} — Memiro`}
+    description={product.description}
+    ogType="product"
+    ogImage={cover}
+    crumbs={crumbs}
+    jsonLd={[productJsonLd({
+      name: product.name,
+      description: product.description,
+      url: absoluteUrl(Astro.site, Astro.url.pathname),
+      image: absoluteUrl(Astro.site, cover),
+      priceFrom: product.price_from,
+    })]}
+  >
+    <Breadcrumbs crumbs={crumbs} />
     <div class="pdp wrap">
-      <div class="gallery solo"><div class="main"><img src={image} alt={product.name} /></div></div>
-      <div class="info"><h1>{product.name}</h1><div class="desc"><p>{product.description}</p></div>{price !== null && <div class="price-row"><span class="price-now">от {price} ₽</span><span class="price-note">цена минимальной конфигурации</span></div>}{product.variants.length > 0 && <div class="variants"><h2>Типовые размеры</h2><table><tbody>{product.variants.map((variant) => <tr><th scope="row">{variant.width_mm} × {variant.height_mm} мм</th><td class="variant-price">{new Intl.NumberFormat("ru-RU").format(Number(variant.price))} ₽</td></tr>)}</tbody></table></div>}<Calculator client:visible product={product} /><p class="offer-note">Цена носит информационный характер. Окончательную стоимость подтвердит менеджер после согласования деталей заказа.</p><div class="promises"><div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div><div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div><div class="promise"><span class="n">03</span> Доставка и монтаж по Санкт-Петербургу и области</div></div></div>
+      <div class={thumbs.length > 1 ? "gallery" : "gallery solo"}>
+        {thumbs.length > 1 && (
+          <div class="thumbs">
+            {thumbs.map((source, index) => (
+              <button class={index === 0 ? "on" : undefined} type="button" aria-pressed={index === 0 ? "true" : "false"} data-src={source}>
+                <img src={source} alt={`${product.name} — фото ${index + 1}`} loading="lazy" />
+              </button>
+            ))}
+          </div>
+        )}
+        <div class="main"><img data-gallery-main src={cover} alt={product.name} /></div>
+      </div>
+      <div class="info">
+        <h1>{product.name}</h1>
+        <div class="desc"><p>{product.description}</p></div>
+        {price !== null && (
+          <div class="price-row"><span class="price-now">от {price} ₽</span><span class="price-note">цена минимальной конфигурации</span></div>
+        )}
+        {product.variants.length > 0 && (
+          <div class="variants">
+            <h2>Типовые размеры</h2>
+            <table>
+              <tbody>
+                {product.variants.map((variant) => (
+                  <tr>
+                    <th scope="row">{variant.width_mm} × {variant.height_mm} мм</th>
+                    <td class="variant-price">{new Intl.NumberFormat("ru-RU").format(Number(variant.price))} ₽</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Calculator client:visible product={product} />
+        <OfferNote />
+        <div class="promises">
+          <div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div>
+          <div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div>
+          <div class="promise"><span class="n">03</span> Доставка и монтаж по Санкт-Петербургу и области</div>
+        </div>
+      </div>
     </div>
+
+    {related.length > 0 && (
+      <section class="wrap section">
+        <div class="section-head">
+          <h2 class="h-section">Похожие зеркала</h2>
+          <a class="link-underline" href={`/catalog/${categorySlug}/`}>Весь раздел →</a>
+        </div>
+        <div class="carousel grid-4">{related.map((item) => <CatalogCard categorySlug={categorySlug} product={item} />)}</div>
+      </section>
+    )}
   </BaseLayout>
 )}
+
+<script>
+  import { mountGallery } from "../../../../islands/gallery.ts";
+
+  mountGallery(document);
+</script>

@@ -1,14 +1,25 @@
 ---
 import "../styles/global.css";
+import CookieBanner from "../components/CookieBanner.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import { SITE_NAME } from "../lib/contacts.ts";
+import { absoluteUrl, breadcrumbsJsonLd, type Crumb, type JsonLdDocument } from "../lib/seo.ts";
 
 interface Props {
   title: string;
   description: string;
+  robots?: string;
+  ogType?: string;
+  ogImage?: string;
+  crumbs?: Crumb[];
+  jsonLd?: JsonLdDocument[];
 }
 
-const { title, description } = Astro.props;
+const { title, description, robots, ogType = "website", ogImage = "/img/hero-1.jpg", crumbs = [], jsonLd = [] } = Astro.props;
+const canonical = absoluteUrl(Astro.site, Astro.url.pathname);
+const image = absoluteUrl(Astro.site, ogImage);
+const documents = crumbs.length > 0 ? [...jsonLd, breadcrumbsJsonLd(Astro.site, crumbs)] : jsonLd;
 ---
 
 <!doctype html>
@@ -16,9 +27,20 @@ const { title, description } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
-    <meta name="description" content={description} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title}</title>
+    <meta name="description" content={description} />
+    {robots && <meta name="robots" content={robots} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {documents.map((document) => <script is:inline type="application/ld+json" set:html={JSON.stringify(document)} />)}
   </head>
   <body>
     <SiteHeader />
@@ -26,5 +48,6 @@ const { title, description } = Astro.props;
       <slot />
     </main>
     <SiteFooter />
+    <CookieBanner />
   </body>
 </html>
