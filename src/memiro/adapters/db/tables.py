@@ -250,6 +250,7 @@ mapper_registry.map_imperatively(
     properties={
         "values": relationship(
             AttributeValue,
+            cascade="all, delete-orphan",
             lazy="raise_on_sql",
             order_by=(attribute_values_table.c.sort_order, attribute_values_table.c.id),
         ),

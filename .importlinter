@@ -55,6 +55,7 @@ type = independence
 modules =
     memiro.application.browse_catalog
     memiro.application.calculate_price
+    memiro.application.manage_attributes
     memiro.application.manage_products
     memiro.application.submit_inquiry
 
@@ -66,3 +67,12 @@ modules =
     memiro.application.manage_products.change_variant
     memiro.application.manage_products.duplicate_variant_with_size
     memiro.application.manage_products.remove_variant
+
+[importlinter:contract:manage-attributes-scenarios]
+name = Dictionary scenarios communicate only through their shared module
+type = independence
+modules =
+    memiro.application.manage_attributes.create_attribute
+    memiro.application.manage_attributes.change_attribute
+    memiro.application.manage_attributes.replace_values
+    memiro.application.manage_attributes.remove_attribute

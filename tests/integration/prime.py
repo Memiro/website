@@ -34,6 +34,7 @@ from tests.common.factory.catalog import (
     FOREIGN_PRODUCT,
     HEATING,
     NO_HEATING,
+    NO_MOUNT,
     PRODUCT,
     SECOND_CATEGORY,
     SECOND_PRODUCT,
@@ -373,6 +374,12 @@ async def prime_product_without_paid_values(engine: AsyncEngine) -> None:
             .where(attribute_values_table.c.id.in_([SILVER, ALUMINIUM, WITH_MOUNT]))
             .values(rate_amount=Money(amount=Decimal(0))),
         )
+
+
+async def prime_one_row_attribute(engine: AsyncEngine) -> None:
+    """Leave the mount attribute with a single dictionary row — the shape a numeric attribute needs."""
+    async with engine.begin() as connection:
+        await connection.execute(delete(attribute_values_table).where(attribute_values_table.c.id == NO_MOUNT))
 
 
 async def prime_non_changeable_attribute(engine: AsyncEngine) -> None:

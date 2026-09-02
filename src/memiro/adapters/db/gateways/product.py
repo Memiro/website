@@ -1,15 +1,16 @@
+from collections.abc import Collection, Sequence
 from typing import override
 
-from sqlalchemy import select
+from sqlalchemy import ColumnElement, select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from memiro.adapters.db.errors import LOCK_NOT_AVAILABLE, LockTimeoutError, sqlstate_of
-from memiro.adapters.db.tables import products_table
+from memiro.adapters.db.tables import product_declared_values_table, products_table
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.entities.catalog.product.entity import Product
-from memiro.entities.common.identifiers import ProductId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
 
 
 class SAProductGateway(ProductGateway):
@@ -50,3 +51,29 @@ class SAProductGateway(ProductGateway):
                 raise
             raise LockTimeoutError from error
         return result.scalar_one_or_none()
+
+    @override
+    async def names_declaring_values(self, value_ids: Collection[AttributeValueId]) -> Sequence[str]:
+        """Read the names behind the declarations of these dictionary rows."""
+        if not value_ids:
+            return ()
+        return await self._names_declaring(product_declared_values_table.c.value_id.in_(value_ids))
+
+    @override
+    async def names_declaring_attribute(self, attribute_id: AttributeId) -> Sequence[str]:
+        """Read the names behind every declaration made on this attribute."""
+        return await self._names_declaring(product_declared_values_table.c.attribute_id == attribute_id)
+
+    async def _names_declaring(self, condition: ColumnElement[bool]) -> Sequence[str]:
+        """Name the products a declaration condition matches, once each and in one order."""
+        result = await self._session.execute(
+            select(products_table.c.name)
+            .join(
+                product_declared_values_table,
+                product_declared_values_table.c.product_id == products_table.c.id,
+            )
+            .where(condition)
+            .distinct()
+            .order_by(products_table.c.name),
+        )
+        return result.scalars().all()
