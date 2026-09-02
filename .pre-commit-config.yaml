@@ -34,8 +34,10 @@ repos:
         types: [python]
         pass_filenames: false
       - id: mypy
+        # The django-stubs plugin imports the admin's settings module, and
+        # pre-commit does not read .env the way `just` does.
         name: mypy
-        entry: uv run mypy
+        entry: env APP_CONFIG_PATH=.config/config.toml uv run mypy
         language: system
         types: [python]
         pass_filenames: false

@@ -12,9 +12,11 @@ COPY README.md ./
 RUN uv sync --frozen --no-dev
 
 # The admin's static files are baked into the image; the compose volume
-# nginx reads is refreshed from here when the admin container starts.
-COPY .config ./.config
-RUN APP_CONFIG_PATH=/app/.config/config.docker.toml \
+# nginx reads is refreshed from here when the admin container starts. The
+# config is bind-mounted for the build only: the repository's placeholder
+# signing key must not survive into a production image.
+RUN --mount=type=bind,source=.config,target=/app/.config \
+    APP_CONFIG_PATH=/app/.config/config.docker.toml \
     /app/.venv/bin/memiro django collectstatic --no-input
 
 ENV PATH="/app/.venv/bin:$PATH"

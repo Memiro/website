@@ -91,33 +91,28 @@ async def test_every_mirror_is_reachable_as_a_changelist_or_an_inline() -> None:
     assert unreachable == set()
 
 
-async def test_the_owner_sees_a_changelist_for_every_registered_mirror() -> None:
+async def test_the_owner_sees_a_changelist_for_every_registered_mirror(owner_client: AsyncClient) -> None:
     """Every registered mirror's changelist renders."""
-    client = AsyncClient()
-    await client.alogin(username=OWNER_USERNAME, password=OWNER_PASSWORD)
-
-    statuses = {url: (await client.get(url)).status_code for url in _changelist_urls()}
+    statuses = {url: (await owner_client.get(url)).status_code for url in _changelist_urls()}
 
     assert statuses == dict.fromkeys(_changelist_urls(), HTTPStatus.OK)
 
 
-async def test_the_owner_is_offered_no_form_to_add_a_domain_row() -> None:
+async def test_the_owner_is_offered_no_form_to_add_a_domain_row(owner_client: AsyncClient) -> None:
     """The add view of a mirror refuses: the domain is written through interactors."""
-    client = AsyncClient()
-    await client.alogin(username=OWNER_USERNAME, password=OWNER_PASSWORD)
-
-    response = await client.get("/admin/memiro/product/add/")
+    response = await owner_client.get("/admin/memiro/product/add/")
 
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
-async def test_the_owner_opens_a_product_card_with_the_child_rows_inlined(primed_catalog: None) -> None:  # noqa: ARG001
+async def test_the_owner_opens_a_product_card_with_the_child_rows_inlined(
+    owner_client: AsyncClient,
+    primed_catalog: None,  # noqa: ARG001
+) -> None:
     """Photos and declared values have no changelist of their own: the card is where they live."""
-    client = AsyncClient()
-    await client.alogin(username=OWNER_USERNAME, password=OWNER_PASSWORD)
     product = await apps.get_model(APP, "Product").objects.afirst()
 
-    response = await client.get(f"/admin/{APP}/product/{product.pk}/change/")
+    response = await owner_client.get(f"/admin/{APP}/product/{product.pk}/change/")
 
     assert response.status_code == HTTPStatus.OK
     assert "Объявленные значения" in response.content.decode()
@@ -125,14 +120,13 @@ async def test_the_owner_opens_a_product_card_with_the_child_rows_inlined(primed
 
 
 async def test_the_owner_opens_the_pricing_settings_with_the_surcharge_steps_inlined(
+    owner_client: AsyncClient,
     primed_catalog: None,  # noqa: ARG001
 ) -> None:
     """The steps of the size surcharge are read inside the object that owns them (ADR-0010)."""
-    client = AsyncClient()
-    await client.alogin(username=OWNER_USERNAME, password=OWNER_PASSWORD)
     settings_row = await apps.get_model(APP, "PricingSettings").objects.afirst()
 
-    response = await client.get(f"/admin/{APP}/pricingsettings/{settings_row.pk}/change/")
+    response = await owner_client.get(f"/admin/{APP}/pricingsettings/{settings_row.pk}/change/")
 
     assert response.status_code == HTTPStatus.OK
     assert "Ступени наценки" in response.content.decode()

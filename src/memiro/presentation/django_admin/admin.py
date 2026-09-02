@@ -208,7 +208,9 @@ class ProductVariantAdmin(ReadOnlyAdmin):
         "price",
         "sort_order",
     )
-    list_filter = ("product",)
+    # No filter by product: the dropdown would carry one option per row of the
+    # catalogue. Variants are read from the card of the product that owns them.
+    search_fields = ("product__name",)
     ordering = (
         "product",
         "sort_order",
