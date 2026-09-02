@@ -39,8 +39,8 @@ services:
       APP_CONFIG_PATH: /app/.config/config.docker.toml
       # No defaults on purpose: a contour without credentials must fail
       # loudly in `ensure_superuser`, not quietly grow a guessable account.
-      MEMIRO_ADMIN_USERNAME: ${MEMIRO_ADMIN_USERNAME:?}
-      MEMIRO_ADMIN_PASSWORD: ${MEMIRO_ADMIN_PASSWORD:?}
+      MEMIRO_ADMIN_USERNAME: ${MEMIRO_ADMIN_USERNAME:?set it in .env, see .env.example}
+      MEMIRO_ADMIN_PASSWORD: ${MEMIRO_ADMIN_PASSWORD:?set it in .env, see .env.example}
     depends_on:
       db:
         condition: service_healthy

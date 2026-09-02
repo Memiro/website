@@ -6,12 +6,12 @@ app registry, URL conf or middleware chain reddens here.
 """
 
 import asyncio
-import os
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 
 import django
 import pytest
 from django.conf import settings
+from django.test import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
@@ -20,7 +20,8 @@ from memiro.adapters.db.config import DbConfig
 from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.django_admin.assembly import admin_settings
-from memiro.presentation.django_admin.config import PASSWORD_ENV, USERNAME_ENV, AdminConfig
+from memiro.presentation.django_admin.config import AdminConfig
+from memiro.presentation.django_admin.credentials import OwnerCredentials
 from memiro_common.observability.config import ObservabilityConfig
 from tests.integration.prime import (
     prime_dictionary,
@@ -32,22 +33,9 @@ from tests.integration.prime import (
 ADMIN_DATABASE = "memiro_admin"
 OWNER_USERNAME = "owner"
 OWNER_PASSWORD = "owner-password"  # noqa: S105  # nosec B105  # a throwaway account in a throwaway database
-
-
-@pytest.fixture(scope="session")
-def owner_credentials() -> Iterator[None]:
-    """Put the owner's credentials where ``ensure_superuser`` reads them, and take them back."""
-    previous = {name: os.environ.get(name) for name in (USERNAME_ENV, PASSWORD_ENV)}
-    os.environ[USERNAME_ENV] = OWNER_USERNAME
-    os.environ[PASSWORD_ENV] = OWNER_PASSWORD
-
-    yield
-
-    for name, value in previous.items():
-        if value is None:
-            del os.environ[name]
-        else:
-            os.environ[name] = value
+# Handed to the production upsert directly: the environment is the deployment's
+# way in, never the tests' (§14.5.2).
+OWNER = OwnerCredentials(username=OWNER_USERNAME, password=OWNER_PASSWORD)
 
 
 @pytest.fixture(scope="session")
@@ -55,10 +43,12 @@ async def admin_site(
     postgres: PostgresContainer,
     admin_engine: AsyncEngine,
     template_database: str,
-    owner_credentials: None,  # noqa: ARG001
     tmp_path_factory: pytest.TempPathFactory,
 ) -> AsyncIterator[None]:
-    """Bring Django up on a clone of the migrated database, with the owner's account."""
+    """Bring Django up on a clone of the migrated database, with the owner's account.
+
+    Never calls ``Config.load()``: the configuration is built by hand (§14.5.2).
+    """
     async with admin_engine.connect() as connection:
         await connection.execute(text(f'CREATE DATABASE "{ADMIN_DATABASE}" TEMPLATE "{template_database}"'))
 
@@ -90,6 +80,15 @@ async def admin_site(
         await connection.execute(text(f'DROP DATABASE "{ADMIN_DATABASE}" WITH (FORCE)'))
 
 
+@pytest.fixture
+async def owner_client(admin_site: None) -> AsyncClient:  # noqa: ARG001
+    """Sign an admin client in as the owner."""
+    client = AsyncClient()
+    await client.alogin(username=OWNER_USERNAME, password=OWNER_PASSWORD)
+
+    return client
+
+
 @pytest.fixture(scope="session")
 def admin_database_url(postgres: PostgresContainer, admin_site: None) -> str:  # noqa: ARG001
     """Reflection URL of the very database the admin is looking at."""
@@ -117,8 +116,12 @@ def _prepare_service_tables() -> None:
     # and that runs inside the fixture above.
     from django.core.management import call_command  # noqa: PLC0415
 
+    from memiro.presentation.django_admin.management.commands.ensure_superuser import (  # noqa: PLC0415
+        ensure_superuser,
+    )
+
     call_command("migrate", "--no-input", verbosity=0)
-    call_command("ensure_superuser", verbosity=0)
+    ensure_superuser(OWNER)
 
 
 def _close_connections() -> None:
