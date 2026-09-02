@@ -4,12 +4,18 @@ The screens are read-only in this slice: the write paths arrive ticket by
 ticket, each one through the interactor the API already calls (ADR-0012).
 """
 
+# django-stubs makes Field and InlineModelAdmin generic, but the runtime
+# classes are not subscriptable: the annotations must stay unevaluated.
+from __future__ import annotations
+
 from http import HTTPStatus
-from typing import Any
 
 import pytest
 from django.apps import apps
 from django.contrib import admin
+from django.contrib.admin.options import InlineModelAdmin
+from django.db.models import Model
+from django.db.models.options import Options
 from django.test import AsyncClient
 
 from tests.integration.admin.conftest import OWNER_PASSWORD, OWNER_USERNAME
@@ -22,17 +28,29 @@ pytestmark = pytest.mark.usefixtures("admin_site")
 APP = "memiro"
 
 
-def _registered_mirrors() -> list[Any]:
-    return [mirror for mirror in admin.site._registry if mirror._meta.app_label == APP]  # noqa: SLF001  # ``_meta`` and ``_registry`` are Django's documented admin API
+def _inline_model(inline: type[InlineModelAdmin[Model, Model]]) -> type[Model]:
+    """Name the child model an inline shows on the card of its parent."""
+    # `model` is declared on the instance, but an inline is registered as a
+    # class and Django reads it off the class the same way.
+    return inline.model  # pyright: ignore[reportGeneralTypeIssues]
+
+
+def _meta(mirror: type[Model]) -> Options[Model]:
+    """Reach a model's Meta, which is Django's documented way to ask about a table."""
+    return mirror._meta  # noqa: SLF001
+
+
+def _registered_mirrors() -> list[type[Model]]:
+    return [mirror for mirror in admin.site._registry if _meta(mirror).app_label == APP]  # noqa: SLF001  # ``_registry`` is Django's documented admin API
 
 
 def _changelist_urls() -> list[str]:
-    return [f"/admin/{APP}/{mirror._meta.model_name}/" for mirror in _registered_mirrors()]  # noqa: SLF001
+    return [f"/admin/{APP}/{_meta(mirror).model_name}/" for mirror in _registered_mirrors()]
 
 
 def _inlined_models() -> set[str]:
     return {
-        inline.model._meta.model_name  # noqa: SLF001
+        str(_meta(_inline_model(inline)).model_name)
         for options in admin.site._registry.values()  # noqa: SLF001  # Django's documented admin API
         for inline in options.inlines
     }
@@ -59,7 +77,7 @@ async def test_the_owner_signs_in_with_the_account_the_command_created() -> None
 
 async def test_every_mirror_is_reachable_as_a_changelist_or_an_inline() -> None:
     """No mirror is dead weight: the owner reaches every domain table on some screen."""
-    registered = {mirror._meta.model_name for mirror in _registered_mirrors()}  # noqa: SLF001
+    registered = {str(_meta(mirror).model_name) for mirror in _registered_mirrors()}
 
     unreachable = (
         {
@@ -102,8 +120,8 @@ async def test_the_owner_opens_a_product_card_with_the_child_rows_inlined(primed
     response = await client.get(f"/admin/{APP}/product/{product.pk}/change/")
 
     assert response.status_code == HTTPStatus.OK
-    assert "Объявленные значения" in response.text
-    assert "Фотографии" in response.text
+    assert "Объявленные значения" in response.content.decode()
+    assert "Фотографии" in response.content.decode()
 
 
 async def test_the_owner_opens_the_pricing_settings_with_the_surcharge_steps_inlined(
@@ -117,4 +135,4 @@ async def test_the_owner_opens_the_pricing_settings_with_the_surcharge_steps_inl
     response = await client.get(f"/admin/{APP}/pricingsettings/{settings_row.pk}/change/")
 
     assert response.status_code == HTTPStatus.OK
-    assert "Ступени наценки" in response.text
+    assert "Ступени наценки" in response.content.decode()

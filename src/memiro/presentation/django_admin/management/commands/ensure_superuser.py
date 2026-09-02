@@ -8,12 +8,10 @@ rotating the password is one environment change away.
 import os
 from typing import override
 
-from django.contrib.auth import get_user_model
+from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
-USERNAME_ENV = "MEMIRO_ADMIN_USERNAME"
-PASSWORD_ENV = "MEMIRO_ADMIN_PASSWORD"  # noqa: S105  # nosec B105  # the name of the variable, not its value
-EMAIL_ENV = "MEMIRO_ADMIN_EMAIL"
+from memiro.presentation.django_admin.config import EMAIL_ENV, PASSWORD_ENV, USERNAME_ENV
 
 
 class Command(BaseCommand):
@@ -30,8 +28,9 @@ class Command(BaseCommand):
             message = f"{USERNAME_ENV} and {PASSWORD_ENV} must both be set"
             raise CommandError(message)
 
-        users = get_user_model().objects
-        user, created = users.get_or_create(username=username)
+        # Django's stock user model, named outright: the admin has one account
+        # and no roles (decision 11), so there is nothing to swap it for.
+        user, created = User.objects.get_or_create(username=username)
         # An address the environment does not carry is not an empty address:
         # the command runs on every start and must not erase what it finds.
         user.email = os.environ.get(EMAIL_ENV, user.email)

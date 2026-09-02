@@ -18,7 +18,11 @@ jobs:
       - run: uv sync --frozen --extra ci
       - run: uv run ruff format --check
       - run: uv run ruff check
+      # The django-stubs plugin imports the admin's settings module, so the
+      # type checker needs the config path every other process reads.
       - run: uv run mypy
+        env:
+          APP_CONFIG_PATH: .config/config.toml
       - run: uv run lint-imports
       - run: uv run typos
       - run: uv run basedpyright
