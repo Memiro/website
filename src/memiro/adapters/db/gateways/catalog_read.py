@@ -196,11 +196,10 @@ class SACatalogReadGateway(CatalogReadGateway):
                 )
                 .where(
                     (categories_table.c.slug == category_slug)
-                    # A numeric attribute is typed, not picked, so it gives no
-                    # filter; an attribute the customer cannot change is not
-                    # his to narrow by either.
+                    # A numeric attribute is typed, not picked, so it gives
+                    # no filter; the rest is the owner's own switch.
                     & (attributes_table.c.kind == AttributeKind.SELECT)
-                    & attributes_table.c.is_customer_changeable
+                    & attributes_table.c.is_filterable
                 )
                 .order_by(
                     attributes_table.c.sort_order,

@@ -77,6 +77,9 @@ def demo_blade() -> Attribute:
         category_id=CATEGORY,
         name="Тип полотна",
         sort_order=1,
+        # Any mirror is made of any blade, so a "silver / graphite" group
+        # would hide products that do fit.
+        is_filterable=False,
         values=[
             AttributeValue(
                 id=SILVER,

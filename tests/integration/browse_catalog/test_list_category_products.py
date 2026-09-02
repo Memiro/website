@@ -16,6 +16,7 @@ from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.common.identifiers import AttributeValueId
 from tests.common.factory.catalog import (
     ALUMINIUM,
+    BLADE,
     NO_BACKLIGHT,
     NO_FRAME,
     RECTANGULAR,
@@ -76,7 +77,7 @@ def _groups(
             ],
         )
         for attribute in demo_attributes()
-        if attribute.kind is AttributeKind.SELECT and attribute.is_customer_changeable
+        if attribute.kind is AttributeKind.SELECT and attribute.is_filterable
     ]
 
 
@@ -319,3 +320,10 @@ async def test_a_numeric_attribute_builds_no_filter_group(api_client: ApiClient,
     page = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
 
     assert page.groups == []
+
+
+async def test_an_attribute_the_owner_took_out_of_the_filters_builds_no_group(api_client: ApiClient) -> None:
+    """Any mirror is made of any blade, so the blade narrows nothing and is not in the sidebar."""
+    page = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert BLADE not in [group.attribute_id for group in page.groups]

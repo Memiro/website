@@ -54,6 +54,12 @@ class Attribute(Entity):
     kind: AttributeKind = AttributeKind.SELECT
     parent_ids: tuple[AttributeId, ...] = ()
     is_customer_changeable: bool = True
+    # A filter narrows the catalogue by what tells products apart. The blade
+    # is not such a thing: any mirror is made of any blade, and a "silver /
+    # graphite" group would hide products that do fit. Separate from
+    # customer-changeability: the mount and the heating are changed by the
+    # customer too, and narrowing by them makes sense.
+    is_filterable: bool = True
     created_at: datetime = field(kw_only=True)
     updated_at: datetime = field(kw_only=True)
 
