@@ -16,6 +16,9 @@ dependencies = [
     "alembic==1.19.1",
     "dishka==1.10.1",
     "opentelemetry-instrumentation-fastapi==0.65b0",
+    "django==6.1",
+    "psycopg[binary]==3.3.5",
+    "gunicorn==26.2.0",
 ]
 
 [project.optional-dependencies]

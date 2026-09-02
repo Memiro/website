@@ -35,14 +35,16 @@ forbidden_modules =
     dishka
     django
 
-; Interim half of decision 41: until presentation.django_admin and
-; bootstrap.django_admin exist (ticket 16), django appears nowhere at all.
-; Ticket 16 replaces this with the precise django_admin contracts.
-[importlinter:contract:no-django-yet]
-name = django is imported nowhere until the admin presentation lands
+; Decision 41: django belongs to the admin presentation and to the bootstrap
+; that assembles it; every other package of the context stays framework-free.
+[importlinter:contract:django-lives-in-the-admin]
+name = django is imported only by presentation.django_admin and bootstrap
 type = forbidden
 source_modules =
-    memiro
+    memiro.entities
+    memiro.application
+    memiro.adapters
+    memiro.presentation.fast_api
     memiro_common
 forbidden_modules =
     django
