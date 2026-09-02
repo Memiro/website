@@ -30,11 +30,17 @@ services:
       timeout: 3s
       retries: 15
 
-  # One-shot: the order of migration steps lives here, not in anyone's memory.
-  # Django's `migrate` for the service tables appends when the admin lands.
+  # One-shot: `migrations apply` runs alembic and then Django's own migrate,
+  # in that order; the owner's single account follows from the environment.
   migrations:
     <<: *app
-    command: ["memiro", "migrations", "apply"]
+    command: ["sh", "-c", "memiro migrations apply && memiro django ensure_superuser"]
+    environment:
+      APP_CONFIG_PATH: /app/.config/config.docker.toml
+      # No defaults on purpose: a contour without credentials must fail
+      # loudly in `ensure_superuser`, not quietly grow a guessable account.
+      MEMIRO_ADMIN_USERNAME: ${MEMIRO_ADMIN_USERNAME:?}
+      MEMIRO_ADMIN_PASSWORD: ${MEMIRO_ADMIN_PASSWORD:?}
     depends_on:
       db:
         condition: service_healthy
@@ -47,6 +53,24 @@ services:
         condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/internal/alive')"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  admin:
+    <<: *app
+    # Same image as the api, another command: WSGI behind gunicorn. The
+    # startup collectstatic refills the volume nginx serves after a rebuild.
+    command:
+      ["sh", "-c", "memiro django collectstatic --no-input && gunicorn --bind 0.0.0.0:8000 memiro.bootstrap.django_admin.wsgi:application"]
+    volumes:
+      - ../.config:/app/.config:ro
+      - adminstatic:/app/staticfiles
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"]
       interval: 2s
       timeout: 3s
       retries: 15
@@ -71,11 +95,15 @@ services:
       - "127.0.0.1:${MEMIRO_HTTP_PORT:-8080}:80"
     volumes:
       - ../.config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - adminstatic:/usr/share/nginx/admin-static:ro
     depends_on:
       api:
+        condition: service_healthy
+      admin:
         condition: service_healthy
       frontend:
         condition: service_healthy
 
 volumes:
   pgdata:
+  adminstatic:

@@ -26,11 +26,12 @@ just test      # unit + integration; базу поднимает сам
 just run       # API на 127.0.0.1:8000
 ```
 
-Живой контур целиком (Postgres → миграции → API → nginx):
+Живой контур целиком (Postgres → миграции → API и админка → nginx):
 
 ```sh
 just up
 curl http://127.0.0.1:8080/internal/alive
+open http://127.0.0.1:8080/admin/   # рабочее место владельца
 ```
 
 ## Команды
@@ -57,6 +58,7 @@ src/
     application/    # интеракторы и порты: один пакет — один сценарий
     adapters/       # реализации портов: db/ (SQLAlchemy, alembic)
     presentation/   # fast_api/: роутеры и обработчики ошибок
+                    # django_admin/: зеркала доменных таблиц и экраны владельца
     bootstrap/      # CLI, конфиг, DI (dishka)
   memiro_common/    # примитивы контекстов: Clock, UoW, AppError, @interactor
 tests/
@@ -71,7 +73,8 @@ application → entities`, и это машинный контракт — `.imp
 
 ## Путь запроса
 
-1. nginx отдаёт `/api/*` в uvicorn, `/internal/*` остаётся служебным.
+1. nginx отдаёт `/api/*` в uvicorn, `/admin/*` — в админку, `/internal/*`
+   остаётся служебным.
 2. Роутер `presentation/fast_api/routers/` берёт интерактор из dishka и в одну
    строку зовёт `execute` — логики в обработчике нет.
 3. Интерактор грузит агрегаты через порты-гейтвеи и передаёт решение домену.

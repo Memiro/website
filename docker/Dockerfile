@@ -11,4 +11,10 @@ COPY src ./src
 COPY README.md ./
 RUN uv sync --frozen --no-dev
 
+# The admin's static files are baked into the image; the compose volume
+# nginx reads is refreshed from here when the admin container starts.
+COPY .config ./.config
+RUN APP_CONFIG_PATH=/app/.config/config.docker.toml \
+    /app/.venv/bin/memiro django collectstatic --no-input
+
 ENV PATH="/app/.venv/bin:$PATH"
