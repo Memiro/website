@@ -39,6 +39,20 @@ export interface CategoryPage extends ListEnvelope<ProductSummary> {
   sort: CatalogSort;
 }
 
+export interface LandingSummary {
+  slug: string;
+  heading: string;
+}
+
+export interface Landing extends LandingSummary {
+  title: string;
+  description: string;
+  text: string;
+  category_slug: string;
+  category_name: string;
+  values: string[];
+}
+
 export interface Category {
   name: string;
   slug: string;
@@ -128,6 +142,14 @@ export class CatalogApi {
     return this.get(search === "" ? path : `${path}?${search}`, isCategoryPage);
   }
 
+  public async landings(): Promise<ListEnvelope<LandingSummary>> {
+    return this.get("/catalog/landings", listOf(isLandingSummary));
+  }
+
+  public async landing(slug: string): Promise<Landing> {
+    return this.get(`/catalog/landings/${encodeURIComponent(slug)}`, isLanding);
+  }
+
   public async product(slug: string): Promise<ProductCard> {
     return this.get(`/catalog/products/${encodeURIComponent(slug)}`, isProductCard);
   }
@@ -150,6 +172,24 @@ export function isCalculatedPrice(value: unknown): value is CalculatedPrice {
   return isVerdict(price.verdict)
     && isNullableString(price.total)
     && isArrayOf(price.selection_deltas, isSelectionDelta);
+}
+
+function isLandingSummary(value: unknown): value is LandingSummary {
+  const landing = asRecord(value);
+  return landing !== null && typeof landing.slug === "string" && typeof landing.heading === "string";
+}
+
+function isLanding(value: unknown): value is Landing {
+  const landing = asRecord(value);
+  if (landing === null || !isLandingSummary(value)) {
+    return false;
+  }
+  return typeof landing.title === "string"
+    && typeof landing.description === "string"
+    && typeof landing.text === "string"
+    && typeof landing.category_slug === "string"
+    && typeof landing.category_name === "string"
+    && isArrayOf(landing.values, (item): item is string => typeof item === "string");
 }
 
 function isCategoryPage(value: unknown): value is CategoryPage {

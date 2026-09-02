@@ -1,11 +1,13 @@
 ---
 import CatalogCard from "../components/CatalogCard.astro";
+import CatalogTiles from "../components/CatalogTiles.astro";
 import OfferNote from "../components/OfferNote.astro";
 import InquiryForm from "../islands/InquiryForm.vue";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { internalCatalogApi, type Category, type ProductSummary } from "../lib/catalog-api.ts";
+import { internalCatalogApi, type ProductSummary } from "../lib/catalog-api.ts";
 import { businessJsonLd } from "../lib/seo.ts";
 import { readSite, socialLinks } from "../lib/site-api.ts";
+import { catalogTiles, type Tile } from "../lib/tiles.ts";
 
 const SHOWCASE_SIZE = 4;
 const api = internalCatalogApi();
@@ -15,17 +17,17 @@ const social = contacts === null ? [] : socialLinks(contacts);
 
 // The storefront survives an API that is down: the home page is still the
 // studio's front door, and its content blocks simply stay away.
-let categories: Category[] = [];
+let tiles: Tile[] = [];
 let showcase: { categorySlug: string; product: ProductSummary }[] = [];
 try {
-  categories = (await api.categories()).items;
-  const [first] = categories;
+  tiles = await catalogTiles(api);
+  const [first] = (await api.categories()).items;
   if (first !== undefined) {
     const products = (await api.categoryProducts(first.slug)).items;
     showcase = products.slice(0, SHOWCASE_SIZE).map((product) => ({ categorySlug: first.slug, product }));
   }
 } catch {
-  categories = [];
+  tiles = [];
 }
 ---
 
@@ -47,21 +49,13 @@ try {
 
   <section class="strip"><div class="wrap strip-row"><div class="strip-item"><span class="n">01</span> Своё производство — цена без посредников</div><div class="strip-item"><span class="n">02</span> Зеркало по вашему эскизу</div><div class="strip-item"><span class="n">03</span> Комплектующие проверенных производителей</div><div class="strip-item"><span class="n">04</span> Доставка и монтаж по городу</div></div></section>
 
-  {categories.length > 0 && (
+  {tiles.length > 0 && (
     <section class="wrap section">
       <div class="section-head">
         <h2 class="h-section">Каталог</h2>
         <a class="link-underline" href="/catalog/">Все зеркала →</a>
       </div>
-      <div class="tiles-grid">
-        {categories.map((category, index) => (
-          <a class="tile" href={`/catalog/${category.slug}/`}>
-            <img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" loading="lazy" />
-            <span class="veil"></span>
-            <span class="label">{category.name}</span>
-          </a>
-        ))}
-      </div>
+      <CatalogTiles tiles={tiles} />
     </section>
   )}
 

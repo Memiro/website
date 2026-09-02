@@ -5,7 +5,14 @@ import httpx
 from fastapi import FastAPI
 from pydantic import TypeAdapter
 
-from memiro.application.browse_catalog import CatalogQuery, CategoriesList, ProductModel, ProductsList
+from memiro.application.browse_catalog import (
+    CatalogQuery,
+    CategoriesList,
+    LandingModel,
+    LandingsList,
+    ProductModel,
+    ProductsList,
+)
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
 from memiro.application.read_site import SiteModel
 from memiro.application.submit_inquiry import CreatedInquiry, SubmitInquiryForm
@@ -100,6 +107,15 @@ class ApiClient:
         )
         response = await self._client.get(f"/catalog/categories/{slug}/products", params=params)
         return ApiResponse(response, TypeAdapter(ProductsList))
+
+    async def list_landings(self) -> ApiResponse[LandingsList]:
+        """List the published landing pages."""
+        return ApiResponse(await self._client.get("/catalog/landings"), TypeAdapter(LandingsList))
+
+    async def read_landing(self, slug: str) -> ApiResponse[LandingModel]:
+        """Read one landing page by its public slug."""
+        response = await self._client.get(f"/catalog/landings/{slug}")
+        return ApiResponse(response, TypeAdapter(LandingModel))
 
     async def read_site(self) -> ApiResponse[SiteModel]:
         """Read the studio's contacts and the seller's requisites."""

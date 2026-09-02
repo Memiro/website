@@ -12,6 +12,14 @@ class CategoryNotFoundError(AppError):
 
 
 @app_error
+class LandingNotFoundError(AppError):
+    """Raised when the requested landing does not exist or is not published."""
+
+    code: ClassVar[str] = "LANDING_NOT_FOUND"
+    message: str = "Landing not found"
+
+
+@app_error
 class ProductNotFoundError(AppError):
     """Raised when the requested product does not exist."""
 

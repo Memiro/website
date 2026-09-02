@@ -114,6 +114,33 @@ categories_table = Table(
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
+# A landing is a manually whitelisted narrowing of one category with its own
+# address and its own copy (ADR-0003): the site indexes what the owner wrote,
+# never a query string a crawler assembled.
+landings_table = Table(
+    "landings",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("category_id", Uuid(), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False),
+    Column("slug", String(NAME_LENGTH), nullable=False, unique=True),
+    Column("title", String(NAME_LENGTH), nullable=False),
+    Column("heading", String(NAME_LENGTH), nullable=False),
+    Column("description", String(1_000), nullable=False),
+    Column("text", String(20_000), nullable=False),
+    Column("is_published", Boolean(), nullable=False),
+    Column("sort_order", Integer(), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
+landing_conditions_table = Table(
+    "landing_conditions",
+    mapper_registry.metadata,
+    Column("landing_id", Uuid(), ForeignKey("landings.id", ondelete="CASCADE"), primary_key=True),
+    Column("value_id", Uuid(), ForeignKey("attribute_values.id", ondelete="CASCADE"), primary_key=True),
+    Column("attribute_id", Uuid(), ForeignKey("attributes.id"), nullable=False),
+)
+
 # Studio contacts and seller requisites are the owner's data, not constants in
 # code: the showroom moves more often than a release goes out. Neither has an
 # aggregate — nothing about them has a rule — so they live on the read path

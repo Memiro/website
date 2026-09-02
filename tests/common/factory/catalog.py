@@ -62,6 +62,7 @@ SECOND_CATEGORY: CategoryId = _id("cabinets")
 FOREIGN_PRODUCT: ProductId = _id("mirror-cabinet")
 SECOND_PRODUCT: ProductId = _id("mirror-with-a-shelf")
 THIRD_PRODUCT: ProductId = _id("large-mirror")
+LANDING: UUID = _id("round-mirrors-landing")
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 

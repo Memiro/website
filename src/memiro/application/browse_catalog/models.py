@@ -82,6 +82,32 @@ class CategoriesList(BaseModel):
     page: int
 
 
+class LandingSummary(BaseModel):
+    """One landing as the storefront's tiles show it."""
+
+    slug: str
+    heading: str
+
+
+class LandingsList(BaseModel):
+    """One page of published landings."""
+
+    items: list[LandingSummary]
+    total: int
+    page: int
+
+
+class LandingModel(LandingSummary):
+    """One landing page: its own copy and the narrowing it stands for."""
+
+    title: str
+    description: str
+    text: str
+    category_slug: str
+    category_name: str
+    values: list[UUID]
+
+
 class ProductSummary(BaseModel):
     """The compact product projection used in a category listing."""
 

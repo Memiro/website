@@ -17,6 +17,8 @@ from memiro.adapters.db.tables import (
     attributes_table,
     categories_table,
     inquiries_table,
+    landing_conditions_table,
+    landings_table,
     pricing_settings_table,
     product_declared_values_table,
     product_images_table,
@@ -37,6 +39,7 @@ from tests.common.factory.catalog import (
     FOREIGN_PRODUCT,
     FRAME,
     HEATING,
+    LANDING,
     NO_FRAME,
     NO_HEATING,
     PRODUCT,
@@ -315,6 +318,33 @@ async def prime_site_data(engine: AsyncEngine, *, seller_name: str = "", ogrn: s
             update(seller_requisites_table)
             .where(seller_requisites_table.c.id == SELLER_REQUISITES_ID)
             .values(name=seller_name, ogrn=ogrn, updated_at=CATALOG_STAMP)
+        )
+
+
+async def prime_landing(engine: AsyncEngine, *, is_published: bool = True) -> None:
+    """Add the landing that narrows the demo category to round mirrors."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(landings_table),
+            [
+                {
+                    "id": LANDING,
+                    "category_id": CATEGORY,
+                    "slug": "kruglye-zerkala",
+                    "title": "Круглые зеркала на заказ — memiro",
+                    "heading": "Круглые зеркала",
+                    "description": "Круглые зеркала по вашим размерам.",
+                    "text": "Круг читается мягче прямоугольника.",  # noqa: RUF001
+                    "is_published": is_published,
+                    "sort_order": 1,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
+                }
+            ],
+        )
+        await connection.execute(
+            insert(landing_conditions_table),
+            [{"landing_id": LANDING, "attribute_id": SHAPE, "value_id": ROUND}],
         )
 
 

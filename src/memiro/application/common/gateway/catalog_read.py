@@ -5,6 +5,8 @@ from memiro.application.browse_catalog.models import (
     CatalogQuery,
     CategoryModel,
     FilterGroup,
+    LandingModel,
+    LandingSummary,
     PriceBounds,
     ProductModel,
     ProductSummary,
@@ -41,6 +43,16 @@ class CatalogReadGateway(Protocol):
     @abstractmethod
     async def price_bounds(self, category_slug: str, query: CatalogQuery) -> PriceBounds:
         """Read the cheapest and the dearest published product of the whole category."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_landings(self) -> tuple[list[LandingSummary], int]:
+        """List the published landings in the owner's order, with the total that match."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def read_landing(self, slug: str) -> LandingModel | None:
+        """Read one published landing with the values it narrows its category by."""
         raise NotImplementedError
 
     @abstractmethod

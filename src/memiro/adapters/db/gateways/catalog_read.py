@@ -9,6 +9,8 @@ from memiro.adapters.db.tables import (
     attribute_values_table,
     attributes_table,
     categories_table,
+    landing_conditions_table,
+    landings_table,
     product_declared_values_table,
     product_images_table,
     product_variants_table,
@@ -21,6 +23,8 @@ from memiro.application.browse_catalog.models import (
     CategoryModel,
     FilterGroup,
     FilterOption,
+    LandingModel,
+    LandingSummary,
     PriceBounds,
     ProductAttribute,
     ProductAttributeValue,
@@ -266,6 +270,57 @@ class SACatalogReadGateway(CatalogReadGateway):
         if sort is CatalogSort.DEAREST:
             return (products_table.c.price_from.desc().nulls_last(), products_table.c.name, products_table.c.id)
         return (products_table.c.name, products_table.c.id)
+
+    @override
+    async def list_landings(self) -> tuple[list[LandingSummary], int]:
+        """Read the published landings in the owner's order."""
+        rows = (
+            await self._session.execute(
+                select(landings_table.c.slug, landings_table.c.heading)
+                .where(landings_table.c.is_published)
+                .order_by(landings_table.c.sort_order, landings_table.c.id)
+            )
+        ).all()
+        landings = [LandingSummary(slug=row.slug, heading=row.heading) for row in rows]
+        return landings, len(landings)
+
+    @override
+    async def read_landing(self, slug: str) -> LandingModel | None:
+        """Read one published landing with its category and the values it narrows by."""
+        row = (
+            (
+                await self._session.execute(
+                    select(landings_table, categories_table.c.slug.label("category_slug"), categories_table.c.name)
+                    .join(categories_table, landings_table.c.category_id == categories_table.c.id)
+                    .where((landings_table.c.slug == slug) & landings_table.c.is_published)
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if row is None:
+            return None
+        values = (
+            (
+                await self._session.execute(
+                    select(landing_conditions_table.c.value_id).where(
+                        landing_conditions_table.c.landing_id == row["id"]
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return LandingModel(
+            slug=row["slug"],
+            heading=row["heading"],
+            title=row["title"],
+            description=row["description"],
+            text=row["text"],
+            category_slug=row["category_slug"],
+            category_name=row["name"],
+            values=list(values),
+        )
 
     @override
     async def read_product(self, slug: str) -> ProductModel | None:
