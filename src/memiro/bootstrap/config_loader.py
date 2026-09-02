@@ -7,9 +7,12 @@ from typing import Self
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
 from memiro.application.submit_inquiry import LegalConfig
+from memiro.presentation.django_admin.config import AdminConfig
 from memiro_common.observability.config import ObservabilityConfig
 
-# The only environment variable the application reads.
+# The only environment variable the application configuration reads; the
+# admin's own credentials are a deployment secret and stay out of git
+# (``ensure_superuser``).
 CONFIG_PATH_ENV = "APP_CONFIG_PATH"
 
 
@@ -21,6 +24,7 @@ class Config:
     observability: ObservabilityConfig
     legal: LegalConfig
     email: EmailConfig = field(default_factory=EmailConfig)
+    admin: AdminConfig = field(default_factory=AdminConfig)
 
     @classmethod
     def load(cls) -> Self:
@@ -32,4 +36,5 @@ class Config:
             observability=ObservabilityConfig(**data["observability"]),
             email=EmailConfig(**data.get("email", {})),
             legal=LegalConfig(**data["legal"]),
+            admin=AdminConfig.from_section(data.get("admin", {})),
         )
