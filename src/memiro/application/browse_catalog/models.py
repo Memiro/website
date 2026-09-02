@@ -1,14 +1,70 @@
 from decimal import Decimal
+from enum import StrEnum
 from typing import Final
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from memiro.entities.catalog.attribute.entity import AttributeKind
 
 # The storefront asks for whole catalogue lists; the envelope still names the
 # page it answers with, so pagination can arrive without a contract change.
 FIRST_PAGE: Final = 1
+PAGE_SIZE: Final = 24
+MAX_FILTER_VALUES: Final = 50
+
+
+class CatalogSort(StrEnum):
+    """The orders a visitor may put a category listing in."""
+
+    NAME = "name"
+    CHEAPEST = "cheapest"
+    DEAREST = "dearest"
+
+
+class CatalogQuery(BaseModel):
+    """How the visitor narrowed and ordered a category listing.
+
+    Values of one attribute widen the answer (OR), values of different
+    attributes narrow it (AND). A value that is not a filterable value of
+    this category is dropped: an old link is still a page of the category.
+    """
+
+    # The query string repeats ``?value=`` per checkbox, the way a GET form
+    # of the sidebar submits it.
+    model_config = ConfigDict(populate_by_name=True)
+
+    values: list[UUID] = Field(default_factory=list[UUID], max_length=MAX_FILTER_VALUES, alias="value")
+    price_min: Decimal | None = Field(default=None, ge=0)
+    price_max: Decimal | None = Field(default=None, ge=0)
+    sort: CatalogSort = CatalogSort.NAME
+    page: int = Field(default=FIRST_PAGE, ge=FIRST_PAGE)
+
+
+class FilterOption(BaseModel):
+    """One checkbox of a filter group: a dictionary row and how much it leaves."""
+
+    value_id: UUID
+    name: str
+    count: int
+    is_selected: bool
+
+
+class FilterGroup(BaseModel):
+    """One filterable attribute of the category with its rows."""
+
+    attribute_id: UUID
+    name: str
+    options: list[FilterOption]
+
+
+class PriceBounds(BaseModel):
+    """The cheapest and the dearest published product of the category, and what the visitor asked for."""
+
+    lowest: Decimal | None
+    highest: Decimal | None
+    selected_min: Decimal | None
+    selected_max: Decimal | None
 
 
 class CategoryModel(BaseModel):
@@ -36,11 +92,15 @@ class ProductSummary(BaseModel):
 
 
 class ProductsList(BaseModel):
-    """One page of a category's public products."""
+    """One page of a category's public products, with what narrows the rest of them."""
 
     items: list[ProductSummary]
     total: int
     page: int
+    pages: int = FIRST_PAGE
+    groups: list[FilterGroup] = Field(default_factory=list[FilterGroup])
+    price: PriceBounds | None = None
+    sort: CatalogSort = CatalogSort.NAME
 
 
 class ProductModel(ProductSummary):

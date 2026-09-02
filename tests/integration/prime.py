@@ -32,12 +32,18 @@ from tests.common.factory.catalog import (
     CATEGORY,
     CONTOUR,
     FOREIGN_PRODUCT,
+    FRAME,
     HEATING,
+    NO_FRAME,
     NO_HEATING,
     PRODUCT,
+    RECTANGULAR,
+    ROUND,
     SECOND_CATEGORY,
     SECOND_PRODUCT,
+    SHAPE,
     SILVER,
+    THIRD_PRODUCT,
     WITH_HEATING,
     WITH_MOUNT,
     demo_attributes,
@@ -230,6 +236,53 @@ async def prime_extra_product(engine: AsyncEngine, *, name: str, slug: str, is_p
                     "created_at": CATALOG_STAMP,
                     "updated_at": CATALOG_STAMP,
                 },
+            ],
+        )
+
+
+async def prime_priced_neighbours(engine: AsyncEngine) -> None:
+    """Add two published neighbours with prices and shapes of their own, so a listing has something to narrow.
+
+    The canonical mirror is rectangular and priceless; the round one is the
+    cheapest, the second rectangular one the dearest.
+    """
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(products_table),
+            [
+                {
+                    "id": SECOND_PRODUCT,
+                    "category_id": CATEGORY,
+                    "name": "Круглое зеркало",
+                    "slug": "krugloe-zerkalo",
+                    "description": "A round made-to-order mirror.",
+                    "is_published": True,
+                    "hides_calculated_price": False,
+                    "price_from": Money(amount=Decimal(4000)),
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
+                },
+                {
+                    "id": THIRD_PRODUCT,
+                    "category_id": CATEGORY,
+                    "name": "Большое зеркало",
+                    "slug": "bolshoe-zerkalo",
+                    "description": "A large made-to-order mirror.",
+                    "is_published": True,
+                    "hides_calculated_price": False,
+                    "price_from": Money(amount=Decimal(12000)),
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
+                },
+            ],
+        )
+        await connection.execute(
+            insert(product_declared_values_table),
+            [
+                {"product_id": SECOND_PRODUCT, "attribute_id": SHAPE, "value_id": ROUND, "quantity": None},
+                {"product_id": SECOND_PRODUCT, "attribute_id": FRAME, "value_id": NO_FRAME, "quantity": None},
+                {"product_id": THIRD_PRODUCT, "attribute_id": SHAPE, "value_id": RECTANGULAR, "quantity": None},
+                {"product_id": THIRD_PRODUCT, "attribute_id": FRAME, "value_id": ALUMINIUM, "quantity": None},
             ],
         )
 

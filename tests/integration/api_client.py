@@ -5,7 +5,7 @@ import httpx
 from fastapi import FastAPI
 from pydantic import TypeAdapter
 
-from memiro.application.browse_catalog import CategoriesList, ProductModel, ProductsList
+from memiro.application.browse_catalog import CatalogQuery, CategoriesList, ProductModel, ProductsList
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
 from memiro.application.submit_inquiry import CreatedInquiry, SubmitInquiryForm
 from memiro.presentation.fast_api.error_handlers import ErrorResponse
@@ -79,9 +79,25 @@ class ApiClient:
         """List public catalogue categories."""
         return ApiResponse(await self._client.get("/catalog/categories"), TypeAdapter(CategoriesList))
 
-    async def list_category_products(self, slug: str) -> ApiResponse[ProductsList]:
-        """List the public products of one category."""
-        response = await self._client.get(f"/catalog/categories/{slug}/products")
+    async def list_category_products(
+        self,
+        slug: str,
+        query: CatalogQuery | None = None,
+    ) -> ApiResponse[ProductsList]:
+        """List the public products of one category, narrowed and ordered as the visitor asked."""
+        asked = query or CatalogQuery()
+        params: list[tuple[str, str | int | float | bool | None]] = [("value", str(value)) for value in asked.values]
+        params.extend(
+            (name, str(value))
+            for name, value in (
+                ("price_min", asked.price_min),
+                ("price_max", asked.price_max),
+                ("sort", asked.sort.value),
+                ("page", asked.page),
+            )
+            if value is not None
+        )
+        response = await self._client.get(f"/catalog/categories/{slug}/products", params=params)
         return ApiResponse(response, TypeAdapter(ProductsList))
 
     async def read_product(self, slug: str) -> ApiResponse[ProductModel]:

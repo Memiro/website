@@ -10,6 +10,35 @@ export interface ListEnvelope<Item> {
   page: number;
 }
 
+export type CatalogSort = "name" | "cheapest" | "dearest";
+
+export interface FilterOption {
+  value_id: string;
+  name: string;
+  count: number;
+  is_selected: boolean;
+}
+
+export interface FilterGroup {
+  attribute_id: string;
+  name: string;
+  options: FilterOption[];
+}
+
+export interface PriceBounds {
+  lowest: string | null;
+  highest: string | null;
+  selected_min: string | null;
+  selected_max: string | null;
+}
+
+export interface CategoryPage extends ListEnvelope<ProductSummary> {
+  pages: number;
+  groups: FilterGroup[];
+  price: PriceBounds | null;
+  sort: CatalogSort;
+}
+
 export interface Category {
   name: string;
   slug: string;
@@ -94,8 +123,9 @@ export class CatalogApi {
     return this.get("/catalog/categories", listOf(isCategory));
   }
 
-  public async categoryProducts(slug: string): Promise<ListEnvelope<ProductSummary>> {
-    return this.get(`/catalog/categories/${encodeURIComponent(slug)}/products`, listOf(isProductSummary));
+  public async categoryProducts(slug: string, search = ""): Promise<CategoryPage> {
+    const path = `/catalog/categories/${encodeURIComponent(slug)}/products`;
+    return this.get(search === "" ? path : `${path}?${search}`, isCategoryPage);
   }
 
   public async product(slug: string): Promise<ProductCard> {
@@ -120,6 +150,53 @@ export function isCalculatedPrice(value: unknown): value is CalculatedPrice {
   return isVerdict(price.verdict)
     && isNullableString(price.total)
     && isArrayOf(price.selection_deltas, isSelectionDelta);
+}
+
+function isCategoryPage(value: unknown): value is CategoryPage {
+  const page = asRecord(value);
+  if (page === null || !listOf(isProductSummary)(value)) {
+    return false;
+  }
+  return typeof page.pages === "number"
+    && isCatalogSort(page.sort)
+    && isArrayOf(page.groups, isFilterGroup)
+    && (page.price === null || isPriceBounds(page.price));
+}
+
+function isCatalogSort(value: unknown): value is CatalogSort {
+  return value === "name" || value === "cheapest" || value === "dearest";
+}
+
+function isFilterGroup(value: unknown): value is FilterGroup {
+  const group = asRecord(value);
+  if (group === null) {
+    return false;
+  }
+  return typeof group.attribute_id === "string"
+    && typeof group.name === "string"
+    && isArrayOf(group.options, isFilterOption);
+}
+
+function isFilterOption(value: unknown): value is FilterOption {
+  const option = asRecord(value);
+  if (option === null) {
+    return false;
+  }
+  return typeof option.value_id === "string"
+    && typeof option.name === "string"
+    && typeof option.count === "number"
+    && typeof option.is_selected === "boolean";
+}
+
+function isPriceBounds(value: unknown): value is PriceBounds {
+  const bounds = asRecord(value);
+  if (bounds === null) {
+    return false;
+  }
+  return isNullableString(bounds.lowest)
+    && isNullableString(bounds.highest)
+    && isNullableString(bounds.selected_min)
+    && isNullableString(bounds.selected_max);
 }
 
 function listOf<Item>(isItem: (value: unknown) => value is Item): (value: unknown) => value is ListEnvelope<Item> {

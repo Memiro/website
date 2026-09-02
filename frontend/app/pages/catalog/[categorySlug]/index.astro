@@ -4,28 +4,50 @@ import CatalogCard from "../../../components/CatalogCard.astro";
 import NotFound from "../../../components/NotFound.astro";
 import OfferNote from "../../../components/OfferNote.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
-import { internalCatalogApi, type ListEnvelope, type ProductSummary } from "../../../lib/catalog-api.ts";
+import { internalCatalogApi, type CategoryPage } from "../../../lib/catalog-api.ts";
+import {
+  catalogSearch,
+  isNarrowed,
+  pageNumbers,
+  parseCatalogQuery,
+  SORT_LABELS,
+  VALUE_PARAM,
+  withoutPrice,
+  withoutValue,
+  withPage,
+} from "../../../lib/catalog-query.ts";
 import { foundOrNull } from "../../../lib/not-found.ts";
 import { productPlural } from "../../../lib/plural.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
-const products: ListEnvelope<ProductSummary> | null = await foundOrNull(categorySlug, (slug) =>
-  api.categoryProducts(slug),
+const path = `/catalog/${categorySlug}/`;
+const query = parseCatalogQuery(Astro.url.searchParams);
+const page: CategoryPage | null = await foundOrNull(categorySlug, (slug) =>
+  api.categoryProducts(slug, catalogSearch(query)),
 );
-if (products === null) {
+if (page === null) {
   Astro.response.status = 404;
 }
-const category = products === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
+const category = page === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
 const name = category?.name ?? "Каталог зеркал";
 const crumbs = [
   { href: "/", label: "Главная" },
   { href: "/catalog/", label: "Каталог" },
-  { href: `/catalog/${categorySlug}/`, label: name },
+  { href: path, label: name },
 ];
+const chips = (page?.groups ?? []).flatMap((group) =>
+  group.options.filter((option) => option.is_selected).map((option) => ({
+    label: option.name,
+    href: withoutValue(path, query, option.value_id),
+  })),
+);
+const narrowed = isNarrowed(query);
+// The hint inside the price field is a round sum, not a stored decimal.
+const roubles = (amount: string | null): string => (amount === null ? "" : String(Math.round(Number(amount))));
 ---
 
-{products === null ? (
+{page === null ? (
   <NotFound
     heading="Категория не найдена"
     lead="Возможно, в адресе опечатка или категория больше не производится."
@@ -35,17 +57,85 @@ const crumbs = [
   <BaseLayout
     title={`${name} — Memiro`}
     description={`Зеркала мастерской Memiro в категории «${name}»: размеры, опции и цена от минимальной конфигурации.`}
+    robots={narrowed || query.page > 1 ? "noindex, follow" : undefined}
     crumbs={crumbs}
   >
     <Breadcrumbs crumbs={crumbs} />
-    <div class="cat-head wrap"><h1 class="h-section">{name}</h1><span class="count">{products.total} {productPlural(products.total)}</span></div>
-    <div class="wrap section">
-      {products.items.length > 0 ? (
-        <div class="grid-3">{products.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div>
-      ) : (
-        <p class="sub">В этой категории пока нет опубликованных зеркал — загляните позже.</p>
-      )}
-      <OfferNote />
+    <div class="cat-head wrap"><h1 class="h-section">{name}</h1><span class="count">{page.total} {productPlural(page.total)}</span></div>
+
+    <div class="toolbar wrap">
+      <div class="chips">
+        <button class="chip-f only-mobile" type="button" data-drawer-open aria-expanded="false" aria-controls="filters-drawer">Фильтры{chips.length > 0 ? ` · ${chips.length}` : ""}</button>
+        {chips.map((chip) => <a class="chip-f on" href={chip.href} title="Убрать фильтр">{chip.label} ✕</a>)}
+        {(query.priceMin !== "" || query.priceMax !== "") && (
+          <a class="chip-f on" href={withoutPrice(path, query)} title="Убрать фильтр">Цена ✕</a>
+        )}
+        {narrowed && <a class="chip-f reset" href={path}>Сбросить всё</a>}
+      </div>
+      <label class="sort">Сортировка:
+        <select name="sort" form="catalog-filters" data-sort>
+          {SORT_LABELS.map((option) => <option value={option.value} selected={option.value === query.sort}>{option.label}</option>)}
+        </select>
+      </label>
+    </div>
+
+    <div class="layout wrap">
+      <aside class="filters" id="filters-drawer" data-drawer>
+        <div class="drawer-head only-mobile">
+          <span class="drawer-title">Фильтры</span>
+          <button class="drawer-close" type="button" data-drawer-close aria-label="Закрыть фильтры">✕</button>
+        </div>
+        <form id="catalog-filters" method="get" action={path}>
+          {page.groups.map((group) => (
+            <div class="fgroup">
+              <h3>{group.name}</h3>
+              {group.options.map((option) => (
+                <label class={option.count === 0 && !option.is_selected ? "off" : undefined}>
+                  <input type="checkbox" name={VALUE_PARAM} value={option.value_id} checked={option.is_selected} disabled={option.count === 0 && !option.is_selected} />
+                  {option.name}<span class="n">{option.count}</span>
+                </label>
+              ))}
+            </div>
+          ))}
+          {page.price !== null && (
+            <div class="fgroup fprice">
+              <h3>Цена, ₽</h3>
+              {/* The category bounds are a hint, not a limit: an old link may carry a price outside them. */}
+              <div class="price-pair">
+                <label>от <input type="number" inputmode="numeric" name="price_min" value={query.priceMin} placeholder={roubles(page.price.lowest)} aria-label="Цена от, ₽" /></label>
+                <label>до <input type="number" inputmode="numeric" name="price_max" value={query.priceMax} placeholder={roubles(page.price.highest)} aria-label="Цена до, ₽" /></label>
+              </div>
+            </div>
+          )}
+          <button class="btn btn-primary apply" type="submit">Показать {page.total} {productPlural(page.total)}</button>
+          {narrowed && <a class="reset-link" href={path}>Сбросить фильтры</a>}
+        </form>
+      </aside>
+      <div class="drawer-backdrop" data-drawer-close hidden></div>
+
+      <main>
+        {page.items.length > 0 ? (
+          <div class="grid-3">{page.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div>
+        ) : (
+          <p class="sub">{narrowed ? "Под эти фильтры ничего не подошло — снимите часть из них." : "В этой категории пока нет опубликованных зеркал — загляните позже."}</p>
+        )}
+
+        {page.pages > 1 && (
+          <nav class="pager" aria-label="Страницы каталога">
+            {pageNumbers(page.pages).map((number) => (
+              <a class={number === page.page ? "here" : undefined} href={withPage(path, query, number)} aria-current={number === page.page ? "page" : undefined}>{number}</a>
+            ))}
+          </nav>
+        )}
+
+        <OfferNote />
+      </main>
     </div>
   </BaseLayout>
 )}
+
+<script>
+  import { mountFilters } from "../../../islands/filters.ts";
+
+  mountFilters(document);
+</script>

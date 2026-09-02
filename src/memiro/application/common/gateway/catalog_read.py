@@ -1,7 +1,14 @@
 from abc import abstractmethod
 from typing import Protocol
 
-from memiro.application.browse_catalog.models import CategoryModel, ProductModel, ProductSummary
+from memiro.application.browse_catalog.models import (
+    CatalogQuery,
+    CategoryModel,
+    FilterGroup,
+    PriceBounds,
+    ProductModel,
+    ProductSummary,
+)
 
 
 class CatalogReadGateway(Protocol):
@@ -18,8 +25,22 @@ class CatalogReadGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    async def list_products_by_category(self, category_slug: str) -> tuple[list[ProductSummary], int]:
-        """List public products of a category slug, with the total that match."""
+    async def list_products_by_category(
+        self,
+        category_slug: str,
+        query: CatalogQuery,
+    ) -> tuple[list[ProductSummary], int]:
+        """List one page of the public products the query leaves, with the total that match."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def filter_groups(self, category_slug: str, query: CatalogQuery) -> list[FilterGroup]:
+        """Build the filter groups of a category, each option counted under the other groups."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def price_bounds(self, category_slug: str, query: CatalogQuery) -> PriceBounds:
+        """Read the cheapest and the dearest published product of the whole category."""
         raise NotImplementedError
 
     @abstractmethod
