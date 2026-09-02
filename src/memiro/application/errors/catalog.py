@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import Any, ClassVar, override
 
 from memiro_common.errors import AppError, app_error
 
@@ -39,3 +39,41 @@ class AttributeValueNotFoundError(AppError):
 
     code: ClassVar[str] = "ATTRIBUTE_VALUE_NOT_FOUND"
     message: str = "Attribute value not found"
+
+
+@app_error
+class AttributeNotFoundError(AppError):
+    """Raised when the requested attribute does not exist."""
+
+    code: ClassVar[str] = "ATTRIBUTE_NOT_FOUND"
+    message: str = "Attribute not found"
+
+
+@app_error
+class AttributeValueInUseError(AppError):
+    """Raised when a dictionary row leaving the set is declared by products."""
+
+    code: ClassVar[str] = "ATTRIBUTE_VALUE_IN_USE"
+    message: str = "A dictionary value declared by products cannot be removed"
+    products: tuple[str, ...] = ()
+
+    @property
+    @override
+    def meta(self) -> dict[str, Any] | None:
+        """Name the products the owner has to free before the row can go."""
+        return {"products": list(self.products)}
+
+
+@app_error
+class AttributeInUseError(AppError):
+    """Raised when an attribute being removed is declared by products."""
+
+    code: ClassVar[str] = "ATTRIBUTE_IN_USE"
+    message: str = "An attribute declared by products cannot be removed"
+    products: tuple[str, ...] = ()
+
+    @property
+    @override
+    def meta(self) -> dict[str, Any] | None:
+        """Name the products the owner has to free before the attribute can go."""
+        return {"products": list(self.products)}

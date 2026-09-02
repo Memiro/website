@@ -9,13 +9,20 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from memiro.adapters.db.errors import LOCK_NOT_AVAILABLE, RETRYABLE_VIOLATIONS, LockTimeoutError, sqlstate_of
 from memiro.application.errors.catalog import (
+    AttributeInUseError,
+    AttributeNotFoundError,
+    AttributeValueInUseError,
     AttributeValueNotFoundError,
     CategoryNotFoundError,
     ProductNotFoundError,
     VariantNotFoundError,
 )
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
-from memiro.entities.errors.attribute import InvalidFactorRateError
+from memiro.entities.errors.attribute import (
+    InvalidAttributeParentError,
+    InvalidAttributeValueSetError,
+    InvalidFactorRateError,
+)
 from memiro.entities.errors.inquiry import (
     ConsentRequiredError,
     EmptyInquiryError,
@@ -45,8 +52,11 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
     VariantNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,
+    AttributeNotFoundError: status.HTTP_404_NOT_FOUND,
     PricingSettingsNotFoundError: status.HTTP_404_NOT_FOUND,
     InvalidFactorRateError: status.HTTP_400_BAD_REQUEST,
+    InvalidAttributeParentError: status.HTTP_400_BAD_REQUEST,
+    InvalidAttributeValueSetError: status.HTTP_400_BAD_REQUEST,
     NegativeMeasureError: status.HTTP_400_BAD_REQUEST,
     EmptyDimensionsError: status.HTTP_400_BAD_REQUEST,
     InvalidSurchargeFactorError: status.HTTP_400_BAD_REQUEST,
@@ -55,6 +65,8 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     InvalidVariantSortOrderError: status.HTTP_400_BAD_REQUEST,
     InvalidQuantityError: status.HTTP_400_BAD_REQUEST,
     DuplicateVariantError: status.HTTP_409_CONFLICT,
+    AttributeValueInUseError: status.HTTP_409_CONFLICT,
+    AttributeInUseError: status.HTTP_409_CONFLICT,
     ConsentRequiredError: status.HTTP_400_BAD_REQUEST,
     EmptyInquiryError: status.HTTP_400_BAD_REQUEST,
     InquirySourceNotAcceptedError: status.HTTP_400_BAD_REQUEST,

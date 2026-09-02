@@ -25,3 +25,16 @@ MAX_PHONE_LENGTH = 32
 MAX_EMAIL_LENGTH = 254
 MAX_COMMENT_LENGTH = 2_000
 MAX_WISH_LENGTH = 1_000
+
+# The dictionary of one attribute is a card of the admin: the rows the owner
+# scrolls through, not a catalogue of its own.
+MAX_ATTRIBUTE_VALUES = 50
+
+# Dependence between attributes is read by the customer as "this appears when
+# that is chosen"; a chain no one can follow is not a form.
+MAX_ATTRIBUTE_PARENTS = 10
+
+# An input bound on a tariff, not a business rule: the studio's own prices are
+# far below it, and without it a hand-written ``1E+999999999`` reaches the
+# arithmetic and dies there as ``decimal.Overflow``.
+MAX_RATE_AMOUNT = Decimal(10_000_000)

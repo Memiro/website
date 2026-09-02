@@ -1,0 +1,51 @@
+import structlog
+
+from memiro.application.common.gateway.attribute import AttributeGateway
+from memiro.application.common.gateway.product import ProductGateway
+from memiro.application.errors.catalog import AttributeNotFoundError, AttributeValueInUseError
+from memiro.application.manage_attributes.shared import ValueSetForm, value_data
+from memiro.entities.common.identifiers import AttributeId
+from memiro_common.clock import Clock
+from memiro_common.interactor import interactor
+from memiro_common.logger import Logger
+from memiro_common.uow import UoW
+
+logger: Logger = structlog.get_logger(__name__)
+
+
+class ReplaceValuesForm(ValueSetForm):
+    """The dictionary of one attribute as the owner wants it to end up."""
+
+
+@interactor
+class ReplaceValues:
+    """Interactor for replacing the whole dictionary of one attribute."""
+
+    uow: UoW
+    attribute_gateway: AttributeGateway
+    product_gateway: ProductGateway
+    clock: Clock
+
+    async def execute(self, attribute_id: AttributeId, data: ReplaceValuesForm) -> None:
+        """Replace the values of one attribute and commit its transaction."""
+        logger.debug("Replacing the values of an attribute", attribute_id=attribute_id)
+        attribute = await self.attribute_gateway.get(attribute_id, for_update=True)
+        if attribute is None:
+            logger.warning("The values of an unknown attribute were replaced", attribute_id=attribute_id)
+            raise AttributeNotFoundError
+        values = value_data(data.values)
+        # The refusal is owed before the delete reaches storage: ``CASCADE`` on
+        # the referencing rows exists to clean up after a legal removal, not to
+        # decide whether one is legal.
+        removed = attribute.values_absent_from(values)
+        products = await self.product_gateway.names_declaring_values(removed)
+        if products:
+            logger.warning(
+                "A declared dictionary value was removed",
+                attribute_id=attribute_id,
+                product_count=len(products),
+            )
+            raise AttributeValueInUseError(products=tuple(products))
+        attribute.replace_values(values, clock=self.clock)
+        await self.uow.commit()
+        logger.info("Attribute values replaced", attribute_id=attribute_id, value_count=len(values))
