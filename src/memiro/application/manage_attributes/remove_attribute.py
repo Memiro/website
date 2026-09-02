@@ -3,7 +3,7 @@ import structlog
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import AttributeInUseError, AttributeNotFoundError
-from memiro.entities.catalog.attribute.attribute_service import ensure_no_attribute_depends_on
+from memiro.entities.catalog.attribute.attribute_service import names_depending_on
 from memiro.entities.common.identifiers import AttributeId
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
@@ -27,18 +27,21 @@ class RemoveAttribute:
         if attribute is None:
             logger.warning("An unknown attribute was removed", attribute_id=attribute_id)
             raise AttributeNotFoundError
-        ensure_no_attribute_depends_on(
+        dependents = names_depending_on(
             attribute_id,
             dictionary=await self.attribute_gateway.list_with_values(),
         )
         products = await self.product_gateway.names_declaring_attribute(attribute_id)
-        if products:
+        if products or dependents:
+            # One refusal for one question — "who still needs it" — so the
+            # owner reads a single list instead of two codes for one wall.
             logger.warning(
-                "A declared attribute was removed",
+                "An attribute still in use was removed",
                 attribute_id=attribute_id,
                 product_count=len(products),
+                dependent_count=len(dependents),
             )
-            raise AttributeInUseError(products=tuple(products))
+            raise AttributeInUseError(products=tuple(products), attributes=dependents)
         await self.uow.delete(attribute)
         await self.uow.commit()
         logger.info("Attribute removed", attribute_id=attribute_id)

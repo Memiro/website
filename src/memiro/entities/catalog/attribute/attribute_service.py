@@ -24,12 +24,9 @@ def ensure_parents_are_usable(
         raise InvalidAttributeParentError
 
 
-def ensure_no_attribute_depends_on(attribute_id: AttributeId, *, dictionary: Sequence[Attribute]) -> None:
-    """Refuse removing an attribute another one names as its parent."""
-    if any(attribute_id in attribute.parent_ids for attribute in dictionary):
-        raise InvalidAttributeParentError(
-            message="An attribute another attribute depends on cannot be removed",
-        )
+def names_depending_on(attribute_id: AttributeId, *, dictionary: Sequence[Attribute]) -> tuple[str, ...]:
+    """Name the attributes that would be left with a dangling parent if this one went."""
+    return tuple(attribute.name for attribute in dictionary if attribute_id in attribute.parent_ids)
 
 
 def _reaches(

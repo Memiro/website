@@ -65,6 +65,7 @@ attributes_table = Table(
     Column("kind", Enum(AttributeKind, name="attribute_kind", native_enum=False, length=NAME_LENGTH), nullable=False),
     Column("parent_ids", AttributeIdsType(), nullable=False),
     Column("is_customer_changeable", Boolean(), nullable=False),
+    Column("is_filterable", Boolean(), nullable=False, default=False),
     Column("sort_order", Integer(), nullable=False, default=0),
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),

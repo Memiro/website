@@ -86,7 +86,7 @@ def test_a_replacement_set_fails_if_it_names_a_row_of_another_attribute() -> Non
     """INVALID_ATTRIBUTE_VALUE_SET: a set may only keep rows this attribute owns."""
     backlight = demo_backlight()
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="only keep rows of this attribute"):
         backlight.replace_values([_row(_STRANGER, name="Чужая")], clock=LATER_CLOCK)
 
 
@@ -94,7 +94,7 @@ def test_a_replacement_set_fails_if_it_names_one_row_twice() -> None:
     """INVALID_ATTRIBUTE_VALUE_SET: one dictionary row cannot be two rows of the set."""
     backlight = demo_backlight()
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="name one dictionary row twice"):
         backlight.replace_values(
             [_row(CONTOUR, name="Контурная"), _row(CONTOUR, name="Контурная снова", sort_order=2)],
             clock=LATER_CLOCK,
@@ -105,7 +105,7 @@ def test_a_numeric_attribute_fails_if_its_set_does_not_hold_exactly_one_row() ->
     """INVALID_ATTRIBUTE_VALUE_SET: a numeric attribute charges by exactly one tariff."""
     cutouts = demo_cutouts()
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="exactly one tariff row"):
         cutouts.replace_values([], clock=LATER_CLOCK)
 
 
@@ -123,7 +123,7 @@ def test_a_refused_replacement_leaves_the_dictionary_untouched() -> None:
     backlight = demo_backlight()
     before = [value.name for value in backlight.values]
 
-    with pytest.raises(InvalidAttributeValueSetError):
+    with pytest.raises(InvalidAttributeValueSetError, match="only keep rows of this attribute"):
         backlight.replace_values([_row(_STRANGER, name="Чужая")], clock=LATER_CLOCK)
 
     assert [value.name for value in backlight.values] == before

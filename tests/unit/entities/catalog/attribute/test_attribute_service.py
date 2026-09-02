@@ -4,8 +4,8 @@ from uuid import uuid4
 import pytest
 
 from memiro.entities.catalog.attribute.attribute_service import (
-    ensure_no_attribute_depends_on,
     ensure_parents_are_usable,
+    names_depending_on,
 )
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.errors.attribute import InvalidAttributeParentError
@@ -91,12 +91,11 @@ def test_a_new_attribute_may_name_parents_before_it_has_an_identifier() -> None:
     )
 
 
-def test_an_attribute_nobody_depends_on_may_be_removed() -> None:
-    """Nothing names heating as a parent, so removing it leaves no dangling dependence."""
-    ensure_no_attribute_depends_on(HEATING, dictionary=demo_attributes())
+def test_nothing_depends_on_an_attribute_no_one_named_a_parent() -> None:
+    """Heating is nobody's parent, so removing it would leave no dangling dependence."""
+    assert names_depending_on(HEATING, dictionary=demo_attributes()) == ()
 
 
-def test_removal_fails_if_another_attribute_names_it_a_parent() -> None:
-    """INVALID_ATTRIBUTE_PARENT: heating depends on backlight, so backlight stays."""
-    with pytest.raises(InvalidAttributeParentError):
-        ensure_no_attribute_depends_on(BACKLIGHT, dictionary=demo_attributes())
+def test_an_attribute_names_the_dependants_that_keep_it_in_place() -> None:
+    """Heating depends on backlight, so backlight is told who still needs it."""
+    assert names_depending_on(BACKLIGHT, dictionary=demo_attributes()) == ("Подогрев",)

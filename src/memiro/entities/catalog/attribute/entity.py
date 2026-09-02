@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -42,7 +40,7 @@ class AttributeValue(Entity):
         """Tell whether this row names a feature the product actually has."""
         return not self.marks_absence
 
-    def restate(self, data: AttributeValueData) -> None:
+    def restate(self, data: "AttributeValueData") -> None:
         """Take the owner's new wording, tariff and place for this dictionary row."""
         self.name = data.name
         self.rate = data.rate
@@ -54,11 +52,10 @@ class AttributeValue(Entity):
 
 @dataclass(frozen=True, slots=True)
 class AttributeValueData:
-    """Owner-controlled fields of one dictionary row.
+    """Owner-controlled fields of one dictionary row."""
 
-    ``id`` is what tells an edit from an addition: a row the owner names keeps
-    the identifier products declare, a row without one is born here.
-    """
+    # ``id`` tells an edit from an addition: a row the owner names keeps the
+    # identifier products declare, a row without one is born here.
 
     id: AttributeValueId | None
     name: str
@@ -78,23 +75,23 @@ class CreateAttributeData:
     kind: AttributeKind
     parent_ids: tuple[AttributeId, ...]
     is_customer_changeable: bool
+    is_filterable: bool
     sort_order: int
     values: tuple[AttributeValueData, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class ChangeAttributeData:
-    """Owner-controlled root fields of an attribute being changed.
+    """Owner-controlled root fields of an attribute being changed."""
 
-    The category is absent by design: an attribute does not move between
-    sections of the catalogue, and the dictionary is replaced by its own
-    command.
-    """
+    # No category: an attribute does not move between sections of the
+    # catalogue, and the dictionary is replaced by its own command.
 
     name: str
     kind: AttributeKind
     parent_ids: tuple[AttributeId, ...]
     is_customer_changeable: bool
+    is_filterable: bool
     sort_order: int
 
 
@@ -114,6 +111,7 @@ class Attribute(Entity):
     kind: AttributeKind = AttributeKind.SELECT
     parent_ids: tuple[AttributeId, ...] = ()
     is_customer_changeable: bool = True
+    is_filterable: bool = False
     created_at: datetime = field(kw_only=True)
     updated_at: datetime = field(kw_only=True)
 
@@ -131,6 +129,7 @@ class Attribute(Entity):
         self.kind = data.kind
         self.parent_ids = tuple(data.parent_ids)
         self.is_customer_changeable = data.is_customer_changeable
+        self.is_filterable = data.is_filterable
         self.sort_order = data.sort_order
         self.updated_at = clock.now()
 
@@ -152,12 +151,9 @@ class Attribute(Entity):
         self.updated_at = clock.now()
 
     def values_absent_from(self, replacement: Sequence[AttributeValueData]) -> tuple[AttributeValueId, ...]:
-        """Tell which dictionary rows a replacement set would remove, refusing a set that is not ours.
-
-        The caller asks this before it asks storage who uses the rows, so the
-        refusal for an impossible set comes out ahead of the refusal for a row
-        products still declare.
-        """
+        """Tell which dictionary rows a replacement set would remove, refusing a set that is not ours."""
+        # Asked before storage is asked who uses the rows, so the refusal for
+        # an impossible set comes out ahead of the one for a row still declared.
         self._ensure_the_set_describes_this_attribute(replacement)
         kept = {value.id for value in replacement if value.id is not None}
         return tuple(value.id for value in self.values if value.id not in kept)
@@ -240,6 +236,7 @@ def attribute_factory(data: CreateAttributeData, *, clock: Clock) -> Attribute:
         kind=data.kind,
         parent_ids=tuple(data.parent_ids),
         is_customer_changeable=data.is_customer_changeable,
+        is_filterable=data.is_filterable,
         created_at=now,
         updated_at=now,
     )

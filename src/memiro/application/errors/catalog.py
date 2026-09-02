@@ -66,14 +66,15 @@ class AttributeValueInUseError(AppError):
 
 @app_error
 class AttributeInUseError(AppError):
-    """Raised when an attribute being removed is declared by products."""
+    """Raised when an attribute being removed is declared by products or depended on by attributes."""
 
     code: ClassVar[str] = "ATTRIBUTE_IN_USE"
-    message: str = "An attribute declared by products cannot be removed"
+    message: str = "An attribute something still uses cannot be removed"
     products: tuple[str, ...] = ()
+    attributes: tuple[str, ...] = ()
 
     @property
     @override
     def meta(self) -> dict[str, Any] | None:
-        """Name the products the owner has to free before the attribute can go."""
-        return {"products": list(self.products)}
+        """Name everything the owner has to free before the attribute can go."""
+        return {"products": list(self.products), "attributes": list(self.attributes)}
