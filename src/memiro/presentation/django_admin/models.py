@@ -1,3 +1,7 @@
+# django-stubs types every model field as a generic descriptor, and only its
+# mypy plugin solves the parameters; basedpyright sees `Unknown` on all 80 of
+# them. Spelling each field as `CharField[str, str]` would be the alternative.
+# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false
 """Mirrors of the domain tables: Django reads them, alembic owns them (ADR-0012).
 
 ``managed = False`` and an explicit ``db_table`` everywhere, ``DO_NOTHING`` on
@@ -49,7 +53,7 @@ class Category(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.name)
+        return self.name
 
 
 class Attribute(Mirror):
@@ -80,7 +84,7 @@ class Attribute(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.name)
+        return self.name
 
 
 class AttributeValue(Mirror):
@@ -108,7 +112,7 @@ class AttributeValue(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.name)
+        return self.name
 
 
 class Product(Mirror):
@@ -138,7 +142,7 @@ class Product(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.name)
+        return self.name
 
 
 class ProductImage(Mirror):
@@ -161,7 +165,7 @@ class ProductImage(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.key)
+        return self.key
 
 
 class ProductDeclaredValue(Mirror):
@@ -297,7 +301,7 @@ class Inquiry(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.name)
+        return self.name
 
 
 class InquiryItem(Mirror):
@@ -330,4 +334,4 @@ class InquiryItem(Mirror):
 
     @override
     def __str__(self) -> str:
-        return str(self.product_name)
+        return self.product_name

@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 from typing import Any, Self
 
+# The owner's credentials are a deployment secret, so they arrive as
+# environment variables and never through the TOML file that lives in git;
+# ``ensure_superuser`` is what reads them.
+USERNAME_ENV = "MEMIRO_ADMIN_USERNAME"
+PASSWORD_ENV = "MEMIRO_ADMIN_PASSWORD"  # noqa: S105  # nosec B105  # the name of the variable, not its value
+EMAIL_ENV = "MEMIRO_ADMIN_EMAIL"
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AdminConfig:

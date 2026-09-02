@@ -7,12 +7,18 @@ and the unique constraints. Defaults are not compared — they live in the
 domain, and the mirror never writes.
 """
 
+# django-stubs makes Field and InlineModelAdmin generic, but the runtime
+# classes are not subscriptable: the annotations must stay unevaluated.
+from __future__ import annotations
+
 from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from django.apps import apps
 from django.db import connections, models
+from django.db.models.fields import Field
+from django.db.models.fields.reverse_related import ForeignObjectRel
 from sqlalchemy import ARRAY, Connection, inspect
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.types import TypeEngine
@@ -54,39 +60,47 @@ def _coarse(declared: str) -> str:
 def _reflected_type(column_type: TypeEngine[Any]) -> str:
     """Spell a reflected type the way Django spells the same column."""
     if isinstance(column_type, ARRAY):
-        return f"{column_type.item_type}[]"
+        return f"{column_type.item_type}[]"  # pyright: ignore[reportUnknownMemberType]
     return str(column_type)
 
 
-def _mirrors() -> Iterator[Any]:
+def _column(field: Field[Any, Any] | ForeignObjectRel) -> str:
+    """Name the database column a mirror field stands for."""
+    assert isinstance(field, Field)
+    assert field.column is not None
+
+    return field.column
+
+
+def _mirrors() -> Iterator[type[models.Model]]:
     return iter(apps.get_app_config("memiro").get_models())
 
 
-def _mirror_columns(mirror: Any) -> dict[str, tuple[str, bool]]:
+def _mirror_columns(mirror: type[models.Model]) -> dict[str, tuple[str, bool]]:
     connection = connections["default"]
     return {
-        field.column: (_coarse(str(field.db_type(connection))), field.null)
+        _column(field): (_coarse(str(field.db_type(connection))), field.null)
         for field in mirror._meta.concrete_fields  # noqa: SLF001  # ``_meta`` is Django's documented model API
         if not isinstance(field, models.CompositePrimaryKey)
     }
 
 
-def _mirror_unique_constraints(mirror: Any) -> set[tuple[str, ...]]:
+def _mirror_unique_constraints(mirror: type[models.Model]) -> set[tuple[str, ...]]:
     meta = mirror._meta  # noqa: SLF001  # ``_meta`` is Django's documented model API
-    single = {(field.column,) for field in meta.concrete_fields if field.unique and not field.primary_key}
+    single = {(_column(field),) for field in meta.concrete_fields if field.unique and not field.primary_key}
     declared = {
-        tuple(meta.get_field(name).column for name in constraint.fields)
+        tuple(_column(meta.get_field(name)) for name in constraint.fields)
         for constraint in meta.constraints
         if isinstance(constraint, models.UniqueConstraint)
     }
     return single | declared
 
 
-def _mirror_primary_key(mirror: Any) -> tuple[str, ...]:
+def _mirror_primary_key(mirror: type[models.Model]) -> tuple[str, ...]:
     meta = mirror._meta  # noqa: SLF001  # ``_meta`` is Django's documented model API
     if isinstance(meta.pk, models.CompositePrimaryKey):
-        return tuple(meta.get_field(name).column for name in meta.pk.field_names)
-    return (meta.pk.column,)
+        return tuple(_column(meta.get_field(name)) for name in meta.pk.field_names)
+    return (_column(meta.pk),)
 
 
 @pytest.fixture(scope="session")
@@ -153,7 +167,7 @@ async def test_no_mirror_lets_django_migrate_or_delete_a_domain_row() -> None:
         for mirror in _mirrors()
         if mirror._meta.managed  # noqa: SLF001
         or any(
-            field.remote_field is None or field.remote_field.on_delete is not models.DO_NOTHING
+            field.remote_field.on_delete is not models.DO_NOTHING
             for field in mirror._meta.concrete_fields  # noqa: SLF001
             if isinstance(field, models.ForeignKey)
         )

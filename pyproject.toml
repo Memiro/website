@@ -29,6 +29,7 @@ lint = [
     "import-linter==2.13",
     "typos==1.49.0",
     "bandit==1.9.4",
+    "django-stubs==6.1.0",
 ]
 test = [
     "asgi-lifespan==2.1.0",
@@ -97,9 +98,6 @@ ignore = [
 # to document.
 "src/memiro/presentation/django_admin/models.py" = ["D106", "RUF001", "RUF002"]
 "src/memiro/presentation/django_admin/admin.py" = ["RUF002"]
-# A mirror class is `Any` however it is spelled — django ships no type
-# information — and the drift test says so instead of pretending otherwise.
-"tests/integration/admin/*.py" = ["ANN401"]
 # The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
 "src/memiro_common/interactor.py" = ["ANN401"]
 # Tests speak in asserts (S101); test databases are named with f-strings over
@@ -113,6 +111,11 @@ ignore = [
 [tool.mypy]
 files = ["src", "tests"]
 strict = true
+# django ships no type information; django-stubs supplies it, and its plugin
+# is what teaches mypy the model and manager types. The plugin imports the
+# settings module, so type checking reads APP_CONFIG_PATH like any other
+# process — `just lint` loads it from .env, CI passes it on the step.
+plugins = ["mypy_django_plugin.main"]
 enable_error_code = [
     "explicit-override",
     "ignore-without-code",
@@ -121,62 +124,19 @@ enable_error_code = [
     "unused-awaitable",
 ]
 
-# Django ships neither stubs nor a py.typed marker, so every name imported
-# from it arrives as `Any`. The framework-facing modules relax exactly the
-# strict rules an untyped base class breaks; the rest of the tree is untouched.
+# django-stubs makes ModelAdmin and TabularInline generic, but Django itself
+# does not implement __class_getitem__ on them: the parameter type-checkers
+# want cannot be written without a runtime TypeError.
 [[tool.mypy.overrides]]
-module = ["django.*"]
-ignore_missing_imports = true
+module = ["memiro.presentation.django_admin.admin"]
+disable_error_code = ["type-arg"]
 
-[[tool.mypy.overrides]]
-module = [
-    "memiro.bootstrap.django_admin.*",
-    "memiro.presentation.django_admin.*",
-    "tests.integration.admin.*",
-]
-disallow_subclassing_any = false
-warn_return_any = false
+[tool.django-stubs]
+django_settings_module = "memiro.bootstrap.django_admin.settings"
 
 [tool.basedpyright]
 include = ["src", "tests"]
 typeCheckingMode = "strict"
-
-# Django is untyped (see the mypy note above): inside the admin's own three
-# directories every name it hands out is `Unknown`, and the strict rules that
-# say so would drown the report. Everything else keeps them.
-[[tool.basedpyright.executionEnvironments]]
-root = "src/memiro/bootstrap/django_admin"
-reportMissingTypeStubs = "none"
-reportUntypedBaseClass = "none"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-reportUnknownArgumentType = "none"
-reportUnknownParameterType = "none"
-reportUnknownLambdaType = "none"
-reportUnannotatedClassAttribute = "none"
-
-[[tool.basedpyright.executionEnvironments]]
-root = "src/memiro/presentation/django_admin"
-reportMissingTypeStubs = "none"
-reportUntypedBaseClass = "none"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-reportUnknownArgumentType = "none"
-reportUnknownParameterType = "none"
-reportUnknownLambdaType = "none"
-reportUnannotatedClassAttribute = "none"
-
-[[tool.basedpyright.executionEnvironments]]
-root = "tests/integration/admin"
-extraPaths = [".", "src"]
-reportMissingTypeStubs = "none"
-reportUntypedBaseClass = "none"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-reportUnknownArgumentType = "none"
-reportUnknownParameterType = "none"
-reportUnknownLambdaType = "none"
-reportUnannotatedClassAttribute = "none"
 
 # The scan scope is given on the CLI (`bandit -r src` in `just static`); the
 # section must exist for `-c pyproject.toml` to resolve.

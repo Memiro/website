@@ -20,11 +20,7 @@ from memiro.adapters.db.config import DbConfig
 from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.django_admin.assembly import admin_settings
-from memiro.presentation.django_admin.config import AdminConfig
-from memiro.presentation.django_admin.management.commands.ensure_superuser import (
-    PASSWORD_ENV,
-    USERNAME_ENV,
-)
+from memiro.presentation.django_admin.config import PASSWORD_ENV, USERNAME_ENV, AdminConfig
 from memiro_common.observability.config import ObservabilityConfig
 from tests.integration.prime import (
     prime_dictionary,
