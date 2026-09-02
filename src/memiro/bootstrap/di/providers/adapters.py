@@ -21,6 +21,7 @@ from memiro.adapters.db.gateways.catalog_read import SACatalogReadGateway
 from memiro.adapters.db.gateways.inquiry import SAInquiryGateway
 from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro.adapters.db.gateways.product import SAProductGateway
+from memiro.adapters.db.gateways.site import SASiteGateway
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus, Transport, smtp_transport
 from memiro_common.clock import SystemClock
 from memiro_common.uow import UoW
@@ -36,6 +37,7 @@ class AdapterProvider(Provider):
     catalog_read_gateway = provide(WithParents[SACatalogReadGateway], scope=Scope.REQUEST)
     inquiry_gateway = provide(WithParents[SAInquiryGateway], scope=Scope.REQUEST)
     pricing_settings_gateway = provide(WithParents[SAPricingSettingsGateway], scope=Scope.REQUEST)
+    site_gateway = provide(WithParents[SASiteGateway], scope=Scope.REQUEST)
     inquiry_notification_bus = provide(WithParents[SMTPInquiryNotificationBus], scope=Scope.REQUEST)
 
     @provide(scope=Scope.APP)

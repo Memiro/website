@@ -2,17 +2,20 @@
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import SellerRequisites from "../../components/SellerRequisites.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { CONTACTS, SELLER_REQUISITES, SOCIAL_LINKS } from "../../lib/contacts.ts";
 import { businessJsonLd } from "../../lib/seo.ts";
+import { addressLine, readSite, socialLinks } from "../../lib/site-api.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/contacts/", label: "Контакты" }];
+const site = await readSite();
+const contacts = site.contacts;
+const social = contacts === null ? [] : socialLinks(contacts);
 ---
 
 <BaseLayout
   title="Контакты — Memiro"
   description="Адрес шоурума, телефон и почта мастерской интерьерных зеркал Memiro в Санкт-Петербурге."
   crumbs={crumbs}
-  jsonLd={[businessJsonLd(Astro.site)]}
+  jsonLd={[businessJsonLd(Astro.site, contacts)]}
 >
   <Breadcrumbs crumbs={crumbs} />
   <div class="page wrap">
@@ -21,29 +24,35 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/contacts/", la
 
     <div class="contacts-grid">
       <div class="contacts-info">
-        <div class="contact-block">
-          <h3>Шоурум</h3>
-          <p>{CONTACTS.address}</p>
-          <p class="muted">{CONTACTS.hours} — напишите или позвоните заранее, встретим и всё покажем.</p>
-        </div>
-        <div class="contact-block">
-          <h3>Телефон</h3>
-          <p><a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a></p>
-        </div>
-        <div class="contact-block">
-          <h3>Почта</h3>
-          <p><a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a></p>
-        </div>
-        {SOCIAL_LINKS.length > 0 && (
+        {contacts !== null && (
           <div class="contact-block">
-            <h3>Мессенджеры и соцсети</h3>
-            <div class="contact-links">{SOCIAL_LINKS.map((link) => <a href={link.href} target="_blank" rel="noopener">{link.label}</a>)}</div>
+            <h3>Шоурум</h3>
+            <p>{addressLine(contacts)}</p>
+            <p class="muted">{contacts.hours} — напишите или позвоните заранее, встретим и всё покажем.</p>
           </div>
         )}
-        {SELLER_REQUISITES.length > 0 && (
+        {contacts !== null && contacts.phone !== "" && (
+          <div class="contact-block">
+            <h3>Телефон</h3>
+            <p><a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a></p>
+          </div>
+        )}
+        {contacts !== null && contacts.email !== "" && (
+          <div class="contact-block">
+            <h3>Почта</h3>
+            <p><a href={`mailto:${contacts.email}`}>{contacts.email}</a></p>
+          </div>
+        )}
+        {social.length > 0 && (
+          <div class="contact-block">
+            <h3>Мессенджеры и соцсети</h3>
+            <div class="contact-links">{social.map((link) => <a href={link.value} target="_blank" rel="noopener">{link.label}</a>)}</div>
+          </div>
+        )}
+        {site.seller.length > 0 && (
           <div class="contact-block">
             <h3>Реквизиты продавца</h3>
-            <SellerRequisites />
+            <SellerRequisites seller={site.seller} />
           </div>
         )}
         <div class="contact-block">
@@ -51,8 +60,8 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/contacts/", la
         </div>
       </div>
       {/* The widget sets cookies of its own, so it arrives on the visitor's click — a local consent, not the analytics banner (ADR-0006). */}
-      {CONTACTS.mapEmbed !== "" && (
-        <div class="contacts-map" data-map data-map-src={CONTACTS.mapEmbed} data-map-title={`Шоурум memiro на карте: ${CONTACTS.address}`}>
+      {contacts !== null && contacts.map_embed !== "" && (
+        <div class="contacts-map" data-map data-map-src={contacts.map_embed} data-map-title={`Шоурум memiro на карте: ${addressLine(contacts)}`}>
           <div class="map-placeholder">
             <p>Карта загружается с сервиса Яндекс.Карт: он может сохранять файлы cookie в вашем браузере.</p>
             <button class="btn btn-primary" type="button" data-map-load>Показать карту</button>

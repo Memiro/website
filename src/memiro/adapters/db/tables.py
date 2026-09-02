@@ -114,6 +114,38 @@ categories_table = Table(
     Column("created_at", DateTime(timezone=True), nullable=False),
     Column("updated_at", DateTime(timezone=True), nullable=False),
 )
+# Studio contacts and seller requisites are the owner's data, not constants in
+# code: the showroom moves more often than a release goes out. Neither has an
+# aggregate — nothing about them has a rule — so they live on the read path
+# until the admin starts writing them.
+site_contacts_table = Table(
+    "site_contacts",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("city", String(NAME_LENGTH), nullable=False),
+    Column("street", String(NAME_LENGTH), nullable=False),
+    Column("phone", String(NAME_LENGTH), nullable=False),
+    Column("phone_display", String(NAME_LENGTH), nullable=False),
+    Column("email", String(NAME_LENGTH), nullable=False),
+    Column("hours", String(NAME_LENGTH), nullable=False),
+    Column("max_link", String(NAME_LENGTH), nullable=False),
+    Column("telegram", String(NAME_LENGTH), nullable=False),
+    Column("vk", String(NAME_LENGTH), nullable=False),
+    Column("map_embed", String(1_000), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
+seller_requisites_table = Table(
+    "seller_requisites",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("name", String(NAME_LENGTH), nullable=False),
+    Column("ogrn", String(NAME_LENGTH), nullable=False),
+    Column("inn", String(NAME_LENGTH), nullable=False),
+    Column("address", String(NAME_LENGTH), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+)
+
 product_images_table = Table(
     "product_images",
     mapper_registry.metadata,

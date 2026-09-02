@@ -1,7 +1,10 @@
 ---
-import { CONTACTS } from "../lib/contacts.ts";
 import { HEADER_LINKS, INQUIRY_LINK, isCurrentPath } from "../lib/navigation.ts";
+import type { Site } from "../lib/site-api.ts";
 
+interface Props { site: Site; }
+const { site } = Astro.props;
+const contacts = site.contacts;
 const pathname = Astro.url.pathname;
 ---
 
@@ -15,16 +18,19 @@ const pathname = Astro.url.pathname;
       })}
     </nav>
     <div class="nav-side">
-      <a class="nav-phone" href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a>
+      {contacts !== null && contacts.phone !== "" && <a class="nav-phone" href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>}
       <div class="icon-row">
-        {CONTACTS.maxLink !== "" && (
-          <a class="icon-btn" href={CONTACTS.maxLink} target="_blank" rel="noopener" title="MAX" aria-label="MAX">
+        {/* An unfilled link draws no icon: the storefront points nowhere. */}
+        {contacts !== null && contacts.max_link !== "" && (
+          <a class="icon-btn" href={contacts.max_link} target="_blank" rel="noopener" title="MAX" aria-label="MAX">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3.5 20.5l1.3-4A8.4 8.4 0 1 1 8 19.7l-4.5.8z" /><path d="M8.6 15V9l3.4 3.7L15.4 9v6" /></svg>
           </a>
         )}
-        <a class="icon-btn" href={CONTACTS.telegram} target="_blank" rel="noopener" title="Telegram" aria-label="Написать в Telegram">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3.5 20.5l1.3-4A8.4 8.4 0 1 1 8 19.7l-4.5.8z" /><path d="M8.6 15V9l3.4 3.7L15.4 9v6" /></svg>
-        </a>
+        {contacts !== null && contacts.telegram !== "" && (
+          <a class="icon-btn" href={contacts.telegram} target="_blank" rel="noopener" title="Telegram" aria-label="Написать в Telegram">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="M3.5 20.5l1.3-4A8.4 8.4 0 1 1 8 19.7l-4.5.8z" /><path d="M8.6 15V9l3.4 3.7L15.4 9v6" /></svg>
+          </a>
+        )}
       </div>
       {/* Not a shopping cart: the site reserves nothing and takes no payment. */}
       <a class="icon-btn counter-btn" href={INQUIRY_LINK.href} title={INQUIRY_LINK.label} aria-label={INQUIRY_LINK.label}>
@@ -39,8 +45,8 @@ const pathname = Astro.url.pathname;
   <nav class="mobile-menu" id="mobile-menu" aria-label="Меню сайта" hidden>
     {HEADER_LINKS.map((link) => <a href={link.href}>{link.label}</a>)}
     <a href={INQUIRY_LINK.href}>{INQUIRY_LINK.label}</a>
-    <a class="phone" href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a>
-    {CONTACTS.maxLink !== "" && <a href={CONTACTS.maxLink} target="_blank" rel="noopener">MAX</a>}
+    {contacts !== null && contacts.phone !== "" && <a class="phone" href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>}
+    {contacts !== null && contacts.max_link !== "" && <a href={contacts.max_link} target="_blank" rel="noopener">MAX</a>}
   </nav>
 </header>
 

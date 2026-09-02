@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { CONTACTS } from "../lib/contacts.ts";
+import { readSite } from "../lib/site-api.ts";
+const contacts = (await readSite()).contacts;
 ---
 
 <BaseLayout title="Ошибка сервера — Memiro" description="На сайте Memiro произошла ошибка. Мы уже разбираемся." robots="noindex, nofollow">
@@ -10,8 +11,8 @@ import { CONTACTS } from "../lib/contacts.ts";
     <p class="page-lead">Страница не открылась из-за ошибки сервера. Попробуйте обновить её через минуту или напишите нам — заявку примем вручную.</p>
     <div class="contact-links">
       <a href="/">На главную</a>
-      <a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a>
-      <a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a>
+      {contacts !== null && <a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>}
+      {contacts !== null && <a href={`mailto:${contacts.email}`}>{contacts.email}</a>}
     </div>
   </div>
 </BaseLayout>

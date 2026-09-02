@@ -11,6 +11,7 @@ from decimal import Decimal
 from sqlalchemy import delete, func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.adapters.db.gateways.site import SELLER_REQUISITES_ID, SITE_CONTACTS_ID
 from memiro.adapters.db.tables import (
     attribute_values_table,
     attributes_table,
@@ -20,6 +21,8 @@ from memiro.adapters.db.tables import (
     product_declared_values_table,
     product_images_table,
     products_table,
+    seller_requisites_table,
+    site_contacts_table,
 )
 from memiro.entities.common.identifiers import AttributeValueId
 from memiro.entities.common.measure import Millimeters
@@ -285,6 +288,33 @@ async def prime_priced_neighbours(engine: AsyncEngine) -> None:
                 {"product_id": THIRD_PRODUCT, "attribute_id": SHAPE, "value_id": RECTANGULAR, "quantity": None},
                 {"product_id": THIRD_PRODUCT, "attribute_id": FRAME, "value_id": ALUMINIUM, "quantity": None},
             ],
+        )
+
+
+async def prime_site_data(engine: AsyncEngine, *, seller_name: str = "", ogrn: str = "") -> None:
+    """Rewrite the single rows the migration created: the storefront is born with contacts, not with a seller."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            update(site_contacts_table)
+            .where(site_contacts_table.c.id == SITE_CONTACTS_ID)
+            .values(
+                city="Санкт-Петербург",
+                street="Александра Матросова, 4к2ж",
+                phone="+79812304050",
+                phone_display="+7 981 230-40-50",
+                email="memiro.ru@yandex.ru",
+                hours="Ежедневно, по предварительной записи",
+                max_link="",
+                telegram="https://t.me/memiro_shop",
+                vk="https://vk.com/memirospb",
+                map_embed="",
+                updated_at=CATALOG_STAMP,
+            )
+        )
+        await connection.execute(
+            update(seller_requisites_table)
+            .where(seller_requisites_table.c.id == SELLER_REQUISITES_ID)
+            .values(name=seller_name, ogrn=ogrn, updated_at=CATALOG_STAMP)
         )
 
 

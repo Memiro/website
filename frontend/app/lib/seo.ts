@@ -1,4 +1,5 @@
-import { CONTACTS, SITE_NAME } from "./contacts.ts";
+import { SITE_NAME } from "./site.ts";
+import type { Contacts } from "./site-api.ts";
 
 export interface Crumb {
   href: string;
@@ -28,9 +29,9 @@ export interface BusinessDocument {
   name: string;
   description: string;
   url: string | undefined;
-  telephone: string;
-  email: string;
-  address: PostalAddressDocument;
+  telephone: string | undefined;
+  email: string | undefined;
+  address: PostalAddressDocument | undefined;
   sameAs: string[] | undefined;
 }
 
@@ -68,21 +69,25 @@ export interface BreadcrumbsDocument {
 
 export type JsonLdDocument = BusinessDocument | ProductDocument | BreadcrumbsDocument;
 
-export function businessJsonLd(site: URL | undefined): BusinessDocument {
-  const sameAs = [CONTACTS.telegram, CONTACTS.vk, CONTACTS.maxLink].filter((link) => link !== "");
+// Markup never names a profile the owner has not entered: an invented link is
+// a worse answer to a search engine than no link at all.
+export function businessJsonLd(site: URL | undefined, contacts: Contacts | null): BusinessDocument {
+  const sameAs = [contacts?.telegram, contacts?.vk, contacts?.max_link].filter(
+    (link): link is string => link !== undefined && link !== "",
+  );
   return {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: SITE_NAME,
     description: "Производство интерьерных зеркал на заказ в Санкт-Петербурге: изготовление, доставка и установка.",
     url: absoluteUrl(site, "/") ?? undefined,
-    telephone: CONTACTS.phone,
-    email: CONTACTS.email,
-    address: {
+    telephone: contacts?.phone,
+    email: contacts?.email,
+    address: contacts === null ? undefined : {
       "@type": "PostalAddress",
       addressCountry: "RU",
-      addressLocality: CONTACTS.city,
-      streetAddress: CONTACTS.street,
+      addressLocality: contacts.city,
+      streetAddress: contacts.street,
     },
     sameAs: sameAs.length > 0 ? sameAs : undefined,
   };

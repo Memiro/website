@@ -8,6 +8,7 @@ from memiro.application.manage_products import (
     DuplicateVariantWithSize,
     RemoveVariant,
 )
+from memiro.application.read_site import ReadSite
 from memiro.application.submit_inquiry import SubmitInquiry
 
 
@@ -24,6 +25,7 @@ class InteractorProvider(Provider):
         CalculatePrice,
         ChangeVariant,
         DuplicateVariantWithSize,
+        ReadSite,
         RemoveVariant,
         SubmitInquiry,
     )

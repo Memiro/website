@@ -13,10 +13,33 @@ test("a page of a site without a configured origin gets no canonical address", (
   assert.equal(absoluteUrl(undefined, "/catalog/"), null);
 });
 
-test("the business document names the studio and its city", () => {
-  const business = businessJsonLd(SITE);
+test("the business document names the studio and the city its contacts give", () => {
+  /** @type {import("../app/lib/site-api.ts").Contacts} */
+  const contacts = {
+    city: "Санкт-Петербург",
+    street: "Александра Матросова, 4к2ж",
+    phone: "+79812304050",
+    phone_display: "+7 981 230-40-50",
+    email: "memiro.ru@yandex.ru",
+    hours: "",
+    max_link: "",
+    telegram: "https://t.me/memiro_shop",
+    vk: "",
+    map_embed: "",
+  };
+
+  const business = businessJsonLd(SITE, contacts);
+
   assert.equal(business["@type"], "LocalBusiness");
-  assert.equal(business.address.addressLocality, "Санкт-Петербург");
+  assert.equal(business.address?.addressLocality, "Санкт-Петербург");
+  assert.deepEqual(business.sameAs, ["https://t.me/memiro_shop"]);
+});
+
+test("a site whose contacts nobody entered publishes no address and no profiles", () => {
+  const business = businessJsonLd(SITE, null);
+
+  assert.equal(business.address, undefined);
+  assert.equal(business.sameAs, undefined);
 });
 
 test("a product without a precalculated price carries no offer", () => {

@@ -4,11 +4,14 @@ import OfferNote from "../components/OfferNote.astro";
 import InquiryForm from "../islands/InquiryForm.vue";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { internalCatalogApi, type Category, type ProductSummary } from "../lib/catalog-api.ts";
-import { CONTACTS, SOCIAL_LINKS } from "../lib/contacts.ts";
 import { businessJsonLd } from "../lib/seo.ts";
+import { readSite, socialLinks } from "../lib/site-api.ts";
 
 const SHOWCASE_SIZE = 4;
 const api = internalCatalogApi();
+const site = await readSite();
+const contacts = site.contacts;
+const social = contacts === null ? [] : socialLinks(contacts);
 
 // The storefront survives an API that is down: the home page is still the
 // studio's front door, and its content blocks simply stay away.
@@ -29,7 +32,7 @@ try {
 <BaseLayout
   title="Мастерская зеркал Memiro"
   description="Мастерская Memiro в Санкт-Петербурге: интерьерные зеркала на заказ любой сложности — изготовление, доставка и монтаж."
-  jsonLd={[businessJsonLd(Astro.site)]}
+  jsonLd={[businessJsonLd(Astro.site, contacts)]}
 >
   <section class="wrap hero">
     <div>
@@ -110,11 +113,13 @@ try {
         <span class="overline bare">Заявка</span>
         <h2 class="h-section">Не нашли подходящее?<br />Сделаем по вашему эскизу</h2>
         <p>Оставьте контакты — менеджер уточнит размеры, сроки и стоимость. Ответим в течение рабочего дня; оплаты и обязательств на сайте нет.</p>
-        <div class="inquiry-contacts">
-          <a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a>
-          <a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a>
-        </div>
-        <div class="contact-links">{SOCIAL_LINKS.map((link) => <a href={link.href} target="_blank" rel="noopener">{link.label}</a>)}</div>
+        {contacts !== null && (
+          <div class="inquiry-contacts">
+            <a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>
+            <a href={`mailto:${contacts.email}`}>{contacts.email}</a>
+          </div>
+        )}
+        <div class="contact-links">{social.map((link) => <a href={link.value} target="_blank" rel="noopener">{link.label}</a>)}</div>
       </div>
       <InquiryForm client:visible />
     </div>

@@ -1,9 +1,10 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { CONTACTS } from "../../lib/contacts.ts";
+import { readSite } from "../../lib/site-api.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/about/", label: "О нас" }];
+const email = (await readSite()).contacts?.email ?? "";
 ---
 
 <BaseLayout
@@ -29,7 +30,7 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/about/", label
 
     <div class="page-note">
       <h2>Сотрудничество</h2>
-      <p>Приглашаем к сотрудничеству дизайнеров и дизайн-студии: внимательные менеджеры, скидки и индивидуальный подход к каждому проекту. Напишите нам — <a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a>.</p>
+      <p>Приглашаем к сотрудничеству дизайнеров и дизайн-студии: внимательные менеджеры, скидки и индивидуальный подход к каждому проекту. Напишите нам{email === "" ? "" : " — "}{email !== "" && <a href={`mailto:${email}`}>{email}</a>}.</p>
     </div>
   </div>
 </BaseLayout>

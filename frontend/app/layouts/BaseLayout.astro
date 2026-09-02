@@ -3,8 +3,9 @@ import "../styles/global.css";
 import CookieBanner from "../components/CookieBanner.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
-import { SITE_NAME } from "../lib/contacts.ts";
 import { absoluteUrl, breadcrumbsJsonLd, type Crumb, type JsonLdDocument } from "../lib/seo.ts";
+import { SITE_NAME } from "../lib/site.ts";
+import { readSite } from "../lib/site-api.ts";
 
 interface Props {
   title: string;
@@ -20,6 +21,7 @@ const { title, description, robots, ogType = "website", ogImage = "/img/hero-1.j
 const canonical = absoluteUrl(Astro.site, Astro.url.pathname);
 const image = absoluteUrl(Astro.site, ogImage);
 const documents = crumbs.length > 0 ? [...jsonLd, breadcrumbsJsonLd(Astro.site, crumbs)] : jsonLd;
+const site = await readSite();
 ---
 
 <!doctype html>
@@ -43,11 +45,11 @@ const documents = crumbs.length > 0 ? [...jsonLd, breadcrumbsJsonLd(Astro.site, 
     {documents.map((document) => <script is:inline type="application/ld+json" set:html={JSON.stringify(document)} />)}
   </head>
   <body>
-    <SiteHeader />
+    <SiteHeader site={site} />
     <main>
       <slot />
     </main>
-    <SiteFooter />
+    <SiteFooter site={site} />
     <CookieBanner />
   </body>
 </html>

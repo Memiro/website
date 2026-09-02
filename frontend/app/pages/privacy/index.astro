@@ -2,10 +2,15 @@
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import SellerRequisites from "../../components/SellerRequisites.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { CONTACTS } from "../../lib/contacts.ts";
 import { CONSENT_VERSION } from "../../lib/legal.ts";
+import { readSite } from "../../lib/site-api.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/privacy/", label: "Политика обработки персональных данных" }];
+const site = await readSite();
+const contacts = site.contacts;
+const phone = contacts?.phone ?? "";
+const phoneDisplay = contacts?.phone_display ?? "";
+const email = contacts?.email ?? "";
 ---
 
 <BaseLayout
@@ -22,10 +27,10 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/privacy/", lab
     <section class="legal-note">
       <h2>1. Оператор</h2>
       <p>Оператором персональных данных является продавец, указанный ниже.</p>
-      <SellerRequisites />
+      <SellerRequisites seller={site.seller} />
       <ul class="legal-contacts">
-        <li><span class="seller-label">Телефон:</span> <a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a></li>
-        <li><span class="seller-label">Электронная почта:</span> <a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a></li>
+        <li><span class="seller-label">Телефон:</span> <a href={`tel:${phone}`}>{phoneDisplay}</a></li>
+        <li><span class="seller-label">Электронная почта:</span> <a href={`mailto:${email}`}>{email}</a></li>
       </ul>
       <p>Политика составлена в соответствии со ст. 18.1 Федерального закона от 27.07.2006 № 152-ФЗ «О персональных данных» и описывает, какие данные посетителей сайта мы получаем, зачем и как долго их храним.</p>
     </section>
@@ -83,7 +88,7 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/privacy/", lab
     <section class="legal-note">
       <h2>8. Ваши права</h2>
       <p>Вы вправе получить сведения об обработке ваших персональных данных, потребовать их уточнения, блокирования или уничтожения, если они неполны, устарели, неточны либо получены незаконно, а также отозвать согласие (ст. 14, ч. 2 ст. 9 152-ФЗ).</p>
-      <p>Для этого напишите на <a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a> или позвоните по телефону <a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a>. Мы отвечаем в срок, установленный законом. Отзыв согласия прекращает обработку и означает, что мы больше не сможем связаться с вами по оставленной заявке.</p>
+      <p>Для этого напишите на <a href={`mailto:${email}`}>{email}</a> или позвоните по телефону <a href={`tel:${phone}`}>{phoneDisplay}</a>. Мы отвечаем в срок, установленный законом. Отзыв согласия прекращает обработку и означает, что мы больше не сможем связаться с вами по оставленной заявке.</p>
     </section>
 
     <section class="legal-note">
@@ -101,7 +106,7 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/privacy/", lab
       <p>Отмечая чекбокс и отправляя форму на сайте memiro.ru, я, действуя свободно, своей волей и в своём интересе, даю оператору, указанному в разделе 1 настоящей политики, согласие на обработку моих персональных данных: имени, номера телефона, адреса электронной почты, текста комментария и состава подобранных мной товаров.</p>
       <p>Согласие даётся на совершение следующих действий: сбор, запись, систематизация, накопление, хранение, уточнение (обновление, изменение), извлечение, использование, передача (предоставление, доступ) лицам, привлекаемым к исполнению моей заявки, обезличивание, блокирование, удаление и уничтожение — как автоматизированным, так и неавтоматизированным способом.</p>
       <p>Цель обработки: связь со мной по оставленной заявке, расчёт стоимости, заключение и исполнение договора на изготовление, доставку и установку изделия.</p>
-      <p>Согласие действует до его отзыва. Отозвать согласие можно письменно на <a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a>; обработка прекращается в сроки, установленные 152-ФЗ.</p>
+      <p>Согласие действует до его отзыва. Отозвать согласие можно письменно на <a href={`mailto:${email}`}>{email}</a>; обработка прекращается в сроки, установленные 152-ФЗ.</p>
     </section>
   </div>
 </BaseLayout>

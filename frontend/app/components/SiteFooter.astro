@@ -1,7 +1,12 @@
 ---
 import SellerRequisites from "./SellerRequisites.astro";
-import { CONTACTS, SOCIAL_LINKS } from "../lib/contacts.ts";
 import { FOOTER_CATALOG_LINKS, FOOTER_CUSTOMER_LINKS, FOOTER_LEGAL_LINKS } from "../lib/navigation.ts";
+import { addressLine, socialLinks, type Site } from "../lib/site-api.ts";
+
+interface Props { site: Site; }
+const { site } = Astro.props;
+const contacts = site.contacts;
+const social = contacts === null ? [] : socialLinks(contacts);
 ---
 
 <footer class="footer">
@@ -21,17 +26,17 @@ import { FOOTER_CATALOG_LINKS, FOOTER_CUSTOMER_LINKS, FOOTER_LEGAL_LINKS } from 
     <div>
       <h4>Контакты</h4>
       <ul>
-        <li><a href={`tel:${CONTACTS.phone}`}>{CONTACTS.phoneDisplay}</a></li>
-        <li><a href={`mailto:${CONTACTS.email}`}>{CONTACTS.email}</a></li>
-        {SOCIAL_LINKS.map((link) => <li><a href={link.href} target="_blank" rel="noopener">{link.label}</a></li>)}
-        <li>{CONTACTS.address}</li>
+        {contacts !== null && contacts.phone !== "" && <li><a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a></li>}
+        {contacts !== null && contacts.email !== "" && <li><a href={`mailto:${contacts.email}`}>{contacts.email}</a></li>}
+        {social.map((link) => <li><a href={link.value} target="_blank" rel="noopener">{link.label}</a></li>)}
+        {contacts !== null && <li>{addressLine(contacts)}</li>}
       </ul>
-      <SellerRequisites />
+      <SellerRequisites seller={site.seller} />
     </div>
   </div>
   <div class="wrap footer-bottom">
     <span>© memiro, 2026</span>
     {FOOTER_LEGAL_LINKS.map((link) => <a href={link.href}>{link.label}</a>)}
-    <span>{CONTACTS.city}</span>
+    <span>{contacts?.city ?? "Санкт-Петербург"}</span>
   </div>
 </footer>

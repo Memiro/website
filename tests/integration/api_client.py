@@ -7,6 +7,7 @@ from pydantic import TypeAdapter
 
 from memiro.application.browse_catalog import CatalogQuery, CategoriesList, ProductModel, ProductsList
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
+from memiro.application.read_site import SiteModel
 from memiro.application.submit_inquiry import CreatedInquiry, SubmitInquiryForm
 from memiro.presentation.fast_api.error_handlers import ErrorResponse
 from memiro.presentation.fast_api.routers.health import HealthStatus
@@ -99,6 +100,10 @@ class ApiClient:
         )
         response = await self._client.get(f"/catalog/categories/{slug}/products", params=params)
         return ApiResponse(response, TypeAdapter(ProductsList))
+
+    async def read_site(self) -> ApiResponse[SiteModel]:
+        """Read the studio's contacts and the seller's requisites."""
+        return ApiResponse(await self._client.get("/site"), TypeAdapter(SiteModel))
 
     async def read_product(self, slug: str) -> ApiResponse[ProductModel]:
         """Read one public product card by its slug."""

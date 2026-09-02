@@ -1,10 +1,13 @@
 ---
-import { SELLER_REQUISITES } from "../lib/contacts.ts";
+import type { Requisite } from "../lib/site-api.ts";
+
+interface Props { seller: Requisite[]; }
+const { seller } = Astro.props;
 ---
 
-{SELLER_REQUISITES.length > 0 && (
+{seller.length > 0 && (
   <ul class="seller-requisites">
-    {SELLER_REQUISITES.map((requisite) => (
+    {seller.map((requisite) => (
       <li>{requisite.label !== "" && <span class="seller-label">{requisite.label}:</span>}{requisite.label !== "" ? " " : ""}{requisite.value}</li>
     ))}
   </ul>
