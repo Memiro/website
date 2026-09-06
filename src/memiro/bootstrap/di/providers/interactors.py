@@ -15,6 +15,7 @@ from memiro.application.manage_products import (
     DuplicateVariantWithSize,
     RemoveVariant,
 )
+from memiro.application.reprice_products import RepriceProducts
 from memiro.application.submit_inquiry import SubmitInquiry
 
 
@@ -37,5 +38,6 @@ class InteractorProvider(Provider):
         ChangeVariant,
         DuplicateVariantWithSize,
         RemoveVariant,
+        RepriceProducts,
         SubmitInquiry,
     )

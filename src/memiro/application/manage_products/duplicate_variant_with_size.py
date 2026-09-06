@@ -5,9 +5,10 @@ from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import MAX_SIDE_MM, MIN_SIDE_MM
+from memiro.application.common.variant_pricing import settled_variant_price
 from memiro.application.errors.catalog import ProductNotFoundError, VariantNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
-from memiro.application.manage_products.shared import CreatedVariant, variant_price
+from memiro.application.manage_products.shared import CreatedVariant
 from memiro.entities.catalog.product.entity import VariantData
 from memiro.entities.common.identifiers import ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
@@ -65,7 +66,7 @@ class DuplicateVariantWithSize:
             overrides=variant.overrides,
             sort_order=variant.sort_order,
         )
-        price = variant_price(
+        price = settled_variant_price(
             duplicate_data,
             product=product,
             attributes=attributes,

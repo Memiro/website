@@ -53,6 +53,12 @@ class SAProductGateway(ProductGateway):
         return result.scalar_one_or_none()
 
     @override
+    async def all_ids(self) -> Sequence[ProductId]:
+        """Read the identifiers of the whole catalogue in the one order that cannot repeat itself."""
+        result = await self._session.execute(select(products_table.c.id).order_by(products_table.c.id))
+        return result.scalars().all()
+
+    @override
     async def names_declaring_values(self, value_ids: Collection[AttributeValueId]) -> Sequence[str]:
         """Read the names behind the declarations of these dictionary rows."""
         if not value_ids:

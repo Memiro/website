@@ -1,5 +1,6 @@
 import structlog
 
+from memiro.application.common.event import EventBus, TariffChanged
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import AttributeValueInUseError
@@ -24,6 +25,7 @@ class ReplaceValues:
     uow: UoW
     attribute_gateway: AttributeGateway
     product_gateway: ProductGateway
+    event_bus: EventBus
     clock: Clock
 
     async def execute(self, attribute_id: AttributeId, data: ReplaceValuesForm) -> None:
@@ -45,4 +47,5 @@ class ReplaceValues:
             raise AttributeValueInUseError(products=tuple(products))
         attribute.replace_values(values, clock=self.clock)
         await self.uow.commit()
+        await self.event_bus.publish(TariffChanged(attribute_id=attribute_id))
         logger.info("Attribute values replaced", attribute_id=attribute_id, value_count=len(values))
