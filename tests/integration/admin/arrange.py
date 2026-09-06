@@ -16,11 +16,12 @@ from memiro.application.manage_pricing_settings import (
     ChangePricingSettingsForm,
     SizeSurchargeRowForm,
 )
+from memiro.application.manage_products import AddVariant, AddVariantForm, RemoveVariant
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, VariantId
 from memiro.presentation.django_admin.bridge import bridge
-from tests.common.factory.catalog import CATEGORY
+from tests.common.factory.catalog import CATEGORY, PRODUCT
 
 INLINE_PREFIX = "values"
 
@@ -247,3 +248,27 @@ def rendered_form(shown: str) -> dict[str, str]:
             continue
         posted[name.group(1)] = unescape(value.group(1)) if value else ""
     return posted
+
+
+def arranged_variant(*, width_mm: int, height_mm: int) -> VariantId:
+    """Put one precalculated variant on the demo product through its own command."""
+    form = AddVariantForm(width_mm=width_mm, height_mm=height_mm, overrides=[], sort_order=0)
+    return bridge().call(lambda scope: _added(scope, form))
+
+
+def removed_variant(variant_id: VariantId) -> None:
+    """Take the arranged variant off the demo product again: the admin's database outlives one test."""
+    bridge().call(lambda scope: _removed(scope, variant_id))
+
+
+async def _added(scope: AsyncContainer, form: AddVariantForm) -> VariantId:
+    """Run the adding interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(AddVariant)
+    created = await interactor.execute(PRODUCT, form)
+    return created.id
+
+
+async def _removed(scope: AsyncContainer, variant_id: VariantId) -> None:
+    """Run the removing interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(RemoveVariant)
+    await interactor.execute(PRODUCT, variant_id)

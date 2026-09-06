@@ -3,6 +3,7 @@ from decimal import Decimal
 import structlog
 from pydantic import BaseModel, Field
 
+from memiro.application.common.event import EventBus, PricingSettingsChanged
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.input_limits import (
     MAX_AREA_M2,
@@ -56,6 +57,7 @@ class ChangePricingSettings:
 
     uow: UoW
     pricing_settings_gateway: PricingSettingsGateway
+    event_bus: EventBus
     clock: Clock
 
     async def execute(self, data: ChangePricingSettingsForm) -> None:
@@ -85,4 +87,5 @@ class ChangePricingSettings:
             clock=self.clock,
         )
         await self.uow.commit()
+        await self.event_bus.publish(PricingSettingsChanged(pricing_settings_id=settings.id))
         logger.info("Pricing settings changed", surcharge_count=len(data.surcharges))

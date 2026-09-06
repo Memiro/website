@@ -3,9 +3,10 @@ import structlog
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.gateway.product import ProductGateway
+from memiro.application.common.variant_pricing import settled_variant_price
 from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
-from memiro.application.manage_products.shared import CreatedVariant, VariantForm, variant_data, variant_price
+from memiro.application.manage_products.shared import CreatedVariant, VariantForm, variant_data
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
@@ -42,7 +43,7 @@ class AddVariant:
             raise PricingSettingsNotFoundError
         attributes = await self.attribute_gateway.list_with_values()
         variant = variant_data(data, product=product, attributes=attributes)
-        price = variant_price(
+        price = settled_variant_price(
             variant,
             product=product,
             attributes=attributes,

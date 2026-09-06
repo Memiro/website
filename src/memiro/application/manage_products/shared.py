@@ -11,10 +11,6 @@ from memiro.entities.catalog.attribute.entity import Attribute
 from memiro.entities.catalog.product.entity import DeclaredValue, Product, VariantData
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
-from memiro.entities.common.money import Money
-from memiro.entities.errors.product import InvalidVariantConfigurationError
-from memiro.entities.pricing.pricing_service import is_product_priceable, price_product
-from memiro.entities.pricing.pricing_settings import PricingSettings
 
 
 def _overrides(
@@ -103,26 +99,3 @@ def variant_data(
         overrides=_overrides(product, attributes, form.overrides),
         sort_order=form.sort_order,
     )
-
-
-def variant_price(
-    data: VariantData,
-    *,
-    product: Product,
-    attributes: Sequence[Attribute],
-    settings: PricingSettings,
-) -> Money:
-    """Price a variant through the owner path of the single pricing service."""
-    selections = {override.attribute_id: override.chosen for override in data.overrides}
-    if not is_product_priceable(product, attributes, selections):
-        raise InvalidVariantConfigurationError(
-            message="A variant configuration must contain every applicable paid value",
-        )
-    quotation = price_product(
-        product=product,
-        attributes=attributes,
-        settings=settings,
-        dimensions=data.dimensions,
-        selections=selections,
-    )
-    return quotation.settled_total()

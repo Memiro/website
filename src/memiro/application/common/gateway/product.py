@@ -28,6 +28,15 @@ class ProductGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def all_ids(self) -> Sequence[ProductId]:
+        """List the identifier of every product, in one stable order.
+
+        The whole catalogue is what repricing walks: it takes no shortcut
+        through the products a change could have touched (ADR-0014).
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def names_declaring_values(self, value_ids: Collection[AttributeValueId]) -> Sequence[str]:
         """Name the products that declare any of these dictionary rows.
 

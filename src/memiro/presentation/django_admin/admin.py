@@ -18,7 +18,7 @@ from functools import partial
 from typing import Any, cast, override
 
 from django.contrib import admin
-from django.db.models import Model
+from django.db.models import Model, QuerySet
 from django.forms import BaseInlineFormSet, Form, ModelForm
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
@@ -49,6 +49,7 @@ from memiro.presentation.django_admin.models import (
     SizeSurcharge,
 )
 from memiro.presentation.django_admin.pricing_settings_card import restate_pricing_settings
+from memiro.presentation.django_admin.reprice import reprice_catalogue
 from memiro.presentation.django_admin.writes import guarded_write
 
 
@@ -326,8 +327,9 @@ class AttributeValueAdmin(GuardsItsForm, admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(ReadOnlyAdmin):
-    """Товары витрины."""
+    """Товары витрины: карточка только читает, а пересчёт цен зовёт хендлер событий."""
 
+    actions = ("reprice_products",)
     list_display = (
         "name",
         "slug",
@@ -350,6 +352,22 @@ class ProductAdmin(ReadOnlyAdmin):
         ProductDeclaredValueInline,
         ProductImageInline,
     )
+
+    @override
+    def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
+        """Send the action through the guard that owns refusals and the banner of the reprice."""
+        view = partial(super().changelist_view, request, extra_context)
+        return guarded_write(request, view)
+
+    @admin.action(description="Пересчитать цены")
+    def reprice_products(self, request: HttpRequest, queryset: QuerySet[Model]) -> None:  # noqa: ARG002  # Django's action signature
+        """Reprice the catalogue by the same handler the events run — the selection is not narrowed.
+
+        Prices are one table: a tariff moves every variant that uses it, and
+        repricing a chosen half of the catalogue would leave the other half
+        showing yesterday's numbers (ADR-0014).
+        """
+        reprice_catalogue()
 
 
 @admin.register(ProductVariant)
