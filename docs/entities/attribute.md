@@ -21,7 +21,8 @@ _Avoid_: свойство, характеристика, опция, настр�
 доменные отказы живут в `entities/catalog/attribute/`, сценарии — в
 `application/manage_attributes/` со страницами в
 [`docs/usecase/manage_attributes/`](../usecase/manage_attributes/create-attribute.md).
-Карточку админки поверх них приносит тикет 09.
+Карточка админки поверх них — `presentation/django_admin/`: корень и
+инлайн значений, команды уходят через мост (ADR-0012, тикет 09).
 
 ## Атрибуты
 
