@@ -583,3 +583,10 @@ async def prime_emptied_product(engine: AsyncEngine) -> None:
         await connection.execute(
             delete(product_variants_table).where(product_variants_table.c.product_id == PRODUCT),
         )
+
+
+async def read_address_holder_directly(engine: AsyncEngine, slug: str) -> ProductId | None:
+    """Read which product ended up answering on the contested address."""
+    async with engine.begin() as connection:
+        result = await connection.execute(select(products_table.c.id).where(products_table.c.slug == slug))
+        return result.scalar_one_or_none()

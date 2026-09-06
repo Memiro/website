@@ -1,3 +1,4 @@
+import asyncio
 from uuid import uuid4
 
 import pytest
@@ -14,9 +15,14 @@ from memiro.application.errors.catalog import (
 from memiro.application.manage_products import ChangeProduct, ChangeProductForm
 from memiro.entities.common.identifiers import ProductId
 from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
-from tests.common.factory.catalog import CATEGORY, PRODUCT, SECOND_CATEGORY
+from tests.common.factory.catalog import CATEGORY, PRODUCT, SECOND_CATEGORY, SECOND_PRODUCT
 from tests.integration.manage_products.arrange import load_product
-from tests.integration.prime import prime_emptied_product, prime_extra_product, prime_second_category
+from tests.integration.prime import (
+    prime_emptied_product,
+    prime_extra_product,
+    prime_second_category,
+    read_address_holder_directly,
+)
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -125,6 +131,24 @@ async def test_a_product_kept_in_its_section_keeps_what_it_declared(container: A
     product = await load_product(container, PRODUCT)
     assert product is not None
     assert product.declared_values == before.declared_values
+
+
+@pytest.mark.usefixtures("neighbour")
+async def test_two_products_racing_for_one_address_leave_one_winner(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """The unique column settles the race the check cannot see: only one product ends up on the address."""
+    contested = _form(slug="zerkalo-spornoe")
+
+    outcomes = await asyncio.gather(
+        _change(container, contested),
+        _change(container, contested, product_id=SECOND_PRODUCT),
+        return_exceptions=True,
+    )
+
+    assert sorted(outcome is None for outcome in outcomes) == [False, True]
+    assert await read_address_holder_directly(engine, "zerkalo-spornoe") is not None
 
 
 async def test_changing_a_product_fails_if_it_does_not_exist(container: AsyncContainer) -> None:
