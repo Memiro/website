@@ -17,6 +17,7 @@ from memiro.entities.errors.product import (
     InvalidProductSlugError,
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
+    ProductSectionNotEmptyError,
 )
 from memiro_common.clock import Clock
 
@@ -156,11 +157,23 @@ class Variant(Entity):
 
 
 @dataclass(frozen=True, slots=True)
-class ProductData:
-    """Owner-controlled root fields of a product.
+class CreateProductData:
+    """Owner-controlled fields of a product being entered into a section."""
 
-    One shape for both cards: what the owner enters a product with is exactly
-    what he restates it by, section included.
+    category_id: CategoryId
+    name: str
+    slug: str
+    description: str
+    is_published: bool
+    hides_calculated_price: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ChangeProductData:
+    """Owner-controlled root fields of a product being restated.
+
+    The section is here: unlike an attribute, a product moves between sections
+    of the catalogue, and moving it is what clears its declarations.
     """
 
     category_id: CategoryId
@@ -171,12 +184,12 @@ class ProductData:
     hides_calculated_price: bool
 
 
-def _settled_slug(data: ProductData) -> str:
+def settled_slug(slug: str, name: str) -> str:
     """Take the address the owner typed, or derive one from the name he gave."""
-    slug = data.slug or slugify(data.name)
-    if not slug:
+    settled = slug or slugify(name)
+    if not settled:
         raise InvalidProductSlugError
-    return slug
+    return settled
 
 
 @dataclass
@@ -210,13 +223,13 @@ class Product(Entity):
         """Return what the owner declared without exposing the mutable collection."""
         return tuple(self._declared_values)
 
-    def change(self, data: ProductData, *, clock: Clock) -> None:
-        """Restate the root of the product, dropping declarations its new section knows nothing about."""
+    def change(self, data: ChangeProductData, *, clock: Clock) -> None:
+        """Restate the root of the product, refusing a move that would strand what its section answered."""
         if data.category_id != self.category_id:
-            self._declared_values = []
+            self._ensure_nothing_belongs_to_the_old_section()
         self.category_id = data.category_id
         self.name = data.name
-        self.slug = _settled_slug(data)
+        self.slug = settled_slug(data.slug, data.name)
         self.description = data.description
         self.is_published = data.is_published
         self.hides_calculated_price = data.hides_calculated_price
@@ -264,6 +277,11 @@ class Product(Entity):
         self._settle_price_from()
         self.updated_at = clock.now()
 
+    def _ensure_nothing_belongs_to_the_old_section(self) -> None:
+        """Refuse to move a product whose answers were given by the attributes of the section it leaves."""
+        if self._declared_values or self._variants:
+            raise ProductSectionNotEmptyError
+
     def declared(self, attribute_id: AttributeId) -> DeclaredValue | None:
         """Return what the product declared on the attribute, if it declared anything."""
         return next(
@@ -307,14 +325,14 @@ class Product(Entity):
             raise RuntimeError(msg) from None
 
 
-def product_factory(data: ProductData, *, clock: Clock) -> Product:
+def product_factory(data: CreateProductData, *, clock: Clock) -> Product:
     """Create a product with an unforgeable identifier; both dates come from one reading of the clock."""
     now = clock.now()
     return Product(
         id=uuid4(),
         category_id=data.category_id,
         name=data.name,
-        slug=_settled_slug(data),
+        slug=settled_slug(data.slug, data.name),
         description=data.description,
         is_published=data.is_published,
         hides_calculated_price=data.hides_calculated_price,

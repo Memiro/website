@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import MAX_SELECTIONS
-from memiro.application.manage_products.shared import DeclarationForm, declarations, loaded_for_update
+from memiro.application.manage_products.shared import DeclarationForm, as_declarations, loaded_for_update
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
@@ -48,6 +48,6 @@ class DeclareValues:
         logger.debug("Declaring product values", product_id=product_id)
         product = await loaded_for_update(self.product_gateway, product_id, command="declare_values")
         attributes = await self.attribute_gateway.list_with_values()
-        product.declare_values(declarations(product, attributes, data.declarations), clock=self.clock)
+        product.declare_values(as_declarations(product, attributes, data.declarations), clock=self.clock)
         await self.uow.commit()
         logger.info("Product values declared", product_id=product_id, count=len(data.declarations))

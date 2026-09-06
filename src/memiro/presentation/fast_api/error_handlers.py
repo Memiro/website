@@ -39,6 +39,7 @@ from memiro.entities.errors.product import (
     InvalidQuantityError,
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
+    ProductSectionNotEmptyError,
 )
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
@@ -69,6 +70,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     InvalidProductSlugError: status.HTTP_400_BAD_REQUEST,
     DuplicateVariantError: status.HTTP_409_CONFLICT,
     ProductSlugTakenError: status.HTTP_409_CONFLICT,
+    ProductSectionNotEmptyError: status.HTTP_409_CONFLICT,
     AttributeValueInUseError: status.HTTP_409_CONFLICT,
     AttributeInUseError: status.HTTP_409_CONFLICT,
     ConsentRequiredError: status.HTTP_400_BAD_REQUEST,

@@ -22,7 +22,18 @@ from tests.common.factory.catalog import (
     SILVER,
 )
 from tests.integration.manage_products.arrange import declared_index, load_product
-from tests.integration.prime import prime_numeric_catalog
+from tests.integration.prime import (
+    prime_numeric_catalog,
+    prime_product_in_the_second_section,
+    prime_second_category,
+)
+
+
+@pytest.fixture
+async def second_section(engine: AsyncEngine) -> None:
+    """Add the section the product is moved into, whose dictionary is empty."""
+    await prime_second_category(engine, name="Шкафы", slug="cabinets", sort_order=2, is_published=True)
+
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -102,6 +113,18 @@ async def test_declaring_values_fails_on_a_value_of_another_attribute(container:
     """ATTRIBUTE_VALUE_NOT_FOUND: a value belongs to the attribute it is declared on."""
     with pytest.raises(AttributeValueNotFoundError):
         await _declare(container, _form(_row(BLADE, NO_FRAME)))
+
+
+@pytest.mark.usefixtures("second_section")
+async def test_declaring_values_fails_on_an_attribute_of_another_section(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """ATTRIBUTE_VALUE_NOT_FOUND: a moved product declares by the attributes of its new section."""
+    await prime_product_in_the_second_section(engine)
+
+    with pytest.raises(AttributeValueNotFoundError):
+        await _declare(container, _form(_row(BLADE, SILVER)))
 
 
 async def test_declaring_values_fails_on_an_attribute_nobody_issued(container: AsyncContainer) -> None:

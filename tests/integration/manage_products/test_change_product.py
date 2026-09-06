@@ -13,10 +13,10 @@ from memiro.application.errors.catalog import (
 )
 from memiro.application.manage_products import ChangeProduct, ChangeProductForm
 from memiro.entities.common.identifiers import ProductId
-from memiro.entities.errors.product import InvalidProductSlugError
+from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
 from tests.common.factory.catalog import CATEGORY, PRODUCT, SECOND_CATEGORY
 from tests.integration.manage_products.arrange import load_product
-from tests.integration.prime import prime_extra_product, prime_second_category
+from tests.integration.prime import prime_emptied_product, prime_extra_product, prime_second_category
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -97,14 +97,22 @@ async def test_a_product_keeps_the_address_it_already_answers_on(container: Asyn
 
 
 @pytest.mark.usefixtures("second_section")
-async def test_a_product_moved_to_another_section_declares_nothing_yet(container: AsyncContainer) -> None:
-    """Declarations are made on the attributes of a section, and the product left that section."""
+async def test_moving_a_product_fails_while_it_still_declares_values(container: AsyncContainer) -> None:
+    """PRODUCT_SECTION_NOT_EMPTY: what the product answered was answered by the attributes it is leaving."""
+    with pytest.raises(ProductSectionNotEmptyError):
+        await _change(container, _form(category_id=SECOND_CATEGORY))
+
+
+@pytest.mark.usefixtures("second_section")
+async def test_an_emptied_product_moves_to_another_section(container: AsyncContainer, engine: AsyncEngine) -> None:
+    """A product the owner has cleared is free to join another section."""
+    await prime_emptied_product(engine)
+
     await _change(container, _form(category_id=SECOND_CATEGORY))
 
     product = await load_product(container, PRODUCT)
     assert product is not None
     assert product.category_id == SECOND_CATEGORY
-    assert product.declared_values == ()
 
 
 async def test_a_product_kept_in_its_section_keeps_what_it_declared(container: AsyncContainer) -> None:

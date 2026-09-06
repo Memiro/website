@@ -22,7 +22,13 @@ from memiro.application.errors.catalog import (
     ProductSlugTakenError,
 )
 from memiro.entities.catalog.attribute.entity import Attribute
-from memiro.entities.catalog.product.entity import DeclaredValue, Product, ProductData, VariantData
+from memiro.entities.catalog.product.entity import (
+    ChangeProductData,
+    CreateProductData,
+    DeclaredValue,
+    Product,
+    VariantData,
+)
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro_common.logger import Logger
@@ -46,21 +52,10 @@ def _overrides(
     setting the product never had — the same rule the customer's choice obeys
     (ADR-0007).
     """
-    index = {attribute.id: attribute for attribute in attributes if attribute.category_id == product.category_id}
-    resolved: list[DeclaredValue] = []
     for form in forms:
-        attribute_id: AttributeId = form.attribute_id
-        attribute = index.get(attribute_id)
-        declaration = product.declared(attribute_id)
-        chosen = (
-            attribute.configure(form.value_id, form.quantity)
-            if attribute is not None and declaration is not None
-            else None
-        )
-        if chosen is None:
+        if product.declared(form.attribute_id) is None:
             raise AttributeValueNotFoundError
-        resolved.append(DeclaredValue(attribute_id=attribute_id, chosen=chosen))
-    return tuple(resolved)
+    return as_declarations(product, attributes, forms)
 
 
 class ChosenValueForm(BaseModel):
@@ -138,9 +133,21 @@ class ProductForm(BaseModel):
     hides_calculated_price: bool = False
 
 
-def product_data(form: ProductForm) -> ProductData:
-    """Resolve the owner's card into the root data the aggregate takes."""
-    return ProductData(
+def create_data(form: ProductForm) -> CreateProductData:
+    """Resolve the owner's card into the data the product is created from."""
+    return CreateProductData(
+        category_id=form.category_id,
+        name=form.name,
+        slug=form.slug,
+        description=form.description,
+        is_published=form.is_published,
+        hides_calculated_price=form.hides_calculated_price,
+    )
+
+
+def change_data(form: ProductForm) -> ChangeProductData:
+    """Resolve the owner's card into the data the product is restated by."""
+    return ChangeProductData(
         category_id=form.category_id,
         name=form.name,
         slug=form.slug,
@@ -163,11 +170,11 @@ async def ensure_the_address_is_free(
     gateway: ProductGateway,
     slug: str,
     *,
-    owner: ProductId | None,
+    except_product: ProductId | None,
 ) -> None:
     """Refuse an address another product already answers on."""
     holder = await gateway.slug_owner(slug)
-    if holder is not None and holder != owner:
+    if holder is not None and holder != except_product:
         logger.warning("A product address is already taken", slug=slug)
         raise ProductSlugTakenError
 
@@ -176,10 +183,10 @@ class DeclarationForm(ChosenValueForm):
     """One chosen value the owner declares for the product on an attribute of its section."""
 
 
-def declarations(
+def as_declarations(
     product: Product,
     attributes: Sequence[Attribute],
-    forms: Sequence[DeclarationForm],
+    forms: Sequence[ChosenValueForm],
 ) -> tuple[DeclaredValue, ...]:
     """Resolve the owner's set into declarations on the attributes of the product's own section."""
     index = {attribute.id: attribute for attribute in attributes if attribute.category_id == product.category_id}

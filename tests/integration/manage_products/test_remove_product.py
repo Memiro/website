@@ -10,6 +10,7 @@ from memiro.entities.common.identifiers import ProductId
 from tests.common.factory.catalog import PRODUCT
 from tests.integration.manage_products.arrange import load_product
 from tests.integration.prime import (
+    StoredProductChildren,
     count_product_children_directly,
     prime_inquiry_for_the_product,
     prime_product_images,
@@ -42,7 +43,7 @@ async def test_a_removed_product_takes_its_photos_and_declarations_with_it(
 
     await _remove(container)
 
-    assert await count_product_children_directly(engine) == (0, 0)
+    assert await count_product_children_directly(engine) == StoredProductChildren(declarations=0, images=0)
 
 
 async def test_an_inquiry_keeps_its_names_when_the_product_it_named_is_gone(

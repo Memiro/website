@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from memiro.application.common.gateway.category import CategoryGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import CategoryNotFoundError
-from memiro.application.manage_products.shared import ProductForm, ensure_the_address_is_free, product_data
-from memiro.entities.catalog.product.entity import product_factory
+from memiro.application.manage_products.shared import ProductForm, create_data, ensure_the_address_is_free
+from memiro.entities.catalog.product.entity import product_factory, settled_slug
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
@@ -40,10 +40,13 @@ class CreateProduct:
         if not await self.category_gateway.exists(data.category_id):
             logger.warning("A product was created in an unknown section", category_id=data.category_id)
             raise CategoryNotFoundError
-        # The address is settled by the aggregate before it is asked about:
-        # a product entered without one answers on the address of its name.
-        product = product_factory(product_data(data), clock=self.clock)
-        await ensure_the_address_is_free(self.product_gateway, product.slug, owner=None)
+        entered = create_data(data)
+        await ensure_the_address_is_free(
+            self.product_gateway,
+            settled_slug(entered.slug, entered.name),
+            except_product=None,
+        )
+        product = product_factory(entered, clock=self.clock)
         self.uow.add(product)
         await self.uow.commit()
         logger.info("Product created", product_id=product.id)
