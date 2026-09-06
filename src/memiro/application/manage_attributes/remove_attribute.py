@@ -2,7 +2,8 @@ import structlog
 
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.errors.catalog import AttributeInUseError, AttributeNotFoundError
+from memiro.application.errors.catalog import AttributeInUseError
+from memiro.application.manage_attributes.shared import loaded_for_update
 from memiro.entities.catalog.attribute.attribute_service import names_depending_on
 from memiro.entities.common.identifiers import AttributeId
 from memiro_common.interactor import interactor
@@ -23,14 +24,9 @@ class RemoveAttribute:
     async def execute(self, attribute_id: AttributeId) -> None:
         """Remove one attribute nothing depends on and commit its transaction."""
         logger.debug("Removing an attribute", attribute_id=attribute_id)
-        attribute = await self.attribute_gateway.get(attribute_id, for_update=True)
-        if attribute is None:
-            logger.warning("An unknown attribute was removed", attribute_id=attribute_id)
-            raise AttributeNotFoundError
-        dependents = names_depending_on(
-            attribute_id,
-            dictionary=await self.attribute_gateway.list_with_values(),
-        )
+        attribute = await loaded_for_update(self.attribute_gateway, attribute_id, command="remove")
+        dictionary = await self.attribute_gateway.list_with_values()
+        dependents = names_depending_on(attribute_id, dictionary=dictionary)
         products = await self.product_gateway.names_declaring_attribute(attribute_id)
         if products or dependents:
             # One refusal for one question — "who still needs it" — so the

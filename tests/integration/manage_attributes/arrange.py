@@ -6,7 +6,7 @@ from decimal import Decimal
 from dishka import AsyncContainer
 
 from memiro.application.common.gateway.attribute import AttributeGateway
-from memiro.application.manage_attributes import AttributeValueForm
+from memiro.application.manage_attributes import AttributeValueForm, ReplacementValueForm
 from memiro.entities.catalog.attribute.entity import Attribute
 from memiro.entities.catalog.attribute.rate import Unit
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId
@@ -20,9 +20,9 @@ def value_form(  # noqa: PLR0913  # one keyword per column of the dictionary row
     unit: Unit = Unit.LINEAR_METER,
     sort_order: int = 1,
     marks_absence: bool = False,
-) -> AttributeValueForm:
-    """Build one row of the dictionary as the owner's card submits it."""
-    return AttributeValueForm(
+) -> ReplacementValueForm:
+    """Build one row of a replacement set as the owner's card submits it."""
+    return ReplacementValueForm(
         id=value_id,
         name=name,
         rate_amount=Decimal(amount),
@@ -46,3 +46,16 @@ async def load_attribute(container: AsyncContainer, attribute_id: AttributeId) -
     async with container() as request:
         gateway: AttributeGateway = await request.get(AttributeGateway)
         return await gateway.get(attribute_id)
+
+
+def new_value_form(*, name: str, amount: str = "2500", sort_order: int = 1) -> AttributeValueForm:
+    """Build one row of the dictionary a new attribute is created with."""
+    return AttributeValueForm(
+        name=name,
+        rate_amount=Decimal(amount),
+        rate_unit=Unit.LINEAR_METER,
+        scaled_by_shape=False,
+        scaled_by_size_surcharge=False,
+        marks_absence=False,
+        sort_order=sort_order,
+    )

@@ -1,8 +1,7 @@
 import structlog
 
 from memiro.application.common.gateway.attribute import AttributeGateway
-from memiro.application.errors.catalog import AttributeNotFoundError
-from memiro.application.manage_attributes.shared import AttributeRootForm
+from memiro.application.manage_attributes.shared import AttributeRootForm, loaded_for_update
 from memiro.entities.catalog.attribute.attribute_service import ensure_parents_are_usable
 from memiro.entities.catalog.attribute.entity import ChangeAttributeData
 from memiro.entities.common.identifiers import AttributeId
@@ -29,15 +28,13 @@ class ChangeAttribute:
     async def execute(self, attribute_id: AttributeId, data: ChangeAttributeForm) -> None:
         """Replace the root fields of one attribute and commit its transaction."""
         logger.debug("Changing an attribute", attribute_id=attribute_id)
-        attribute = await self.attribute_gateway.get(attribute_id, for_update=True)
-        if attribute is None:
-            logger.warning("An unknown attribute was changed", attribute_id=attribute_id)
-            raise AttributeNotFoundError
+        attribute = await loaded_for_update(self.attribute_gateway, attribute_id, command="change")
+        dictionary = await self.attribute_gateway.list_with_values()
         ensure_parents_are_usable(
             data.parent_ids,
             attribute_id=attribute_id,
             category_id=attribute.category_id,
-            dictionary=await self.attribute_gateway.list_with_values(),
+            dictionary=dictionary,
         )
         attribute.change(
             ChangeAttributeData(

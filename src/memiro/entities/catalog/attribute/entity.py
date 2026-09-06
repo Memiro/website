@@ -20,6 +20,14 @@ class AttributeKind(StrEnum):
     NUMBER = auto()
 
 
+def _ensure_the_kind_fits_the_dictionary(kind: AttributeKind, size: int) -> None:
+    """Hold the one rule the kind and the dictionary share: a number is charged by one tariff."""
+    if kind is AttributeKind.NUMBER and size != 1:
+        raise InvalidAttributeValueSetError(
+            message="A numeric attribute needs exactly one tariff row",
+        )
+
+
 @dataclass
 class AttributeValue(Entity):
     """A dictionary row of an attribute: "silver", "no frame", "cut-out".
@@ -54,16 +62,23 @@ class AttributeValue(Entity):
 class AttributeValueData:
     """Owner-controlled fields of one dictionary row."""
 
-    # ``id`` tells an edit from an addition: a row the owner names keeps the
-    # identifier products declare, a row without one is born here.
-
-    id: AttributeValueId | None
     name: str
     rate: Rate
     scaled_by_shape: bool
     scaled_by_size_surcharge: bool
     marks_absence: bool
     sort_order: int
+
+
+@dataclass(frozen=True, slots=True)
+class ReplacementValueData:
+    """One row of a replacement set: the dictionary row it keeps, or nothing if it is a new one."""
+
+    # The identifier is what tells an edit from an addition, and it is never
+    # invented here: a row the owner names keeps the identifier products
+    # declare, a row without one is born inside the aggregate.
+    id: AttributeValueId | None
+    data: AttributeValueData
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,24 +148,24 @@ class Attribute(Entity):
         self.sort_order = data.sort_order
         self.updated_at = clock.now()
 
-    def replace_values(self, values: Sequence[AttributeValueData], *, clock: Clock) -> None:
+    def replace_values(self, values: Sequence[ReplacementValueData], *, clock: Clock) -> None:
         """Replace the whole dictionary of the attribute with the set the owner submitted."""
         self._ensure_the_set_describes_this_attribute(values)
         rows = {value.id: value for value in self.values}
         replacement: list[AttributeValue] = []
-        for data in values:
-            row = rows.get(data.id) if data.id is not None else None
+        for value in values:
+            row = rows.get(value.id) if value.id is not None else None
             if row is None:
-                row = attribute_value_factory(data)
+                row = attribute_value_factory(value.data)
             else:
-                row.restate(data)
+                row.restate(value.data)
             replacement.append(row)
         # The collection is edited in place, not rebound: the ORM watches this
         # very list to learn which rows left the dictionary and must be deleted.
         self.values[:] = replacement
         self.updated_at = clock.now()
 
-    def values_absent_from(self, replacement: Sequence[AttributeValueData]) -> tuple[AttributeValueId, ...]:
+    def values_absent_from(self, replacement: Sequence[ReplacementValueData]) -> tuple[AttributeValueId, ...]:
         """Tell which dictionary rows a replacement set would remove, refusing a set that is not ours."""
         # Asked before storage is asked who uses the rows, so the refusal for
         # an impossible set comes out ahead of the one for a row still declared.
@@ -158,7 +173,7 @@ class Attribute(Entity):
         kept = {value.id for value in replacement if value.id is not None}
         return tuple(value.id for value in self.values if value.id not in kept)
 
-    def _ensure_the_set_describes_this_attribute(self, values: Sequence[AttributeValueData]) -> None:
+    def _ensure_the_set_describes_this_attribute(self, values: Sequence[ReplacementValueData]) -> None:
         """Refuse a set naming a row twice, a row of somebody else, or the wrong number of rows."""
         _ensure_the_kind_fits_the_dictionary(self.kind, len(values))
         named = [value.id for value in values if value.id is not None]
@@ -198,14 +213,6 @@ class Attribute(Entity):
         return chosen if self.row_of(chosen) is not None else None
 
 
-def _ensure_the_kind_fits_the_dictionary(kind: AttributeKind, size: int) -> None:
-    """Hold the one rule the kind and the dictionary share: a number is charged by one tariff."""
-    if kind is AttributeKind.NUMBER and size != 1:
-        raise InvalidAttributeValueSetError(
-            message="A numeric attribute needs exactly one tariff row",
-        )
-
-
 def attribute_value_factory(data: AttributeValueData) -> AttributeValue:
     """Create one dictionary row under an identifier nobody outside could forge."""
     return AttributeValue(
@@ -222,10 +229,6 @@ def attribute_value_factory(data: AttributeValueData) -> AttributeValue:
 def attribute_factory(data: CreateAttributeData, *, clock: Clock) -> Attribute:
     """Create an attribute with its dictionary; both dates come from one reading of the clock."""
     _ensure_the_kind_fits_the_dictionary(data.kind, len(data.values))
-    if any(value.id is not None for value in data.values):
-        raise InvalidAttributeValueSetError(
-            message="A new attribute cannot claim a dictionary row of another",
-        )
     now = clock.now()
     return Attribute(
         id=uuid4(),

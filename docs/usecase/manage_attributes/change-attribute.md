@@ -9,8 +9,9 @@
 ## Input
 
 `ChangeAttributeForm` — те же поля корня, что и у
-[заведения](create-attribute.md), кроме `category_id` и `values`: раздел
-атрибута не переезжает.
+[заведения](create-attribute.md) (`name`, `kind`, `parent_ids`,
+`is_customer_changeable`, `is_filterable`, `sort_order`), кроме `category_id`
+и `values`: раздел атрибута не переезжает.
 
 ## Output
 

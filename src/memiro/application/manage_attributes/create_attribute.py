@@ -1,10 +1,11 @@
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.category import CategoryGateway
+from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES
 from memiro.application.errors.catalog import CategoryNotFoundError
-from memiro.application.manage_attributes.shared import AttributeRootForm, ValueSetForm, value_data
+from memiro.application.manage_attributes.shared import AttributeRootForm, AttributeValueForm, as_value_data
 from memiro.entities.catalog.attribute.attribute_service import ensure_parents_are_usable
 from memiro.entities.catalog.attribute.entity import CreateAttributeData, attribute_factory
 from memiro.entities.common.identifiers import AttributeId, CategoryId
@@ -16,10 +17,16 @@ from memiro_common.uow import UoW
 logger: Logger = structlog.get_logger(__name__)
 
 
-class CreateAttributeForm(AttributeRootForm, ValueSetForm):
+class CreateAttributeForm(AttributeRootForm):
     """Owner-controlled fields of the attribute being created, dictionary included."""
 
     category_id: CategoryId
+    # The rows of a new attribute carry no identifiers: there is nothing yet
+    # for them to keep, and the aggregate issues every one of them itself.
+    values: list[AttributeValueForm] = Field(
+        default_factory=list[AttributeValueForm],
+        max_length=MAX_ATTRIBUTE_VALUES,
+    )
 
 
 class CreatedAttribute(BaseModel):
@@ -43,11 +50,12 @@ class CreateAttribute:
         if not await self.category_gateway.exists(data.category_id):
             logger.warning("An attribute was created in an unknown category", category_id=data.category_id)
             raise CategoryNotFoundError
+        dictionary = await self.attribute_gateway.list_with_values()
         ensure_parents_are_usable(
             data.parent_ids,
             attribute_id=None,
             category_id=data.category_id,
-            dictionary=await self.attribute_gateway.list_with_values(),
+            dictionary=dictionary,
         )
         attribute = attribute_factory(
             CreateAttributeData(
@@ -58,7 +66,7 @@ class CreateAttribute:
                 is_customer_changeable=data.is_customer_changeable,
                 is_filterable=data.is_filterable,
                 sort_order=data.sort_order,
-                values=value_data(data.values),
+                values=tuple(as_value_data(form) for form in data.values),
             ),
             clock=self.clock,
         )

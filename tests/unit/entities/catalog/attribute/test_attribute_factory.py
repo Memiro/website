@@ -12,16 +12,15 @@ from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.common.money import Money
 from memiro.entities.errors.attribute import InvalidAttributeValueSetError
 from tests.clock import CLOCK, NOW
-from tests.common.factory.catalog import BACKLIGHT, CATEGORY, CONTOUR
+from tests.common.factory.catalog import BACKLIGHT, CATEGORY
 
 # Where the owner puts the new attribute in the card.
 PLACE_IN_THE_CARD = 4
 
 
-def _value(*, name: str = "Контурная", sort_order: int = 1, value_id: object = None) -> AttributeValueData:
+def _value(*, name: str = "Контурная", sort_order: int = 1) -> AttributeValueData:
     """Build one dictionary row the owner typed into the card."""
     return AttributeValueData(
-        id=value_id,  # type: ignore[arg-type]  # the test hands an alien identifier on purpose
         name=name,
         rate=Rate(amount=Money(amount=Decimal(2500)), unit=Unit.LINEAR_METER),
         scaled_by_shape=False,
@@ -78,14 +77,6 @@ def test_a_new_attribute_gets_an_identifier_nobody_could_forge() -> None:
 
     assert first.id != second.id
     assert first.values[0].id != second.values[0].id
-
-
-def test_a_new_attribute_fails_if_it_claims_a_dictionary_row_of_another() -> None:
-    """INVALID_ATTRIBUTE_VALUE_SET: a row that already exists belongs to the attribute that owns it."""
-    data = _data(values=(_value(value_id=CONTOUR),))
-
-    with pytest.raises(InvalidAttributeValueSetError, match="claim a dictionary row of another"):
-        attribute_factory(data, clock=CLOCK)
 
 
 def test_a_new_numeric_attribute_fails_if_it_is_given_two_tariff_rows() -> None:

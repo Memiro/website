@@ -3,10 +3,8 @@ import asyncio
 import pytest
 from dishka import AsyncContainer
 
-from memiro.application.errors.catalog import AttributeNotFoundError
 from memiro.application.manage_attributes import RemoveAttribute, ReplaceValues, ReplaceValuesForm
 from memiro.entities.common.identifiers import AttributeId
-from memiro.entities.errors.attribute import InvalidAttributeValueSetError
 from tests.common.factory.catalog import HEATING, NO_HEATING, WITH_HEATING
 from tests.integration.manage_attributes.arrange import load_attribute, value_form
 
@@ -37,9 +35,11 @@ async def test_concurrent_replacements_leave_one_dictionary_behind(container: As
         return_exceptions=True,
     )
 
-    refusals = [outcome for outcome in outcomes if isinstance(outcome, InvalidAttributeValueSetError)]
     attribute = await load_attribute(container, HEATING)
-    assert len(refusals) == 1
+    assert sorted(type(outcome).__name__ for outcome in outcomes) == [
+        "InvalidAttributeValueSetError",
+        "NoneType",
+    ]
     assert attribute is not None
     assert len(attribute.values) == 1
 
@@ -52,6 +52,5 @@ async def test_concurrent_removals_of_one_attribute_leave_one_refusal(container:
         return_exceptions=True,
     )
 
-    refusals = [outcome for outcome in outcomes if isinstance(outcome, AttributeNotFoundError)]
-    assert len(refusals) == 1
+    assert sorted(type(outcome).__name__ for outcome in outcomes) == ["AttributeNotFoundError", "NoneType"]
     assert await load_attribute(container, HEATING) is None
