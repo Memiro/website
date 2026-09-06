@@ -78,3 +78,16 @@ class AttributeInUseError(AppError):
     def meta(self) -> dict[str, Any] | None:
         """Name everything the owner has to free before the attribute can go."""
         return {"products": list(self.products), "attributes": list(self.attributes)}
+
+
+@app_error
+class ProductSlugTakenError(AppError):
+    """Raised when the public address of a product belongs to another product.
+
+    Uniqueness is a fact of the transaction and not of the aggregate — one
+    product cannot see the addresses of the others — so the refusal lives here
+    and not in ``entities/errors/`` (§12.2).
+    """
+
+    code: ClassVar[str] = "PRODUCT_SLUG_TAKEN"
+    message: str = "The product address is already taken"

@@ -11,8 +11,12 @@ from memiro.application.manage_attributes import (
 from memiro.application.manage_pricing_settings import ChangePricingSettings
 from memiro.application.manage_products import (
     AddVariant,
+    ChangeProduct,
     ChangeVariant,
+    CreateProduct,
+    DeclareValues,
     DuplicateVariantWithSize,
+    RemoveProduct,
     RemoveVariant,
 )
 from memiro.application.reprice_products import RepriceProducts
@@ -27,6 +31,10 @@ class InteractorProvider(Provider):
     interactors = provide_all(
         AddVariant,
         ChangeAttribute,
+        ChangeProduct,
+        CreateProduct,
+        DeclareValues,
+        RemoveProduct,
         ChangePricingSettings,
         CreateAttribute,
         RemoveAttribute,

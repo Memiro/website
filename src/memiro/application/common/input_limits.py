@@ -24,6 +24,10 @@ MIN_PHONE_LENGTH = 1
 MAX_PHONE_LENGTH = 32
 MAX_EMAIL_LENGTH = 254
 MAX_COMMENT_LENGTH = 2_000
+
+# The description of a product card: a paragraph the owner writes, bounded by
+# the column that stores it.
+MAX_DESCRIPTION_LENGTH = 2_000
 MAX_WISH_LENGTH = 1_000
 
 # The dictionary of one attribute is a card of the admin: the rows the owner

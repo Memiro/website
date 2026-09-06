@@ -25,7 +25,9 @@
 | `INVALID_VARIANT_CONFIGURATION` | 400 | `InvalidVariantConfigurationError` | Конфигурация варианта не описывает полностью считаемый товар |
 | `INVALID_VARIANT_SORT_ORDER` | 400 | `InvalidVariantSortOrderError` | Порядок варианта отрицательный |
 | `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
+| `INVALID_PRODUCT_SLUG` | 400 | `InvalidProductSlugError` | Из названия товара не выводится ни одного символа адреса |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
+| `PRODUCT_SLUG_TAKEN` | 409 | `ProductSlugTakenError` | Публичный адрес товара занят другим товаром |
 | `ATTRIBUTE_VALUE_IN_USE` | 409 | `AttributeValueInUseError` | Удаляемое значение объявлено товарами; `meta.products` — их названия |
 | `ATTRIBUTE_IN_USE` | 409 | `AttributeInUseError` | Удаляемый атрибут объявлен товарами или назван родителем другого; `meta.products` и `meta.attributes` — их названия |
 | `CONSENT_REQUIRED` | 400 | `ConsentRequiredError` | Посетитель не согласился на обработку ПД |

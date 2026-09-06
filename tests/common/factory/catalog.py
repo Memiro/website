@@ -14,7 +14,14 @@ from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.catalog.product.entity import DeclaredValue, Product
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
+from memiro.entities.common.identifiers import (
+    AttributeId,
+    AttributeValueId,
+    CategoryId,
+    InquiryId,
+    InquiryItemId,
+    ProductId,
+)
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings, SizeSurcharge
@@ -61,6 +68,11 @@ PRODUCT: ProductId = _id("mirror-in-a-frame")
 SECOND_CATEGORY: CategoryId = _id("cabinets")
 FOREIGN_PRODUCT: ProductId = _id("mirror-cabinet")
 SECOND_PRODUCT: ProductId = _id("mirror-with-a-shelf")
+
+# One inquiry a manager already has in hand: what a product removed later
+# leaves behind is read off its position.
+INQUIRY: InquiryId = _id("inquiry")
+INQUIRY_ITEM: InquiryItemId = _id("inquiry-item")
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 
@@ -291,6 +303,7 @@ def demo_product(*, blade: AttributeValueId = SILVER) -> Product:
         category_id=CATEGORY,
         name="Зеркало в раме",
         slug="zerkalo-v-rame",
+        description="A made-to-order mirror.",
         is_published=True,
         hides_calculated_price=False,
         created_at=NOW,
@@ -384,6 +397,7 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
         category_id=CATEGORY,
         name="Зеркало с вырезами",
         slug="zerkalo-s-vyrezami",
+        description="A made-to-order mirror with cut-outs.",
         is_published=True,
         hides_calculated_price=False,
         created_at=NOW,

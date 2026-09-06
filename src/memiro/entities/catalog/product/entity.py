@@ -11,8 +11,10 @@ from memiro.entities.common.entity import Entity
 from memiro.entities.common.identifiers import AttributeId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
+from memiro.entities.common.slug import slugify
 from memiro.entities.errors.product import (
     DuplicateVariantError,
+    InvalidProductSlugError,
     InvalidVariantConfigurationError,
     InvalidVariantSortOrderError,
 )
@@ -153,6 +155,30 @@ class Variant(Entity):
         )
 
 
+@dataclass(frozen=True, slots=True)
+class ProductData:
+    """Owner-controlled root fields of a product.
+
+    One shape for both cards: what the owner enters a product with is exactly
+    what he restates it by, section included.
+    """
+
+    category_id: CategoryId
+    name: str
+    slug: str
+    description: str
+    is_published: bool
+    hides_calculated_price: bool
+
+
+def _settled_slug(data: ProductData) -> str:
+    """Take the address the owner typed, or derive one from the name he gave."""
+    slug = data.slug or slugify(data.name)
+    if not slug:
+        raise InvalidProductSlugError
+    return slug
+
+
 @dataclass
 class Product(Entity):
     """A made-to-order product with its declarations and precalculated variants.
@@ -165,6 +191,7 @@ class Product(Entity):
     category_id: CategoryId
     name: str
     slug: str
+    description: str
     is_published: bool
     hides_calculated_price: bool = False
     _declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue], repr=False)
@@ -182,6 +209,18 @@ class Product(Entity):
     def declared_values(self) -> tuple[DeclaredValue, ...]:
         """Return what the owner declared without exposing the mutable collection."""
         return tuple(self._declared_values)
+
+    def change(self, data: ProductData, *, clock: Clock) -> None:
+        """Restate the root of the product, dropping declarations its new section knows nothing about."""
+        if data.category_id != self.category_id:
+            self._declared_values = []
+        self.category_id = data.category_id
+        self.name = data.name
+        self.slug = _settled_slug(data)
+        self.description = data.description
+        self.is_published = data.is_published
+        self.hides_calculated_price = data.hides_calculated_price
+        self.updated_at = clock.now()
 
     def declare_values(self, values: Iterable[DeclaredValue], *, clock: Clock) -> None:
         """Replace what the owner declared for this product on the attributes of its category."""
@@ -266,6 +305,22 @@ class Product(Entity):
         except StopIteration:
             msg = f"Variant {variant.id} does not belong to product {self.id}"
             raise RuntimeError(msg) from None
+
+
+def product_factory(data: ProductData, *, clock: Clock) -> Product:
+    """Create a product with an unforgeable identifier; both dates come from one reading of the clock."""
+    now = clock.now()
+    return Product(
+        id=uuid4(),
+        category_id=data.category_id,
+        name=data.name,
+        slug=_settled_slug(data),
+        description=data.description,
+        is_published=data.is_published,
+        hides_calculated_price=data.hides_calculated_price,
+        created_at=now,
+        updated_at=now,
+    )
 
 
 def variant_factory(data: VariantData, *, price: Money) -> Variant:
