@@ -1,8 +1,9 @@
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from memiro.application.common.gateway.category import CategoryGateway
 from memiro.application.common.gateway.product import ProductGateway
+from memiro.application.common.input_limits import MAX_DESCRIPTION_LENGTH
 from memiro.application.errors.catalog import CategoryNotFoundError
 from memiro.application.manage_products.shared import ProductForm, create_data, ensure_the_address_is_free
 from memiro.entities.catalog.product.entity import product_factory, settled_slug
@@ -17,6 +18,13 @@ logger: Logger = structlog.get_logger(__name__)
 
 class CreateProductForm(ProductForm):
     """Owner-controlled fields of the product being created."""
+
+    # A blank card is the honest starting state of a product nobody has
+    # written yet: no description, invisible on the storefront, no secret
+    # about its price. A change has no such card and states all three.
+    description: str = Field(default="", max_length=MAX_DESCRIPTION_LENGTH)
+    is_published: bool = False
+    hides_calculated_price: bool = False
 
 
 class CreatedProduct(BaseModel):

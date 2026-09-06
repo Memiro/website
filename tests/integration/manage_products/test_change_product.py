@@ -182,6 +182,23 @@ async def test_changing_a_product_fails_on_a_name_one_character_over_the_limit()
         _form(name="я" * (MAX_NAME_LENGTH + 1))
 
 
+@pytest.mark.parametrize("omitted", ["description", "is_published", "hides_calculated_price"])
+def test_changing_a_product_fails_on_a_card_that_leaves_a_field_out(omitted: str) -> None:
+    """VALIDATION_ERROR: a change restates the whole root, so a missing field is not a silent default."""
+    fields = {
+        "category_id": CATEGORY,
+        "name": "Зеркало в раме",
+        "slug": OWN_ADDRESS,
+        "description": "Зеркало под заказ.",
+        "is_published": True,
+        "hides_calculated_price": False,
+    }
+    del fields[omitted]
+
+    with pytest.raises(ValidationError):
+        ChangeProductForm.model_validate(fields)
+
+
 @pytest.mark.usefixtures("neighbour")
 async def test_a_refused_change_leaves_the_product_as_it_was(container: AsyncContainer) -> None:
     """A refused command stores nothing: the name the refusal came with is not on the product."""

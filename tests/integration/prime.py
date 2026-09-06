@@ -562,7 +562,7 @@ async def count_product_children_directly(engine: AsyncEngine) -> StoredProductC
 
 
 async def prime_product_in_the_second_section(engine: AsyncEngine) -> None:
-    """Put the canonical product in the other section, emptied — the state a move through the domain leaves."""
+    """Put the canonical product in the other section, with nothing declared by the one it left."""
     async with engine.begin() as connection:
         await connection.execute(
             delete(product_declared_values_table).where(
