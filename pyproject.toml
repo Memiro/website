@@ -97,7 +97,10 @@ ignore = [
 # are UI text, and Django's `class Meta` is framework boilerplate with nothing
 # to document.
 "src/memiro/presentation/django_admin/models.py" = ["D106", "RUF001", "RUF002"]
-"src/memiro/presentation/django_admin/admin.py" = ["RUF002"]
+"src/memiro/presentation/django_admin/admin.py" = ["RUF001", "RUF002"]
+"src/memiro/presentation/django_admin/forms.py" = ["D106", "RUF001", "RUF002"]
+"src/memiro/presentation/django_admin/refusals.py" = ["RUF001", "RUF002"]
+"src/memiro/presentation/django_admin/writes.py" = ["RUF001", "RUF002"]
 # The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
 "src/memiro_common/interactor.py" = ["ANN401"]
 # Tests speak in asserts (S101); test databases are named with f-strings over
@@ -128,7 +131,7 @@ enable_error_code = [
 # does not implement __class_getitem__ on them: the parameter type-checkers
 # want cannot be written without a runtime TypeError.
 [[tool.mypy.overrides]]
-module = ["memiro.presentation.django_admin.admin"]
+module = ["memiro.presentation.django_admin.admin", "memiro.presentation.django_admin.forms"]
 disable_error_code = ["type-arg"]
 
 [tool.django-stubs]
