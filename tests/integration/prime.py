@@ -7,6 +7,7 @@ of a pricing test goes straight to the tables through named helpers.
 
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import NamedTuple
 
 from sqlalchemy import delete, func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -20,6 +21,7 @@ from memiro.adapters.db.tables import (
     pricing_settings_table,
     product_declared_values_table,
     product_images_table,
+    product_variants_table,
     products_table,
 )
 from memiro.entities.common.identifiers import AttributeValueId, ProductId
@@ -544,9 +546,40 @@ async def count_products_directly(engine: AsyncEngine) -> int:
         return (await connection.execute(select(func.count()).select_from(products_table))).scalar_one()
 
 
-async def count_product_children_directly(engine: AsyncEngine) -> tuple[int, int]:
+class StoredProductChildren(NamedTuple):
+    """What the tables of the children still hold, whatever product they belong to."""
+
+    declarations: int
+    images: int
+
+
+async def count_product_children_directly(engine: AsyncEngine) -> StoredProductChildren:
     """Count the declarations and the photos still stored, whatever product they belong to."""
     async with engine.begin() as connection:
         declared = await connection.execute(select(func.count()).select_from(product_declared_values_table))
         images = await connection.execute(select(func.count()).select_from(product_images_table))
-        return declared.scalar_one(), images.scalar_one()
+        return StoredProductChildren(declarations=declared.scalar_one(), images=images.scalar_one())
+
+
+async def prime_product_in_the_second_section(engine: AsyncEngine) -> None:
+    """Put the canonical product in the other section, emptied — the state a move through the domain leaves."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            delete(product_declared_values_table).where(
+                product_declared_values_table.c.product_id == PRODUCT,
+            )
+        )
+        await connection.execute(
+            update(products_table).where(products_table.c.id == PRODUCT).values(category_id=SECOND_CATEGORY),
+        )
+
+
+async def prime_emptied_product(engine: AsyncEngine) -> None:
+    """Clear the card of the canonical product the way the owner does before moving it: no declarations, no variants."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            delete(product_declared_values_table).where(product_declared_values_table.c.product_id == PRODUCT),
+        )
+        await connection.execute(
+            delete(product_variants_table).where(product_variants_table.c.product_id == PRODUCT),
+        )

@@ -2,9 +2,9 @@ from uuid import uuid4
 
 import pytest
 
-from memiro.entities.catalog.product.entity import ProductData, product_factory
+from memiro.entities.catalog.product.entity import ChangeProductData, CreateProductData, product_factory
 from memiro.entities.common.identifiers import CategoryId
-from memiro.entities.errors.product import InvalidProductSlugError
+from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
 from tests.clock import CLOCK, LATER, LATER_CLOCK, NOW
 from tests.common.factory.catalog import CATEGORY, demo_product
 
@@ -19,9 +19,9 @@ def _data(  # noqa: PLR0913  # one keyword per field of the card the owner fills
     description: str = "Зеркало под заказ.",
     is_published: bool = True,
     hides_calculated_price: bool = False,
-) -> ProductData:
-    """Build the owner's card of a mirror as the admin submits it."""
-    return ProductData(
+) -> CreateProductData:
+    """Build the owner's card of a new mirror as the admin submits it."""
+    return CreateProductData(
         category_id=category_id,
         name=name,
         slug=slug,
@@ -68,11 +68,31 @@ def test_a_new_product_fails_if_its_name_yields_no_address() -> None:
         product_factory(_data(name="!!!"), clock=CLOCK)
 
 
+def _restated(  # noqa: PLR0913  # one keyword per field of the card the owner fills in
+    *,
+    category_id: CategoryId = CATEGORY,
+    name: str = "Зеркало в раме",
+    slug: str = "",
+    description: str = "Зеркало под заказ.",
+    is_published: bool = True,
+    hides_calculated_price: bool = False,
+) -> ChangeProductData:
+    """Build the card that restates a stored mirror."""
+    return ChangeProductData(
+        category_id=category_id,
+        name=name,
+        slug=slug,
+        description=description,
+        is_published=is_published,
+        hides_calculated_price=hides_calculated_price,
+    )
+
+
 def test_a_changed_product_takes_the_owners_new_card() -> None:
     """A change restates every owner-controlled field of the root."""
     product = demo_product()
 
-    product.change(_data(name="Зеркало с подсветкой", slug="mirror-led", is_published=False), clock=LATER_CLOCK)
+    product.change(_restated(name="Зеркало с подсветкой", slug="mirror-led", is_published=False), clock=LATER_CLOCK)
 
     assert product.name == "Зеркало с подсветкой"
     assert product.slug == "mirror-led"
@@ -83,19 +103,38 @@ def test_a_changed_product_notes_when_it_was_changed() -> None:
     """A change moves the product's own timestamp to the instant of the command."""
     product = demo_product()
 
-    product.change(_data(), clock=LATER_CLOCK)
+    product.change(_restated(), clock=LATER_CLOCK)
 
     assert product.updated_at == LATER
 
 
-def test_a_product_moved_to_another_section_declares_nothing_yet() -> None:
-    """Declarations are made on the attributes of a section, and the product left that section."""
+def test_moving_a_product_fails_if_it_still_declares_values() -> None:
+    """PRODUCT_SECTION_NOT_EMPTY: what the product answered was answered by the attributes it is leaving."""
     product = demo_product()
 
-    product.change(_data(category_id=OTHER_CATEGORY), clock=LATER_CLOCK)
+    with pytest.raises(ProductSectionNotEmptyError):
+        product.change(_restated(category_id=OTHER_CATEGORY), clock=LATER_CLOCK)
+
+
+def test_an_emptied_product_moves_to_another_section() -> None:
+    """A product carrying no answers of its old section is free to join another one."""
+    product = demo_product()
+    product.declare_values([], clock=CLOCK)
+
+    product.change(_restated(category_id=OTHER_CATEGORY), clock=LATER_CLOCK)
 
     assert product.category_id == OTHER_CATEGORY
-    assert product.declared_values == ()
+
+
+def test_a_refused_move_leaves_the_product_in_its_section() -> None:
+    """A refusal is not a half-done move: the name that came with it is not on the product either."""
+    product = demo_product()
+
+    with pytest.raises(ProductSectionNotEmptyError):
+        product.change(_restated(category_id=OTHER_CATEGORY, name="Зеркало в шкафу"), clock=LATER_CLOCK)
+
+    assert product.category_id == CATEGORY
+    assert product.name == "Зеркало в раме"
 
 
 def test_a_product_kept_in_its_section_keeps_what_it_declared() -> None:
@@ -103,6 +142,6 @@ def test_a_product_kept_in_its_section_keeps_what_it_declared() -> None:
     product = demo_product()
     declared = product.declared_values
 
-    product.change(_data(name="Зеркало в раме, широкое"), clock=LATER_CLOCK)
+    product.change(_restated(name="Зеркало в раме, широкое"), clock=LATER_CLOCK)
 
     assert product.declared_values == declared

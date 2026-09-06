@@ -4,7 +4,6 @@ from uuid import uuid4
 import pytest
 from dishka import AsyncContainer
 from pydantic import ValidationError
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.input_limits import MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH
@@ -19,6 +18,9 @@ pytestmark = pytest.mark.usefixtures("catalog")
 
 # The address the canonical product of the demo catalogue already answers on.
 TAKEN_ADDRESS = "zerkalo-v-rame"
+
+# The demo catalogue holds one product, and a race adds exactly one more.
+CATALOGUE_AFTER_THE_RACE = 2
 
 
 def _form(**overrides: object) -> CreateProductForm:
@@ -119,13 +121,16 @@ async def test_a_refused_creation_stores_nothing(container: AsyncContainer, engi
     assert await count_products_directly(engine) == before
 
 
-async def test_two_products_racing_for_one_address_leave_one_winner(container: AsyncContainer) -> None:
+async def test_two_products_racing_for_one_address_leave_one_winner(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
     """The unique column settles the race the check cannot see: the loser is told to retry."""
     form = _form(slug="zerkalo-bliznec")
 
     outcomes = await asyncio.gather(_create(container, form), _create(container, form), return_exceptions=True)
 
-    # Either road ends the race honestly: the check sees the winner's row, or
-    # the unique column refuses the loser's insert.
-    assert [isinstance(outcome, CreatedProduct) for outcome in outcomes].count(True) == 1
-    assert [isinstance(outcome, ProductSlugTakenError | IntegrityError) for outcome in outcomes].count(True) == 1
+    # Either road ends the race honestly: the loser's check sees the winner's
+    # row, or the unique column refuses the loser's insert.
+    assert sorted(isinstance(outcome, CreatedProduct) for outcome in outcomes) == [False, True]
+    assert await count_products_directly(engine) == CATALOGUE_AFTER_THE_RACE

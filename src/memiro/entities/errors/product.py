@@ -41,3 +41,11 @@ class InvalidProductSlugError(AppError):
 
     code: ClassVar[str] = "INVALID_PRODUCT_SLUG"
     message: str = "A product name yields no public address"
+
+
+@app_error
+class ProductSectionNotEmptyError(AppError):
+    """Raised when a product still carrying its section's answers is moved to another section."""
+
+    code: ClassVar[str] = "PRODUCT_SECTION_NOT_EMPTY"
+    message: str = "A product is emptied before it moves to another section"

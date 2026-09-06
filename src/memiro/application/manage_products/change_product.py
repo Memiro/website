@@ -5,10 +5,11 @@ from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import CategoryNotFoundError
 from memiro.application.manage_products.shared import (
     ProductForm,
+    change_data,
     ensure_the_address_is_free,
     loaded_for_update,
-    product_data,
 )
+from memiro.entities.catalog.product.entity import settled_slug
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
@@ -27,8 +28,8 @@ class ChangeProduct:
     """Interactor for restating the root of one product."""
 
     uow: UoW
-    category_gateway: CategoryGateway
     product_gateway: ProductGateway
+    category_gateway: CategoryGateway
     clock: Clock
 
     async def execute(self, product_id: ProductId, data: ChangeProductForm) -> None:
@@ -38,7 +39,12 @@ class ChangeProduct:
         if data.category_id != product.category_id and not await self.category_gateway.exists(data.category_id):
             logger.warning("A product was moved to an unknown section", category_id=data.category_id)
             raise CategoryNotFoundError
-        product.change(product_data(data), clock=self.clock)
-        await ensure_the_address_is_free(self.product_gateway, product.slug, owner=product_id)
+        restated = change_data(data)
+        await ensure_the_address_is_free(
+            self.product_gateway,
+            settled_slug(restated.slug, restated.name),
+            except_product=product_id,
+        )
+        product.change(restated, clock=self.clock)
         await self.uow.commit()
         logger.info("Product changed", product_id=product_id)
