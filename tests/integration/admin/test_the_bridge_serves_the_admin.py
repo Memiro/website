@@ -2,21 +2,27 @@
 
 import asyncio
 from http import HTTPStatus
+from typing import Any, cast
 
 import pytest
 from dishka import AsyncContainer
+from django.apps import apps
 from django.contrib.messages import get_messages
 from django.contrib.messages.storage.cookie import CookieStorage
+from django.db.models import Manager
 from django.http import HttpRequest, HttpResponse
 from django.test import RequestFactory
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.presentation.django_admin.attribute_card import create_attribute
 from memiro.presentation.django_admin.bridge import bridge
-from memiro.presentation.django_admin.writes import HISTORY_LOST, guarded_write, record_commit
+from memiro.presentation.django_admin.writes import HISTORY_LOST, guarded_write
+from tests.integration.admin.arrange import card_fields
 
-pytestmark = pytest.mark.usefixtures("admin_site")
+pytestmark = pytest.mark.usefixtures("admin_site", "primed_catalog")
 
 CARD_URL = "/admin/memiro/attribute/add/"
+SAVED_NAME = "Сохранён без истории"
 
 
 async def _home_of_the_command(scope: AsyncContainer) -> tuple[int, int]:
@@ -35,8 +41,9 @@ def _request() -> HttpRequest:
 
 
 def _fails_after_the_commit() -> HttpResponse:
-    """Stand in for the Django half falling over once the domain is already written."""
-    record_commit()
+    """Send a whole card to the interactors, then fall over the way the Django half can."""
+    root, rows = card_fields(name=SAVED_NAME)
+    create_attribute(root, rows)
     message = "LogEntry could not be written"
     raise RuntimeError(message)
 
@@ -60,14 +67,20 @@ async def test_the_admin_process_has_exactly_one_bridge() -> None:
     assert bridge() is bridge()
 
 
-async def test_a_failure_after_the_commit_becomes_a_warning_the_owner_reads() -> None:
-    """The Django half is best-effort: its failure never turns a written command into an error page."""
+async def test_a_failure_after_the_commit_becomes_a_warning_and_the_domain_keeps_the_write() -> None:
+    """The Django half is best-effort: its failure warns the owner and the attribute stays written."""
     request = _request()
 
-    response = guarded_write(request, _fails_after_the_commit)
+    response = await asyncio.to_thread(guarded_write, request, _fails_after_the_commit)
 
     assert response.status_code == HTTPStatus.FOUND
     assert [str(message) for message in get_messages(request)] == [HISTORY_LOST]
+    assert await _attributes().filter(name=SAVED_NAME).aexists()
+
+
+def _attributes() -> Manager[Any]:
+    """Reach the attribute mirror; the app registry is only ready once Django is configured."""
+    return cast("Manager[Any]", apps.get_model("memiro", "Attribute").objects)
 
 
 async def test_a_failure_before_any_command_is_not_swallowed() -> None:

@@ -21,7 +21,7 @@ from memiro_common.logger import Logger
 
 _committed: ContextVar[bool] = ContextVar("memiro_admin_committed", default=False)
 
-HISTORY_LOST = "Изменение сохранено, но админка не смогла записать его в свою историю."
+HISTORY_LOST = "Изменение сохранено, но админка не смогла доделать свою часть: историю и переход на список."
 PARTLY_SAVED = "Часть карточки успела сохраниться: откройте её заново и проверьте."
 
 logger: Logger = structlog.get_logger(__name__)
@@ -45,7 +45,7 @@ def guarded_write(request: HttpRequest, view: Callable[[], HttpResponse]) -> Htt
     try:
         return view()
     except AppError as refusal:
-        logger.info("The admin refused a write", code=type(refusal).code)
+        logger.warning("The admin refused a write", code=type(refusal).code)
         messages.error(request, _refused(refusal))
         return HttpResponseRedirect(request.get_full_path())
     except Exception as failure:
