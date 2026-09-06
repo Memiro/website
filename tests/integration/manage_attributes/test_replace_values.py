@@ -79,30 +79,6 @@ async def test_replacing_the_values_moves_the_attribute_forward_in_time(containe
     assert after.updated_at > before.updated_at
 
 
-async def test_replacing_the_values_fails_if_there_is_no_such_attribute(container: AsyncContainer) -> None:
-    """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
-    with pytest.raises(AttributeNotFoundError):
-        await _replace(container, uuid4(), ReplaceValuesForm(values=[value_form(name="Контурная")]))
-
-
-async def test_removing_a_declared_row_fails_and_names_the_products(container: AsyncContainer) -> None:
-    """ATTRIBUTE_VALUE_IN_USE: the canonical mirror declares "no backlight", so that row stays."""
-    with pytest.raises(AttributeValueInUseError) as refusal:
-        await _replace(container, BACKLIGHT, ReplaceValuesForm(values=[KEPT_CONTOUR]))
-
-    assert refusal.value.meta == {"products": ["Зеркало в раме"]}
-
-
-async def test_a_refused_removal_leaves_the_dictionary_untouched(container: AsyncContainer) -> None:
-    """A refused command deletes nothing: both rows are where the arrangement left them."""
-    with pytest.raises(AttributeValueInUseError):
-        await _replace(container, BACKLIGHT, ReplaceValuesForm(values=[KEPT_CONTOUR]))
-
-    attribute = await load_attribute(container, BACKLIGHT)
-    assert attribute is not None
-    assert [value.id for value in attribute.values] == [CONTOUR, NO_BACKLIGHT]
-
-
 async def test_replacing_the_values_fails_if_a_row_belongs_to_another_attribute(container: AsyncContainer) -> None:
     """INVALID_ATTRIBUTE_VALUE_SET: a set may only keep rows this attribute owns."""
     with pytest.raises(InvalidAttributeValueSetError):
@@ -125,3 +101,27 @@ async def test_replacing_the_values_fails_on_one_row_over_the_limit() -> None:
         ReplaceValuesForm(
             values=[value_form(name=f"Значение {number}") for number in range(MAX_ATTRIBUTE_VALUES + 1)],
         )
+
+
+async def test_removing_a_declared_row_fails_and_names_the_products(container: AsyncContainer) -> None:
+    """ATTRIBUTE_VALUE_IN_USE: the canonical mirror declares "no backlight", so that row stays."""
+    with pytest.raises(AttributeValueInUseError) as refusal:
+        await _replace(container, BACKLIGHT, ReplaceValuesForm(values=[KEPT_CONTOUR]))
+
+    assert refusal.value.meta == {"products": ["Зеркало в раме"]}
+
+
+async def test_a_refused_removal_leaves_the_dictionary_untouched(container: AsyncContainer) -> None:
+    """A refused command deletes nothing: both rows are where the arrangement left them."""
+    with pytest.raises(AttributeValueInUseError):
+        await _replace(container, BACKLIGHT, ReplaceValuesForm(values=[KEPT_CONTOUR]))
+
+    attribute = await load_attribute(container, BACKLIGHT)
+    assert attribute is not None
+    assert [value.id for value in attribute.values] == [CONTOUR, NO_BACKLIGHT]
+
+
+async def test_replacing_the_values_fails_if_there_is_no_such_attribute(container: AsyncContainer) -> None:
+    """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
+    with pytest.raises(AttributeNotFoundError):
+        await _replace(container, uuid4(), ReplaceValuesForm(values=[value_form(name="Контурная")]))

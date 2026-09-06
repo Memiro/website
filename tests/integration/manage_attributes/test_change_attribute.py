@@ -79,10 +79,18 @@ async def test_changing_an_attribute_moves_it_forward_in_time(container: AsyncCo
     assert after.updated_at > before.updated_at
 
 
-async def test_changing_an_attribute_fails_if_there_is_no_such_attribute(container: AsyncContainer) -> None:
-    """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
-    with pytest.raises(AttributeNotFoundError):
-        await _change(container, uuid4(), _form())
+async def test_an_attribute_with_one_row_may_turn_numeric(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """A dictionary already holding one row satisfies the shape a numeric attribute needs."""
+    await prime_one_row_attribute(engine)
+
+    await _change(container, MOUNT, _form(name="Крепления", kind=AttributeKind.NUMBER))
+
+    attribute = await load_attribute(container, MOUNT)
+    assert attribute is not None
+    assert attribute.kind is AttributeKind.NUMBER
 
 
 async def test_changing_an_attribute_fails_if_it_becomes_its_own_parent(container: AsyncContainer) -> None:
@@ -103,20 +111,6 @@ async def test_turning_an_attribute_numeric_fails_with_a_dictionary_of_two(conta
         await _change(container, BACKLIGHT, _form(kind=AttributeKind.NUMBER))
 
 
-async def test_an_attribute_with_one_row_may_turn_numeric(
-    container: AsyncContainer,
-    engine: AsyncEngine,
-) -> None:
-    """A dictionary already holding one row satisfies the shape a numeric attribute needs."""
-    await prime_one_row_attribute(engine)
-
-    await _change(container, MOUNT, _form(name="Крепления", kind=AttributeKind.NUMBER))
-
-    attribute = await load_attribute(container, MOUNT)
-    assert attribute is not None
-    assert attribute.kind is AttributeKind.NUMBER
-
-
 async def test_changing_an_attribute_fails_on_a_name_one_character_over_the_limit() -> None:
     """VALIDATION_ERROR: the form refuses a name longer than the production constant allows."""
     with pytest.raises(ValidationError):
@@ -134,3 +128,9 @@ async def test_a_refused_root_change_stores_nothing(container: AsyncContainer) -
     after = await load_attribute(container, BACKLIGHT)
     assert after is not None
     assert (after.name, after.updated_at) == (before.name, before.updated_at)
+
+
+async def test_changing_an_attribute_fails_if_there_is_no_such_attribute(container: AsyncContainer) -> None:
+    """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
+    with pytest.raises(AttributeNotFoundError):
+        await _change(container, uuid4(), _form())

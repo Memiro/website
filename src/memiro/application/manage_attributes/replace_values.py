@@ -2,8 +2,8 @@ import structlog
 
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.errors.catalog import AttributeNotFoundError, AttributeValueInUseError
-from memiro.application.manage_attributes.shared import ValueSetForm, value_data
+from memiro.application.errors.catalog import AttributeValueInUseError
+from memiro.application.manage_attributes.shared import ValueSetForm, as_replacements, loaded_for_update
 from memiro.entities.common.identifiers import AttributeId
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
@@ -29,11 +29,8 @@ class ReplaceValues:
     async def execute(self, attribute_id: AttributeId, data: ReplaceValuesForm) -> None:
         """Replace the values of one attribute and commit its transaction."""
         logger.debug("Replacing the values of an attribute", attribute_id=attribute_id)
-        attribute = await self.attribute_gateway.get(attribute_id, for_update=True)
-        if attribute is None:
-            logger.warning("The values of an unknown attribute were replaced", attribute_id=attribute_id)
-            raise AttributeNotFoundError
-        values = value_data(data.values)
+        attribute = await loaded_for_update(self.attribute_gateway, attribute_id, command="replace_values")
+        values = as_replacements(data.values)
         # The refusal is owed before the delete reaches storage: ``CASCADE`` on
         # the referencing rows exists to clean up after a legal removal, not to
         # decide whether one is legal.

@@ -11,7 +11,12 @@ from memiro.application.manage_attributes.create_attribute import (
 )
 from memiro.application.manage_attributes.remove_attribute import RemoveAttribute
 from memiro.application.manage_attributes.replace_values import ReplaceValues, ReplaceValuesForm
-from memiro.application.manage_attributes.shared import AttributeRootForm, AttributeValueForm, ValueSetForm
+from memiro.application.manage_attributes.shared import (
+    AttributeRootForm,
+    AttributeValueForm,
+    ReplacementValueForm,
+    ValueSetForm,
+)
 
 __all__ = [
     "AttributeRootForm",
@@ -24,5 +29,6 @@ __all__ = [
     "RemoveAttribute",
     "ReplaceValues",
     "ReplaceValuesForm",
+    "ReplacementValueForm",
     "ValueSetForm",
 ]

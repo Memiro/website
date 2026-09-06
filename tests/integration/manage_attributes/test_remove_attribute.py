@@ -37,12 +37,6 @@ async def test_removing_an_attribute_takes_its_dictionary_with_it(container: Asy
     assert WITH_HEATING not in {value.id for attribute in dictionary for value in attribute.values}
 
 
-async def test_removing_an_attribute_fails_if_there_is_no_such_attribute(container: AsyncContainer) -> None:
-    """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
-    with pytest.raises(AttributeNotFoundError):
-        await _remove(container, uuid4())
-
-
 async def test_removing_an_attribute_fails_and_names_the_attribute_that_depends_on_it(
     container: AsyncContainer,
 ) -> None:
@@ -71,3 +65,9 @@ async def test_a_refused_removal_leaves_the_attribute_in_place(container: AsyncC
     attribute = await load_attribute(container, BLADE)
     assert attribute is not None
     assert len(attribute.values) == BLADE_ROWS
+
+
+async def test_removing_an_attribute_fails_if_there_is_no_such_attribute(container: AsyncContainer) -> None:
+    """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
+    with pytest.raises(AttributeNotFoundError):
+        await _remove(container, uuid4())

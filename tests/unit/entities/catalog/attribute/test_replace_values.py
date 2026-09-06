@@ -3,7 +3,7 @@ from uuid import uuid4
 
 import pytest
 
-from memiro.entities.catalog.attribute.entity import Attribute, AttributeValueData
+from memiro.entities.catalog.attribute.entity import Attribute, AttributeValueData, ReplacementValueData
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.common.identifiers import AttributeValueId
 from memiro.entities.common.money import Money
@@ -21,16 +21,18 @@ def _row(
     amount: str = "2500",
     sort_order: int = 1,
     marks_absence: bool = False,
-) -> AttributeValueData:
+) -> ReplacementValueData:
     """Build one row of the replacement set as the owner's form carries it."""
-    return AttributeValueData(
+    return ReplacementValueData(
         id=value_id,
-        name=name,
-        rate=Rate(amount=Money(amount=Decimal(amount)), unit=Unit.LINEAR_METER),
-        scaled_by_shape=False,
-        scaled_by_size_surcharge=False,
-        marks_absence=marks_absence,
-        sort_order=sort_order,
+        data=AttributeValueData(
+            name=name,
+            rate=Rate(amount=Money(amount=Decimal(amount)), unit=Unit.LINEAR_METER),
+            scaled_by_shape=False,
+            scaled_by_size_surcharge=False,
+            marks_absence=marks_absence,
+            sort_order=sort_order,
+        ),
     )
 
 
@@ -69,8 +71,8 @@ def test_a_row_without_an_identifier_joins_the_dictionary() -> None:
         clock=LATER_CLOCK,
     )
 
-    added = next(value for value in backlight.values if value.name == "Рассеянная")
-    assert added.id not in {CONTOUR, NO_BACKLIGHT}
+    assert [value.name for value in backlight.values] == ["Контурная", "Рассеянная"]
+    assert backlight.values[1].id not in (CONTOUR, NO_BACKLIGHT)
 
 
 def test_replacing_the_values_moves_the_attribute_forward_in_time() -> None:

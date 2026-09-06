@@ -13,8 +13,8 @@ from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.common.money import Money
 from memiro.entities.errors.attribute import InvalidAttributeParentError, InvalidAttributeValueSetError
-from tests.common.factory.catalog import BACKLIGHT, CATEGORY, CONTOUR, SECOND_CATEGORY
-from tests.integration.manage_attributes.arrange import load_attribute, load_dictionary, value_form
+from tests.common.factory.catalog import BACKLIGHT, CATEGORY, SECOND_CATEGORY
+from tests.integration.manage_attributes.arrange import load_attribute, load_dictionary, new_value_form
 from tests.integration.prime import prime_second_category
 
 pytestmark = pytest.mark.usefixtures("dictionary")
@@ -40,7 +40,7 @@ def _form(**overrides: object) -> CreateAttributeForm:
         "is_customer_changeable": True,
         "is_filterable": True,
         "sort_order": PLACE_IN_THE_CARD,
-        "values": [value_form(name="Фацет есть"), value_form(name="Без фацета", amount="0", sort_order=2)],
+        "values": [new_value_form(name="Фацет есть"), new_value_form(name="Без фацета", amount="0", sort_order=2)],
     }
     return CreateAttributeForm.model_validate(fields | overrides)
 
@@ -77,12 +77,6 @@ async def test_a_created_attribute_joins_the_dictionary_the_calculator_reads(con
     assert created.id in {attribute.id for attribute in dictionary}
 
 
-async def test_creating_an_attribute_fails_if_the_category_does_not_exist(container: AsyncContainer) -> None:
-    """CATEGORY_NOT_FOUND: an attribute describes products of a section that exists."""
-    with pytest.raises(CategoryNotFoundError):
-        await _create(container, _form(category_id=uuid4()))
-
-
 async def test_creating_an_attribute_fails_if_a_parent_is_not_in_the_dictionary(container: AsyncContainer) -> None:
     """INVALID_ATTRIBUTE_PARENT: dependence points at an attribute that is there."""
     with pytest.raises(InvalidAttributeParentError):
@@ -96,14 +90,6 @@ async def test_creating_an_attribute_fails_if_a_parent_belongs_to_another_catego
     """INVALID_ATTRIBUTE_PARENT: dependence is read inside one category and nowhere across."""
     with pytest.raises(InvalidAttributeParentError):
         await _create(container, _form(category_id=SECOND_CATEGORY, parent_ids=[BACKLIGHT]))
-
-
-async def test_creating_an_attribute_fails_if_it_claims_an_existing_dictionary_row(
-    container: AsyncContainer,
-) -> None:
-    """INVALID_ATTRIBUTE_VALUE_SET: an existing row belongs to the attribute that owns it."""
-    with pytest.raises(InvalidAttributeValueSetError):
-        await _create(container, _form(values=[value_form(value_id=CONTOUR)]))
 
 
 async def test_creating_a_numeric_attribute_fails_with_two_tariff_rows(container: AsyncContainer) -> None:
@@ -132,3 +118,9 @@ async def test_a_refused_creation_leaves_the_dictionary_as_it_was(container: Asy
         await _create(container, _form(category_id=uuid4()))
 
     assert {attribute.id for attribute in await load_dictionary(container)} == before
+
+
+async def test_creating_an_attribute_fails_if_the_category_does_not_exist(container: AsyncContainer) -> None:
+    """CATEGORY_NOT_FOUND: an attribute describes products of a section that exists."""
+    with pytest.raises(CategoryNotFoundError):
+        await _create(container, _form(category_id=uuid4()))
