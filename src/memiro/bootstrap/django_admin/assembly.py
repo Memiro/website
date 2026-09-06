@@ -1,6 +1,9 @@
+from functools import partial
 from typing import Any
 
 from memiro.bootstrap.config_loader import Config
+from memiro.bootstrap.di.container import get_async_container
+from memiro.presentation.django_admin.bridge import CONTAINER_FACTORY_SETTING
 
 
 def admin_settings(config: Config) -> dict[str, Any]:
@@ -56,6 +59,9 @@ def admin_settings(config: Config) -> dict[str, Any]:
                 "NAME": config.db.database,
             },
         },
+        # The bridge assembles the container from this factory inside its own
+        # loop; the admin package never reaches into the bootstrap itself.
+        CONTAINER_FACTORY_SETTING: partial(get_async_container, config),
         "DEFAULT_AUTO_FIELD": "django.db.models.BigAutoField",
         "LANGUAGE_CODE": "ru-ru",
         "TIME_ZONE": "Europe/Moscow",
