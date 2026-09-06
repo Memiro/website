@@ -31,6 +31,7 @@ from memiro.entities.catalog.product.entity import (
 )
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro.entities.common.slug import MAX_SLUG_LENGTH
 from memiro_common.logger import Logger
 
 logger: Logger = structlog.get_logger(__name__)
@@ -123,14 +124,20 @@ def variant_data(
 
 
 class ProductForm(BaseModel):
-    """Owner-controlled root fields shared by creating and changing a product."""
+    """Owner-controlled root fields shared by creating and changing a product.
+
+    Only the address carries a default here: empty means "derive it from the
+    name". Everything else the card states outright, so that a field left out
+    of a change cannot silently unpublish the product or wipe its description
+    — the form of the scenario that has a sensible blank card says so itself.
+    """
 
     category_id: CategoryId
     name: str = Field(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH)
-    slug: str = Field(default="", max_length=MAX_NAME_LENGTH, pattern=SLUG_PATTERN)
-    description: str = Field(default="", max_length=MAX_DESCRIPTION_LENGTH)
-    is_published: bool = False
-    hides_calculated_price: bool = False
+    slug: str = Field(default="", max_length=MAX_SLUG_LENGTH, pattern=SLUG_PATTERN)
+    description: str = Field(max_length=MAX_DESCRIPTION_LENGTH)
+    is_published: bool
+    hides_calculated_price: bool
 
 
 def create_data(form: ProductForm) -> CreateProductData:

@@ -44,6 +44,10 @@ CYRILLIC: dict[str, str] = {
 
 _SEPARATORS = re.compile(r"[^a-z0-9]+")
 
+# One letter of a name can unfold into four ("щ" is "shch"), so an address is
+# bounded on its own and not by the length of the name it came from.
+MAX_SLUG_LENGTH = 255
+
 
 def slugify(name: str) -> str:
     """Turn a name into a lowercase latin address, or into nothing when it holds no letter."""
@@ -53,4 +57,5 @@ def slugify(name: str) -> str:
     # the address cannot spell becomes a separator, digits included in words.
     decomposed = unicodedata.normalize("NFKD", transliterated)
     folded = "".join(character for character in decomposed if not unicodedata.combining(character))
-    return _SEPARATORS.sub("-", folded).strip("-")
+    address = _SEPARATORS.sub("-", folded).strip("-")
+    return address[:MAX_SLUG_LENGTH].rstrip("-")
