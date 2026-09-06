@@ -20,11 +20,11 @@ from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
 
-logger: Logger = structlog.get_logger(__name__)
-
 # Zero is a bound the owner may type: it means the studio takes on any size
 # (``pricing-settings.md``, rule 2).
 NO_PRODUCTION_LIMIT = 0
+
+logger: Logger = structlog.get_logger(__name__)
 
 
 class SizeSurchargeRowForm(BaseModel):

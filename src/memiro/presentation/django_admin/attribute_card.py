@@ -20,7 +20,7 @@ from memiro.application.manage_attributes import (
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId
-from memiro.presentation.django_admin.writes import sent
+from memiro.presentation.django_admin.writes import send
 
 
 def create_attribute(root: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> AttributeId:
@@ -30,7 +30,7 @@ def create_attribute(root: Mapping[str, Any], rows: Sequence[Mapping[str, Any]])
         values=[AttributeValueForm(**_row_fields(row)) for row in rows],
         **_root_fields(root),
     )
-    created: CreatedAttribute = sent(lambda scope: _create(scope, form))
+    created: CreatedAttribute = send(lambda scope: _create(scope, form))
     return created.id
 
 
@@ -48,13 +48,18 @@ def restate_attribute(
     values = ReplaceValuesForm(
         values=[ReplacementValueForm(id=_kept_row(row), **_row_fields(row)) for row in rows],
     )
-    sent(lambda scope: _replace(scope, attribute_id, values))
-    sent(lambda scope: _change(scope, attribute_id, ChangeAttributeForm(**_root_fields(root))))
+    replace_values(attribute_id, values)
+    send(lambda scope: _change(scope, attribute_id, ChangeAttributeForm(**_root_fields(root))))
+
+
+def replace_values(attribute_id: AttributeId, values: ReplaceValuesForm) -> None:
+    """Send the whole dictionary of one attribute: the only command that prices a row (decision 4)."""
+    send(lambda scope: _replace(scope, attribute_id, values))
 
 
 def remove_attribute(attribute_id: AttributeId) -> None:
     """Send one attribute to the command that removes it together with its dictionary."""
-    sent(lambda scope: _remove(scope, attribute_id))
+    send(lambda scope: _remove(scope, attribute_id))
 
 
 def _root_fields(root: Mapping[str, Any]) -> dict[str, Any]:

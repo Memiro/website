@@ -57,6 +57,21 @@ def _submitted_rows(formsets: list[BaseInlineFormSet]) -> list[dict[str, Any]]:
     return [row for formset in formsets for row in formset.cleaned_data if row and not row.get("DELETE")]
 
 
+class GuardsItsForm:
+    """Screen whose form is a write: every submit goes through the guard of ADR-0012."""
+
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: str | None = None,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Send the form through the guard that owns refusals and the best-effort half (ADR-0012)."""
+        view = partial(super().changeform_view, request, object_id, form_url, extra_context)  # type: ignore[misc]  # pyright: ignore[reportAttributeAccessIssue]  # the mixin is only ever mixed into a ``ModelAdmin``
+        return guarded_write(request, view)
+
+
 class RefusesWrites:
     """Screen that shows the domain and accepts nothing back."""
 
@@ -140,6 +155,10 @@ class AttributeValueInline(admin.TabularInline):
 
     model = AttributeValue
     form = AttributeValueRowForm
+    # The mirror row is named for the flat price list; on this card the same
+    # rows are the dictionary of one attribute.
+    verbose_name = "значение"
+    verbose_name_plural = "значения"
     extra = 1
     max_num = MAX_ATTRIBUTE_VALUES
     ordering = (
@@ -159,7 +178,7 @@ class AttributeValueInline(admin.TabularInline):
 
 
 @admin.register(Attribute)
-class AttributeAdmin(admin.ModelAdmin):
+class AttributeAdmin(GuardsItsForm, admin.ModelAdmin):
     """Атрибуты разделов: карточка пишет домен командами агрегата."""
 
     form = AttributeCardForm
@@ -191,18 +210,6 @@ class AttributeAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request: HttpRequest, obj: Model | None = None) -> tuple[str, ...]:
         """Keep a saved attribute in its section: ``ChangeAttributeData`` carries no category."""
         return () if obj is None else ("category",)
-
-    @override
-    def changeform_view(
-        self,
-        request: HttpRequest,
-        object_id: str | None = None,
-        form_url: str = "",
-        extra_context: dict[str, Any] | None = None,
-    ) -> HttpResponse:
-        """Send the card through the guard that owns refusals and the best-effort half (ADR-0012)."""
-        view = partial(super().changeform_view, request, object_id, form_url, extra_context)
-        return guarded_write(request, view)
 
     @override
     def delete_view(
@@ -258,7 +265,7 @@ class AttributeAdmin(admin.ModelAdmin):
 
 
 @admin.register(AttributeValue)
-class AttributeValueAdmin(admin.ModelAdmin):
+class AttributeValueAdmin(GuardsItsForm, admin.ModelAdmin):
     """Материалы и цены: тарифы всех значений справочника поперёк атрибутов."""
 
     form = MaterialPriceRowForm
@@ -309,18 +316,6 @@ class AttributeValueAdmin(admin.ModelAdmin):
     def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
         """Send the edited rows through the guard that owns refusals and the best-effort half."""
         view = partial(super().changelist_view, request, extra_context)
-        return guarded_write(request, view)
-
-    @override
-    def changeform_view(
-        self,
-        request: HttpRequest,
-        object_id: str | None = None,
-        form_url: str = "",
-        extra_context: dict[str, Any] | None = None,
-    ) -> HttpResponse:
-        """Guard the single-row form too: it is unlinked from the list, not unreachable."""
-        view = partial(super().changeform_view, request, object_id, form_url, extra_context)
         return guarded_write(request, view)
 
     @override
@@ -400,7 +395,7 @@ class SizeSurchargeInline(admin.TabularInline):
 
 
 @admin.register(PricingSettings)
-class PricingSettingsAdmin(admin.ModelAdmin):
+class PricingSettingsAdmin(GuardsItsForm, admin.ModelAdmin):
     """Параметры расчёта: границы и ступени наценки одной командой."""
 
     form = PricingSettingsForm
@@ -423,18 +418,6 @@ class PricingSettingsAdmin(admin.ModelAdmin):
     ) -> HttpResponse:  # Django's hook signature
         """Send the owner to the only object there is: a list of one row is not a screen."""
         return HttpResponseRedirect(reverse("admin:memiro_pricingsettings_change", args=[PRICING_SETTINGS_ID]))
-
-    @override
-    def changeform_view(
-        self,
-        request: HttpRequest,
-        object_id: str | None = None,
-        form_url: str = "",
-        extra_context: dict[str, Any] | None = None,
-    ) -> HttpResponse:
-        """Send the screen through the guard that owns refusals and the best-effort half (ADR-0012)."""
-        view = partial(super().changeform_view, request, object_id, form_url, extra_context)
-        return guarded_write(request, view)
 
     @override
     def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:

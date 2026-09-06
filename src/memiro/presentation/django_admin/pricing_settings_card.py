@@ -10,7 +10,7 @@ from memiro.application.manage_pricing_settings import (
     ChangePricingSettingsForm,
     SizeSurchargeRowForm,
 )
-from memiro.presentation.django_admin.writes import sent
+from memiro.presentation.django_admin.writes import send
 
 
 def restate_pricing_settings(bounds: Mapping[str, Any], tiers: Sequence[Mapping[str, Any]]) -> None:
@@ -24,7 +24,7 @@ def restate_pricing_settings(bounds: Mapping[str, Any], tiers: Sequence[Mapping[
             SizeSurchargeRowForm(from_long_side_mm=tier["from_long_side_mm"], factor=tier["factor"]) for tier in tiers
         ],
     )
-    sent(lambda scope: _change(scope, form))
+    send(lambda scope: _change(scope, form))
 
 
 async def _change(scope: AsyncContainer, form: ChangePricingSettingsForm) -> None:

@@ -31,6 +31,14 @@ from memiro.presentation.django_admin.models import Attribute, AttributeValue, P
 
 PARENTS_FIELD = "parents"
 
+# One blank row under the stored ones, so the owner always has somewhere to
+# type the next tier.
+BLANK_TIER_ROWS = 1
+
+# The name the mirror gives the composite key of a tier, and the name Django's
+# inline template looks the row's key up by.
+TIER_KEY_FIELD = "pk"
+
 
 class AttributeCardForm(forms.ModelForm):
     """Корень атрибута: название, вид, зависимости и место в списке."""
@@ -166,15 +174,6 @@ class SizeSurchargeTierForm(forms.ModelForm):
             "from_long_side_mm",
             "factor",
         )
-
-
-# One blank row under the stored ones, so the owner always has somewhere to
-# type the next tier.
-BLANK_TIER_ROWS = 1
-
-# The name the mirror gives the composite key of a tier, and the name Django's
-# inline template looks the row's key up by.
-TIER_KEY_FIELD = "pk"
 
 
 class SizeSurchargeFormSet(BaseInlineFormSet):

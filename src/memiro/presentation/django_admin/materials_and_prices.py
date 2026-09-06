@@ -12,20 +12,17 @@ forbids — so the row travels back inside the dictionary it belongs to, its
 neighbours unchanged.
 """
 
-from dishka import AsyncContainer
-
-from memiro.application.manage_attributes import ReplacementValueForm, ReplaceValues, ReplaceValuesForm
+from memiro.application.manage_attributes import ReplacementValueForm, ReplaceValuesForm
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.common.identifiers import AttributeId
+from memiro.presentation.django_admin.attribute_card import replace_values
 from memiro.presentation.django_admin.models import AttributeValue
-from memiro.presentation.django_admin.writes import sent
 
 
 def restate_priced_row(edited: AttributeValue) -> None:
     """Send the dictionary of one attribute with the row the owner priced put back into it."""
     dictionary = AttributeValue.objects.filter(attribute_id=edited.attribute_id).order_by("sort_order", "name")
     values = [_as_replacement(edited if row.id == edited.id else row) for row in dictionary]
-    sent(lambda scope: _replace(scope, edited.attribute_id, ReplaceValuesForm(values=values)))
+    replace_values(edited.attribute_id, ReplaceValuesForm(values=values))
 
 
 def _as_replacement(row: AttributeValue) -> ReplacementValueForm:
@@ -42,8 +39,3 @@ def _as_replacement(row: AttributeValue) -> ReplacementValueForm:
         marks_absence=row.marks_absence,
         sort_order=row.sort_order,
     )
-
-
-async def _replace(scope: AsyncContainer, attribute_id: AttributeId, form: ReplaceValuesForm) -> None:
-    interactor = await scope.get(ReplaceValues)
-    await interactor.execute(attribute_id, form)

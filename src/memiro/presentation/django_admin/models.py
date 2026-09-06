@@ -108,8 +108,12 @@ class AttributeValue(Mirror):
 
     class Meta(Mirror.Meta):
         db_table = "attribute_values"
-        verbose_name = "значение"
-        verbose_name_plural = "значения"
+        # The flat list across attributes is the screen the ticket calls
+        # "Материалы и цены" (``attribute.md``, item 15); on the card of an
+        # attribute the same rows are its dictionary, and the inline names
+        # them itself.
+        verbose_name = "материал"
+        verbose_name_plural = "материалы и цены"
 
     @override
     def __str__(self) -> str:

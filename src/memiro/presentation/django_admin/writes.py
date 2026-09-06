@@ -37,7 +37,7 @@ def _refused(refusal: AppError) -> str:
     return refusal_text(refusal)
 
 
-def sent[T](command: Callable[[AsyncContainer], Coroutine[Any, Any, T]]) -> T:
+def send[T](command: Callable[[AsyncContainer], Coroutine[Any, Any, T]]) -> T:
     """Send one command across the bridge and remember that it reached the domain."""
     result = bridge().call(command)
     _committed.set(True)

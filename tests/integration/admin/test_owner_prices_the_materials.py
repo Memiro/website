@@ -40,6 +40,11 @@ async def _amount_of(value_id: AttributeValueId) -> Decimal:
     return cast("Decimal", (await _values().aget(id=value_id)).rate_amount)
 
 
+async def _unit_of(value_id: AttributeValueId) -> str:
+    """Read the unit of consumption of one dictionary row back."""
+    return cast("str", (await _values().aget(id=value_id)).rate_unit)
+
+
 async def _names_of(attribute_id: AttributeId) -> list[str]:
     """Read the dictionary of one attribute back in the order the owner gave it."""
     return [value.name async for value in _values().filter(attribute_id=attribute_id).order_by("sort_order")]
@@ -54,6 +59,17 @@ async def test_the_owner_prices_one_row_of_the_flat_list(owner_client: AsyncClie
 
     assert response.status_code == HTTPStatus.FOUND
     assert await _amount_of(CONTOUR) == Decimal(3100)
+
+
+async def test_the_owner_moves_a_row_to_another_unit_of_consumption(owner_client: AsyncClient) -> None:
+    """The unit is the fourth column the screen edits: a row leaves the metre it was priced in."""
+    response = await owner_client.post(
+        CHANGELIST_URL,
+        priced_list_post([priced_row(value_id=CONTOUR, amount="3100", unit=Unit.SQUARE_METER)]),
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert await _unit_of(CONTOUR) == Unit.SQUARE_METER.name
 
 
 async def test_the_card_of_the_attribute_shows_the_price_the_flat_list_saved(owner_client: AsyncClient) -> None:

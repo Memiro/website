@@ -10,6 +10,7 @@ from decimal import Decimal
 import pytest
 from dishka import AsyncContainer
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.input_limits import (
     MAX_AREA_M2,
@@ -40,20 +41,16 @@ async def test_the_owner_moves_the_bounds_the_calculation_lives_in(container: As
     assert [tier.factor for tier in stored.size_surcharges] == [Decimal("1.25")]
 
 
-@pytest.mark.parametrize(
-    "form",
-    [
-        pytest.param({"min_area": MAX_AREA_M2 + 1}, id=None),
-        pytest.param({"max_long_side_mm": MAX_SIDE_MM + 1}, id=None),
-    ],
-)
-async def test_a_bound_one_step_over_its_limit_never_reaches_the_domain(
-    container: AsyncContainer,
-    form: dict[str, object],
-) -> None:
-    """VALIDATION_ERROR: the input bounds of the form are hit at exactly limit + 1."""
+async def test_an_area_one_step_over_its_limit_never_reaches_the_domain(container: AsyncContainer) -> None:
+    """VALIDATION_ERROR: the input bound on the minimum area is hit at exactly limit + 1."""
     with pytest.raises(ValidationError):
-        await change_settings(container, settings_form(**form))  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+        await change_settings(container, settings_form(min_area=MAX_AREA_M2 + 1))
+
+
+async def test_a_side_one_step_over_its_limit_never_reaches_the_domain(container: AsyncContainer) -> None:
+    """VALIDATION_ERROR: the input bound on a production side is hit at exactly limit + 1."""
+    with pytest.raises(ValidationError):
+        await change_settings(container, settings_form(max_long_side_mm=MAX_SIDE_MM + 1))
 
 
 async def test_one_tier_more_than_the_table_holds_never_reaches_the_domain(container: AsyncContainer) -> None:
@@ -72,10 +69,10 @@ async def test_a_factor_one_step_over_its_limit_never_reaches_the_domain(contain
 
 async def test_a_site_whose_parameters_were_never_installed_is_told_so(
     container: AsyncContainer,
-    engine: object,
+    engine: AsyncEngine,
 ) -> None:
     """PRICING_SETTINGS_NOT_FOUND: without the row the command has nothing to move."""
-    await prime_no_pricing_settings(engine)  # type: ignore[arg-type]  # pyright: ignore[reportArgumentType]
+    await prime_no_pricing_settings(engine)
 
     with pytest.raises(PricingSettingsNotFoundError):
         await change_settings(container, settings_form())
