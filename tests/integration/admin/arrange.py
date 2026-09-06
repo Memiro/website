@@ -1,20 +1,38 @@
 """What the write tests of the admin card arrange and post."""
 
+import re
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from decimal import Decimal
+from html import unescape
 from typing import Any
 
 from dishka import AsyncContainer
 
-from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES
+from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
 from memiro.application.manage_attributes import AttributeValueForm, CreateAttribute, CreateAttributeForm
+from memiro.application.manage_pricing_settings import (
+    ChangePricingSettings,
+    ChangePricingSettingsForm,
+    SizeSurchargeRowForm,
+)
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.common.identifiers import AttributeId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId
 from memiro.presentation.django_admin.bridge import bridge
 from tests.common.factory.catalog import CATEGORY
 
 INLINE_PREFIX = "values"
+
+
+@dataclass(frozen=True, slots=True)
+class PricingBounds:
+    """The four bounds of calculation, as the owner types them on the screen."""
+
+    min_area: str
+    min_order_total: str
+    max_long_side_mm: int
+    max_short_side_mm: int
 
 
 def value_form(*, name: str, amount: str = "2500", sort_order: int = 1) -> AttributeValueForm:
@@ -123,4 +141,109 @@ def card_post(  # noqa: PLR0913  # one keyword per field of the card the owner f
     }
     for number, posted_row in enumerate(rows):
         posted |= {f"{INLINE_PREFIX}-{number}-{field}": value for field, value in posted_row.items()}
+    return posted
+
+
+TIER_PREFIX = "size_surcharges"
+FLAT_PREFIX = "form"
+
+
+def priced_row(  # noqa: PLR0913  # one keyword per column of the flat list the owner may move
+    *,
+    value_id: AttributeValueId,
+    amount: str = "3000",
+    unit: Unit = Unit.LINEAR_METER,
+    scaled_by_shape: bool = False,
+    scaled_by_size_surcharge: bool = False,
+    extra: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Spell one row of «Материалы и цены» the way the changelist posts it."""
+    posted = {
+        "id": str(value_id),
+        "rate_unit": unit.name,
+        "rate_amount": amount,
+    }
+    posted |= {"scaled_by_shape": "on"} if scaled_by_shape else {}
+    posted |= {"scaled_by_size_surcharge": "on"} if scaled_by_size_surcharge else {}
+    posted |= dict(extra or {})
+    return posted
+
+
+def priced_list_post(rows: Sequence[Mapping[str, str]]) -> dict[str, Any]:
+    """Spell the edited rows of the flat list as the changelist's own POST body."""
+    posted: dict[str, Any] = {
+        f"{FLAT_PREFIX}-TOTAL_FORMS": str(len(rows)),
+        f"{FLAT_PREFIX}-INITIAL_FORMS": str(len(rows)),
+        f"{FLAT_PREFIX}-MIN_NUM_FORMS": "0",
+        f"{FLAT_PREFIX}-MAX_NUM_FORMS": str(len(rows)),
+        "_save": "",
+    }
+    for number, posted_row in enumerate(rows):
+        posted |= {f"{FLAT_PREFIX}-{number}-{field}": value for field, value in posted_row.items()}
+    return posted
+
+
+def tier(*, from_long_side_mm: int, factor: str) -> dict[str, str]:
+    """Spell one surcharge tier the way the inline posts it."""
+    return {"from_long_side_mm": str(from_long_side_mm), "factor": factor}
+
+
+def pricing_post(
+    *,
+    bounds: PricingBounds,
+    tiers: Sequence[Mapping[str, str]],
+) -> dict[str, Any]:
+    """Spell the whole screen of calculation parameters — bounds and tiers — as one POST body."""
+    posted: dict[str, Any] = {
+        "min_area": bounds.min_area,
+        "min_order_total": bounds.min_order_total,
+        "max_long_side_mm": str(bounds.max_long_side_mm),
+        "max_short_side_mm": str(bounds.max_short_side_mm),
+        f"{TIER_PREFIX}-TOTAL_FORMS": str(len(tiers)),
+        f"{TIER_PREFIX}-INITIAL_FORMS": "0",
+        f"{TIER_PREFIX}-MIN_NUM_FORMS": "0",
+        f"{TIER_PREFIX}-MAX_NUM_FORMS": str(MAX_SIZE_SURCHARGES),
+    }
+    for number, posted_tier in enumerate(tiers):
+        posted |= {f"{TIER_PREFIX}-{number}-{field}": value for field, value in posted_tier.items()}
+    return posted
+
+
+def arranged_pricing_settings(bounds: PricingBounds, tiers: Sequence[tuple[int, str]] = ()) -> None:
+    """Put known calculation parameters into the database through their own command."""
+    form = ChangePricingSettingsForm(
+        min_area=Decimal(bounds.min_area),
+        min_order_total=Decimal(bounds.min_order_total),
+        max_long_side_mm=bounds.max_long_side_mm,
+        max_short_side_mm=bounds.max_short_side_mm,
+        surcharges=[
+            SizeSurchargeRowForm(from_long_side_mm=threshold, factor=Decimal(factor)) for threshold, factor in tiers
+        ],
+    )
+    bridge().call(lambda scope: _changed(scope, form))
+
+
+async def _changed(scope: AsyncContainer, form: ChangePricingSettingsForm) -> None:
+    """Run the parameters interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(ChangePricingSettings)
+    await interactor.execute(form)
+
+
+# What the browser sends back: every input the card rendered, the empty extra
+# row and the template row of the inline aside.
+_INPUT = re.compile(r"<input[^>]*>")
+_NAME = re.compile(r'name="([^"]+)"')
+_VALUE = re.compile(r'value="([^"]*)"')
+TEMPLATE_ROW = f"{TIER_PREFIX}-__prefix__"
+
+
+def rendered_form(shown: str) -> dict[str, str]:
+    """Read back the card the owner is looking at, as the fields his browser would post."""
+    posted: dict[str, str] = {}
+    for tag in _INPUT.findall(shown):
+        name = _NAME.search(tag)
+        value = _VALUE.search(tag)
+        if name is None or name.group(1).startswith(TEMPLATE_ROW) or 'type="checkbox"' in tag:
+            continue
+        posted[name.group(1)] = unescape(value.group(1)) if value else ""
     return posted

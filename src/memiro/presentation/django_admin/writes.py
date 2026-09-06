@@ -8,13 +8,16 @@ history, banners, the redirect — is a warning: the admin's bookkeeping is a
 convenience, not an invariant.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from contextvars import ContextVar
+from typing import Any
 
 import structlog
+from dishka import AsyncContainer
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 
+from memiro.presentation.django_admin.bridge import bridge
 from memiro.presentation.django_admin.refusals import refusal_text
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
@@ -34,9 +37,11 @@ def _refused(refusal: AppError) -> str:
     return refusal_text(refusal)
 
 
-def record_commit() -> None:
-    """Remember that a command of this request has already reached the domain."""
+def send[T](command: Callable[[AsyncContainer], Coroutine[Any, Any, T]]) -> T:
+    """Send one command across the bridge and remember that it reached the domain."""
+    result = bridge().call(command)
     _committed.set(True)
+    return result
 
 
 def guarded_write(request: HttpRequest, view: Callable[[], HttpResponse]) -> HttpResponse:

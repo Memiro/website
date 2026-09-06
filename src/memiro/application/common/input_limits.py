@@ -38,3 +38,13 @@ MAX_ATTRIBUTE_PARENTS = 10
 # far below it, and without it a hand-written ``1E+999999999`` reaches the
 # arithmetic and dies there as ``decimal.Overflow``.
 MAX_RATE_AMOUNT = Decimal(10_000_000)
+
+# The surcharge table is a card of the admin: a handful of steps at which the
+# studio's production changes, not a price list of its own.
+MAX_SIZE_SURCHARGES = 20
+
+# Input bounds on the calculation parameters, not business rules: what the
+# studio charges and takes on is the owner's data.
+MAX_SURCHARGE_FACTOR = Decimal(100)
+MAX_AREA_M2 = Decimal(100)
+MAX_ORDER_TOTAL = Decimal(10_000_000)
