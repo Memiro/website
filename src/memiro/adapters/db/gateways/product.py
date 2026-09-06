@@ -53,6 +53,14 @@ class SAProductGateway(ProductGateway):
         return result.scalar_one_or_none()
 
     @override
+    async def slug_owner(self, slug: str) -> ProductId | None:
+        """Ask the unique column who holds the address: no aggregate is needed to answer that."""
+        result = await self._session.execute(
+            select(products_table.c.id).where(products_table.c.slug == slug),
+        )
+        return result.scalar_one_or_none()
+
+    @override
     async def all_ids(self) -> Sequence[ProductId]:
         """Read the identifiers of the whole catalogue in the one order that cannot repeat itself."""
         result = await self._session.execute(select(products_table.c.id).order_by(products_table.c.id))

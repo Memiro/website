@@ -28,6 +28,16 @@ class ProductGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def slug_owner(self, slug: str) -> ProductId | None:
+        """Name the product holding this public address, or ``None`` if it is free.
+
+        Uniqueness belongs to the transaction, not to the aggregate: a
+        product cannot see the addresses of the others, and the database is
+        the only place that knows them all.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def all_ids(self) -> Sequence[ProductId]:
         """List the identifier of every product, in one stable order.
 

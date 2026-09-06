@@ -3,14 +3,36 @@ from __future__ import annotations
 from collections.abc import Sequence
 from decimal import Decimal
 
+import structlog
 from pydantic import BaseModel, Field, model_validator
 
-from memiro.application.common.input_limits import MAX_QUANTITY, MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
-from memiro.application.errors.catalog import AttributeValueNotFoundError
+from memiro.application.common.gateway.product import ProductGateway
+from memiro.application.common.input_limits import (
+    MAX_DESCRIPTION_LENGTH,
+    MAX_NAME_LENGTH,
+    MAX_QUANTITY,
+    MAX_SELECTIONS,
+    MAX_SIDE_MM,
+    MIN_NAME_LENGTH,
+    MIN_SIDE_MM,
+)
+from memiro.application.errors.catalog import (
+    AttributeValueNotFoundError,
+    ProductNotFoundError,
+    ProductSlugTakenError,
+)
 from memiro.entities.catalog.attribute.entity import Attribute
-from memiro.entities.catalog.product.entity import DeclaredValue, Product, VariantData
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, VariantId
+from memiro.entities.catalog.product.entity import DeclaredValue, Product, ProductData, VariantData
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro_common.logger import Logger
+
+logger: Logger = structlog.get_logger(__name__)
+
+# Either the address the owner typed — lowercase latin words joined by single
+# hyphens — or nothing, which the domain fills in from the name. The form
+# refuses anything else instead of quietly rewriting what the owner entered.
+SLUG_PATTERN = r"^$|^[a-z0-9]+(?:-[a-z0-9]+)*$"
 
 
 def _overrides(
@@ -41,20 +63,24 @@ def _overrides(
     return tuple(resolved)
 
 
-class VariantOverrideForm(BaseModel):
-    """One dictionary value or numeric quantity replacing the product's declaration."""
+class ChosenValueForm(BaseModel):
+    """One dictionary value or numeric quantity the owner set on one attribute."""
 
     attribute_id: AttributeId
     value_id: AttributeValueId | None = None
     quantity: Decimal | None = Field(default=None, ge=0, le=MAX_QUANTITY)
 
     @model_validator(mode="after")
-    def _one_representation(self) -> VariantOverrideForm:
-        """Require exactly one representation of the override."""
+    def _one_representation(self) -> ChosenValueForm:
+        """Require exactly one representation of the chosen value."""
         if (self.value_id is None) is (self.quantity is None):
-            msg = "A variant override must name exactly one of value_id and quantity"
+            msg = "A chosen value must name exactly one of value_id and quantity"
             raise ValueError(msg)
         return self
+
+
+class VariantOverrideForm(ChosenValueForm):
+    """One chosen value replacing what the product declared on that attribute."""
 
 
 class VariantForm(BaseModel):
@@ -99,3 +125,69 @@ def variant_data(
         overrides=_overrides(product, attributes, form.overrides),
         sort_order=form.sort_order,
     )
+
+
+class ProductForm(BaseModel):
+    """Owner-controlled root fields shared by creating and changing a product."""
+
+    category_id: CategoryId
+    name: str = Field(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH)
+    slug: str = Field(default="", max_length=MAX_NAME_LENGTH, pattern=SLUG_PATTERN)
+    description: str = Field(default="", max_length=MAX_DESCRIPTION_LENGTH)
+    is_published: bool = False
+    hides_calculated_price: bool = False
+
+
+def product_data(form: ProductForm) -> ProductData:
+    """Resolve the owner's card into the root data the aggregate takes."""
+    return ProductData(
+        category_id=form.category_id,
+        name=form.name,
+        slug=form.slug,
+        description=form.description,
+        is_published=form.is_published,
+        hides_calculated_price=form.hides_calculated_price,
+    )
+
+
+async def loaded_for_update(gateway: ProductGateway, product_id: ProductId, *, command: str) -> Product:
+    """Load one product under its lock, with its children, refusing an identifier nobody issued."""
+    product = await gateway.get(product_id, for_update=True, eager_variants=True)
+    if product is None:
+        logger.warning("A command named an unknown product", product_id=product_id, command=command)
+        raise ProductNotFoundError
+    return product
+
+
+async def ensure_the_address_is_free(
+    gateway: ProductGateway,
+    slug: str,
+    *,
+    owner: ProductId | None,
+) -> None:
+    """Refuse an address another product already answers on."""
+    holder = await gateway.slug_owner(slug)
+    if holder is not None and holder != owner:
+        logger.warning("A product address is already taken", slug=slug)
+        raise ProductSlugTakenError
+
+
+class DeclarationForm(ChosenValueForm):
+    """One chosen value the owner declares for the product on an attribute of its section."""
+
+
+def declarations(
+    product: Product,
+    attributes: Sequence[Attribute],
+    forms: Sequence[DeclarationForm],
+) -> tuple[DeclaredValue, ...]:
+    """Resolve the owner's set into declarations on the attributes of the product's own section."""
+    index = {attribute.id: attribute for attribute in attributes if attribute.category_id == product.category_id}
+    resolved: list[DeclaredValue] = []
+    for form in forms:
+        attribute = index.get(form.attribute_id)
+        chosen = attribute.configure(form.value_id, form.quantity) if attribute is not None else None
+        if chosen is None:
+            raise AttributeValueNotFoundError
+        resolved.append(DeclaredValue(attribute_id=form.attribute_id, chosen=chosen))
+    return tuple(resolved)

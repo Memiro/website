@@ -324,6 +324,7 @@ class InquiryItem(Mirror):
         on_delete=models.DO_NOTHING,
         db_column="product_id",
         related_name="inquiry_items",
+        null=True,
     )
     product_name = models.CharField(max_length=NAME_LENGTH)
     price_from = models.DecimalField(max_digits=12, decimal_places=2, null=True)

@@ -33,3 +33,11 @@ class InvalidQuantityError(AppError):
 
     code: ClassVar[str] = "INVALID_QUANTITY"
     message: str = "A configured quantity cannot be negative"
+
+
+@app_error
+class InvalidProductSlugError(AppError):
+    """Raised when a product would carry no public address at all."""
+
+    code: ClassVar[str] = "INVALID_PRODUCT_SLUG"
+    message: str = "A product name yields no public address"

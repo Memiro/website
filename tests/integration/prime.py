@@ -16,14 +16,18 @@ from memiro.adapters.db.tables import (
     attributes_table,
     categories_table,
     inquiries_table,
+    inquiry_items_table,
     pricing_settings_table,
     product_declared_values_table,
     product_images_table,
     products_table,
 )
-from memiro.entities.common.identifiers import AttributeValueId
+from memiro.entities.common.identifiers import AttributeValueId, ProductId
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.common.money import Money
+from memiro.entities.inquiry.entity import InquirySource
+from memiro.entities.inquiry.phone import Phone
+from memiro.entities.pricing.quotation import PricingVerdict
 from memiro_common.clock import SystemClock
 from tests.common.factory.catalog import (
     ALUMINIUM,
@@ -33,6 +37,8 @@ from tests.common.factory.catalog import (
     CONTOUR,
     FOREIGN_PRODUCT,
     HEATING,
+    INQUIRY,
+    INQUIRY_ITEM,
     NO_HEATING,
     NO_MOUNT,
     PRODUCT,
@@ -482,3 +488,65 @@ async def count_inquiries_directly(engine: AsyncEngine) -> int:
     """Count the stored inquiries to prove what a refused submission did not leave behind."""
     async with engine.begin() as connection:
         return (await connection.execute(select(func.count()).select_from(inquiries_table))).scalar_one()
+
+
+async def prime_inquiry_for_the_product(engine: AsyncEngine) -> None:
+    """Leave a manager one inquiry whose only position points at the canonical product."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(inquiries_table),
+            [
+                {
+                    "id": INQUIRY,
+                    "source": InquirySource.SELECTION,
+                    "name": "Ольга",
+                    "phone": Phone(value="+79990000000"),
+                    "email": None,
+                    "comment": "",
+                    "consent_version": "2026-01-01",
+                    "created_at": CATALOG_STAMP,
+                },
+            ],
+        )
+        await connection.execute(
+            insert(inquiry_items_table),
+            [
+                {
+                    "id": INQUIRY_ITEM,
+                    "inquiry_id": INQUIRY,
+                    "product_id": PRODUCT,
+                    "product_name": "Зеркало в раме",
+                    "price_from": None,
+                    "configuration": None,
+                    "calculated_price": None,
+                    "verdict": PricingVerdict.NOT_PRICEABLE,
+                    "wish": "",
+                },
+            ],
+        )
+
+
+async def read_inquiry_item_directly(engine: AsyncEngine) -> tuple[ProductId | None, str]:
+    """Read what the surviving position still says about the product it was taken from."""
+    async with engine.begin() as connection:
+        result = await connection.execute(
+            select(inquiry_items_table.c.product_id, inquiry_items_table.c.product_name).where(
+                inquiry_items_table.c.id == INQUIRY_ITEM,
+            ),
+        )
+        row = result.one()
+        return row.product_id, row.product_name
+
+
+async def count_products_directly(engine: AsyncEngine) -> int:
+    """Count the stored products to prove what a refused command did not leave behind."""
+    async with engine.begin() as connection:
+        return (await connection.execute(select(func.count()).select_from(products_table))).scalar_one()
+
+
+async def count_product_children_directly(engine: AsyncEngine) -> tuple[int, int]:
+    """Count the declarations and the photos still stored, whatever product they belong to."""
+    async with engine.begin() as connection:
+        declared = await connection.execute(select(func.count()).select_from(product_declared_values_table))
+        images = await connection.execute(select(func.count()).select_from(product_images_table))
+        return declared.scalar_one(), images.scalar_one()

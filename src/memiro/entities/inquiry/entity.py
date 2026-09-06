@@ -69,7 +69,9 @@ class InquiryItem(Entity):
     """One product snapshot belonging exclusively to an inquiry."""
 
     id: InquiryItemId
-    product_id: ProductId
+    # The snapshot outlives what it points at: the owner removes a product and
+    # the position keeps its name (rule 5 of the entity page).
+    product_id: ProductId | None
     product_name: str
     price_from: Money | None
     configuration: InquiryConfiguration | None
