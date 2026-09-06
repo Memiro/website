@@ -10,7 +10,8 @@ from typing import override
 
 import structlog
 
-from memiro.application.common.event import DispatchLog, DomainEvent, EventBus
+from memiro.application.common.dispatch_log import DispatchLog
+from memiro.application.common.event import DomainEvent, EventBus
 from memiro.application.reprice_products import RepriceProducts
 from memiro_common.logger import Logger
 
@@ -30,7 +31,7 @@ class InProcessEventBus(EventBus):
         """Reprice the catalogue behind both events the context publishes so far."""
         logger.debug("Publishing a domain event", domain_event=type(event).__name__)
         try:
-            self._dispatch_log.record(await self._reprice_products.execute())
+            self._dispatch_log.record((await self._reprice_products.execute()).product_count)
         except Exception as failure:  # a subscriber never fails the change it followed
             self._dispatch_log.record_failure()
             logger.warning(

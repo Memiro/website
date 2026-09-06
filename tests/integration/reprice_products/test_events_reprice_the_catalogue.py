@@ -6,7 +6,7 @@ import pytest
 from dishka import AsyncContainer
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from memiro.application.common.event import DispatchLog
+from memiro.application.common.dispatch_log import DispatchLog
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.manage_attributes import ReplacementValueForm, ReplaceValues, ReplaceValuesForm
 from memiro.application.manage_pricing_settings import ChangePricingSettings, ChangePricingSettingsForm
@@ -105,7 +105,7 @@ async def test_the_publication_reports_how_many_products_it_repriced(container: 
         await interactor.execute(MOUNT, _dearer_mount())
         log = await request.get(DispatchLog)
 
-    assert log == DispatchLog(repriced_products=1)
+    assert log == DispatchLog(repriced_products=1, repricing_ran=True)
 
 
 async def test_a_failed_reprice_does_not_roll_back_the_tariff_it_followed(

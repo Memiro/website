@@ -361,12 +361,11 @@ class ProductAdmin(ReadOnlyAdmin):
 
     @admin.action(description="Пересчитать цены")
     def reprice_products(self, request: HttpRequest, queryset: QuerySet[Model]) -> None:  # noqa: ARG002  # Django's action signature
-        """Reprice the catalogue by the same handler the events run — the selection is not narrowed.
-
-        Prices are one table: a tariff moves every variant that uses it, and
-        repricing a chosen half of the catalogue would leave the other half
-        showing yesterday's numbers (ADR-0014).
-        """
+        """Reprice the catalogue by the same handler the domain events run."""
+        # The selection is not narrowed: prices are one table, a tariff moves
+        # every variant that uses it, and repricing a chosen half of the
+        # catalogue would leave the other half showing yesterday's numbers
+        # (ADR-0014).
         reprice_catalogue()
 
 

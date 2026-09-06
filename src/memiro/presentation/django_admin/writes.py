@@ -17,7 +17,7 @@ from dishka import AsyncContainer
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 
-from memiro.application.common.event import DispatchLog
+from memiro.application.common.dispatch_log import DispatchLog
 from memiro.presentation.django_admin.bridge import bridge
 from memiro.presentation.django_admin.refusals import refusal_text
 from memiro_common.errors import AppError
@@ -69,7 +69,9 @@ def _announce(request: HttpRequest, dispatched: DispatchLog) -> None:
     """Tell the owner what the after-commit repricing did, when it did anything."""
     if dispatched.failed:
         messages.warning(request, REPRICE_FAILED)
-    if dispatched.repriced_products:
+    # A run that moved nothing is still an answer to the owner who asked for
+    # it by hand: silence would read as an action that never fired.
+    if dispatched.repricing_ran:
         messages.info(request, REPRICED.format(count=dispatched.repriced_products))
 
 

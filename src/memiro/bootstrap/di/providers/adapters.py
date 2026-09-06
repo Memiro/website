@@ -24,7 +24,7 @@ from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro.adapters.db.gateways.product import SAProductGateway
 from memiro.adapters.events.in_process import InProcessEventBus
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus, Transport, smtp_transport
-from memiro.application.common.event import DispatchLog
+from memiro.application.common.dispatch_log import DispatchLog
 from memiro_common.clock import SystemClock
 from memiro_common.uow import UoW
 

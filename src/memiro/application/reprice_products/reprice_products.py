@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from itertools import batched
 
 import structlog
+from pydantic import BaseModel
 
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
@@ -24,6 +25,12 @@ PRODUCTS_PER_TRANSACTION = 50
 logger: Logger = structlog.get_logger(__name__)
 
 
+class RepricedCatalogue(BaseModel):
+    """Count of the products a repricing moved."""
+
+    product_count: int
+
+
 @interactor
 class RepriceProducts:
     """Interactor for recalculating every precalculated variant of the catalogue."""
@@ -34,7 +41,7 @@ class RepriceProducts:
     pricing_settings_gateway: PricingSettingsGateway
     clock: Clock
 
-    async def execute(self) -> int:
+    async def execute(self) -> RepricedCatalogue:
         """Reprice the catalogue in batches and say how many products it moved."""
         logger.debug("Repricing the catalogue")
         settings = await self.pricing_settings_gateway.get_with_surcharges()
@@ -45,23 +52,27 @@ class RepriceProducts:
         repriced = 0
         for batch in batched(await self.product_gateway.all_ids(), PRODUCTS_PER_TRANSACTION, strict=False):
             for product_id in batch:
-                repriced += await self._moved_any_price(product_id, attributes, settings)
+                if await self._repriced_any_variant(product_id, attributes, settings):
+                    repriced += 1
             await self.uow.commit()
         logger.info("The catalogue was repriced", product_count=repriced)
-        return repriced
+        return RepricedCatalogue(product_count=repriced)
 
-    async def _moved_any_price(
+    async def _repriced_any_variant(
         self,
         product_id: ProductId,
         attributes: Sequence[Attribute],
         settings: PricingSettings,
-    ) -> int:
-        """Reprice every variant of one product, and count the product when any of them took a new price."""
-        product = await self.product_gateway.get(product_id, eager_variants=True)
+    ) -> bool:
+        """Reprice every variant of one product, and say whether any of them took a new price."""
+        # The aggregate root is locked like any owner command locks it (§7.9):
+        # a reprice and a hand edit of the same product must not overwrite
+        # each other while the batch transaction is open.
+        product = await self.product_gateway.get(product_id, for_update=True, eager_variants=True)
         if product is None:
             logger.warning("A product left the catalogue while it was being repriced", product_id=product_id)
-            return 0
-        moved = 0
+            return False
+        moved = False
         for variant in product.variants:
             configuration = _same_configuration(variant)
             price = variant_price(configuration, product=product, attributes=attributes, settings=settings)
@@ -73,8 +84,8 @@ class RepriceProducts:
                 )
                 continue
             product.change_variant(variant, configuration, price=price, clock=self.clock)
-            moved += 1
-        return min(moved, 1)
+            moved = True
+        return moved
 
 
 def _same_configuration(variant: Variant) -> VariantData:

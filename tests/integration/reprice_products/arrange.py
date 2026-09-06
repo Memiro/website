@@ -29,10 +29,10 @@ async def arranged_variant(
 
 
 async def reprice(container: AsyncContainer) -> int:
-    """Run the repricing handler in its own production REQUEST scope."""
+    """Run the repricing handler in its own production REQUEST scope and count what it moved."""
     async with container() as request:
         interactor = await request.get(RepriceProducts)
-        return await interactor.execute()
+        return (await interactor.execute()).product_count
 
 
 async def load_product(container: AsyncContainer) -> Product:

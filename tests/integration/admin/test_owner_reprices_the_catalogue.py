@@ -49,6 +49,7 @@ REPRICED_MOUNT = "1600"
 REFUSED_MOUNT = "1700"
 PRICE_AT_THE_REPRICED_MOUNT = Decimal(10000)
 ONE_PRODUCT = REPRICED.format(count=1)
+NO_PRODUCTS = REPRICED.format(count=0)
 
 
 @pytest.fixture
@@ -100,6 +101,18 @@ async def test_the_owner_reprices_the_catalogue_from_the_list_of_products(
 
     assert response.status_code == HTTPStatus.OK
     assert ONE_PRODUCT in response.content.decode()
+
+
+async def test_the_action_answers_the_owner_even_when_it_moved_nothing(owner_client: AsyncClient) -> None:
+    """A catalogue with nothing precalculated still gets its banner: silence would read as a dead action."""
+    response = await owner_client.post(
+        PRODUCTS_URL,
+        {"action": REPRICE_ACTION, "_selected_action": [str(PRODUCT)], "index": "0"},
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert NO_PRODUCTS in response.content.decode()
 
 
 async def test_the_price_of_the_variant_follows_the_tariff_the_owner_saved(
