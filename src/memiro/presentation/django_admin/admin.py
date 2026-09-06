@@ -312,6 +312,18 @@ class AttributeValueAdmin(admin.ModelAdmin):
         return guarded_write(request, view)
 
     @override
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: str | None = None,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Guard the single-row form too: it is unlinked from the list, not unreachable."""
+        view = partial(super().changeform_view, request, object_id, form_url, extra_context)
+        return guarded_write(request, view)
+
+    @override
     def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
         """Send the priced row to the command of its attribute; the mirror itself is never written."""
         restate_priced_row(cast("AttributeValue", obj))

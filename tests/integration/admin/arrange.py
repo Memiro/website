@@ -148,7 +148,7 @@ TIER_PREFIX = "size_surcharges"
 FLAT_PREFIX = "form"
 
 
-def priced_row_post(  # noqa: PLR0913  # one keyword per column of the flat list the owner may move
+def priced_row(  # noqa: PLR0913  # one keyword per column of the flat list the owner may move
     *,
     value_id: AttributeValueId,
     amount: str = "3000",
@@ -156,21 +156,30 @@ def priced_row_post(  # noqa: PLR0913  # one keyword per column of the flat list
     scaled_by_shape: bool = False,
     scaled_by_size_surcharge: bool = False,
     extra: Mapping[str, str] | None = None,
-) -> dict[str, Any]:
+) -> dict[str, str]:
     """Spell one row of «Материалы и цены» the way the changelist posts it."""
+    posted = {
+        "id": str(value_id),
+        "rate_unit": unit.name,
+        "rate_amount": amount,
+    }
+    posted |= {"scaled_by_shape": "on"} if scaled_by_shape else {}
+    posted |= {"scaled_by_size_surcharge": "on"} if scaled_by_size_surcharge else {}
+    posted |= dict(extra or {})
+    return posted
+
+
+def priced_list_post(rows: Sequence[Mapping[str, str]]) -> dict[str, Any]:
+    """Spell the edited rows of the flat list as the changelist's own POST body."""
     posted: dict[str, Any] = {
-        f"{FLAT_PREFIX}-TOTAL_FORMS": "1",
-        f"{FLAT_PREFIX}-INITIAL_FORMS": "1",
+        f"{FLAT_PREFIX}-TOTAL_FORMS": str(len(rows)),
+        f"{FLAT_PREFIX}-INITIAL_FORMS": str(len(rows)),
         f"{FLAT_PREFIX}-MIN_NUM_FORMS": "0",
-        f"{FLAT_PREFIX}-MAX_NUM_FORMS": "1",
-        f"{FLAT_PREFIX}-0-id": str(value_id),
-        f"{FLAT_PREFIX}-0-rate_unit": unit.name,
-        f"{FLAT_PREFIX}-0-rate_amount": amount,
+        f"{FLAT_PREFIX}-MAX_NUM_FORMS": str(len(rows)),
         "_save": "",
     }
-    posted |= {f"{FLAT_PREFIX}-0-scaled_by_shape": "on"} if scaled_by_shape else {}
-    posted |= {f"{FLAT_PREFIX}-0-scaled_by_size_surcharge": "on"} if scaled_by_size_surcharge else {}
-    posted |= dict(extra or {})
+    for number, posted_row in enumerate(rows):
+        posted |= {f"{FLAT_PREFIX}-{number}-{field}": value for field, value in posted_row.items()}
     return posted
 
 

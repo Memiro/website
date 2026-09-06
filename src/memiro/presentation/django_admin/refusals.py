@@ -9,6 +9,7 @@ from typing import Any
 
 import structlog
 
+from memiro.adapters.db.errors import LockTimeoutError
 from memiro.application.errors.catalog import (
     AttributeInUseError,
     AttributeNotFoundError,
@@ -38,6 +39,7 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
     PricingSettingsNotFoundError: "Параметров расчёта на сайте нет: заведите строку параметров.",
     InvalidSurchargeFactorError: "Коэффициент ступени должен быть больше единицы: наценка выключается пустой таблицей.",
     DuplicateSizeSurchargeError: "Две ступени не начинаются с одного размера: оставьте одну.",
+    LockTimeoutError: "Эту строку сейчас правят в другом окне: повторите сохранение.",
 }
 
 # The names the refusal carries in its ``meta``, in the owner's words.

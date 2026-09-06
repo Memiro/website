@@ -20,15 +20,6 @@ from memiro.entities.common.identifiers import AttributeId
 from memiro.presentation.django_admin.models import AttributeValue
 from memiro.presentation.django_admin.writes import sent
 
-# The columns of the flat list the owner may move; the rest of the row travels
-# back exactly as it was stored.
-PRICED_COLUMNS = (
-    "rate_unit",
-    "rate_amount",
-    "scaled_by_shape",
-    "scaled_by_size_surcharge",
-)
-
 
 def restate_priced_row(edited: AttributeValue) -> None:
     """Send the dictionary of one attribute with the row the owner priced put back into it."""

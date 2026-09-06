@@ -31,9 +31,10 @@ class SizeSurchargeRowForm(BaseModel):
     """One surcharge tier as the owner's screen submits it."""
 
     from_long_side_mm: int = Field(ge=NO_PRODUCTION_LIMIT, le=MAX_SIDE_MM)
-    # The bound is an input bound; that the factor must actually raise the
-    # price is the domain's rule and stays there.
-    factor: Decimal = Field(gt=0, le=MAX_SURCHARGE_FACTOR)
+    # The bound is an input bound and stops at "a number the arithmetic
+    # survives"; that the factor must actually raise the price is the domain's
+    # rule, and refusing it here would beat the domain to its own refusal.
+    factor: Decimal = Field(ge=0, le=MAX_SURCHARGE_FACTOR)
 
 
 class ChangePricingSettingsForm(BaseModel):
@@ -60,7 +61,10 @@ class ChangePricingSettings:
     async def execute(self, data: ChangePricingSettingsForm) -> None:
         """Replace the calculation parameters of the site and commit their transaction."""
         logger.debug("Changing the pricing settings")
-        settings = await self.pricing_settings_gateway.get_with_surcharges(for_update=True)
+        # No lock on the root: the command overwrites every bound and the whole
+        # tier table from the owner's form, so there is nothing read here that
+        # a competitor could make stale.
+        settings = await self.pricing_settings_gateway.get_with_surcharges()
         if settings is None:
             logger.warning("The site has no pricing settings to change")
             raise PricingSettingsNotFoundError

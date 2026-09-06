@@ -184,7 +184,7 @@ class SizeSurchargeFormSet(BaseInlineFormSet):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """Show every stored tier as a fresh row: the composite key of a tier is not a form field."""
         super().__init__(*args, **kwargs)
-        stored = list(super().get_queryset())
+        stored = list(self.get_queryset())
         self.initial_extra = [{"from_long_side_mm": tier.from_long_side_mm, "factor": tier.factor} for tier in stored]
         self.extra = len(stored) + BLANK_TIER_ROWS
 

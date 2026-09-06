@@ -44,8 +44,7 @@ MAX_RATE_AMOUNT = Decimal(10_000_000)
 MAX_SIZE_SURCHARGES = 20
 
 # Input bounds on the calculation parameters, not business rules: what the
-# studio charges and takes on is the owner's data. Without them a hand-written
-# ``1E+999999999`` reaches the arithmetic and dies there as ``decimal.Overflow``.
+# studio charges and takes on is the owner's data.
 MAX_SURCHARGE_FACTOR = Decimal(100)
 MAX_AREA_M2 = Decimal(100)
 MAX_ORDER_TOTAL = Decimal(10_000_000)
