@@ -26,6 +26,9 @@ pytestmark = pytest.mark.usefixtures("admin_site")
 
 
 APP = "memiro"
+# The one changelist that is not a screen: the site has a single row of
+# calculation parameters, and the list of it redirects to the object.
+SETTINGS_CHANGELIST_URL = f"/admin/{APP}/pricingsettings/"
 
 
 def _inline_model(inline: type[InlineModelAdmin[Model, Model]]) -> type[Model]:
@@ -92,10 +95,11 @@ async def test_every_mirror_is_reachable_as_a_changelist_or_an_inline() -> None:
 
 
 async def test_the_owner_sees_a_changelist_for_every_registered_mirror(owner_client: AsyncClient) -> None:
-    """Every registered mirror's changelist renders."""
+    """Every registered mirror's changelist renders, the single settings row aside (ticket 04)."""
     statuses = {url: (await owner_client.get(url)).status_code for url in _changelist_urls()}
 
-    assert statuses == dict.fromkeys(_changelist_urls(), HTTPStatus.OK)
+    expected = dict.fromkeys(_changelist_urls(), HTTPStatus.OK) | {SETTINGS_CHANGELIST_URL: HTTPStatus.FOUND}
+    assert statuses == expected
 
 
 async def test_the_owner_is_offered_no_form_to_add_a_domain_row(owner_client: AsyncClient) -> None:

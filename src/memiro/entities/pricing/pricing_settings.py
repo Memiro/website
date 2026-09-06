@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -8,6 +9,7 @@ from memiro.entities.common.identifiers import PricingSettingsId
 from memiro.entities.common.measure import Area, Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
+from memiro_common.clock import Clock
 
 # The site has exactly one row of settings, and it is fetched by this id
 # rather than by "whatever the table holds": a stray second row must not be
@@ -29,6 +31,37 @@ class SizeSurcharge(Entity):
             raise InvalidSurchargeFactorError(message=msg)
 
 
+def _ensure_thresholds_are_unambiguous(surcharges: Sequence[SizeSurcharge]) -> None:
+    """Refuse a set in which two tiers start at the same threshold."""
+    seen: set[Millimeters] = set()
+    for surcharge in surcharges:
+        if surcharge.from_long_side_mm in seen:
+            msg = f"Duplicate size-surcharge threshold: {surcharge.from_long_side_mm.value} mm"
+            raise DuplicateSizeSurchargeError(message=msg)
+        seen.add(surcharge.from_long_side_mm)
+
+
+@dataclass(frozen=True, slots=True)
+class SizeSurchargeData:
+    """Owner-controlled fields of one surcharge tier."""
+
+    # No identifier: the set is replaced whole, and a tier is told from a tier
+    # by the threshold it starts at (``pricing-settings.md``, rule 14).
+    from_long_side_mm: Millimeters
+    factor: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class ChangePricingSettingsData:
+    """Owner-controlled bounds of calculation, the surcharge tiers included."""
+
+    min_area: Area
+    min_order_total: Money
+    max_long_side_mm: Millimeters
+    max_short_side_mm: Millimeters
+    surcharges: tuple[SizeSurchargeData, ...]
+
+
 @dataclass
 class PricingSettings(Entity):
     """The monetary and production bounds of calculation — admin data, one row per site."""
@@ -45,12 +78,22 @@ class PricingSettings(Entity):
     def __post_init__(self) -> None:
         """Detach surcharge tiers and keep their thresholds unambiguous."""
         self._size_surcharges = list(self._size_surcharges)
-        seen: set[Millimeters] = set()
-        for surcharge in self._size_surcharges:
-            if surcharge.from_long_side_mm in seen:
-                msg = f"Duplicate size-surcharge threshold: {surcharge.from_long_side_mm.value} mm"
-                raise DuplicateSizeSurchargeError(message=msg)
-            seen.add(surcharge.from_long_side_mm)
+        _ensure_thresholds_are_unambiguous(self._size_surcharges)
+
+    def restate(self, data: "ChangePricingSettingsData", *, clock: Clock) -> None:
+        """Replace the bounds of calculation together with the whole set of surcharge tiers."""
+        replacement = [
+            SizeSurcharge(from_long_side_mm=tier.from_long_side_mm, factor=tier.factor) for tier in data.surcharges
+        ]
+        _ensure_thresholds_are_unambiguous(replacement)
+        self.min_area = data.min_area
+        self.min_order_total = data.min_order_total
+        self.max_long_side_mm = data.max_long_side_mm
+        self.max_short_side_mm = data.max_short_side_mm
+        # The collection is edited in place, not rebound: the ORM watches this
+        # very list to learn which tiers left the set and must be deleted.
+        self._size_surcharges[:] = replacement
+        self.updated_at = clock.now()
 
     @property
     def size_surcharges(self) -> tuple[SizeSurcharge, ...]:

@@ -15,16 +15,26 @@ changing and deleting.
 
 from collections.abc import Iterable
 from functools import partial
-from typing import Any, override
+from typing import Any, cast, override
 
 from django.contrib import admin
 from django.db.models import Model
 from django.forms import BaseInlineFormSet, Form, ModelForm
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.urls import reverse
 
-from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES
+from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
+from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID
 from memiro.presentation.django_admin.attribute_card import create_attribute, remove_attribute, restate_attribute
-from memiro.presentation.django_admin.forms import AttributeCardForm, AttributeValueRowForm
+from memiro.presentation.django_admin.forms import (
+    AttributeCardForm,
+    AttributeValueRowForm,
+    MaterialPriceRowForm,
+    PricingSettingsForm,
+    SizeSurchargeFormSet,
+    SizeSurchargeTierForm,
+)
+from memiro.presentation.django_admin.materials_and_prices import restate_priced_row
 from memiro.presentation.django_admin.models import (
     Attribute,
     AttributeValue,
@@ -38,6 +48,7 @@ from memiro.presentation.django_admin.models import (
     ProductVariant,
     SizeSurcharge,
 )
+from memiro.presentation.django_admin.pricing_settings_card import restate_pricing_settings
 from memiro.presentation.django_admin.writes import guarded_write
 
 
@@ -101,16 +112,6 @@ class ProductDeclaredValueInline(ReadOnlyInline):
         "attribute",
         "value",
         "quantity",
-    )
-
-
-class SizeSurchargeInline(ReadOnlyInline):
-    """Ступени наценки за размер."""
-
-    model = SizeSurcharge
-    fields = (
-        "from_long_side_mm",
-        "factor",
     )
 
 
@@ -257,17 +258,29 @@ class AttributeAdmin(admin.ModelAdmin):
 
 
 @admin.register(AttributeValue)
-class AttributeValueAdmin(ReadOnlyAdmin):
-    """Справочник значений с тарифами."""
+class AttributeValueAdmin(admin.ModelAdmin):
+    """Материалы и цены: тарифы всех значений справочника поперёк атрибутов."""
 
+    form = MaterialPriceRowForm
+    # No bulk action and no row link: the flat list prices what already exists.
+    # Naming, ordering, "means absence", adding and removing a row are the
+    # card of the attribute, and this screen must not become a second one.
+    actions = None
+    list_display_links = None
     list_display = (
         "name",
         "attribute",
-        "rate_amount",
         "rate_unit",
+        "rate_amount",
         "scaled_by_shape",
         "scaled_by_size_surcharge",
         "marks_absence",
+    )
+    list_editable = (
+        "rate_unit",
+        "rate_amount",
+        "scaled_by_shape",
+        "scaled_by_size_surcharge",
     )
     list_filter = (
         "rate_unit",
@@ -281,6 +294,27 @@ class AttributeValueAdmin(ReadOnlyAdmin):
         "sort_order",
         "name",
     )
+
+    @override
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        """Refuse: a dictionary row is born on the card of the attribute that owns it."""
+        return False
+
+    @override
+    def has_delete_permission(self, request: HttpRequest, obj: Model | None = None) -> bool:  # Django's hook signature
+        """Refuse: a row leaves the dictionary by the command of its attribute, not from here."""
+        return False
+
+    @override
+    def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
+        """Send the edited rows through the guard that owns refusals and the best-effort half."""
+        view = partial(super().changelist_view, request, extra_context)
+        return guarded_write(request, view)
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
+        """Send the priced row to the command of its attribute; the mirror itself is never written."""
+        restate_priced_row(cast("AttributeValue", obj))
 
 
 @admin.register(Product)
@@ -331,18 +365,90 @@ class ProductVariantAdmin(ReadOnlyAdmin):
     )
 
 
-@admin.register(PricingSettings)
-class PricingSettingsAdmin(ReadOnlyAdmin):
-    """Параметры расчёта."""
+class SizeSurchargeInline(admin.TabularInline):
+    """Ступени наценки за размер: набор заменяется целиком одной командой корня."""
 
-    list_display = (
-        "min_area",
-        "min_order_total",
-        "max_long_side_mm",
-        "max_short_side_mm",
-        "updated_at",
-    )
+    model = SizeSurcharge
+    form = SizeSurchargeTierForm
+    formset = SizeSurchargeFormSet
+    max_num = MAX_SIZE_SURCHARGES
+    can_delete = True
+    show_change_link = False
+    ordering = ("from_long_side_mm",)
+
+    @override
+    def get_formset(
+        self,
+        request: HttpRequest,
+        obj: Model | None = None,
+        **kwargs: Any,
+    ) -> type[BaseInlineFormSet]:
+        """Hold ``max_num`` as a rule, not as a hint: the application form refuses the same length."""
+        return super().get_formset(request, obj, validate_max=True, **kwargs)
+
+
+@admin.register(PricingSettings)
+class PricingSettingsAdmin(admin.ModelAdmin):
+    """Параметры расчёта: границы и ступени наценки одной командой."""
+
+    form = PricingSettingsForm
     inlines = (SizeSurchargeInline,)
+    actions = None
+
+    @override
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        """Refuse: the site has exactly one row of settings, born with it."""
+        return False
+
+    @override
+    def has_delete_permission(self, request: HttpRequest, obj: Model | None = None) -> bool:  # Django's hook signature
+        """Refuse: without the settings row the catalogue has no price at all."""
+        return False
+
+    @override
+    def changelist_view(
+        self, request: HttpRequest, extra_context: dict[str, Any] | None = None
+    ) -> HttpResponse:  # Django's hook signature
+        """Send the owner to the only object there is: a list of one row is not a screen."""
+        return HttpResponseRedirect(reverse("admin:memiro_pricingsettings_change", args=[PRICING_SETTINGS_ID]))
+
+    @override
+    def changeform_view(
+        self,
+        request: HttpRequest,
+        object_id: str | None = None,
+        form_url: str = "",
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Send the screen through the guard that owns refusals and the best-effort half (ADR-0012)."""
+        view = partial(super().changeform_view, request, object_id, form_url, extra_context)
+        return guarded_write(request, view)
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
+        """Write nothing here: the whole screen is sent to the interactor by ``save_related``."""
+
+    @override
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: ModelForm,
+        formsets: list[BaseInlineFormSet],
+        change: bool,
+    ) -> None:
+        """Send the bounds and the surcharge table as the one command of the aggregate."""
+        restate_pricing_settings(form.cleaned_data, _submitted_rows(formsets))
+
+    @override
+    def construct_change_message(
+        self,
+        request: HttpRequest,
+        form: Form,
+        formsets: Iterable[Any] | None,
+        add: bool = False,
+    ) -> list[dict[str, dict[str, list[str]]]]:
+        """Describe the change from the bounds alone: the tiers are replaced whole, not row by row."""
+        return super().construct_change_message(request, form, (), add=add)
 
 
 @admin.register(Inquiry)

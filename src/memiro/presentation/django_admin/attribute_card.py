@@ -1,6 +1,6 @@
 """What the attribute card sends: the owner's form as the commands of the aggregate (ADR-0012)."""
 
-from collections.abc import Callable, Coroutine, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from dishka import AsyncContainer
@@ -20,8 +20,7 @@ from memiro.application.manage_attributes import (
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId
-from memiro.presentation.django_admin.bridge import bridge
-from memiro.presentation.django_admin.writes import record_commit
+from memiro.presentation.django_admin.writes import sent
 
 
 def create_attribute(root: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> AttributeId:
@@ -31,7 +30,7 @@ def create_attribute(root: Mapping[str, Any], rows: Sequence[Mapping[str, Any]])
         values=[AttributeValueForm(**_row_fields(row)) for row in rows],
         **_root_fields(root),
     )
-    created: CreatedAttribute = _sent(lambda scope: _create(scope, form))
+    created: CreatedAttribute = sent(lambda scope: _create(scope, form))
     return created.id
 
 
@@ -49,13 +48,13 @@ def restate_attribute(
     values = ReplaceValuesForm(
         values=[ReplacementValueForm(id=_kept_row(row), **_row_fields(row)) for row in rows],
     )
-    _sent(lambda scope: _replace(scope, attribute_id, values))
-    _sent(lambda scope: _change(scope, attribute_id, ChangeAttributeForm(**_root_fields(root))))
+    sent(lambda scope: _replace(scope, attribute_id, values))
+    sent(lambda scope: _change(scope, attribute_id, ChangeAttributeForm(**_root_fields(root))))
 
 
 def remove_attribute(attribute_id: AttributeId) -> None:
     """Send one attribute to the command that removes it together with its dictionary."""
-    _sent(lambda scope: _remove(scope, attribute_id))
+    sent(lambda scope: _remove(scope, attribute_id))
 
 
 def _root_fields(root: Mapping[str, Any]) -> dict[str, Any]:
@@ -109,10 +108,3 @@ async def _replace(scope: AsyncContainer, attribute_id: AttributeId, form: Repla
 async def _remove(scope: AsyncContainer, attribute_id: AttributeId) -> None:
     interactor = await scope.get(RemoveAttribute)
     await interactor.execute(attribute_id)
-
-
-def _sent[T](command: Callable[[AsyncContainer], Coroutine[Any, Any, T]]) -> T:
-    """Send one command across the bridge and remember that it reached the domain."""
-    result = bridge().call(command)
-    record_commit()
-    return result

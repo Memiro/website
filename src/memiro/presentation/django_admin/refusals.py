@@ -15,11 +15,13 @@ from memiro.application.errors.catalog import (
     AttributeValueInUseError,
     CategoryNotFoundError,
 )
+from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
     InvalidAttributeParentError,
     InvalidAttributeValueSetError,
     InvalidFactorRateError,
 )
+from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
 
@@ -33,6 +35,9 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
     InvalidFactorRateError: "Тариф-множитель должен быть больше нуля.",
     AttributeValueInUseError: "Значение нельзя убрать: его объявляют товары.",
     AttributeInUseError: "Атрибут нельзя удалить: он ещё кому-то нужен.",
+    PricingSettingsNotFoundError: "Параметров расчёта на сайте нет: заведите строку параметров.",
+    InvalidSurchargeFactorError: "Коэффициент ступени должен быть больше единицы: наценка выключается пустой таблицей.",
+    DuplicateSizeSurchargeError: "Две ступени не начинаются с одного размера: оставьте одну.",
 }
 
 # The names the refusal carries in its ``meta``, in the owner's words.
