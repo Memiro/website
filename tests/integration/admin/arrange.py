@@ -30,6 +30,36 @@ def value_form(*, name: str, amount: str = "2500", sort_order: int = 1) -> Attri
     )
 
 
+def card_fields(*, name: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Spell one card the way the admin form hands it to the interactors, once it is valid."""
+    # Imported here: the mirror models may not be touched before the session
+    # fixture has run ``django.setup()``. The section is built, not read back —
+    # only its identifier travels, so no query is made.
+    from memiro.presentation.django_admin.models import Category  # noqa: PLC0415
+
+    root: dict[str, Any] = {
+        "category": Category(id=CATEGORY),
+        "name": name,
+        "kind": AttributeKind.SELECT.name,
+        "parents": [],
+        "is_customer_changeable": True,
+        "is_filterable": False,
+        "sort_order": 0,
+    }
+    rows: list[dict[str, Any]] = [
+        {
+            "name": "Строка",
+            "rate_amount": Decimal(2500),
+            "rate_unit": Unit.LINEAR_METER.name,
+            "scaled_by_shape": False,
+            "scaled_by_size_surcharge": False,
+            "marks_absence": False,
+            "sort_order": 1,
+        },
+    ]
+    return root, rows
+
+
 def arranged_attribute(*, name: str, values: Sequence[AttributeValueForm]) -> AttributeId:
     """Put one attribute of the demo category into the database through its own command."""
     form = CreateAttributeForm(

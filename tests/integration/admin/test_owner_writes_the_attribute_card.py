@@ -28,6 +28,7 @@ APP = "memiro"
 # cannot be imported before the app registry is ready.
 ADDITION = 1
 CHANGE = 2
+DELETION = 3
 LOGIN_URL = "/admin/login/"
 CHANGELIST_URL = f"/admin/{APP}/attribute/"
 ADD_URL = f"{CHANGELIST_URL}add/"
@@ -78,6 +79,11 @@ async def _identifiers_of(attribute_id: AttributeId) -> list[AttributeId]:
     return [value.id async for value in _values_of(attribute_id)]
 
 
+def _history() -> Manager[Any]:
+    """Reach Django's own history; the app registry is only ready once Django is configured."""
+    return cast("Manager[Any]", apps.get_model("admin", "LogEntry").objects)
+
+
 async def test_the_owner_creates_an_attribute_with_its_dictionary_from_one_card(owner_client: AsyncClient) -> None:
     """The card of a new attribute reaches the domain as one command, its rows included."""
     response = await owner_client.post(
@@ -116,8 +122,7 @@ async def test_the_card_the_owner_saved_is_written_to_the_history(owner_client: 
     await owner_client.post(ADD_URL, card_post(name="Пескоструй", rows=[row(name="Рисунок")]))
 
     created = await _attributes().aget(name="Пескоструй")
-    history = cast("Manager[Any]", apps.get_model("admin", "LogEntry").objects)
-    assert await history.filter(object_id=str(created.id), action_flag=ADDITION).aexists()
+    assert await _history().filter(object_id=str(created.id), action_flag=ADDITION).aexists()
 
 
 async def test_the_history_records_the_card_the_owner_restated(owner_client: AsyncClient) -> None:
@@ -130,8 +135,7 @@ async def test_the_history_records_the_card_the_owner_restated(owner_client: Asy
         card_post(name="Подвес зеркала", rows=[row(name="Тросик", value_id=kept)], kept_rows=1),
     )
 
-    history = cast("Manager[Any]", apps.get_model("admin", "LogEntry").objects)
-    assert await history.filter(object_id=str(attribute_id), action_flag=CHANGE).aexists()
+    assert await _history().filter(object_id=str(attribute_id), action_flag=CHANGE).aexists()
 
 
 async def test_the_owner_removes_an_attribute_nothing_depends_on(owner_client: AsyncClient) -> None:
@@ -142,6 +146,15 @@ async def test_the_owner_removes_an_attribute_nothing_depends_on(owner_client: A
 
     assert response.status_code == HTTPStatus.FOUND
     assert not await _attributes().filter(id=attribute_id).aexists()
+
+
+async def test_the_history_records_the_attribute_the_owner_removed(owner_client: AsyncClient) -> None:
+    """The Django half records the deletion too: the fourth verb of the card leaves its trace."""
+    attribute_id = arranged_attribute(name="Ножки", values=[value_form(name="Резиновые")])
+
+    await owner_client.post(_delete_url(attribute_id), {"post": "yes"})
+
+    assert await _history().filter(object_id=str(attribute_id), action_flag=DELETION).aexists()
 
 
 async def test_a_card_dropping_a_declared_row_comes_back_with_a_message_and_changes_nothing(
