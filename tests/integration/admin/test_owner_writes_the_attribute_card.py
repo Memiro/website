@@ -43,6 +43,9 @@ ADD_URLS = (
     f"/admin/{APP}/pricingsettings/add/",
     f"/admin/{APP}/inquiry/add/",
     f"/admin/{APP}/inquiryitem/add/",
+    f"/admin/{APP}/landing/add/",
+    f"/admin/{APP}/sitecontacts/add/",
+    f"/admin/{APP}/sellerrequisites/add/",
 )
 # What the demo backlight holds before a card touches it (the contour tape and
 # the row that says there is no backlight at all) and what its root is called.
@@ -238,6 +241,11 @@ async def test_only_the_attribute_card_offers_the_owner_a_form(owner_client: Asy
         f"/admin/{APP}/pricingsettings/add/": HTTPStatus.FORBIDDEN,
         f"/admin/{APP}/inquiry/add/": HTTPStatus.FORBIDDEN,
         f"/admin/{APP}/inquiryitem/add/": HTTPStatus.FORBIDDEN,
+        # The landing pages got their own card; the site's contacts and the
+        # seller's requisites are still read-only mirrors.
+        f"/admin/{APP}/landing/add/": HTTPStatus.OK,
+        f"/admin/{APP}/sitecontacts/add/": HTTPStatus.FORBIDDEN,
+        f"/admin/{APP}/sellerrequisites/add/": HTTPStatus.FORBIDDEN,
     }
 
 

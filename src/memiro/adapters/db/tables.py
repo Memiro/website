@@ -36,6 +36,7 @@ from memiro.adapters.db.types import (
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
+from memiro.entities.catalog.landing.entity import Landing, LandingCondition
 from memiro.entities.catalog.product.entity import DeclaredValue, Product, ProductImage, Variant
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.inquiry.consent import Consent
@@ -367,6 +368,27 @@ mapper_registry.map_imperatively(
             cascade="all, delete-orphan",
             lazy="raise_on_sql",
             order_by=(product_variants_table.c.sort_order, product_variants_table.c.id),
+        ),
+    },
+)
+
+mapper_registry.map_imperatively(
+    LandingCondition,
+    landing_conditions_table,
+    properties={
+        "_landing_id": landing_conditions_table.c.landing_id,
+    },
+)
+
+mapper_registry.map_imperatively(
+    Landing,
+    landings_table,
+    properties={
+        "_conditions": relationship(
+            LandingCondition,
+            cascade="all, delete-orphan",
+            lazy="raise_on_sql",
+            order_by=landing_conditions_table.c.value_id,
         ),
     },
 )

@@ -2,12 +2,14 @@ from uuid import uuid4
 
 import pytest
 from dishka import AsyncContainer
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.errors.catalog import AttributeInUseError, AttributeNotFoundError
 from memiro.application.manage_attributes import RemoveAttribute
 from memiro.entities.common.identifiers import AttributeId
-from tests.common.factory.catalog import BACKLIGHT, BLADE, HEATING, WITH_HEATING
+from tests.common.factory.catalog import BACKLIGHT, BLADE, HEATING, SHAPE, WITH_HEATING
 from tests.integration.manage_attributes.arrange import load_attribute, load_dictionary
+from tests.integration.prime import prime_landing
 
 pytestmark = pytest.mark.usefixtures("dictionary")
 
@@ -44,7 +46,7 @@ async def test_removing_an_attribute_fails_and_names_the_attribute_that_depends_
     with pytest.raises(AttributeInUseError) as refusal:
         await _remove(container, BACKLIGHT)
 
-    assert refusal.value.meta == {"products": ["Зеркало в раме"], "attributes": ["Подогрев"]}
+    assert refusal.value.meta == {"products": ["Зеркало в раме"], "attributes": ["Подогрев"], "landings": []}
 
 
 async def test_removing_an_attribute_fails_and_names_the_products_that_declare_it(
@@ -54,7 +56,7 @@ async def test_removing_an_attribute_fails_and_names_the_products_that_declare_i
     with pytest.raises(AttributeInUseError) as refusal:
         await _remove(container, BLADE)
 
-    assert refusal.value.meta == {"products": ["Зеркало в раме"], "attributes": []}
+    assert refusal.value.meta == {"products": ["Зеркало в раме"], "attributes": [], "landings": []}
 
 
 async def test_a_refused_removal_leaves_the_attribute_in_place(container: AsyncContainer) -> None:
@@ -71,3 +73,20 @@ async def test_removing_an_attribute_fails_if_there_is_no_such_attribute(contain
     """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
     with pytest.raises(AttributeNotFoundError):
         await _remove(container, uuid4())
+
+
+async def test_removing_an_attribute_fails_and_names_the_landings_that_narrow_by_it(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """ATTRIBUTE_IN_USE: one refusal answers one question — who still needs the shape — pages included."""
+    await prime_landing(engine)
+
+    with pytest.raises(AttributeInUseError) as refusal:
+        await _remove(container, SHAPE)
+
+    assert refusal.value.meta == {
+        "products": ["Зеркало в раме"],
+        "attributes": [],
+        "landings": ["Круглые зеркала"],
+    }

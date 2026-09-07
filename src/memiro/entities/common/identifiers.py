@@ -5,6 +5,7 @@ from uuid import UUID
 type ProductId = UUID
 type VariantId = UUID
 type CategoryId = UUID
+type LandingId = UUID
 type AttributeId = UUID
 type AttributeValueId = UUID
 type PricingSettingsId = UUID

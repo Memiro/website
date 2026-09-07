@@ -11,6 +11,7 @@ from dishka import AsyncContainer
 
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
 from memiro.application.manage_attributes import AttributeValueForm, CreateAttribute, CreateAttributeForm
+from memiro.application.manage_landings import CreateLanding, CreateLandingForm
 from memiro.application.manage_pricing_settings import (
     ChangePricingSettings,
     ChangePricingSettingsForm,
@@ -29,9 +30,16 @@ from memiro.application.manage_products import (
 )
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
+from memiro.entities.common.identifiers import (
+    AttributeId,
+    AttributeValueId,
+    CategoryId,
+    LandingId,
+    ProductId,
+    VariantId,
+)
 from memiro.presentation.django_admin.bridge import bridge
-from tests.common.factory.catalog import CATEGORY, PRODUCT
+from tests.common.factory.catalog import CATEGORY, PRODUCT, ROUND
 
 INLINE_PREFIX = "values"
 
@@ -359,5 +367,58 @@ async def _uploaded(scope: AsyncContainer, product_id: ProductId, form: AddImage
 async def _entered(scope: AsyncContainer, form: CreateProductForm) -> ProductId:
     """Run the creating interactor in a REQUEST scope of the admin's own container."""
     interactor = await scope.get(CreateProduct)
+    created = await interactor.execute(form)
+    return created.id
+
+
+# The narrowing of a landing is shown as the rows it is stored as; Django reads
+# that inline's management form on every save, touched or not.
+CONDITION_PREFIX = "conditions"
+
+
+def landing_post(  # noqa: PLR0913  # one keyword per field of the card the owner fills in
+    *,
+    heading: str,
+    slug: str = "",
+    title: str = "Круглые зеркала на заказ — memiro",
+    narrowing: Sequence[AttributeValueId] = (ROUND,),
+    sort_order: int = 0,
+    is_published: bool = True,
+    stored_conditions: int = 0,
+) -> dict[str, Any]:
+    """Spell the whole landing card — the copy and the narrowing — as one POST body."""
+    posted: dict[str, Any] = {
+        "category": str(CATEGORY),
+        "slug": slug,
+        "title": title,
+        "heading": heading,
+        "description": "Круглые зеркала по вашему диаметру.",
+        "text": "Круг читается мягче прямоугольника.",  # noqa: RUF001
+        "sort_order": str(sort_order),
+        "narrowing": [str(value_id) for value_id in narrowing],
+        f"{CONDITION_PREFIX}-TOTAL_FORMS": str(stored_conditions),
+        f"{CONDITION_PREFIX}-INITIAL_FORMS": str(stored_conditions),
+        f"{CONDITION_PREFIX}-MIN_NUM_FORMS": "0",
+        f"{CONDITION_PREFIX}-MAX_NUM_FORMS": str(stored_conditions),
+    }
+    posted |= {"is_published": "on"} if is_published else {}
+    return posted
+
+
+def arranged_landing(*, heading: str, slug: str, narrowing: Sequence[AttributeValueId] = (ROUND,)) -> LandingId:
+    """Put one landing page into the database through its own command."""
+    form = CreateLandingForm(
+        category_id=CATEGORY,
+        slug=slug,
+        title=heading,
+        heading=heading,
+        conditions=list(narrowing),
+    )
+    return bridge().call(lambda scope: _published(scope, form))
+
+
+async def _published(scope: AsyncContainer, form: CreateLandingForm) -> LandingId:
+    """Run the creating interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(CreateLanding)
     created = await interactor.execute(form)
     return created.id

@@ -2,6 +2,7 @@ import structlog
 
 from memiro.application.common.event import EventBus, TariffChanged
 from memiro.application.common.gateway.attribute import AttributeGateway
+from memiro.application.common.gateway.landing import LandingGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import AttributeValueInUseError
 from memiro.application.manage_attributes.shared import ValueSetForm, as_replacements, loaded_for_update
@@ -24,6 +25,7 @@ class ReplaceValues:
 
     uow: UoW
     attribute_gateway: AttributeGateway
+    landing_gateway: LandingGateway
     product_gateway: ProductGateway
     event_bus: EventBus
     clock: Clock
@@ -38,13 +40,15 @@ class ReplaceValues:
         # decide whether one is legal.
         removed = attribute.values_absent_from(values)
         products = await self.product_gateway.names_declaring_values(removed)
-        if products:
+        landings = await self.landing_gateway.headings_narrowing_by_values(removed)
+        if products or landings:
             logger.warning(
                 "A declared dictionary value was removed",
                 attribute_id=attribute_id,
                 product_count=len(products),
+                landing_count=len(landings),
             )
-            raise AttributeValueInUseError(products=tuple(products))
+            raise AttributeValueInUseError(products=tuple(products), landings=tuple(landings))
         attribute.replace_values(values, clock=self.clock)
         await self.uow.commit()
         await self.event_bus.publish(TariffChanged(attribute_id=attribute_id))

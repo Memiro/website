@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from dishka import AsyncContainer
 from pydantic import ValidationError
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES
 from memiro.application.errors.catalog import AttributeNotFoundError, AttributeValueInUseError
@@ -12,8 +13,9 @@ from memiro.entities.catalog.attribute.rate import Rate, Unit
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.money import Money
 from memiro.entities.errors.attribute import InvalidAttributeValueSetError, InvalidFactorRateError
-from tests.common.factory.catalog import BACKLIGHT, CONTOUR, NO_BACKLIGHT
+from tests.common.factory.catalog import BACKLIGHT, CONTOUR, NO_BACKLIGHT, RECTANGULAR, SHAPE
 from tests.integration.manage_attributes.arrange import load_attribute, value_form
+from tests.integration.prime import prime_landing
 
 pytestmark = pytest.mark.usefixtures("dictionary")
 
@@ -108,7 +110,7 @@ async def test_removing_a_declared_row_fails_and_names_the_products(container: A
     with pytest.raises(AttributeValueInUseError) as refusal:
         await _replace(container, BACKLIGHT, ReplaceValuesForm(values=[KEPT_CONTOUR]))
 
-    assert refusal.value.meta == {"products": ["Зеркало в раме"]}
+    assert refusal.value.meta == {"products": ["Зеркало в раме"], "landings": []}
 
 
 async def test_a_refused_removal_leaves_the_dictionary_untouched(container: AsyncContainer) -> None:
@@ -125,3 +127,20 @@ async def test_replacing_the_values_fails_if_there_is_no_such_attribute(containe
     """ATTRIBUTE_NOT_FOUND: an identifier nobody issued names nothing."""
     with pytest.raises(AttributeNotFoundError):
         await _replace(container, uuid4(), ReplaceValuesForm(values=[value_form(name="Контурная")]))
+
+
+async def test_removing_a_row_a_landing_narrows_by_fails_and_names_the_page(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """ATTRIBUTE_VALUE_IN_USE: the landing of round mirrors holds the row it narrows by."""
+    await prime_landing(engine)
+
+    with pytest.raises(AttributeValueInUseError) as refusal:
+        await _replace(
+            container,
+            SHAPE,
+            ReplaceValuesForm(values=[value_form(value_id=RECTANGULAR, name="Прямоугольное", unit=Unit.FACTOR)]),
+        )
+
+    assert refusal.value.meta == {"products": [], "landings": ["Круглые зеркала"]}

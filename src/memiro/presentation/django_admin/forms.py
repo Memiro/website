@@ -26,6 +26,9 @@ from memiro.application.common.input_limits import (
     MAX_ATTRIBUTE_PARENTS,
     MAX_DESCRIPTION_LENGTH,
     MAX_IMAGE_BYTES,
+    MAX_LANDING_CONDITIONS,
+    MAX_LANDING_TEXT_LENGTH,
+    MAX_META_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
     MAX_ORDER_TOTAL,
     MAX_QUANTITY,
@@ -41,6 +44,7 @@ from memiro.presentation.django_admin.models import (
     Attribute,
     AttributeValue,
     Category,
+    Landing,
     PricingSettings,
     Product,
     ProductDeclaredValue,
@@ -49,6 +53,11 @@ from memiro.presentation.django_admin.models import (
 )
 
 PARENTS_FIELD = "parents"
+
+# The narrowing of a landing is a set replaced whole, so the card carries it
+# as one field of values; the inline underneath shows the rows it was stored
+# as, and the field is named apart from that inline's own prefix.
+NARROWING_FIELD = "narrowing"
 
 # One blank row under the stored ones, so the owner always has somewhere to
 # type the next tier.
@@ -407,3 +416,73 @@ def photo_fields(product_id: UUID) -> dict[str, forms.Field]:
             choices=[(image.key, image.key) for image in stored],
         ),
     }
+
+
+class LandingCardForm(forms.ModelForm):
+    """Посадочная страница: адрес, тексты и значения, которыми она сужает раздел."""
+
+    slug = forms.CharField(
+        required=False,
+        max_length=MAX_SLUG_LENGTH,
+        validators=[RegexValidator(SLUG_PATTERN, message=SLUG_MESSAGE)],
+        label="Адрес",
+        help_text="Адрес в корне сайта. Пустой выводится из заголовка.",
+    )
+    title = forms.CharField(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH, label="Мета-заголовок")
+    heading = forms.CharField(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH, label="Заголовок")
+    description = forms.CharField(
+        required=False,
+        max_length=MAX_META_DESCRIPTION_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 2}),
+        label="Мета-описание",
+    )
+    text = forms.CharField(
+        required=False,
+        max_length=MAX_LANDING_TEXT_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 10}),
+        label="Текст страницы",
+    )
+    sort_order = forms.IntegerField(min_value=0, initial=0, label="Порядок")
+    narrowing = forms.ModelMultipleChoiceField(
+        queryset=AttributeValue.objects.filter(
+            attribute__is_filterable=True,
+            attribute__kind=AttributeKind.SELECT.name,
+        ).order_by("attribute__sort_order", "attribute__name", "sort_order", "name"),
+        label="Сужение",
+        help_text=(
+            "Значения одного атрибута объединяются по ИЛИ, разных — по И. "
+            "Атрибутов не больше двух, и весь справочник одного атрибута — это уже раздел, а не посадочная."
+        ),
+    )
+
+    class Meta:
+        model = Landing
+        fields = (
+            "category",
+            "slug",
+            "title",
+            "heading",
+            "description",
+            "text",
+            "is_published",
+            "sort_order",
+        )
+        labels = {  # noqa: RUF012  # Django reads Meta options off the class as plain values
+            "category": "Раздел",
+            "is_published": "Опубликована",
+        }
+
+    @override
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Show the narrowing the page was stored with: the rows live in a table of their own."""
+        super().__init__(*args, **kwargs)
+        if self.instance.pk is not None:
+            self.fields[NARROWING_FIELD].initial = [condition.value_id for condition in self.instance.conditions.all()]
+
+    def clean_narrowing(self) -> list[AttributeValue]:
+        """Refuse a longer narrowing than the application form accepts."""
+        chosen = list(self.cleaned_data[NARROWING_FIELD])
+        if len(chosen) > MAX_LANDING_CONDITIONS:
+            message = f"Не больше {MAX_LANDING_CONDITIONS} значений."
+            raise forms.ValidationError(message)
+        return chosen

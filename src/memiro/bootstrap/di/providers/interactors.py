@@ -14,6 +14,7 @@ from memiro.application.manage_attributes import (
     RemoveAttribute,
     ReplaceValues,
 )
+from memiro.application.manage_landings import ChangeLanding, CreateLanding, RemoveLanding
 from memiro.application.manage_pricing_settings import ChangePricingSettings
 from memiro.application.manage_products import (
     AddImage,
@@ -44,12 +45,15 @@ class InteractorProvider(Provider):
         AddImage,
         AddVariant,
         ChangeAttribute,
+        ChangeLanding,
         ChangePricingSettings,
         ChangeProduct,
         CreateAttribute,
+        CreateLanding,
         CreateProduct,
         DeclareValues,
         RemoveAttribute,
+        RemoveLanding,
         RemoveImage,
         RemoveProduct,
         ReplaceValues,

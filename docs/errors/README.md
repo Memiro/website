@@ -28,12 +28,15 @@
 | `INVALID_VARIANT_SORT_ORDER` | 400 | `InvalidVariantSortOrderError` | Порядок варианта отрицательный |
 | `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
 | `INVALID_PRODUCT_SLUG` | 400 | `InvalidProductSlugError` | Из названия товара не выводится ни одного символа адреса |
+| `INVALID_LANDING_SLUG` | 400 | `InvalidLandingSlugError` | Из заголовка посадочной не выводится ни одного символа адреса |
+| `INVALID_LANDING_NARROWING` | 400 | `InvalidLandingNarrowingError` | Сужение посадочной пустое, шире двух атрибутов, чужое или равно всей категории |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
 | `DUPLICATE_PRODUCT_IMAGE` | 409 | `DuplicateProductImageError` | Фотография с таким ключом у товара уже есть |
 | `PRODUCT_SLUG_TAKEN` | 409 | `ProductSlugTakenError` | Публичный адрес товара занят другим товаром |
+| `LANDING_SLUG_TAKEN` | 409 | `LandingSlugTakenError` | Адрес посадочной занят другой посадочной |
 | `PRODUCT_SECTION_NOT_EMPTY` | 409 | `ProductSectionNotEmptyError` | Товар переносят в другой раздел, а он ещё объявляет значения или держит варианты |
-| `ATTRIBUTE_VALUE_IN_USE` | 409 | `AttributeValueInUseError` | Удаляемое значение объявлено товарами; `meta.products` — их названия |
-| `ATTRIBUTE_IN_USE` | 409 | `AttributeInUseError` | Удаляемый атрибут объявлен товарами или назван родителем другого; `meta.products` и `meta.attributes` — их названия |
+| `ATTRIBUTE_VALUE_IN_USE` | 409 | `AttributeValueInUseError` | Удаляемое значение объявлено товарами или сужает посадочную; `meta.products` и `meta.landings` — их названия |
+| `ATTRIBUTE_IN_USE` | 409 | `AttributeInUseError` | Удаляемый атрибут объявлен товарами, назван родителем другого или сужает посадочную; `meta.products`, `meta.attributes` и `meta.landings` — их названия |
 | `CONSENT_REQUIRED` | 400 | `ConsentRequiredError` | Посетитель не согласился на обработку ПД |
 | `INVALID_PHONE` | 400 | `InvalidPhoneError` | Телефон в заявке не похож на телефон: не 10–15 цифр |
 | `EMPTY_INQUIRY` | 400 | `EmptyInquiryError` | Подборка не содержит позиции |
