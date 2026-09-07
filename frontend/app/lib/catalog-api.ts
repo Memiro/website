@@ -194,7 +194,7 @@ function isLanding(value: unknown): value is Landing {
     && isArrayOf(landing.values, (item): item is string => typeof item === "string");
 }
 
-function isCategoryPage(value: unknown): value is CategoryPage {
+export function isCategoryPage(value: unknown): value is CategoryPage {
   const page = asRecord(value);
   if (page === null || !listOf(isProductSummary)(value)) {
     return false;
