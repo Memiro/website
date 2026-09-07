@@ -1,0 +1,83 @@
+---
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import CatalogCard from "../../components/CatalogCard.astro";
+import NotFound from "../../components/NotFound.astro";
+import OfferNote from "../../components/OfferNote.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/catalog-api.ts";
+import { catalogSearch, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
+import { foundOrNull } from "../../lib/not-found.ts";
+import { productPlural } from "../../lib/plural.ts";
+
+const api = internalCatalogApi();
+const landingSlug = Astro.params.landingSlug ?? "";
+const path = `/${landingSlug}/`;
+const landing: Landing | null = await foundOrNull(landingSlug, (slug) => api.landing(slug));
+if (landing === null) {
+  Astro.response.status = 404;
+}
+
+// A landing narrows its category by the values the owner wrote down; the
+// visitor may still page through what they leave.
+const asked = parseCatalogQuery(Astro.url.searchParams);
+const query = landing === null ? asked : { ...asked, values: landing.values };
+const page: CategoryPage | null = landing === null
+  ? null
+  : await foundOrNull(landing.category_slug, (slug) => api.categoryProducts(slug, catalogSearch(query)));
+const paragraphs = landing === null ? [] : landing.text.split("\n").filter((line) => line.trim() !== "");
+const crumbs = landing === null ? [] : [
+  { href: "/", label: "Главная" },
+  { href: "/catalog/", label: "Каталог" },
+  { href: `/catalog/${landing.category_slug}/`, label: landing.category_name },
+  { href: path, label: landing.heading },
+];
+---
+
+{landing === null || page === null ? (
+  <NotFound
+    heading="Страница не найдена"
+    lead="Возможно, в адресе опечатка или страница больше не публикуется."
+    description="Такой страницы нет на сайте Memiro."
+  />
+) : (
+  <BaseLayout
+    title={landing.title}
+    description={landing.description}
+    robots={asked.page > 1 ? "noindex, follow" : undefined}
+    crumbs={crumbs}
+  >
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="cat-head wrap">
+      <h1 class="h-section">{landing.heading}</h1>
+      <span class="count">{page.total} {productPlural(page.total)}</span>
+    </div>
+
+    {paragraphs.length > 0 && (
+      <div class="page wrap landing-text">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>
+    )}
+
+    <div class="wrap">
+      <main>
+        {page.items.length > 0 ? (
+          <div class="grid-3">{page.items.map((product) => <CatalogCard categorySlug={landing.category_slug} product={product} />)}</div>
+        ) : (
+          <p class="sub">Под эту подборку сейчас ничего не подошло — посмотрите весь раздел.</p>
+        )}
+
+        {page.pages > 1 && (
+          <nav class="pager" aria-label="Страницы подборки">
+            {pageNumbers(page.pages).map((number) => (
+              <a class={number === page.page ? "here" : undefined} href={withPage(path, asked, number)} aria-current={number === page.page ? "page" : undefined}>{number}</a>
+            ))}
+          </nav>
+        )}
+
+        <p class="landing-all">
+          <a class="link-underline" href={`/catalog/${landing.category_slug}/`}>Весь раздел «{landing.category_name}» →</a>
+        </p>
+
+        <OfferNote />
+      </main>
+    </div>
+  </BaseLayout>
+)}

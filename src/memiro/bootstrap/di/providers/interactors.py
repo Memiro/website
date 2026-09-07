@@ -1,6 +1,12 @@
 from dishka import Provider, Scope, provide_all
 
-from memiro.application.browse_catalog import ListCategories, ListCategoryProducts, ReadProduct
+from memiro.application.browse_catalog import (
+    ListCategories,
+    ListCategoryProducts,
+    ListLandings,
+    ReadLanding,
+    ReadProduct,
+)
 from memiro.application.calculate_price import CalculatePrice
 from memiro.application.manage_attributes import (
     ChangeAttribute,
@@ -24,6 +30,7 @@ from memiro.application.manage_products import (
     RemoveProduct,
     RemoveVariant,
 )
+from memiro.application.read_site import ReadSite
 from memiro.application.reprice_products import RepriceProducts
 from memiro.application.submit_inquiry import SubmitInquiry
 
@@ -48,6 +55,8 @@ class InteractorProvider(Provider):
         ReplaceValues,
         ListCategories,
         ListCategoryProducts,
+        ListLandings,
+        ReadLanding,
         ReadProduct,
         CalculatePrice,
         ChangeVariant,
@@ -55,6 +64,7 @@ class InteractorProvider(Provider):
         ListPricingGaps,
         ListVariants,
         QuoteVariant,
+        ReadSite,
         RemoveVariant,
         RepriceProducts,
         SubmitInquiry,

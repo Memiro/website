@@ -1,0 +1,17 @@
+---
+interface Tile { href: string; label: string; }
+interface Props { tiles: Tile[]; }
+const { tiles } = Astro.props;
+---
+
+{tiles.length > 0 && (
+  <div class="tiles-grid">
+    {tiles.map((tile, index) => (
+      <a class="tile" href={tile.href}>
+        <img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" loading="lazy" />
+        <span class="veil"></span>
+        <span class="label">{tile.label}</span>
+      </a>
+    ))}
+  </div>
+)}

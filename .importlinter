@@ -58,6 +58,7 @@ modules =
     memiro.application.manage_attributes
     memiro.application.manage_pricing_settings
     memiro.application.manage_products
+    memiro.application.read_site
     memiro.application.reprice_products
     memiro.application.submit_inquiry
 

@@ -10,6 +10,7 @@
 |---|---|---|---|
 | `VALIDATION_ERROR` | 422 | — (FastAPI) | Тело или параметры запроса не прошли границы формы |
 | `CATEGORY_NOT_FOUND` | 404 | `CategoryNotFoundError` | Категории с названным slug нет |
+| `LANDING_NOT_FOUND` | 404 | `LandingNotFoundError` | Посадочной с названным slug нет или она снята с публикации |
 | `PRODUCT_NOT_FOUND` | 404 | `ProductNotFoundError` | Товара с названным идентификатором нет |
 | `PRODUCT_IMAGE_NOT_FOUND` | 404 | `ProductImageNotFoundError` | Ключ не называет ни одной фотографии этого товара |
 | `VARIANT_NOT_FOUND` | 404 | `VariantNotFoundError` | Вариант не принадлежит названному товару |

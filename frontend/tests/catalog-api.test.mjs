@@ -12,8 +12,8 @@ const product = {
   image_keys: [],
   description: "Зеркало для ванной.",
   attributes: [
-    { id: "frame", name: "Рама", kind: "select", values: [{ id: "black", name: "Чёрная", quantity: null }] },
-    { id: "cut-outs", name: "Вырезы", kind: "number", values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
+    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", values: [{ id: "black", name: "Чёрная", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
   ],
   variants: [],
 };
@@ -26,6 +26,16 @@ const categoryProducts = {
   items: [{ name: "Лира", slug: "lira", price_from: "18900", image_keys: [] }],
   total: 1,
   page: 1,
+  pages: 1,
+  sort: "name",
+  groups: [
+    {
+      attribute_id: "frame",
+      name: "Рама",
+      options: [{ value_id: "black", name: "Чёрная", count: 1, is_selected: false }],
+    },
+  ],
+  price: { lowest: "18900", highest: "18900", selected_min: null, selected_max: null },
 };
 
 /** Serve the given handler on a loopback port and hand the client that speaks to it. */
@@ -44,7 +54,7 @@ async function withApi(t, handler) {
   return new CatalogApi(`http://127.0.0.1:${address.port}`);
 }
 
-test("the SSR client reads catalogue lists as the {items, total, page} envelope", async (t) => {
+test("the SSR client reads a category page as its envelope with filters", async (t) => {
   const bodies = { "/catalog/categories": categories, "/catalog/categories/mirrors/products": categoryProducts };
   const api = await withApi(t, (request, response) => response.end(JSON.stringify(bodies[request.url])));
 

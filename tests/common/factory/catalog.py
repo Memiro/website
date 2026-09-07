@@ -68,6 +68,8 @@ PRODUCT: ProductId = _id("mirror-in-a-frame")
 SECOND_CATEGORY: CategoryId = _id("cabinets")
 FOREIGN_PRODUCT: ProductId = _id("mirror-cabinet")
 SECOND_PRODUCT: ProductId = _id("mirror-with-a-shelf")
+THIRD_PRODUCT: ProductId = _id("large-mirror")
+LANDING: UUID = _id("round-mirrors-landing")
 
 # One inquiry a manager already has in hand: what a product removed later
 # leaves behind is read off its position.
@@ -88,6 +90,9 @@ def demo_blade() -> Attribute:
         category_id=CATEGORY,
         name="Тип полотна",
         sort_order=1,
+        # Any mirror is made of any blade, so a "silver / graphite" group
+        # would hide products that do fit.
+        is_filterable=False,
         values=[
             AttributeValue(
                 id=SILVER,

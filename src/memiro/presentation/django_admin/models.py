@@ -348,3 +348,112 @@ class InquiryItem(Mirror):
     @override
     def __str__(self) -> str:
         return self.product_name
+
+
+class Landing(Mirror):
+    """A landing page: one category narrowed by the values the owner wrote down."""
+
+    id = models.UUIDField(primary_key=True)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.DO_NOTHING,
+        db_column="category_id",
+        related_name="landings",
+    )
+    slug = models.CharField(max_length=NAME_LENGTH, unique=True)
+    title = models.CharField(max_length=NAME_LENGTH)
+    heading = models.CharField(max_length=NAME_LENGTH)
+    description = models.CharField(max_length=1_000)
+    text = models.CharField(max_length=20_000)
+    is_published = models.BooleanField()
+    sort_order = models.IntegerField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta(Mirror.Meta):
+        db_table = "landings"
+        verbose_name = "посадочная страница"
+        verbose_name_plural = "посадочные страницы"
+
+    @override
+    def __str__(self) -> str:
+        return self.heading
+
+
+class LandingCondition(Mirror):
+    """One value a landing narrows its category by."""
+
+    pk = models.CompositePrimaryKey("landing_id", "value_id")
+    landing = models.ForeignKey(
+        Landing,
+        on_delete=models.DO_NOTHING,
+        db_column="landing_id",
+        related_name="conditions",
+    )
+    value = models.ForeignKey(
+        AttributeValue,
+        on_delete=models.DO_NOTHING,
+        db_column="value_id",
+        related_name="landing_conditions",
+    )
+    attribute = models.ForeignKey(
+        Attribute,
+        on_delete=models.DO_NOTHING,
+        db_column="attribute_id",
+        related_name="landing_conditions",
+    )
+
+    class Meta(Mirror.Meta):
+        db_table = "landing_conditions"
+        verbose_name = "условие посадочной"
+        verbose_name_plural = "условия посадочной"
+
+    @override
+    def __str__(self) -> str:
+        return str(self.pk)
+
+
+class SiteContacts(Mirror):
+    """The studio contacts the storefront prints."""
+
+    id = models.UUIDField(primary_key=True)
+    city = models.CharField(max_length=NAME_LENGTH)
+    street = models.CharField(max_length=NAME_LENGTH)
+    phone = models.CharField(max_length=NAME_LENGTH)
+    phone_display = models.CharField(max_length=NAME_LENGTH)
+    email = models.CharField(max_length=NAME_LENGTH)
+    hours = models.CharField(max_length=NAME_LENGTH)
+    max_link = models.CharField(max_length=NAME_LENGTH)
+    telegram = models.CharField(max_length=NAME_LENGTH)
+    vk = models.CharField(max_length=NAME_LENGTH)
+    map_embed = models.CharField(max_length=1_000)
+    updated_at = models.DateTimeField()
+
+    class Meta(Mirror.Meta):
+        db_table = "site_contacts"
+        verbose_name = "контакты"
+        verbose_name_plural = "контакты"
+
+    @override
+    def __str__(self) -> str:
+        return self.phone_display
+
+
+class SellerRequisites(Mirror):
+    """The seller requisites printed in the storefront footer."""
+
+    id = models.UUIDField(primary_key=True)
+    name = models.CharField(max_length=NAME_LENGTH)
+    ogrn = models.CharField(max_length=NAME_LENGTH)
+    inn = models.CharField(max_length=NAME_LENGTH)
+    address = models.CharField(max_length=NAME_LENGTH)
+    updated_at = models.DateTimeField()
+
+    class Meta(Mirror.Meta):
+        db_table = "seller_requisites"
+        verbose_name = "реквизиты продавца"
+        verbose_name_plural = "реквизиты продавца"
+
+    @override
+    def __str__(self) -> str:
+        return self.name

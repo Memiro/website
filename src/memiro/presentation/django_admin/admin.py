@@ -53,10 +53,14 @@ from memiro.presentation.django_admin.models import (
     Category,
     Inquiry,
     InquiryItem,
+    Landing,
+    LandingCondition,
     PricingSettings,
     Product,
     ProductImage,
     ProductVariant,
+    SellerRequisites,
+    SiteContacts,
     SizeSurcharge,
 )
 from memiro.presentation.django_admin.pricing_settings_card import restate_pricing_settings
@@ -726,3 +730,60 @@ class InquiryItemAdmin(ReadOnlyAdmin):
     )
     list_filter = ("verdict",)
     search_fields = ("product_name",)
+
+
+class LandingConditionInline(ReadOnlyInline):
+    """Conditions of a landing: what it narrows its category by."""
+
+    model = LandingCondition
+    fields = (
+        "attribute",
+        "value",
+    )
+
+
+@admin.register(Landing)
+class LandingAdmin(ReadOnlyAdmin):
+    """Landing pages of the catalogue."""
+
+    list_display = (
+        "heading",
+        "slug",
+        "category",
+        "is_published",
+        "sort_order",
+    )
+    list_filter = (
+        "category",
+        "is_published",
+    )
+    search_fields = (
+        "heading",
+        "slug",
+    )
+    ordering = ("sort_order",)
+    inlines = (LandingConditionInline,)
+
+
+@admin.register(SiteContacts)
+class SiteContactsAdmin(ReadOnlyAdmin):
+    """The studio contacts the storefront prints."""
+
+    list_display = (
+        "phone_display",
+        "email",
+        "city",
+        "updated_at",
+    )
+
+
+@admin.register(SellerRequisites)
+class SellerRequisitesAdmin(ReadOnlyAdmin):
+    """The seller requisites printed in the storefront footer."""
+
+    list_display = (
+        "name",
+        "ogrn",
+        "inn",
+        "updated_at",
+    )

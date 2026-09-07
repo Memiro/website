@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { calculatePrice } from "./calculate-price.ts";
 import { inquiryErrorMessage, SubmitInquiryError, submitInquiry } from "./submit-inquiry.ts";
 import type { ProductCard } from "../lib/catalog-api.ts";
+import { notifyInquiryChanged } from "../lib/inquiry-events.ts";
 import { Calculator, HEIGHT_FIELD, WIDTH_FIELD } from "../lib/calculator-state.ts";
 import {
   addInquiryItem,
@@ -60,10 +61,12 @@ function addToInquiry(): void {
   );
   wish.value = "";
   submitResult.value = null;
+  notifyInquiryChanged(window);
 }
 
 function removeItem(index: number): void {
   items.value = removeInquiryItem(window.localStorage, items.value, index);
+  notifyInquiryChanged(window);
 }
 
 async function sendInquiry(): Promise<void> {
@@ -81,6 +84,7 @@ async function sendInquiry(): Promise<void> {
     }));
     items.value = [];
     saveInquiryItems(window.localStorage, items.value);
+    notifyInquiryChanged(window);
     submitResult.value = { text: "Спасибо! Заявка отправлена, менеджер свяжется с вами.", isError: false };
   } catch (error) {
     submitResult.value = {

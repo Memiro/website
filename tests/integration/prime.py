@@ -12,19 +12,24 @@ from typing import NamedTuple
 from sqlalchemy import delete, func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.adapters.db.gateways.site import SELLER_REQUISITES_ID, SITE_CONTACTS_ID
 from memiro.adapters.db.tables import (
     attribute_values_table,
     attributes_table,
     categories_table,
     inquiries_table,
     inquiry_items_table,
+    landing_conditions_table,
+    landings_table,
     pricing_settings_table,
     product_declared_values_table,
     product_images_table,
     product_variants_table,
     products_table,
+    seller_requisites_table,
+    site_contacts_table,
 )
-from memiro.entities.common.identifiers import AttributeValueId, ProductId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import InquirySource
@@ -38,15 +43,22 @@ from tests.common.factory.catalog import (
     CATEGORY,
     CONTOUR,
     FOREIGN_PRODUCT,
+    FRAME,
     HEATING,
     INQUIRY,
     INQUIRY_ITEM,
+    LANDING,
+    NO_FRAME,
     NO_HEATING,
     NO_MOUNT,
     PRODUCT,
+    RECTANGULAR,
+    ROUND,
     SECOND_CATEGORY,
     SECOND_PRODUCT,
+    SHAPE,
     SILVER,
+    THIRD_PRODUCT,
     WITH_HEATING,
     WITH_MOUNT,
     demo_attributes,
@@ -241,6 +253,112 @@ async def prime_extra_product(engine: AsyncEngine, *, name: str, slug: str, is_p
                     "updated_at": CATALOG_STAMP,
                 },
             ],
+        )
+
+
+async def prime_priced_neighbours(engine: AsyncEngine) -> None:
+    """Add two published neighbours with prices and shapes of their own, so a listing has something to narrow.
+
+    The canonical mirror is rectangular and priceless; the round one is the
+    cheapest, the second rectangular one the dearest.
+    """
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(products_table),
+            [
+                {
+                    "id": SECOND_PRODUCT,
+                    "category_id": CATEGORY,
+                    "name": "Круглое зеркало",
+                    "slug": "krugloe-zerkalo",
+                    "description": "A round made-to-order mirror.",
+                    "is_published": True,
+                    "hides_calculated_price": False,
+                    "price_from": Money(amount=Decimal(4000)),
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
+                },
+                {
+                    "id": THIRD_PRODUCT,
+                    "category_id": CATEGORY,
+                    "name": "Большое зеркало",
+                    "slug": "bolshoe-zerkalo",
+                    "description": "A large made-to-order mirror.",
+                    "is_published": True,
+                    "hides_calculated_price": False,
+                    "price_from": Money(amount=Decimal(12000)),
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
+                },
+            ],
+        )
+        await connection.execute(
+            insert(product_declared_values_table),
+            [
+                {"product_id": SECOND_PRODUCT, "attribute_id": SHAPE, "value_id": ROUND, "quantity": None},
+                {"product_id": SECOND_PRODUCT, "attribute_id": FRAME, "value_id": NO_FRAME, "quantity": None},
+                {"product_id": THIRD_PRODUCT, "attribute_id": SHAPE, "value_id": RECTANGULAR, "quantity": None},
+                {"product_id": THIRD_PRODUCT, "attribute_id": FRAME, "value_id": ALUMINIUM, "quantity": None},
+            ],
+        )
+
+
+async def prime_site_data(engine: AsyncEngine, *, seller_name: str = "", ogrn: str = "") -> None:
+    """Rewrite the single rows the migration created: the storefront is born with contacts, not with a seller."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            update(site_contacts_table)
+            .where(site_contacts_table.c.id == SITE_CONTACTS_ID)
+            .values(
+                city="Санкт-Петербург",
+                street="Александра Матросова, 4к2ж",
+                phone="+79812304050",
+                phone_display="+7 981 230-40-50",
+                email="memiro.ru@yandex.ru",
+                hours="Ежедневно, по предварительной записи",
+                max_link="",
+                telegram="https://t.me/memiro_shop",
+                vk="https://vk.com/memirospb",
+                map_embed="",
+                updated_at=CATALOG_STAMP,
+            )
+        )
+        await connection.execute(
+            update(seller_requisites_table)
+            .where(seller_requisites_table.c.id == SELLER_REQUISITES_ID)
+            .values(name=seller_name, ogrn=ogrn, updated_at=CATALOG_STAMP)
+        )
+
+
+async def prime_landing(
+    engine: AsyncEngine,
+    *,
+    is_published: bool = True,
+    narrows_by: tuple[AttributeId, AttributeValueId] = (SHAPE, ROUND),
+) -> None:
+    """Add the landing that narrows the demo category, by default to round mirrors."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(landings_table),
+            [
+                {
+                    "id": LANDING,
+                    "category_id": CATEGORY,
+                    "slug": "kruglye-zerkala",
+                    "title": "Круглые зеркала на заказ — memiro",
+                    "heading": "Круглые зеркала",
+                    "description": "Круглые зеркала по вашим размерам.",
+                    "text": "Круг читается мягче прямоугольника.",  # noqa: RUF001
+                    "is_published": is_published,
+                    "sort_order": 1,
+                    "created_at": CATALOG_STAMP,
+                    "updated_at": CATALOG_STAMP,
+                }
+            ],
+        )
+        await connection.execute(
+            insert(landing_conditions_table),
+            [{"landing_id": LANDING, "attribute_id": narrows_by[0], "value_id": narrows_by[1]}],
         )
 
 
