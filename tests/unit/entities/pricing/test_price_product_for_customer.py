@@ -11,7 +11,7 @@ from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeValueId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
-from memiro.entities.pricing.pricing_service import price_product_for_customer
+from memiro.entities.pricing.pricing_service import Selections, price_product_for_customer
 from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro.entities.pricing.quotation import PricingVerdict, Quotation
 from tests.common.factory.catalog import (
@@ -60,7 +60,7 @@ def test_an_unpublished_product_is_not_priceable_for_a_customer() -> None:
 
 
 def test_a_customer_choice_that_makes_a_parent_present_requires_its_child() -> None:
-    """A selected present parent makes its undeclared dependent attribute required."""
+    """A selected present parent makes its undeclared dependent attribute required: SELECTION_NOT_PRICEABLE."""
     quotation = price_product_for_customer(
         product=demo_product(),
         attributes=demo_attributes(),
@@ -69,7 +69,7 @@ def test_a_customer_choice_that_makes_a_parent_present_requires_its_child() -> N
         selections={BACKLIGHT: ChosenValue(value_id=CONTOUR, quantity=None)},
     )
 
-    assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())
+    assert quotation == Quotation(verdict=PricingVerdict.SELECTION_NOT_PRICEABLE, total=None, breakdown=())
 
 
 @pytest.mark.parametrize("child_value", [NO_HEATING, WITH_HEATING])
@@ -130,7 +130,7 @@ def test_a_zero_numeric_quantity_is_complete_and_consumed_exactly() -> None:
 
 
 def test_a_customer_cannot_select_a_non_changeable_attribute() -> None:
-    """A choice on a non-changeable attribute receives NOT_PRICEABLE."""
+    """A choice on a non-changeable attribute receives SELECTION_NOT_PRICEABLE."""
     attributes = demo_attributes_with_changeability(FRAME, is_customer_changeable=False)
 
     quotation = price_product_for_customer(
@@ -141,7 +141,7 @@ def test_a_customer_cannot_select_a_non_changeable_attribute() -> None:
         selections={FRAME: ChosenValue(value_id=NO_FRAME, quantity=None)},
     )
 
-    assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())
+    assert quotation == Quotation(verdict=PricingVerdict.SELECTION_NOT_PRICEABLE, total=None, breakdown=())
 
 
 def test_a_customer_beyond_production_limits_receives_that_verdict() -> None:
@@ -228,17 +228,17 @@ def test_one_thousand_limit_decisions_are_rotation_invariant(
 @given(case=customer_gate_cases())
 def test_one_thousand_customer_verdicts_keep_their_total_and_emptiness_invariants(
     _example_group: int,
-    case: tuple[Product, PricingSettings, Dimensions, PricingVerdict, bool],
+    case: tuple[Product, PricingSettings, Dimensions, Selections, PricingVerdict, bool],
 ) -> None:
     """One thousand coherent customer questions keep every verdict's quotation shape."""
-    product, pricing_settings, size, expected_verdict, carries_price = case
+    product, pricing_settings, size, selections, expected_verdict, carries_price = case
 
     quotation = price_product_for_customer(
         product=product,
         attributes=demo_attributes(),
         settings=pricing_settings,
         dimensions=size,
-        selections={},
+        selections=selections,
     )
 
     assert quotation.verdict is expected_verdict
@@ -277,4 +277,4 @@ def test_a_selection_naming_an_attribute_outside_the_dictionary_is_not_priceable
         selections={uuid4(): ChosenValue(value_id=SILVER, quantity=None)},
     )
 
-    assert quotation == Quotation(verdict=PricingVerdict.NOT_PRICEABLE, total=None, breakdown=())
+    assert quotation == Quotation(verdict=PricingVerdict.SELECTION_NOT_PRICEABLE, total=None, breakdown=())

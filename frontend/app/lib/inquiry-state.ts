@@ -44,17 +44,25 @@ export interface SubmitInquiryRequest {
   }>;
 }
 
+// A position without a price is still a position (``Inquiry``, rule 7): the
+// only configuration there is nothing to add is the one of a product outside
+// the calculable set, where the customer configured nothing at all.
+const ADDABLE_KINDS: ReadonlySet<InquiryPresentationKind> = new Set(["priced", "hidden", "unpriced", "wish"]);
+
 export function canAddCalculatorConfiguration(
   kind: InquiryPresentationKind | undefined,
   wish: string,
 ): boolean {
-  return kind === "priced" || (kind === "wish" && wish.trim().length > 0);
+  if (kind === undefined || !ADDABLE_KINDS.has(kind)) {
+    return false;
+  }
+  return kind !== "wish" || wish.trim().length > 0;
 }
 
 export function canShowInquiryEditor(
   kind: InquiryPresentationKind | undefined,
 ): boolean {
-  return kind === "priced" || kind === "wish";
+  return kind !== undefined && ADDABLE_KINDS.has(kind);
 }
 
 export function loadInquiryItems(storage: BrowserStorage): InquiryItem[] {
@@ -91,7 +99,7 @@ export function removeInquiryItem(storage: BrowserStorage, items: InquiryItem[],
 export function inquiryItemFromCalculator(
   product: ProductCard,
   state: CalculatorState,
-  kind: "priced" | "wish",
+  kind: InquiryPresentationKind,
   wish = "",
 ): InquiryItem {
   return {

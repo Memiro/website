@@ -1,6 +1,6 @@
 import { API_TIMEOUT_MS, asRecord, requestJson } from "./http.ts";
 
-export type PricingVerdict = "PRICED" | "BEYOND_LIMITS" | "NOT_PRICEABLE" | "HIDDEN";
+export type PricingVerdict = "PRICED" | "BEYOND_LIMITS" | "NOT_PRICEABLE" | "SELECTION_NOT_PRICEABLE" | "HIDDEN";
 
 const DEFAULT_INTERNAL_API_BASE_URL = "http://api:8000";
 
@@ -340,7 +340,8 @@ function isSelectionDelta(value: unknown): value is SelectionDelta {
 }
 
 function isVerdict(value: unknown): value is PricingVerdict {
-  return value === "PRICED" || value === "BEYOND_LIMITS" || value === "NOT_PRICEABLE" || value === "HIDDEN";
+  return value === "PRICED" || value === "BEYOND_LIMITS" || value === "NOT_PRICEABLE"
+    || value === "SELECTION_NOT_PRICEABLE" || value === "HIDDEN";
 }
 
 function isArrayOf<Item>(value: unknown, isItem: (item: unknown) => item is Item): value is Item[] {

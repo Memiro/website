@@ -206,13 +206,13 @@ async def test_an_absence_marked_parent_leaves_its_undeclared_child_out_of_prici
 async def test_a_customer_choice_that_makes_a_parent_present_requires_its_child(
     api_client: ApiClient,
 ) -> None:
-    """A selected present parent makes its undeclared child answer NOT_PRICEABLE."""
+    """A selected present parent makes its undeclared child answer SELECTION_NOT_PRICEABLE."""
     selection = Selection(attribute_id=BACKLIGHT, value_id=CONTOUR)
 
     response = await api_client.calculate(_form(selections=[selection]))
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
-        verdict=PricingVerdict.NOT_PRICEABLE,
+        verdict=PricingVerdict.SELECTION_NOT_PRICEABLE,
         total=None,
         selection_deltas=[],
     )
@@ -418,14 +418,14 @@ async def test_a_customer_choice_on_a_non_changeable_attribute_is_not_priceable(
     api_client: ApiClient,
     engine: AsyncEngine,
 ) -> None:
-    """A valid choice on an owner-only attribute answers NOT_PRICEABLE."""
+    """A valid choice on an owner-only attribute answers SELECTION_NOT_PRICEABLE."""
     await prime_non_changeable_attribute(engine)
     selection = Selection(attribute_id=BLADE, value_id=GRAPHITE)
 
     response = await api_client.calculate(_form(selections=[selection]))
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
-        verdict=PricingVerdict.NOT_PRICEABLE,
+        verdict=PricingVerdict.SELECTION_NOT_PRICEABLE,
         total=None,
         selection_deltas=[],
     )

@@ -15,6 +15,7 @@ from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro.entities.pricing.pricing_service import Selections
 from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro.entities.pricing.quotation import PricingVerdict
 from tests.common.factory.catalog import (
@@ -106,9 +107,10 @@ def pricing_cases(
 @st.composite
 def customer_gate_cases(
     draw: st.DrawFn,
-) -> tuple[Product, PricingSettings, Dimensions, PricingVerdict, bool]:
+) -> tuple[Product, PricingSettings, Dimensions, Selections, PricingVerdict, bool]:
     """Draw one coherent customer question and its expected quotation shape."""
     verdict = draw(st.sampled_from(list(PricingVerdict)))
+    selections: Selections = {}
     sides = st.integers(min_value=MIN_SIDE_MM + 1, max_value=MAX_SIDE_MM)
     size = Dimensions(
         width=Millimeters(value=draw(sides)),
@@ -123,13 +125,17 @@ def customer_gate_cases(
             product,
             [declaration for declaration in product.declared_values if declaration.attribute_id != MOUNT],
         )
+    elif verdict is PricingVerdict.SELECTION_NOT_PRICEABLE:
+        # A present backlight makes heating applicable, and the canonical
+        # mirror declares none: the choice, not the product, is what stops here.
+        selections = {BACKLIGHT: ChosenValue(value_id=CONTOUR, quantity=None)}
     elif verdict is PricingVerdict.BEYOND_LIMITS:
         pricing_settings = replace(
             pricing_settings,
             max_long_side_mm=Millimeters(value=size.long_side.value - 1),
         )
     carries_price = verdict in {PricingVerdict.PRICED, PricingVerdict.HIDDEN}
-    return product, pricing_settings, size, verdict, carries_price
+    return product, pricing_settings, size, selections, verdict, carries_price
 
 
 @st.composite

@@ -23,7 +23,7 @@ from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfiguration, InquiryItem
 from memiro.entities.pricing.quotation import PricingVerdict
-from tests.common.factory.catalog import BLADE, CUTOUTS, GRAPHITE, PRODUCT
+from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, CUTOUTS, GRAPHITE, PRODUCT
 from tests.common.factory.pricing import SelectionFactory
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
@@ -267,6 +267,35 @@ async def test_a_not_priceable_product_keeps_no_configuration_in_an_inquiry(
         calculated_price=None,
         wish="",
         verdict=PricingVerdict.NOT_PRICEABLE,
+    )
+
+
+async def test_a_choice_the_price_refuses_still_reaches_the_manager_as_a_configuration(
+    api_client: ApiClient,
+    request_container: AsyncContainer,
+) -> None:
+    """A SELECTION_NOT_PRICEABLE item keeps the size and the values the customer chose."""
+    selection = SelectionFactory.build(attribute_id=BACKLIGHT, value_id=CONTOUR, quantity=None)
+
+    created = (
+        (await api_client.submit_inquiry(_form(items=[_item(selections=[selection])])))
+        .assert_status(200)
+        .ensure_content()
+    )
+    gateway: InquiryGateway = await request_container.get(InquiryGateway)
+    inquiry = await gateway.get(created.id)
+
+    assert inquiry is not None
+    assert inquiry.items[0] == _snapshot(
+        inquiry.items[0].id,
+        configuration=_configuration(
+            800,
+            600,
+            ConfigurationValue(attribute_name="Подсветка", value_name="Контурная", quantity=None),
+        ),
+        calculated_price=None,
+        wish="",
+        verdict=PricingVerdict.SELECTION_NOT_PRICEABLE,
     )
 
 
