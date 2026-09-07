@@ -376,6 +376,9 @@ mapper_registry.map_imperatively(
     LandingCondition,
     landing_conditions_table,
     properties={
+        # Half of the row's own key, which the aggregate has no field for: the
+        # condition is told from a condition by the value it names, and the
+        # page it belongs to is the collection it lies in.
         "_landing_id": landing_conditions_table.c.landing_id,
     },
 )

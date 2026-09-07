@@ -3,6 +3,8 @@
 import re
 import unicodedata
 
+from memiro_common.errors import AppError
+
 # One table, Cyrillic to the letters a URL is written in. It is the domain's
 # own because the address is the domain's: a library would bring a second
 # spelling of the same names with the next version bump.
@@ -47,6 +49,14 @@ _SEPARATORS = re.compile(r"[^a-z0-9]+")
 # One letter of a name can unfold into four ("щ" is "shch"), so an address is
 # bounded on its own and not by the length of the name it came from.
 MAX_SLUG_LENGTH = 255
+
+
+def derive_slug(slug: str, name: str, *, missing: type[AppError]) -> str:
+    """Take the address the owner typed, or derive one from the name he gave."""
+    settled = slug or slugify(name)
+    if not settled:
+        raise missing
+    return settled
 
 
 def slugify(name: str) -> str:

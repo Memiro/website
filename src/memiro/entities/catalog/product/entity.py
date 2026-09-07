@@ -11,7 +11,7 @@ from memiro.entities.common.entity import Entity
 from memiro.entities.common.identifiers import AttributeId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
-from memiro.entities.common.slug import slugify
+from memiro.entities.common.slug import derive_slug
 from memiro.entities.errors.product import (
     DuplicateProductImageError,
     DuplicateVariantError,
@@ -21,6 +21,11 @@ from memiro.entities.errors.product import (
     ProductSectionNotEmptyError,
 )
 from memiro_common.clock import Clock
+
+
+def settled_slug(slug: str, name: str) -> str:
+    """Take the address the owner typed, or derive one from the name of the product."""
+    return derive_slug(slug, name, missing=InvalidProductSlugError)
 
 
 def _variant_fingerprint(variant: Variant) -> UUID:
@@ -198,14 +203,6 @@ class ChangeProductData:
     description: str
     is_published: bool
     hides_calculated_price: bool
-
-
-def settled_slug(slug: str, name: str) -> str:
-    """Take the address the owner typed, or derive one from the name he gave."""
-    settled = slug or slugify(name)
-    if not settled:
-        raise InvalidProductSlugError
-    return settled
 
 
 @dataclass
