@@ -144,9 +144,14 @@ export class Calculator {
   public selections: CalculatorSelection[];
   public request: PriceRequest;
   public priced: CalculatorState | null;
+  // The editor of the inquiry is drawn on this, not on the request in flight:
+  // torn down for the moment a recalculation takes, the "add" button would
+  // swallow the very click that follows retyping a size.
+  public settledPrice: PricePresentation | null;
   private readonly product: ProductCard;
   private readonly calculate: CalculatePrice;
   private generation: number;
+  private inFlight: Promise<void> | null;
 
   public constructor(product: ProductCard, calculate: CalculatePrice) {
     const state = initialCalculatorState(product);
@@ -157,7 +162,9 @@ export class Calculator {
     this.selections = state === null ? declaredQuantities(product, []) : state.selections;
     this.request = { status: "idle" };
     this.priced = null;
+    this.settledPrice = null;
     this.generation = 0;
+    this.inFlight = null;
   }
 
   /** The ready size the current configuration stands on, or null for a size the customer typed. */
@@ -220,11 +227,30 @@ export class Calculator {
     await this.refresh();
   }
 
-  public async refresh(): Promise<void> {
+  /** Wait until no price is being counted, including one a running answer starts. */
+  public async whenSettled(): Promise<void> {
+    while (this.inFlight !== null) {
+      await this.inFlight;
+    }
+  }
+
+  public refresh(): Promise<void> {
+    const running = this.recount();
+    this.inFlight = running;
+    void running.finally(() => {
+      if (this.inFlight === running) {
+        this.inFlight = null;
+      }
+    });
+    return running;
+  }
+
+  private async recount(): Promise<void> {
     const generation = this.generation + 1;
     this.generation = generation;
     const configuration = this.configuration();
     if (configuration === null) {
+      this.settledPrice = null;
       this.request = { status: "invalid", fields: this.invalidFields() };
       return;
     }
@@ -235,11 +261,13 @@ export class Calculator {
         return;
       }
       this.priced = configuration;
+      this.settledPrice = price;
       this.request = { status: "done", price };
     } catch {
       if (generation !== this.generation) {
         return;
       }
+      this.settledPrice = null;
       this.request = { status: "error" };
     }
   }

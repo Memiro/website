@@ -450,6 +450,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .calc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 600; }
 .calc-fields { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 24px; }
 .calc-result { margin-top: 22px; display: grid; gap: 12px; justify-items: start; }
+.calc-result.recounting { opacity: 0.45; }
 .calc-total { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; white-space: nowrap; }
 .calc-note { font-size: 15px; line-height: 1.55; color: var(--body); max-width: 46ch; }
 .calc-additions { list-style: none; display: grid; gap: 8px; width: 100%; font-size: 15px; }
