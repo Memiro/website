@@ -43,15 +43,15 @@ class Category(Mirror):
     """Раздел каталога."""
 
     # The one domain table the admin writes directly: a section carries no
-    # rules, so it has no interactor to fill the key and the stamps for it
-    # (ADR-0012, decision 3). The columns have no default in the database,
-    # so Django fills them the way it fills any table of its own.
+    # rules, so it has no interactor to issue its key (ADR-0012, decision 3).
+    # The stamps stay bare fields on purpose — time is not Django's to invent,
+    # it comes from the one ``Clock`` of the process (``section_card.py``).
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=NAME_LENGTH)
     slug = models.CharField(max_length=NAME_LENGTH, unique=True)
     sort_order = models.IntegerField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
 
     class Meta(Mirror.Meta):
         db_table = "categories"

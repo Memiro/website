@@ -12,7 +12,7 @@ The bounds are imported from ``input_limits``, never spelled again here: the
 application form and this one refuse the same value (§13.6).
 """
 
-from typing import Any, override
+from typing import Any, cast, override
 from uuid import UUID
 
 from django import forms
@@ -37,6 +37,7 @@ from memiro.entities.common.slug import MAX_SLUG_LENGTH
 from memiro.presentation.django_admin.models import (
     Attribute,
     AttributeValue,
+    Category,
     PricingSettings,
     Product,
     ProductDeclaredValue,
@@ -56,6 +57,14 @@ TIER_KEY_FIELD = "pk"
 # The prefix a card field carries when it declares an attribute of the section
 # rather than a column of the product itself.
 DECLARED_PREFIX = "declared_"
+
+SLUG_MESSAGE = "Адрес — латинские слова через дефис."
+# The declared fields on a card are built from the section the product is in
+# today, so a save that also moves it would send the old section's values to
+# the new one: the domain refuses them, and the root has already committed.
+MOVE_CARRIES_VALUES = (
+    "Раздел меняется отдельным сохранением: сначала перенесите товар, а значения нового раздела объявите следующим."
+)
 
 
 class AttributeCardForm(forms.ModelForm):
@@ -229,7 +238,7 @@ class ProductCardForm(forms.ModelForm):
     slug = forms.CharField(
         required=False,
         max_length=MAX_SLUG_LENGTH,
-        validators=[RegexValidator(SLUG_PATTERN, message="Адрес — латинские слова через дефис.")],
+        validators=[RegexValidator(SLUG_PATTERN, message=SLUG_MESSAGE)],
         label="Адрес",
         help_text="Пустой адрес выводится из названия; дальше он правится руками.",
     )
@@ -259,6 +268,18 @@ class ProductCardForm(forms.ModelForm):
     @override
     def validate_unique(self) -> None:
         """Leave the address to the transaction that writes it: a card cannot see a race (``product.md``, п. 13)."""
+
+    @override
+    def clean(self) -> dict[str, Any]:
+        """Refuse a move that carries declared values with it: they are the values of the section being left."""
+        cleaned = cast("dict[str, Any]", super().clean())
+        section = cleaned.get("category")
+        if self.instance.pk is None or section is None or section.pk == self.initial.get("category"):
+            return cleaned
+        declared = (field for field in self.fields if field.startswith(DECLARED_PREFIX))
+        if any(cleaned.get(field) is not None for field in declared):
+            raise forms.ValidationError(MOVE_CARRIES_VALUES)
+        return cleaned
 
     @override
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -298,3 +319,25 @@ def _declared_field(attribute: Attribute) -> forms.Field:
         required=False,
         label=label,
     )
+
+
+class CategoryCardForm(forms.ModelForm):
+    """Карточка раздела: название, адрес и место в списке — правил у раздела нет, границы ввода есть (§13.6)."""
+
+    name = forms.CharField(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH, label="Название")
+    # The address of a section is typed, not derived: there is no interactor
+    # behind this card to transliterate a name into one.
+    slug = forms.CharField(
+        max_length=MAX_SLUG_LENGTH,
+        validators=[RegexValidator(SLUG_PATTERN, message=SLUG_MESSAGE)],
+        label="Адрес",
+    )
+
+    class Meta:
+        model = Category
+        fields = (
+            "name",
+            "slug",
+            "sort_order",
+        )
+        labels = {"sort_order": "Порядок"}  # noqa: RUF012  # Django reads Meta options off the class as plain values

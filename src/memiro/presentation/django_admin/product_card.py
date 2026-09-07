@@ -16,7 +16,7 @@ from memiro.application.manage_products import (
     DeclareValues,
     DeclareValuesForm,
     ListPricingGaps,
-    ProductPricingGaps,
+    PricingGapsModel,
     RemoveProduct,
 )
 from memiro.entities.common.identifiers import AttributeValueId, ProductId
@@ -49,7 +49,7 @@ def remove_product(product_id: ProductId) -> None:
     send(lambda scope: _remove(scope, product_id))
 
 
-def pricing_gaps_of(product_ids: Sequence[ProductId]) -> dict[ProductId, ProductPricingGaps]:
+def pricing_gaps_of(product_ids: Sequence[ProductId]) -> dict[ProductId, PricingGapsModel]:
     """Ask what the products of one page still lack before the calculator prices them."""
     return bridge().call(lambda scope: _gaps(scope, product_ids))
 
@@ -101,6 +101,6 @@ async def _remove(scope: AsyncContainer, product_id: ProductId) -> None:
     await interactor.execute(product_id)
 
 
-async def _gaps(scope: AsyncContainer, product_ids: Sequence[ProductId]) -> dict[ProductId, ProductPricingGaps]:
+async def _gaps(scope: AsyncContainer, product_ids: Sequence[ProductId]) -> dict[ProductId, PricingGapsModel]:
     interactor = await scope.get(ListPricingGaps)
     return await interactor.execute(product_ids)
