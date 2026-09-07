@@ -10,7 +10,9 @@ export interface ListEnvelope<Item> {
   page: number;
 }
 
-export type CatalogSort = "name" | "cheapest" | "dearest";
+export const CATALOG_SORTS = ["name", "cheapest", "dearest"] as const;
+
+export type CatalogSort = (typeof CATALOG_SORTS)[number];
 
 export interface FilterOption {
   value_id: string;
@@ -204,7 +206,7 @@ function isCategoryPage(value: unknown): value is CategoryPage {
 }
 
 function isCatalogSort(value: unknown): value is CatalogSort {
-  return value === "name" || value === "cheapest" || value === "dearest";
+  return CATALOG_SORTS.some((sort) => sort === value);
 }
 
 function isFilterGroup(value: unknown): value is FilterGroup {

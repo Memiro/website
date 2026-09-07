@@ -1,3 +1,5 @@
+from enum import StrEnum
+
 from pydantic import BaseModel
 
 
@@ -21,10 +23,19 @@ class ContactsModel(BaseModel):
     map_embed: str
 
 
-class RequisiteModel(BaseModel):
-    """One published requisite of the seller, with the caption it is printed under."""
+class Requisite(StrEnum):
+    """The requisites of the seller a marketplace page must carry."""
 
-    label: str
+    NAME = "name"
+    OGRN = "ogrn"
+    INN = "inn"
+    ADDRESS = "address"
+
+
+class RequisiteModel(BaseModel):
+    """One published requisite of the seller: which one it is and what the owner filled in."""
+
+    kind: Requisite
     value: str
 
 

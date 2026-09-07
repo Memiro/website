@@ -1,7 +1,7 @@
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from memiro.application.read_site import ContactsModel, RequisiteModel, SiteModel
+from memiro.application.read_site import ContactsModel, Requisite, RequisiteModel, SiteModel
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import prime_site_data
 
@@ -32,18 +32,18 @@ async def test_the_storefront_reads_the_studio_contacts_the_owner_entered(
     )
 
 
-async def test_a_filled_requisite_arrives_with_the_caption_it_is_printed_under(
+async def test_a_filled_requisite_arrives_named_by_what_it_is(
     api_client: ApiClient,
     engine: AsyncEngine,
 ) -> None:
-    """The seller's own name carries no caption; the numbers under it do."""
+    """The storefront gets the requisite it asked for and writes the caption itself."""
     await prime_site_data(engine, seller_name="ИП Иванов Иван Иванович", ogrn="321784700000000")
 
     seller = (await api_client.read_site()).assert_status(status.HTTP_200_OK).ensure_content().seller
 
     assert seller == [
-        RequisiteModel(label="", value="ИП Иванов Иван Иванович"),
-        RequisiteModel(label="ОГРН/ОГРНИП", value="321784700000000"),
+        RequisiteModel(kind=Requisite.NAME, value="ИП Иванов Иван Иванович"),
+        RequisiteModel(kind=Requisite.OGRN, value="321784700000000"),
     ]
 
 

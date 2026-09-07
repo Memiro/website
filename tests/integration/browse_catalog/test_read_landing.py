@@ -2,8 +2,8 @@ import pytest
 from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from memiro.application.browse_catalog import CatalogQuery, LandingsList, LandingSummary
-from tests.common.factory.catalog import ROUND
+from memiro.application.browse_catalog import CatalogQuery
+from tests.common.factory.catalog import BLADE, ROUND, SILVER
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import prime_landing
 
@@ -50,21 +50,11 @@ async def test_a_landing_taken_off_the_storefront_answers_as_a_missing_one(
     (await api_client.read_landing("kruglye-zerkala")).assert_error(status.HTTP_404_NOT_FOUND, "LANDING_NOT_FOUND")
 
 
-async def test_an_unpublished_landing_is_not_a_tile_either(api_client: ApiClient, engine: AsyncEngine) -> None:
-    """Tiles show what the storefront publishes, and nothing else."""
-    await prime_landing(engine, is_published=False)
+async def test_a_landing_narrowed_by_an_unfilterable_attribute_answers_as_a_missing_one(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """LANDING_NOT_FOUND: the sidebar drops such a value, and an indexable page must not show the whole category."""
+    await prime_landing(engine, narrows_by=(BLADE, SILVER))
 
-    assert (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content() == LandingsList(
-        items=[], total=0, page=1
-    )
-
-
-async def test_the_storefront_lists_its_landings_as_tiles(api_client: ApiClient, engine: AsyncEngine) -> None:
-    """A published landing reaches the tiles by its heading and its address."""
-    await prime_landing(engine)
-
-    assert (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content() == LandingsList(
-        items=[LandingSummary(slug="kruglye-zerkala", heading="Круглые зеркала")],
-        total=1,
-        page=1,
-    )
+    (await api_client.read_landing("kruglye-zerkala")).assert_error(status.HTTP_404_NOT_FOUND, "LANDING_NOT_FOUND")

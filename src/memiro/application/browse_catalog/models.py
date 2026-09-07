@@ -123,10 +123,10 @@ class ProductsList(BaseModel):
     items: list[ProductSummary]
     total: int
     page: int
-    pages: int = FIRST_PAGE
-    groups: list[FilterGroup] = Field(default_factory=list[FilterGroup])
-    price: PriceBounds | None = None
-    sort: CatalogSort = CatalogSort.NAME
+    pages: int
+    groups: list[FilterGroup]
+    price: PriceBounds
+    sort: CatalogSort
 
 
 class ProductModel(ProductSummary):

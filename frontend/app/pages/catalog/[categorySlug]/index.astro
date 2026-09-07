@@ -10,7 +10,7 @@ import {
   isNarrowed,
   pageNumbers,
   parseCatalogQuery,
-  SORT_LABELS,
+  SORT_OPTIONS,
   VALUE_PARAM,
   withoutPrice,
   withoutValue,
@@ -74,7 +74,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
       </div>
       <label class="sort">Сортировка:
         <select name="sort" form="catalog-filters" data-sort>
-          {SORT_LABELS.map((option) => <option value={option.value} selected={option.value === query.sort}>{option.label}</option>)}
+          {SORT_OPTIONS.map((option) => <option value={option.value} selected={option.value === query.sort}>{option.label}</option>)}
         </select>
       </label>
     </div>

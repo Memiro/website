@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from memiro.adapters.db.tables import seller_requisites_table, site_contacts_table
 from memiro.application.common.gateway.site import SiteGateway
-from memiro.application.read_site.models import ContactsModel, RequisiteModel
+from memiro.application.read_site.models import ContactsModel, Requisite, RequisiteModel
 
 # The site has exactly one row of each, fetched by identifier rather than by
 # "whatever the table holds": a stray second row must not be able to rename
@@ -14,14 +14,9 @@ from memiro.application.read_site.models import ContactsModel, RequisiteModel
 SITE_CONTACTS_ID = UUID("0197c0de-0000-7000-8000-000000000002")
 SELLER_REQUISITES_ID = UUID("0197c0de-0000-7000-8000-000000000003")
 
-# The caption each requisite is printed under; the seller's own name carries
-# none — it reads as the name of the seller.
-REQUISITE_LABELS: tuple[tuple[str, str], ...] = (
-    ("name", ""),
-    ("ogrn", "ОГРН/ОГРНИП"),
-    ("inn", "ИНН"),
-    ("address", "Адрес"),
-)
+# The order the requisites are printed in; the caption each is printed under
+# is the storefront's wording, not the gateway's.
+REQUISITE_COLUMNS: tuple[Requisite, ...] = (Requisite.NAME, Requisite.OGRN, Requisite.INN, Requisite.ADDRESS)
 
 
 class SASiteGateway(SiteGateway):
@@ -72,4 +67,4 @@ class SASiteGateway(SiteGateway):
         )
         if row is None:
             return []
-        return [RequisiteModel(label=label, value=row[column]) for column, label in REQUISITE_LABELS if row[column]]
+        return [RequisiteModel(kind=kind, value=row[kind]) for kind in REQUISITE_COLUMNS if row[kind]]

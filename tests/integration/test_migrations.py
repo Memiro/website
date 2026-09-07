@@ -175,7 +175,7 @@ async def test_pricing_migrations_preserve_existing_rows(
         )
     await engine.dispose()
 
-    assert attribute == (product.category_id, "SELECT", [], True, False)
+    assert attribute == (product.category_id, "SELECT", [], True, True)
     assert value == (False,)
     assert product.is_published
     assert not product.hides_calculated_price

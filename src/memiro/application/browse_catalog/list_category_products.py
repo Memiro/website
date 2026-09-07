@@ -12,20 +12,19 @@ class ListCategoryProducts:
 
     catalog_read_gateway: CatalogReadGateway
 
-    async def execute(self, slug: str, query: CatalogQuery | None = None) -> ProductsList:
+    async def execute(self, slug: str, query: CatalogQuery) -> ProductsList:
         """Return the page of public products the visitor narrowed the category to."""
-        asked = query or CatalogQuery()
         if await self.catalog_read_gateway.read_category(slug) is None:
             raise CategoryNotFoundError
-        products, total = await self.catalog_read_gateway.list_products_by_category(slug, asked)
-        groups = await self.catalog_read_gateway.filter_groups(slug, asked)
-        price = await self.catalog_read_gateway.price_bounds(slug, asked)
+        products, total = await self.catalog_read_gateway.list_products_by_category(slug, query)
+        groups = await self.catalog_read_gateway.filter_groups(slug, query)
+        price = await self.catalog_read_gateway.price_bounds(slug, query)
         return ProductsList(
             items=products,
             total=total,
-            page=asked.page,
+            page=query.page,
             pages=max(ceil(total / PAGE_SIZE), 1),
             groups=groups,
             price=price,
-            sort=asked.sort,
+            sort=query.sort,
         )

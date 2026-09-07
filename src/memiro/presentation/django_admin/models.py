@@ -351,7 +351,7 @@ class InquiryItem(Mirror):
 
 
 class Landing(Mirror):
-    """Посадочная страница: категория, сужённая значениями атрибутов."""
+    """A landing page: one category narrowed by the values the owner wrote down."""
 
     id = models.UUIDField(primary_key=True)
     category = models.ForeignKey(
@@ -381,7 +381,7 @@ class Landing(Mirror):
 
 
 class LandingCondition(Mirror):
-    """Значение атрибута, которым посадочная сужает свою категорию."""
+    """One value a landing narrows its category by."""
 
     pk = models.CompositePrimaryKey("landing_id", "value_id")
     landing = models.ForeignKey(
@@ -414,7 +414,7 @@ class LandingCondition(Mirror):
 
 
 class SiteContacts(Mirror):
-    """Контакты студии, которые печатает витрина."""
+    """The studio contacts the storefront prints."""
 
     id = models.UUIDField(primary_key=True)
     city = models.CharField(max_length=NAME_LENGTH)
@@ -440,7 +440,7 @@ class SiteContacts(Mirror):
 
 
 class SellerRequisites(Mirror):
-    """Реквизиты продавца в подвале витрины."""
+    """The seller requisites printed in the storefront footer."""
 
     id = models.UUIDField(primary_key=True)
     name = models.CharField(max_length=NAME_LENGTH)

@@ -180,97 +180,6 @@ class SACatalogReadGateway(CatalogReadGateway):
             selected_max=query.price_max,
         )
 
-    async def _filterable_rows(self, category_slug: str) -> Sequence[Row[Any]]:
-        """Read the rows of the attributes a visitor may narrow this category by, in the owner's order."""
-        return (
-            await self._session.execute(
-                select(
-                    attributes_table.c.id.label("attribute_id"),
-                    attributes_table.c.name.label("attribute_name"),
-                    attribute_values_table.c.id.label("value_id"),
-                    attribute_values_table.c.name.label("value_name"),
-                )
-                .select_from(
-                    attributes_table.join(
-                        categories_table, attributes_table.c.category_id == categories_table.c.id
-                    ).join(
-                        attribute_values_table,
-                        attribute_values_table.c.attribute_id == attributes_table.c.id,
-                    )
-                )
-                .where(
-                    (categories_table.c.slug == category_slug)
-                    # A numeric attribute is typed, not picked, so it gives
-                    # no filter; the rest is the owner's own switch.
-                    & (attributes_table.c.kind == AttributeKind.SELECT)
-                    & attributes_table.c.is_filterable
-                )
-                .order_by(
-                    attributes_table.c.sort_order,
-                    attributes_table.c.id,
-                    attribute_values_table.c.sort_order,
-                    attribute_values_table.c.id,
-                )
-            )
-        ).all()
-
-    @staticmethod
-    def _selected(rows: Sequence[Row[Any]], query: CatalogQuery) -> dict[UUID, list[UUID]]:
-        """Group the asked values by their attribute, dropping what this category does not offer."""
-        owner: dict[UUID, UUID] = {row.value_id: row.attribute_id for row in rows}
-        selected: dict[UUID, list[UUID]] = {}
-        for value_id in query.values:
-            attribute_id = owner.get(value_id)
-            if attribute_id is not None:
-                selected.setdefault(attribute_id, []).append(value_id)
-        return selected
-
-    @staticmethod
-    def _conditions(
-        category_slug: str,
-        query: CatalogQuery,
-        selected: dict[UUID, list[UUID]],
-        *,
-        ignoring: UUID | None = None,
-    ) -> list[ColumnElement[bool]]:
-        """Build what narrows a category listing: its slug, publication, the chosen values and the price."""
-        conditions: list[ColumnElement[bool]] = [
-            products_table.c.category_id.in_(
-                select(categories_table.c.id).where(categories_table.c.slug == category_slug)
-            ),
-            products_table.c.is_published,
-        ]
-        for attribute_id, values in selected.items():
-            if attribute_id == ignoring:
-                continue
-            # An alias per condition: the counting query already selects from
-            # the declarations table, and an uncorrelated copy of it would be
-            # auto-correlated away.
-            declared = product_declared_values_table.alias()
-            conditions.append(
-                exists(
-                    select(declared.c.product_id).where(
-                        (declared.c.product_id == products_table.c.id)
-                        & (declared.c.attribute_id == attribute_id)
-                        & declared.c.value_id.in_(values)
-                    )
-                )
-            )
-        if query.price_min is not None:
-            conditions.append(products_table.c.price_from >= Money(amount=query.price_min))
-        if query.price_max is not None:
-            conditions.append(products_table.c.price_from <= Money(amount=query.price_max))
-        return conditions
-
-    @staticmethod
-    def _ordering(sort: CatalogSort) -> tuple[ColumnElement[object], ...]:
-        """Put the listing in the order the visitor asked for; a product without a price goes last."""
-        if sort is CatalogSort.CHEAPEST:
-            return (products_table.c.price_from.asc().nulls_last(), products_table.c.name, products_table.c.id)
-        if sort is CatalogSort.DEAREST:
-            return (products_table.c.price_from.desc().nulls_last(), products_table.c.name, products_table.c.id)
-        return (products_table.c.name, products_table.c.id)
-
     @override
     async def list_landings(self) -> tuple[list[LandingSummary], int]:
         """Read the published landings in the owner's order."""
@@ -300,17 +209,19 @@ class SACatalogReadGateway(CatalogReadGateway):
         )
         if row is None:
             return None
-        values = (
-            (
-                await self._session.execute(
-                    select(landing_conditions_table.c.value_id).where(
-                        landing_conditions_table.c.landing_id == row["id"]
-                    )
-                )
+        conditions = (
+            await self._session.execute(
+                select(landing_conditions_table.c.value_id, attributes_table.c.is_filterable)
+                .join(attributes_table, attributes_table.c.id == landing_conditions_table.c.attribute_id)
+                .where(landing_conditions_table.c.landing_id == row["id"])
             )
-            .scalars()
-            .all()
-        )
+        ).all()
+        # The landing narrows by the rule of the sidebar and has no second
+        # implementation of it: a condition the sidebar would drop would leave
+        # an indexable page showing the whole category under a narrowing
+        # heading (ADR-0003), so the page is not published at all.
+        if any(not condition.is_filterable for condition in conditions):
+            return None
         return LandingModel(
             slug=row["slug"],
             heading=row["heading"],
@@ -319,7 +230,7 @@ class SACatalogReadGateway(CatalogReadGateway):
             text=row["text"],
             category_slug=row["category_slug"],
             category_name=row["name"],
-            values=list(values),
+            values=[condition.value_id for condition in conditions],
         )
 
     @override
@@ -428,3 +339,94 @@ class SACatalogReadGateway(CatalogReadGateway):
                 for item in variants
             ],
         )
+
+    async def _filterable_rows(self, category_slug: str) -> Sequence[Row[Any]]:
+        """Read the rows of the attributes a visitor may narrow this category by, in the owner's order."""
+        return (
+            await self._session.execute(
+                select(
+                    attributes_table.c.id.label("attribute_id"),
+                    attributes_table.c.name.label("attribute_name"),
+                    attribute_values_table.c.id.label("value_id"),
+                    attribute_values_table.c.name.label("value_name"),
+                )
+                .select_from(
+                    attributes_table.join(
+                        categories_table, attributes_table.c.category_id == categories_table.c.id
+                    ).join(
+                        attribute_values_table,
+                        attribute_values_table.c.attribute_id == attributes_table.c.id,
+                    )
+                )
+                .where(
+                    (categories_table.c.slug == category_slug)
+                    # A numeric attribute is typed, not picked, so it gives
+                    # no filter; the rest is the owner's own switch.
+                    & (attributes_table.c.kind == AttributeKind.SELECT)
+                    & attributes_table.c.is_filterable
+                )
+                .order_by(
+                    attributes_table.c.sort_order,
+                    attributes_table.c.id,
+                    attribute_values_table.c.sort_order,
+                    attribute_values_table.c.id,
+                )
+            )
+        ).all()
+
+    @staticmethod
+    def _selected(rows: Sequence[Row[Any]], query: CatalogQuery) -> dict[UUID, list[UUID]]:
+        """Group the asked values by their attribute, dropping what this category does not offer."""
+        owner: dict[UUID, UUID] = {row.value_id: row.attribute_id for row in rows}
+        selected: dict[UUID, list[UUID]] = {}
+        for value_id in query.values:
+            attribute_id = owner.get(value_id)
+            if attribute_id is not None:
+                selected.setdefault(attribute_id, []).append(value_id)
+        return selected
+
+    @staticmethod
+    def _conditions(
+        category_slug: str,
+        query: CatalogQuery,
+        selected: dict[UUID, list[UUID]],
+        *,
+        ignoring: UUID | None = None,
+    ) -> list[ColumnElement[bool]]:
+        """Build what narrows a category listing: its slug, publication, the chosen values and the price."""
+        conditions: list[ColumnElement[bool]] = [
+            products_table.c.category_id.in_(
+                select(categories_table.c.id).where(categories_table.c.slug == category_slug)
+            ),
+            products_table.c.is_published,
+        ]
+        for attribute_id, values in selected.items():
+            if attribute_id == ignoring:
+                continue
+            # An alias per condition: the counting query already selects from
+            # the declarations table, and an uncorrelated copy of it would be
+            # auto-correlated away.
+            declared = product_declared_values_table.alias()
+            conditions.append(
+                exists(
+                    select(declared.c.product_id).where(
+                        (declared.c.product_id == products_table.c.id)
+                        & (declared.c.attribute_id == attribute_id)
+                        & declared.c.value_id.in_(values)
+                    )
+                )
+            )
+        if query.price_min is not None:
+            conditions.append(products_table.c.price_from >= Money(amount=query.price_min))
+        if query.price_max is not None:
+            conditions.append(products_table.c.price_from <= Money(amount=query.price_max))
+        return conditions
+
+    @staticmethod
+    def _ordering(sort: CatalogSort) -> tuple[ColumnElement[object], ...]:
+        """Put the listing in the order the visitor asked for; a product without a price goes last."""
+        if sort is CatalogSort.CHEAPEST:
+            return (products_table.c.price_from.asc().nulls_last(), products_table.c.name, products_table.c.id)
+        if sort is CatalogSort.DEAREST:
+            return (products_table.c.price_from.desc().nulls_last(), products_table.c.name, products_table.c.id)
+        return (products_table.c.name, products_table.c.id)

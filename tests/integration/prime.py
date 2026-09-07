@@ -29,7 +29,7 @@ from memiro.adapters.db.tables import (
     seller_requisites_table,
     site_contacts_table,
 )
-from memiro.entities.common.identifiers import AttributeValueId, ProductId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
 from memiro.entities.common.measure import Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import InquirySource
@@ -330,8 +330,13 @@ async def prime_site_data(engine: AsyncEngine, *, seller_name: str = "", ogrn: s
         )
 
 
-async def prime_landing(engine: AsyncEngine, *, is_published: bool = True) -> None:
-    """Add the landing that narrows the demo category to round mirrors."""
+async def prime_landing(
+    engine: AsyncEngine,
+    *,
+    is_published: bool = True,
+    narrows_by: tuple[AttributeId, AttributeValueId] = (SHAPE, ROUND),
+) -> None:
+    """Add the landing that narrows the demo category, by default to round mirrors."""
     async with engine.begin() as connection:
         await connection.execute(
             insert(landings_table),
@@ -353,7 +358,7 @@ async def prime_landing(engine: AsyncEngine, *, is_published: bool = True) -> No
         )
         await connection.execute(
             insert(landing_conditions_table),
-            [{"landing_id": LANDING, "attribute_id": SHAPE, "value_id": ROUND}],
+            [{"landing_id": LANDING, "attribute_id": narrows_by[0], "value_id": narrows_by[1]}],
         )
 
 

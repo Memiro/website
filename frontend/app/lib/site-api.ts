@@ -15,9 +15,32 @@ export interface Contacts {
   map_embed: string;
 }
 
+export type RequisiteKind = "name" | "ogrn" | "inn" | "address";
+
+const REQUISITE_KINDS: readonly RequisiteKind[] = ["name", "ogrn", "inn", "address"];
+
+// The caption each requisite is printed under; the seller's own name carries
+// none — it reads as the name of the seller.
+const REQUISITE_LABELS: Record<RequisiteKind, string> = {
+  name: "",
+  ogrn: "ОГРН/ОГРНИП",
+  inn: "ИНН",
+  address: "Адрес",
+};
+
 export interface Requisite {
+  kind: RequisiteKind;
+  value: string;
+}
+
+export interface SiteLink {
   label: string;
   value: string;
+}
+
+/** The caption a requisite is printed under, empty for the seller's own name. */
+export function requisiteLabel(kind: RequisiteKind): string {
+  return REQUISITE_LABELS[kind];
 }
 
 export interface Site {
@@ -33,7 +56,7 @@ export function addressLine(contacts: Contacts): string {
 }
 
 /** Links to the studio outside the site, in the order the storefront prints them. */
-export function socialLinks(contacts: Contacts): Requisite[] {
+export function socialLinks(contacts: Contacts): SiteLink[] {
   return [
     { label: "MAX", value: contacts.max_link },
     { label: "Telegram", value: contacts.telegram },
@@ -75,5 +98,8 @@ function isContacts(value: unknown): value is Contacts {
 
 function isRequisite(value: unknown): value is Requisite {
   const requisite = asRecord(value);
-  return requisite !== null && typeof requisite.label === "string" && typeof requisite.value === "string";
+  if (requisite === null || typeof requisite.value !== "string") {
+    return false;
+  }
+  return REQUISITE_KINDS.some((kind) => kind === requisite.kind);
 }

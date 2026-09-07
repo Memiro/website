@@ -733,7 +733,7 @@ class InquiryItemAdmin(ReadOnlyAdmin):
 
 
 class LandingConditionInline(ReadOnlyInline):
-    """Условия посадочной: чем она сужает свою категорию."""
+    """Conditions of a landing: what it narrows its category by."""
 
     model = LandingCondition
     fields = (
@@ -744,7 +744,7 @@ class LandingConditionInline(ReadOnlyInline):
 
 @admin.register(Landing)
 class LandingAdmin(ReadOnlyAdmin):
-    """Посадочные страницы каталога."""
+    """Landing pages of the catalogue."""
 
     list_display = (
         "heading",
@@ -767,7 +767,7 @@ class LandingAdmin(ReadOnlyAdmin):
 
 @admin.register(SiteContacts)
 class SiteContactsAdmin(ReadOnlyAdmin):
-    """Контакты студии, которые печатает витрина."""
+    """The studio contacts the storefront prints."""
 
     list_display = (
         "phone_display",
@@ -779,7 +779,7 @@ class SiteContactsAdmin(ReadOnlyAdmin):
 
 @admin.register(SellerRequisites)
 class SellerRequisitesAdmin(ReadOnlyAdmin):
-    """Реквизиты продавца в подвале витрины."""
+    """The seller requisites printed in the storefront footer."""
 
     list_display = (
         "name",

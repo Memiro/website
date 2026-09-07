@@ -1,4 +1,4 @@
-import type { CatalogSort } from "./catalog-api.ts";
+import { CATALOG_SORTS, type CatalogSort } from "./catalog-api.ts";
 
 export interface CatalogQuery {
   values: string[];
@@ -10,16 +10,17 @@ export interface CatalogQuery {
 
 export const FIRST_PAGE = 1;
 export const VALUE_PARAM = "value";
-const SORTS: CatalogSort[] = ["name", "cheapest", "dearest"];
+const SORT_LABELS: Record<CatalogSort, string> = {
+  name: "По названию",
+  cheapest: "Сначала дешёвые",
+  dearest: "Сначала дорогие",
+};
 
-export const SORT_LABELS: { value: CatalogSort; label: string }[] = [
-  { value: "name", label: "По названию" },
-  { value: "cheapest", label: "Сначала дешёвые" },
-  { value: "dearest", label: "Сначала дорогие" },
-];
+/** The orders offered in the sort control, in the order the API names them. */
+export const SORT_OPTIONS = CATALOG_SORTS.map((value) => ({ value, label: SORT_LABELS[value] }));
 
 function asSort(value: string | null): CatalogSort {
-  return SORTS.find((sort) => sort === value) ?? "name";
+  return CATALOG_SORTS.find((sort) => sort === value) ?? "name";
 }
 
 function asPage(value: string | null): number {
@@ -88,7 +89,7 @@ export function withPage(path: string, query: CatalogQuery, page: number): strin
   return href(path, { ...query, page });
 }
 
-/** The pages a visitor may jump to, always including the first, the last and the current one. */
+/** Every page of the listing, in order: the pager of a category prints them all. */
 export function pageNumbers(pages: number): number[] {
   return Array.from({ length: pages }, (_, index) => index + 1);
 }
