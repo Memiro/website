@@ -28,13 +28,14 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
-from memiro.application.manage_products import ProductPricingGaps
+from memiro.application.manage_products import PricingGapsModel
 from memiro.entities.common.identifiers import ProductId
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID
 from memiro.presentation.django_admin.attribute_card import create_attribute, remove_attribute, restate_attribute
 from memiro.presentation.django_admin.forms import (
     AttributeCardForm,
     AttributeValueRowForm,
+    CategoryCardForm,
     MaterialPriceRowForm,
     PricingSettingsForm,
     ProductCardForm,
@@ -63,6 +64,7 @@ from memiro.presentation.django_admin.product_card import (
     restate_product,
 )
 from memiro.presentation.django_admin.reprice import reprice_catalogue
+from memiro.presentation.django_admin.section_card import stamped_now
 from memiro.presentation.django_admin.writes import guarded_write
 
 # What the list says about a product whose calculator is not ready: the
@@ -73,8 +75,8 @@ NOTHING_IS_PAID = "Ни одно значение не стоит денег."
 
 # What one rendering of the product list learned about its own rows: asked
 # once by the list, read by every row of it, and dropped with the request.
-_NO_GAPS: dict[ProductId, ProductPricingGaps] = {}
-_page_gaps: ContextVar[dict[ProductId, ProductPricingGaps]] = ContextVar("memiro_admin_pricing_gaps", default=_NO_GAPS)
+_NO_GAPS: dict[ProductId, PricingGapsModel] = {}
+_page_gaps: ContextVar[dict[ProductId, PricingGapsModel]] = ContextVar("memiro_admin_pricing_gaps", default=_NO_GAPS)
 
 
 def _submitted_rows(formsets: list[BaseInlineFormSet]) -> list[dict[str, Any]]:
@@ -148,6 +150,7 @@ class ProductImageInline(ReadOnlyInline):
 class CategoryAdmin(admin.ModelAdmin):
     """Разделы каталога: содержимое без правил, поэтому его правят напрямую (решение 3)."""
 
+    form = CategoryCardForm
     list_display = (
         "name",
         "slug",
@@ -162,6 +165,16 @@ class CategoryAdmin(admin.ModelAdmin):
         "sort_order",
         "name",
     )
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
+        """Stamp the row before writing it: time is taken from the clock, never invented by the ORM (§1.7)."""
+        section = cast("Category", obj)
+        stamped = stamped_now()
+        if not change:
+            section.created_at = stamped
+        section.updated_at = stamped
+        super().save_model(request, obj, form, change)
 
 
 class AttributeValueInline(admin.TabularInline):

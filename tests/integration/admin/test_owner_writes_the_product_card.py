@@ -21,7 +21,7 @@ from memiro.application.errors.catalog import (
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId
 from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
 from memiro.presentation.django_admin.refusals import REFUSAL_MESSAGES
-from memiro.presentation.django_admin.writes import PARTLY_SAVED
+from memiro.presentation.django_admin.section_card import stamped_now
 from tests.common.factory.catalog import ALUMINIUM, BLADE, FRAME, PRODUCT, SILVER
 from tests.integration.admin.arrange import arranged_product, category_post, product_post
 
@@ -77,7 +77,8 @@ def _delete_url(product_id: ProductId) -> str:
 
 async def _arranged_section(*, name: str, slug: str) -> CategoryId:
     """Enter one more section the way its own screen does: straight into the mirror."""
-    section = await _categories().acreate(name=name, slug=slug, sort_order=0)
+    stamped = stamped_now()
+    section = await _categories().acreate(name=name, slug=slug, sort_order=0, created_at=stamped, updated_at=stamped)
     return cast("CategoryId", section.id)
 
 
@@ -110,6 +111,23 @@ async def test_the_owner_restates_the_root_and_the_declared_values_of_a_saved_pr
     assert await _declared_by(product_id) == {BLADE: SILVER, FRAME: ALUMINIUM}
 
 
+async def test_the_owner_moves_an_empty_product_to_another_section_from_the_card(
+    owner_client: AsyncClient,
+) -> None:
+    """A move on its own is one save: the values of the new section are declared by the next one."""
+    section = await _arranged_section(name="Тумбы", slug="tumby")
+    product_id = arranged_product(name="Зеркало над тумбой")
+
+    response = await owner_client.post(
+        _card_url(product_id),
+        product_post(name="Зеркало над тумбой", category=section),
+    )
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert (await _products().aget(id=product_id)).category_id == section
+    assert await _declared_by(product_id) == {}
+
+
 async def test_the_owner_removes_a_product_from_its_card(owner_client: AsyncClient) -> None:
     """Deletion from the card goes through the interactor that owns everything belonging to the product."""
     product_id = arranged_product(name="Зеркало на выброс")
@@ -118,71 +136,6 @@ async def test_the_owner_removes_a_product_from_its_card(owner_client: AsyncClie
 
     assert response.status_code == HTTPStatus.FOUND
     assert not await _products().filter(id=product_id).aexists()
-
-
-async def test_a_card_claiming_an_address_another_product_answers_on_comes_back_with_a_message(
-    owner_client: AsyncClient,
-) -> None:
-    """PRODUCT_SLUG_TAKEN: the address belongs to the demo mirror, and nothing is stored."""
-    response = await owner_client.post(
-        ADD_URL,
-        product_post(name="Второе зеркало в раме", slug="zerkalo-v-rame"),
-        follow=True,
-    )
-
-    assert REFUSAL_MESSAGES[ProductSlugTakenError] in response.content.decode()
-    assert not await _products().filter(name="Второе зеркало в раме").aexists()
-
-
-async def test_moving_a_product_that_declares_anything_to_another_section_changes_nothing(
-    owner_client: AsyncClient,
-) -> None:
-    """PRODUCT_SECTION_NOT_EMPTY: the demo mirror declares its values, so it stays where it is."""
-    section = await _arranged_section(name="Шкафы", slug="shkafy")
-
-    response = await owner_client.post(
-        _card_url(PRODUCT),
-        product_post(name="Зеркало в раме", slug="zerkalo-v-rame", category=section, photos=DEMO_PHOTOS),
-        follow=True,
-    )
-
-    assert REFUSAL_MESSAGES[ProductSectionNotEmptyError] in response.content.decode()
-    assert (await _products().aget(id=PRODUCT)).category_id != section
-
-
-async def test_a_card_refused_on_its_declared_half_says_that_the_root_already_landed(
-    owner_client: AsyncClient,
-) -> None:
-    """ATTRIBUTE_VALUE_NOT_FOUND: an empty product may move, and the values it declared stay in the old section."""
-    section = await _arranged_section(name="Полки", slug="polki")
-    product_id = arranged_product(name="Зеркало на переезд")
-
-    response = await owner_client.post(
-        _card_url(product_id),
-        product_post(name="Зеркало на переезд", category=section, declared=[(BLADE, str(SILVER))]),
-        follow=True,
-    )
-
-    shown = response.content.decode()
-    assert PARTLY_SAVED in shown
-    assert REFUSAL_MESSAGES[AttributeValueNotFoundError] in shown
-    assert await _declared_by(product_id) == {}
-
-
-async def test_the_root_of_a_card_refused_on_its_declared_half_is_the_one_that_landed(
-    owner_client: AsyncClient,
-) -> None:
-    """The banner is not a figure of speech: the first of the two commands did commit."""
-    section = await _arranged_section(name="Тумбы", slug="tumby")
-    product_id = arranged_product(name="Зеркало над тумбой")
-
-    await owner_client.post(
-        _card_url(product_id),
-        product_post(name="Зеркало над тумбой", category=section, declared=[(BLADE, str(SILVER))]),
-        follow=True,
-    )
-
-    assert (await _products().aget(id=product_id)).category_id == section
 
 
 async def test_the_list_says_which_attributes_a_product_has_not_filled_in_yet(owner_client: AsyncClient) -> None:
@@ -240,6 +193,34 @@ async def test_the_owner_renames_and_then_removes_a_section(owner_client: AsyncC
     assert not await _categories().filter(id=section).aexists()
 
 
+async def test_a_card_that_moves_a_product_and_declares_values_at_once_comes_back_untouched(
+    owner_client: AsyncClient,
+) -> None:
+    """The card carries the fields of the section being left, so the move and the values cannot ride together."""
+    from memiro.presentation.django_admin.forms import MOVE_CARRIES_VALUES  # noqa: PLC0415  # after ``django.setup()``
+
+    section = await _arranged_section(name="Полки", slug="polki")
+    product_id = arranged_product(name="Зеркало на переезд")
+
+    response = await owner_client.post(
+        _card_url(product_id),
+        product_post(name="Зеркало на переезд", category=section, declared=[(BLADE, str(SILVER))]),
+    )
+
+    assert MOVE_CARRIES_VALUES in response.content.decode()
+    assert (await _products().aget(id=product_id)).category_id != section
+
+
+async def test_a_stranger_writes_no_product_from_the_card() -> None:
+    """An unauthenticated POST is sent to the login page and leaves the catalogue alone."""
+    stranger = AsyncClient()
+
+    response = await stranger.post(ADD_URL, product_post(name="Незваное зеркало"))
+
+    assert response.headers["Location"].startswith(LOGIN_URL)
+    assert not await _products().filter(name="Незваное зеркало").aexists()
+
+
 async def test_only_the_screens_of_this_ticket_take_a_card_from_the_owner(owner_client: AsyncClient) -> None:
     """The refusal to write is lifted from the products and the sections, and from nothing else."""
     statuses = {
@@ -254,14 +235,41 @@ async def test_only_the_screens_of_this_ticket_take_a_card_from_the_owner(owner_
     }
 
 
-async def test_a_stranger_writes_no_product_from_the_card() -> None:
-    """An unauthenticated POST is sent to the login page and leaves the catalogue alone."""
-    stranger = AsyncClient()
+def test_every_refusal_a_product_screen_can_meet_is_named_in_the_owner_s_words() -> None:
+    """A code missing from the table shows «Запись отклонена.» and is invisible without this check."""
+    named = REFUSAL_MESSAGES.keys()
 
-    response = await stranger.post(ADD_URL, product_post(name="Незваное зеркало"))
+    assert set(PRODUCT_REFUSALS) <= named
 
-    assert response.headers["Location"].startswith(LOGIN_URL)
-    assert not await _products().filter(name="Незваное зеркало").aexists()
+
+async def test_a_card_claiming_an_address_another_product_answers_on_comes_back_with_a_message(
+    owner_client: AsyncClient,
+) -> None:
+    """PRODUCT_SLUG_TAKEN: the address belongs to the demo mirror, and nothing is stored."""
+    response = await owner_client.post(
+        ADD_URL,
+        product_post(name="Второе зеркало в раме", slug="zerkalo-v-rame"),
+        follow=True,
+    )
+
+    assert REFUSAL_MESSAGES[ProductSlugTakenError] in response.content.decode()
+    assert not await _products().filter(name="Второе зеркало в раме").aexists()
+
+
+async def test_moving_a_product_that_declares_anything_to_another_section_changes_nothing(
+    owner_client: AsyncClient,
+) -> None:
+    """PRODUCT_SECTION_NOT_EMPTY: the demo mirror declares its values, so it stays where it is."""
+    section = await _arranged_section(name="Шкафы", slug="shkafy")
+
+    response = await owner_client.post(
+        _card_url(PRODUCT),
+        product_post(name="Зеркало в раме", slug="zerkalo-v-rame", category=section, photos=DEMO_PHOTOS),
+        follow=True,
+    )
+
+    assert REFUSAL_MESSAGES[ProductSectionNotEmptyError] in response.content.decode()
+    assert (await _products().aget(id=PRODUCT)).category_id != section
 
 
 async def test_a_card_of_a_product_nobody_issued_is_not_found(owner_client: AsyncClient) -> None:
@@ -270,10 +278,3 @@ async def test_a_card_of_a_product_nobody_issued_is_not_found(owner_client: Asyn
 
     assert response.status_code == HTTPStatus.FOUND
     assert response.headers["Location"] == "/admin/"
-
-
-def test_every_refusal_a_product_screen_can_meet_is_named_in_the_owner_s_words() -> None:
-    """A code missing from the table shows «Запись отклонена.» and is invisible without this check."""
-    named = REFUSAL_MESSAGES.keys()
-
-    assert set(PRODUCT_REFUSALS) <= named

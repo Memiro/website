@@ -15,11 +15,11 @@
 
 ## Output
 
-`dict[ProductId, ProductPricingGaps]` — по записи на найденный товар. Не
+`dict[ProductId, PricingGapsModel]` — по записи на найденный товар. Не
 страница коллекции, а ответ про названные товары, поэтому и не конверт
 `{items, total, page}`: страницу нарезал спрашивающий.
 
-`ProductPricingGaps`
+`PricingGapsModel`
 
 | Поле | Тип | Смысл |
 |---|---|---|
