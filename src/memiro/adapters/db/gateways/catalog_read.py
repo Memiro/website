@@ -185,12 +185,17 @@ class SACatalogReadGateway(CatalogReadGateway):
         """Read the published landings in the owner's order."""
         rows = (
             await self._session.execute(
-                select(landings_table.c.slug, landings_table.c.heading)
+                select(
+                    landings_table.c.slug,
+                    landings_table.c.heading,
+                    categories_table.c.slug.label("category_slug"),
+                )
+                .join(categories_table, landings_table.c.category_id == categories_table.c.id)
                 .where(landings_table.c.is_published)
                 .order_by(landings_table.c.sort_order, landings_table.c.id)
             )
         ).all()
-        landings = [LandingSummary(slug=row.slug, heading=row.heading) for row in rows]
+        landings = [LandingSummary(slug=row.slug, heading=row.heading, category_slug=row.category_slug) for row in rows]
         return landings, len(landings)
 
     @override
