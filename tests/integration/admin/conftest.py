@@ -36,6 +36,8 @@ OWNER_PASSWORD = "owner-password"  # noqa: S105  # nosec B105  # a throwaway acc
 # Handed to the production upsert directly: the environment is the deployment's
 # way in, never the tests' (§14.5.2).
 OWNER = OwnerCredentials(username=OWNER_USERNAME, password=OWNER_PASSWORD)
+CLERK_USERNAME = "clerk"
+CLERK_PASSWORD = "clerk-password"  # noqa: S105  # nosec B105  # a throwaway account in a throwaway database
 
 
 @pytest.fixture(scope="session")
@@ -89,6 +91,16 @@ async def owner_client(admin_site: None) -> AsyncClient:  # noqa: ARG001
     return client
 
 
+@pytest.fixture
+async def clerk_client(admin_site: None) -> AsyncClient:  # noqa: ARG001
+    """Sign an admin client in as staff who was given no permission over the catalogue."""
+    await asyncio.to_thread(_ensure_clerk)
+    client = AsyncClient()
+    await client.alogin(username=CLERK_USERNAME, password=CLERK_PASSWORD)
+
+    return client
+
+
 @pytest.fixture(scope="session")
 def admin_database_url(postgres: PostgresContainer, admin_site: None) -> str:  # noqa: ARG001
     """Reflection URL of the very database the admin is looking at."""
@@ -122,6 +134,16 @@ def _prepare_service_tables() -> None:
 
     call_command("migrate", "--no-input", verbosity=0)
     ensure_superuser(OWNER)
+
+
+def _ensure_clerk() -> None:
+    """Keep a staff member with no permissions in the database, off the event loop."""
+    # Imported here: the app registry may not be touched before django.setup().
+    from django.contrib.auth.models import User  # noqa: PLC0415
+
+    clerk, _ = User.objects.get_or_create(username=CLERK_USERNAME, defaults={"is_staff": True, "is_active": True})
+    clerk.set_password(CLERK_PASSWORD)
+    clerk.save()
 
 
 def _close_connections() -> None:

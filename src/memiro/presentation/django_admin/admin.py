@@ -13,7 +13,7 @@ bridge (ADR-0012); every screen that has not got its ticket yet refuses adding,
 changing and deleting.
 """
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from contextvars import ContextVar
 from functools import partial
 from typing import Any, cast, override
@@ -68,6 +68,7 @@ from memiro.presentation.django_admin.section_card import stamped_now
 from memiro.presentation.django_admin.variant_builder import (
     answered,
     builder_context,
+    forbidden,
     quoted,
     removed,
     saved,
@@ -79,6 +80,15 @@ from memiro.presentation.django_admin.writes import guarded_write
 NOTHING_TO_SAY = "—"
 UNDECLARED = "Не заполнено:"
 NOTHING_IS_PAID = "Ни одно значение не стоит денег."
+
+# The three addresses of the panel, under the card of the product they belong
+# to: a variant of nobody's product does not exist.
+VARIANT_PRICE_URL = "memiro_product_variant_price"
+VARIANT_SAVE_URL = "memiro_product_variant_save"
+VARIANT_DELETE_URL = "memiro_product_variant_delete"
+
+# One answer of the panel, as the URL conf hands it a request.
+type PanelView = Callable[[HttpRequest, ProductId], HttpResponse]
 
 # What one rendering of the product list learned about its own rows: asked
 # once by the list, read by every row of it, and dropped with the request.
@@ -385,13 +395,6 @@ def _card_form(obj: Model | None) -> type[ModelForm]:
     return type(ProductCardForm.__name__, (ProductCardForm,), declared_value_fields(section))
 
 
-# The three addresses of the panel, under the card of the product they belong
-# to: a variant of nobody's product does not exist.
-VARIANT_PRICE_URL = "memiro_product_variant_price"
-VARIANT_SAVE_URL = "memiro_product_variant_save"
-VARIANT_DELETE_URL = "memiro_product_variant_delete"
-
-
 @admin.register(Product)
 class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
     """Товары витрины: карточка пишет домен командами агрегата, а пересчёт цен зовёт хендлер событий."""
@@ -461,17 +464,17 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
         own = [
             path(
                 "<uuid:product_id>/variants/price/",
-                self.admin_site.admin_view(self.variant_price),
+                self.admin_site.admin_view(self._permitted(self.variant_price)),
                 name=VARIANT_PRICE_URL,
             ),
             path(
                 "<uuid:product_id>/variants/save/",
-                self.admin_site.admin_view(self.variant_save),
+                self.admin_site.admin_view(self._permitted(self.variant_save)),
                 name=VARIANT_SAVE_URL,
             ),
             path(
                 "<uuid:product_id>/variants/delete/",
-                self.admin_site.admin_view(self.variant_delete),
+                self.admin_site.admin_view(self._permitted(self.variant_delete)),
                 name=VARIANT_DELETE_URL,
             ),
         ]
@@ -490,6 +493,16 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
         """Give the card of a saved product its panel: an unsaved one has nothing to build variants of."""
         context["variant_builder"] = None if obj is None else _panel(cast("Product", obj).id)
         return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
+
+    def _permitted(self, view: PanelView) -> PanelView:
+        """Keep the panel behind the permission of the card: ``admin_view`` asks about the door, not the product."""
+
+        def permitted(request: HttpRequest, product_id: ProductId) -> HttpResponse:
+            if not self.has_change_permission(request):
+                return forbidden()
+            return view(request, product_id)
+
+        return permitted
 
     def variant_price(self, request: HttpRequest, product_id: ProductId) -> HttpResponse:
         """Answer what the assembled variant would cost, by the function that would save it."""

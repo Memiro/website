@@ -13,10 +13,6 @@ from memiro.entities.common.identifiers import AttributeId, AttributeValueId, Pr
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 
-# What an override names when the dictionary row behind it is gone: the panel
-# still shows the variant, and a name it cannot read is not a reason to hide it.
-UNNAMED = "—"
-
 logger: Logger = structlog.get_logger(__name__)
 
 
@@ -24,7 +20,7 @@ class VariantOverrideModel(BaseModel):
     """One difference between a variant and the product, named the way the owner reads it."""
 
     attribute_id: AttributeId
-    attribute_name: str
+    attribute_name: str | None
     value_id: AttributeValueId | None
     value_name: str | None
     quantity: Decimal | None
@@ -58,7 +54,7 @@ def _named(
     row = attribute.value(override.chosen.value_id) if attribute and override.chosen.value_id else None
     return VariantOverrideModel(
         attribute_id=override.attribute_id,
-        attribute_name=attribute.name if attribute else UNNAMED,
+        attribute_name=attribute.name if attribute else None,
         value_id=override.chosen.value_id,
         value_name=row.name if row else None,
         quantity=override.chosen.quantity,
