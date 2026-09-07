@@ -4,7 +4,7 @@ import pytest
 from dishka import AsyncContainer
 
 from memiro.application.errors.catalog import ProductImageNotFoundError, ProductNotFoundError
-from memiro.application.manage_products import AddedImage, AddImage, AddImageForm, RemoveImage
+from memiro.application.manage_products import AddImage, AddImageForm, CreatedProductImage, RemoveImage
 from memiro.bootstrap.config_loader import Config
 from memiro.entities.common.identifiers import ProductId
 from tests.common.factory.catalog import PRODUCT
@@ -15,7 +15,7 @@ pytestmark = pytest.mark.usefixtures("catalog")
 PHOTO = b"\xff\xd8\xff\xd9"
 
 
-async def _add(container: AsyncContainer) -> AddedImage:
+async def _add(container: AsyncContainer) -> CreatedProductImage:
     """Put one photo on the canonical product to take off again."""
     async with container() as request:
         interactor = await request.get(AddImage)

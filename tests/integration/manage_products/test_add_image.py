@@ -11,7 +11,7 @@ from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.gateway.product_image import ImageUpload, ProductImageStorage
 from memiro.application.common.input_limits import MAX_IMAGE_BYTES, MAX_NAME_LENGTH
 from memiro.application.errors.catalog import ProductNotFoundError
-from memiro.application.manage_products import AddedImage, AddImage, AddImageForm
+from memiro.application.manage_products import AddImage, AddImageForm, CreatedProductImage
 from memiro.bootstrap.config_loader import Config
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.clock import Clock
@@ -68,7 +68,7 @@ async def _with_storage(request: AsyncContainer, storage: ProductImageStorage) -
     )
 
 
-async def _add(container: AsyncContainer, product_id: ProductId, form: AddImageForm) -> AddedImage:
+async def _add(container: AsyncContainer, product_id: ProductId, form: AddImageForm) -> CreatedProductImage:
     """Execute one upload in its own production REQUEST scope."""
     async with container() as request:
         interactor = await request.get(AddImage)

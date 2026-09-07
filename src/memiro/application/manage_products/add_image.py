@@ -32,7 +32,7 @@ class AddImageForm(BaseModel):
         return filename
 
 
-class AddedImage(BaseModel):
+class CreatedProductImage(BaseModel):
     """The key the storage issued for the photo that was just stored."""
 
     key: str
@@ -47,7 +47,7 @@ class AddImage:
     image_storage: ProductImageStorage
     clock: Clock
 
-    async def execute(self, product_id: ProductId, data: AddImageForm) -> AddedImage:
+    async def execute(self, product_id: ProductId, data: AddImageForm) -> CreatedProductImage:
         """Store one photo, name it in the gallery of the product and commit."""
         logger.debug("Adding a product photo", product_id=product_id)
         product = await loaded_for_update(self.product_gateway, product_id, command="add_image", eager_images=True)
@@ -68,4 +68,4 @@ class AddImage:
             await self.image_storage.remove(key)
             raise
         logger.info("Product photo added", product_id=product_id, key=key)
-        return AddedImage(key=key)
+        return CreatedProductImage(key=key)

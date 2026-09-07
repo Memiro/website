@@ -1,5 +1,6 @@
 """The owner fills the gallery of a product from its card, and the files go to the storage (тикет 08)."""
 
+import asyncio
 from dataclasses import dataclass
 from http import HTTPStatus
 from pathlib import Path
@@ -49,6 +50,15 @@ def _images() -> Manager[Any]:
 
 def _card_url(product_id: ProductId) -> str:
     return f"/admin/{APP}/product/{product_id}/change/"
+
+
+def _stored_files(root: Path) -> set[str]:
+    """Read what the storage holds on the volume the whole admin suite shares."""
+    return {file.name for file in root.iterdir()}
+
+
+def _delete_url(product_id: ProductId) -> str:
+    return f"/admin/{APP}/product/{product_id}/delete/"
 
 
 def _card(product: Photographed, **fields: list[Any]) -> dict[str, Any]:
@@ -105,6 +115,39 @@ async def test_a_file_that_is_not_a_photo_never_reaches_the_storage(
 
     assert response.status_code == HTTPStatus.OK
     assert await _keys(photographed.id) == set()
+
+
+async def test_the_card_takes_no_photo_from_anybody_who_may_not_change_the_product(
+    clerk_client: AsyncClient,
+    admin_media_root: Path,
+    photographed: Photographed,
+) -> None:
+    """Signing in is not the permission: staff without it uploads nothing and the volume stays as it was."""
+    before = await asyncio.to_thread(_stored_files, admin_media_root)
+
+    response = await clerk_client.post(
+        _card_url(photographed.id),
+        _card(photographed, photos=[SimpleUploadedFile("mirror.jpg", PHOTO, content_type="image/jpeg")]),
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert await _keys(photographed.id) == set()
+    assert await asyncio.to_thread(_stored_files, admin_media_root) == before
+
+
+async def test_the_photos_of_a_removed_product_leave_the_storage_with_it(
+    owner_client: AsyncClient,
+    admin_media_root: Path,
+    photographed: Photographed,
+) -> None:
+    """A product is removed with its gallery: the rows go by cascade and the files go with them."""
+    uploaded = arranged_photo(photographed.id, content=PHOTO)
+
+    response = await owner_client.post(_delete_url(photographed.id), {"post": "yes"})
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert await _keys(photographed.id) == set()
+    assert not (admin_media_root / uploaded).exists()
 
 
 def test_every_refusal_the_gallery_can_meet_is_named_in_the_owner_s_words() -> None:

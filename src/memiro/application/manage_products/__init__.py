@@ -3,7 +3,7 @@
 Actor: the owner established by the Django presentation.
 """
 
-from memiro.application.manage_products.add_image import AddedImage, AddImage, AddImageForm
+from memiro.application.manage_products.add_image import AddImage, AddImageForm, CreatedProductImage
 from memiro.application.manage_products.add_variant import AddVariant, AddVariantForm
 from memiro.application.manage_products.change_product import ChangeProduct, ChangeProductForm
 from memiro.application.manage_products.change_variant import ChangeVariant, ChangeVariantForm
@@ -39,7 +39,6 @@ __all__ = [
     "AddImageForm",
     "AddVariant",
     "AddVariantForm",
-    "AddedImage",
     "ChangeProduct",
     "ChangeProductForm",
     "ChangeVariant",
@@ -47,6 +46,7 @@ __all__ = [
     "CreateProduct",
     "CreateProductForm",
     "CreatedProduct",
+    "CreatedProductImage",
     "CreatedVariant",
     "DeclarationForm",
     "DeclareValues",

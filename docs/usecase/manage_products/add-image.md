@@ -17,7 +17,7 @@
 
 ## Output
 
-`AddedImage`
+`CreatedProductImage`
 
 | Поле | Тип | Смысл |
 |---|---|---|

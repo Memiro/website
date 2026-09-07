@@ -394,6 +394,10 @@ def photo_fields(product_id: UUID) -> dict[str, forms.Field]:
             required=False,
             label="Добавить фотографии",
             help_text="Новые фотографии встают за уже заведёнными.",
+            # The name is a bound of the application form too, and a name
+            # past it there is a pydantic error no refusal table can say:
+            # the card holds the same bound so the owner reads it on the form.
+            max_length=MAX_NAME_LENGTH,
             validators=[FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)), _photo_is_not_too_large],
         ),
         REMOVE_PHOTOS_FIELD: forms.MultipleChoiceField(
