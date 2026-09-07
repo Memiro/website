@@ -20,6 +20,7 @@ from django.http.response import HttpResponseBase
 from django.test import AsyncClient
 
 from memiro.application.common.input_limits import MAX_SIDE_MM
+from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.entities.common.identifiers import ProductId
 from memiro.entities.errors.product import DuplicateVariantError, InvalidVariantConfigurationError
 from memiro.presentation.django_admin import variant_builder
@@ -159,13 +160,23 @@ async def test_the_owner_removes_a_variant_from_the_panel(owner_client: AsyncCli
     assert not await _variants().filter(id=variant_id).aexists()
 
 
-async def test_the_storefront_price_of_the_product_follows_the_cheapest_variant(
+async def test_the_storefront_price_stays_with_the_cheapest_of_the_added_variants(
+    owner_client: AsyncClient,
+) -> None:
+    """A dearer variant does not move «цена от»: the storefront quotes the cheapest."""
+    arranged_variant(width_mm=800, height_mm=600)
+
+    await owner_client.post(_save_url(PRODUCT), _panel_post(width_mm=1200, height_mm=900, sort_order=1))
+
+    assert (await _products().aget(id=PRODUCT)).price_from == Decimal(8900)
+
+
+async def test_the_storefront_price_follows_the_cheapest_variant_off_the_product(
     owner_client: AsyncClient,
 ) -> None:
     """The mark the panel shows and the product's «цена от» are one and the same answer."""
     cheap = arranged_variant(width_mm=800, height_mm=600)
     await owner_client.post(_save_url(PRODUCT), _panel_post(width_mm=1200, height_mm=900, sort_order=1))
-    assert (await _products().aget(id=PRODUCT)).price_from == Decimal(8900)
 
     listed = _answer(await owner_client.post(_delete_url(PRODUCT), {"variant": str(cheap)}))
 
@@ -258,6 +269,16 @@ async def test_the_panel_refuses_a_variant_of_a_product_nobody_entered(owner_cli
     response = await owner_client.post(_save_url(uuid4()), _panel_post())
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert (_answer(response))["error"] == REFUSAL_MESSAGES[ProductNotFoundError]
+
+
+async def test_the_panel_answers_nobody_who_may_not_change_the_product(clerk_client: AsyncClient) -> None:
+    """Signing in is not the permission: the panel writes the product, and staff without it is refused."""
+    response = await clerk_client.post(_save_url(PRODUCT), _panel_post())
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert (_answer(response))["error"] == variant_builder.NOT_YOURS
+    assert await _variants().filter(product_id=PRODUCT).acount() == 0
 
 
 async def test_the_panel_answers_nobody_who_is_not_signed_in() -> None:

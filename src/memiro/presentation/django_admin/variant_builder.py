@@ -18,7 +18,7 @@ from uuid import UUID
 
 import structlog
 from dishka import AsyncContainer
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, JsonResponse, QueryDict
 from pydantic import ValidationError
 
 from memiro.application.common.input_limits import MAX_QUANTITY, MAX_SIDE_MM
@@ -39,6 +39,7 @@ from memiro.application.manage_products import (
     VariantsList,
 )
 from memiro.application.manage_products.shared import VariantOverrideForm
+from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.common.identifiers import ProductId, VariantId
 from memiro.presentation.django_admin.bridge import bridge
 from memiro.presentation.django_admin.refusals import refusal_text
@@ -61,10 +62,14 @@ DUPLICATE = "duplicate"
 NOT_A_NUMBER = "Размер и порядок вводятся числами."
 NOT_A_PAIR = "Панель прислала значение, которое не разбирается: обновите страницу."
 LIKE_THE_PRODUCT = "как у товара"
+# What an override is called when the attribute behind it is gone: the panel
+# still shows the variant, and a name it cannot read is not a reason to hide it.
+UNNAMED = "—"
 ROUBLE = "₽"
 # A non-breaking thin space between the thousands, so a price never wraps.
 THOUSANDS = " "
 OUTSIDE_THE_LIMITS = f"Значение не принято: размер — от 1 до {MAX_SIDE_MM} мм, количество — от 0 до {MAX_QUANTITY}."
+NOT_YOURS = "У вас нет прав менять товары."
 
 logger: Logger = structlog.get_logger(__name__)
 
@@ -86,7 +91,12 @@ def builder_context(product_id: ProductId) -> dict[str, Any]:
 
 def listed_variants(product_id: ProductId) -> VariantsList:
     """Ask the domain for the variants the panel draws."""
-    return bridge().call(lambda scope: _listed(scope, product_id))
+    return bridge().call(lambda scope: _all_variants(scope, product_id))
+
+
+def forbidden() -> JsonResponse:
+    """Answer the staff member who may not change products: every panel address writes or reads his aggregate."""
+    return JsonResponse({"error": NOT_YOURS}, status=403)
 
 
 def answered(request: HttpRequest, answer: Callable[[], dict[str, Any]]) -> JsonResponse:
@@ -157,7 +167,7 @@ def values_label(variant: VariantModel) -> str:
 def _difference(override: VariantOverrideModel) -> str:
     """Name one difference: a dictionary row by its name, a quantity by its number."""
     chosen = override.value_name if override.value_id is not None else override.quantity
-    return f"{override.attribute_name}: {chosen}"
+    return f"{override.attribute_name or UNNAMED}: {chosen}"
 
 
 def _rows(listed: VariantsList) -> list[dict[str, Any]]:
@@ -196,20 +206,20 @@ def _controls(product_id: ProductId) -> list[dict[str, Any]]:
     controls: list[dict[str, Any]] = []
     for declaration in declared.order_by("attribute__sort_order", "attribute__name"):
         attribute: Attribute = declaration.attribute
-        chosen: UUID | None = declaration.value_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
+        is_quantity = attribute.kind == AttributeKind.NUMBER.name
         rows = AttributeValue.objects.filter(attribute_id=attribute.id).order_by("sort_order", "name")
         controls.append(
             {
                 "attribute_id": str(attribute.id),
                 "name": attribute.name,
-                "is_quantity": chosen is None,
-                "values": [] if chosen is None else list(rows),
+                "is_quantity": is_quantity,
+                "values": [] if is_quantity else list(rows),
             },
         )
     return controls
 
 
-def _assembled(sent: Mapping[str, Any]) -> dict[str, Any]:
+def _assembled(sent: QueryDict) -> dict[str, Any]:
     """Read the panel's own fields into the words of the application form."""
     return {
         WIDTH: _whole(sent.get(WIDTH)),
@@ -219,7 +229,7 @@ def _assembled(sent: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _overrides(sent: Mapping[str, Any]) -> list[VariantOverrideForm]:
+def _overrides(sent: QueryDict) -> list[VariantOverrideForm]:
     """Read the controls the owner filled in: each names its attribute alongside its value."""
     chosen: list[VariantOverrideForm] = []
     for pair in _repeated(sent, VALUE):
@@ -231,13 +241,9 @@ def _overrides(sent: Mapping[str, Any]) -> list[VariantOverrideForm]:
     return chosen
 
 
-def _repeated(sent: Mapping[str, Any], name: str) -> Sequence[str]:
-    """Take every value the panel sent under one name; a plain mapping carries at most one."""
-    getlist = getattr(sent, "getlist", None)
-    if getlist is None:
-        value = sent.get(name)
-        return [] if value is None else [str(value)]
-    return [str(value) for value in getlist(name)]
+def _repeated(sent: QueryDict, name: str) -> Sequence[str]:
+    """Take every value the panel sent under one name: a control per declared value posts them all at once."""
+    return [str(value) for value in sent.getlist(name)]
 
 
 def _pair(sent: str) -> tuple[UUID, str]:
@@ -276,7 +282,7 @@ def _amount(sent: str) -> Decimal:
         raise PanelInputError(NOT_A_NUMBER) from broken
 
 
-async def _listed(scope: AsyncContainer, product_id: ProductId) -> VariantsList:
+async def _all_variants(scope: AsyncContainer, product_id: ProductId) -> VariantsList:
     interactor = await scope.get(ListVariants)
     return await interactor.execute(product_id)
 
