@@ -49,3 +49,11 @@ class ProductSectionNotEmptyError(AppError):
 
     code: ClassVar[str] = "PRODUCT_SECTION_NOT_EMPTY"
     message: str = "A product is emptied before it moves to another section"
+
+
+@app_error
+class DuplicateProductImageError(AppError):
+    """Raised when a product is given a second photo under a key it already holds."""
+
+    code: ClassVar[str] = "DUPLICATE_PRODUCT_IMAGE"
+    message: str = "A product cannot hold two photos under one key"

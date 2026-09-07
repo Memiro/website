@@ -4,7 +4,9 @@ import type { ProductSummary } from "../lib/catalog-api.ts";
 interface Props { categorySlug: string; product: ProductSummary; }
 const { categorySlug, product } = Astro.props;
 const price = product.price_from === null ? null : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
-const previewImage = "/img/hero-1.jpg";
+// The edge serves the photo volume the admin writes to; a product without
+// photos keeps the studio shot the catalogue was launched with.
+const previewImage = product.image_keys[0] === undefined ? "/img/hero-1.jpg" : `/media/${product.image_keys[0]}`;
 ---
 
 <article class="product-card">

@@ -14,7 +14,10 @@ if (product === null) {
 const price = product === null || product.price_from === null
   ? null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
-const image = "/img/hero-1.jpg";
+const photoKey = product === null ? undefined : product.image_keys[0];
+// The edge serves the photo volume the admin writes to; a product without
+// photos keeps the studio shot the catalogue was launched with.
+const image = photoKey === undefined ? "/img/hero-1.jpg" : `/media/${photoKey}`;
 ---
 
 {product === null ? (

@@ -16,14 +16,16 @@ class ProductGateway(Protocol):
         *,
         for_update: bool = False,
         eager_variants: bool = False,
+        eager_images: bool = False,
     ) -> Product | None:
         """Load a product with its declared values, or ``None`` if there is no such product.
 
         Implementations must load the declared values eagerly: pricing reads
         them for every request, and a lazy load behind the gateway is
-        forbidden. ``eager_variants`` loads the private child collection for
-        management commands; ``for_update`` locks the aggregate root until
-        the current transaction ends.
+        forbidden. ``eager_variants`` and ``eager_images`` load the private
+        child collections for the commands that touch them — the calculator
+        asks for neither; ``for_update`` locks the aggregate root until the
+        current transaction ends.
         """
         raise NotImplementedError
 

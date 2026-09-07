@@ -14,6 +14,7 @@ from memiro.application.errors.catalog import (
     AttributeValueInUseError,
     AttributeValueNotFoundError,
     CategoryNotFoundError,
+    ProductImageNotFoundError,
     ProductNotFoundError,
     ProductSlugTakenError,
     VariantNotFoundError,
@@ -34,6 +35,7 @@ from memiro.entities.errors.inquiry import (
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro.entities.errors.product import (
+    DuplicateProductImageError,
     DuplicateVariantError,
     InvalidProductSlugError,
     InvalidQuantityError,
@@ -53,6 +55,7 @@ CONCURRENT_CHANGE_CODE = "CONCURRENT_CHANGE"
 ERROR_STATUSES: dict[type[AppError], int] = {
     CategoryNotFoundError: status.HTTP_404_NOT_FOUND,
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
+    ProductImageNotFoundError: status.HTTP_404_NOT_FOUND,
     VariantNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeNotFoundError: status.HTTP_404_NOT_FOUND,
@@ -69,6 +72,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     InvalidQuantityError: status.HTTP_400_BAD_REQUEST,
     InvalidProductSlugError: status.HTTP_400_BAD_REQUEST,
     DuplicateVariantError: status.HTTP_409_CONFLICT,
+    DuplicateProductImageError: status.HTTP_409_CONFLICT,
     ProductSlugTakenError: status.HTTP_409_CONFLICT,
     ProductSectionNotEmptyError: status.HTTP_409_CONFLICT,
     AttributeValueInUseError: status.HTTP_409_CONFLICT,

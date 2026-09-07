@@ -16,6 +16,7 @@ from memiro.application.errors.catalog import (
     AttributeValueInUseError,
     AttributeValueNotFoundError,
     CategoryNotFoundError,
+    ProductImageNotFoundError,
     ProductNotFoundError,
     ProductSlugTakenError,
     VariantNotFoundError,
@@ -28,6 +29,7 @@ from memiro.entities.errors.attribute import (
 )
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro.entities.errors.product import (
+    DuplicateProductImageError,
     DuplicateVariantError,
     InvalidProductSlugError,
     InvalidQuantityError,
@@ -52,6 +54,8 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
     InvalidSurchargeFactorError: "Коэффициент ступени должен быть больше единицы: наценка выключается пустой таблицей.",
     DuplicateSizeSurchargeError: "Две ступени не начинаются с одного размера: оставьте одну.",
     ProductNotFoundError: "Товар не найден: похоже, его удалили в другом окне.",
+    ProductImageNotFoundError: "Фотография не найдена: похоже, её убрали в другом окне.",
+    DuplicateProductImageError: "Такая фотография у товара уже есть.",
     ProductSlugTakenError: "Этот адрес уже занят другим товаром: придумайте другой.",
     InvalidProductSlugError: "Адрес товара — латинские слова через дефис, и пустым он выводится из названия.",
     ProductSectionNotEmptyError: (

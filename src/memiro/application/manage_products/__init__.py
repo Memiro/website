@@ -3,6 +3,7 @@
 Actor: the owner established by the Django presentation.
 """
 
+from memiro.application.manage_products.add_image import AddImage, AddImageForm, CreatedProductImage
 from memiro.application.manage_products.add_variant import AddVariant, AddVariantForm
 from memiro.application.manage_products.change_product import ChangeProduct, ChangeProductForm
 from memiro.application.manage_products.change_variant import ChangeVariant, ChangeVariantForm
@@ -20,6 +21,7 @@ from memiro.application.manage_products.list_variants import (
     VariantsList,
 )
 from memiro.application.manage_products.quote_variant import QuotedVariant, QuoteVariant, QuoteVariantForm
+from memiro.application.manage_products.remove_image import RemoveImage
 from memiro.application.manage_products.remove_product import RemoveProduct
 from memiro.application.manage_products.remove_variant import RemoveVariant
 from memiro.application.manage_products.shared import (
@@ -33,6 +35,8 @@ from memiro.application.manage_products.shared import (
 
 __all__ = [
     "SLUG_PATTERN",
+    "AddImage",
+    "AddImageForm",
     "AddVariant",
     "AddVariantForm",
     "ChangeProduct",
@@ -42,6 +46,7 @@ __all__ = [
     "CreateProduct",
     "CreateProductForm",
     "CreatedProduct",
+    "CreatedProductImage",
     "CreatedVariant",
     "DeclarationForm",
     "DeclareValues",
@@ -55,6 +60,7 @@ __all__ = [
     "QuoteVariant",
     "QuoteVariantForm",
     "QuotedVariant",
+    "RemoveImage",
     "RemoveProduct",
     "RemoveVariant",
     "VariantForm",

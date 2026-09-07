@@ -11,6 +11,7 @@
 | `VALIDATION_ERROR` | 422 | — (FastAPI) | Тело или параметры запроса не прошли границы формы |
 | `CATEGORY_NOT_FOUND` | 404 | `CategoryNotFoundError` | Категории с названным slug нет |
 | `PRODUCT_NOT_FOUND` | 404 | `ProductNotFoundError` | Товара с названным идентификатором нет |
+| `PRODUCT_IMAGE_NOT_FOUND` | 404 | `ProductImageNotFoundError` | Ключ не называет ни одной фотографии этого товара |
 | `VARIANT_NOT_FOUND` | 404 | `VariantNotFoundError` | Вариант не принадлежит названному товару |
 | `ATTRIBUTE_VALUE_NOT_FOUND` | 404 | `AttributeValueNotFoundError` | Значения нет, оно чужого атрибута или атрибут не объявлен у товара |
 | `ATTRIBUTE_NOT_FOUND` | 404 | `AttributeNotFoundError` | Атрибута с названным идентификатором нет |
@@ -27,6 +28,7 @@
 | `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
 | `INVALID_PRODUCT_SLUG` | 400 | `InvalidProductSlugError` | Из названия товара не выводится ни одного символа адреса |
 | `DUPLICATE_VARIANT` | 409 | `DuplicateVariantError` | У товара уже есть вариант такого размера и с теми же итоговыми значениями |
+| `DUPLICATE_PRODUCT_IMAGE` | 409 | `DuplicateProductImageError` | Фотография с таким ключом у товара уже есть |
 | `PRODUCT_SLUG_TAKEN` | 409 | `ProductSlugTakenError` | Публичный адрес товара занят другим товаром |
 | `PRODUCT_SECTION_NOT_EMPTY` | 409 | `ProductSectionNotEmptyError` | Товар переносят в другой раздел, а он ещё объявляет значения или держит варианты |
 | `ATTRIBUTE_VALUE_IN_USE` | 409 | `AttributeValueInUseError` | Удаляемое значение объявлено товарами; `meta.products` — их названия |

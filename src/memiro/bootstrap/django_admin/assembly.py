@@ -70,6 +70,9 @@ def admin_settings(config: Config) -> dict[str, Any]:
         # Django's own prefix would collide with the admin's URLs; nginx
         # serves this one from the directory collectstatic fills.
         "STATIC_URL": "/admin-static/",
+        # The photos themselves are served by nginx off the media volume; the
+        # admin only ever prints their address.
+        "MEDIA_URL": "/media/",
         "STATIC_ROOT": config.admin.static_root,
         # nginx is the edge and terminates TLS; the admin never sees the
         # scheme itself.

@@ -57,10 +57,10 @@ async def _copy_variant_row_directly(engine: AsyncEngine, variant_id: UUID) -> N
 
 
 async def _load_product(container: AsyncContainer) -> Product | None:
-    """Read the aggregate in a fresh transaction after a command."""
+    """Read the whole aggregate in a fresh transaction after a command."""
     async with container() as request:
         gateway: ProductGateway = await request.get(ProductGateway)
-        return await gateway.get(PRODUCT, eager_variants=True)
+        return await gateway.get(PRODUCT, eager_variants=True, eager_images=True)
 
 
 def _expected_variant(

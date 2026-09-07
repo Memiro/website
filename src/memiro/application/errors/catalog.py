@@ -91,3 +91,11 @@ class ProductSlugTakenError(AppError):
 
     code: ClassVar[str] = "PRODUCT_SLUG_TAKEN"
     message: str = "The product address is already taken"
+
+
+@app_error
+class ProductImageNotFoundError(AppError):
+    """Raised when a key names no photo of this product."""
+
+    code: ClassVar[str] = "PRODUCT_IMAGE_NOT_FOUND"
+    message: str = "Product image not found"

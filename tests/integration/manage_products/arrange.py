@@ -9,10 +9,10 @@ from memiro.entities.common.identifiers import AttributeId, ProductId
 
 
 async def load_product(container: AsyncContainer, product_id: ProductId) -> Product | None:
-    """Read one product back in a fresh transaction after a command."""
+    """Read the whole product back in a fresh transaction after a command."""
     async with container() as request:
         gateway: ProductGateway = await request.get(ProductGateway)
-        return await gateway.get(product_id)
+        return await gateway.get(product_id, eager_images=True)
 
 
 def declared_index(product: Product) -> dict[AttributeId, ChosenValue]:

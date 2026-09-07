@@ -16,13 +16,16 @@ from typing import Any, cast, override
 from uuid import UUID
 
 from django import forms
-from django.core.validators import RegexValidator
+from django.core.files.uploadedfile import UploadedFile
+from django.core.validators import FileExtensionValidator, RegexValidator
 from django.forms import BaseInlineFormSet
 
 from memiro.application.common.input_limits import (
+    IMAGE_EXTENSIONS,
     MAX_AREA_M2,
     MAX_ATTRIBUTE_PARENTS,
     MAX_DESCRIPTION_LENGTH,
+    MAX_IMAGE_BYTES,
     MAX_NAME_LENGTH,
     MAX_ORDER_TOTAL,
     MAX_QUANTITY,
@@ -41,6 +44,7 @@ from memiro.presentation.django_admin.models import (
     PricingSettings,
     Product,
     ProductDeclaredValue,
+    ProductImage,
     SizeSurcharge,
 )
 
@@ -57,6 +61,14 @@ TIER_KEY_FIELD = "pk"
 # The prefix a card field carries when it declares an attribute of the section
 # rather than a column of the product itself.
 DECLARED_PREFIX = "declared_"
+
+# The two halves of the gallery on the card: what the owner adds, and what he
+# strikes out. Their order on the screen is the order the card sends them in.
+PHOTOS_FIELD = "photos"
+REMOVE_PHOTOS_FIELD = "remove_photos"
+
+PHOTO_TOO_LARGE = "Фотография не должна быть тяжелее %(limit)s МБ."
+BYTES_IN_A_MEGABYTE = 1024 * 1024
 
 SLUG_MESSAGE = "Адрес — латинские слова через дефис."
 # The declared fields on a card are built from the section the product is in
@@ -341,3 +353,57 @@ class CategoryCardForm(forms.ModelForm):
             "sort_order",
         )
         labels = {"sort_order": "Порядок"}  # noqa: RUF012  # Django reads Meta options off the class as plain values
+
+
+class MultiPhotoInput(forms.ClearableFileInput):
+    """Поле выбора файлов, которое браузер даёт открыть сразу на нескольких."""
+
+    allow_multiple_selected = True
+
+
+class MultiPhotoField(forms.FileField):
+    """Несколько фотографий одним полем: браузер отдаёт их списком, поле файла — по одной."""
+
+    @override
+    def __init__(self, **kwargs: Any) -> None:
+        """Take the whole selection the widget hands over, not only its last file."""
+        kwargs.setdefault("widget", MultiPhotoInput())
+        super().__init__(**kwargs)
+
+    @override
+    def clean(self, data: Any, initial: Any = None) -> list[Any]:
+        """Validate every file of the selection by the rules of one file."""
+        # Bound here: a zero-argument ``super()`` inside a comprehension is
+        # resolved against the comprehension's own scope, not the field's.
+        one_file = super().clean
+        files = data if isinstance(data, list | tuple) else [data]
+        return [cleaned for cleaned in (one_file(file, initial) for file in files if file) if cleaned]
+
+
+def _photo_is_not_too_large(photo: UploadedFile) -> None:
+    """Refuse a file above the bound the application form refuses too (§13.6)."""
+    if photo.size is not None and photo.size > MAX_IMAGE_BYTES:
+        raise forms.ValidationError(PHOTO_TOO_LARGE, params={"limit": MAX_IMAGE_BYTES // BYTES_IN_A_MEGABYTE})
+
+
+def photo_fields(product_id: UUID) -> dict[str, forms.Field]:
+    """Build the gallery half of the card: what the owner uploads, and what he takes off."""
+    stored = ProductImage.objects.filter(product_id=product_id).order_by("sort_order", "key")
+    return {
+        PHOTOS_FIELD: MultiPhotoField(
+            required=False,
+            label="Добавить фотографии",
+            help_text="Новые фотографии встают за уже заведёнными.",
+            # The name is a bound of the application form too, and a name
+            # past it there is a pydantic error no refusal table can say:
+            # the card holds the same bound so the owner reads it on the form.
+            max_length=MAX_NAME_LENGTH,
+            validators=[FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)), _photo_is_not_too_large],
+        ),
+        REMOVE_PHOTOS_FIELD: forms.MultipleChoiceField(
+            required=False,
+            label="Убрать фотографии",
+            widget=forms.CheckboxSelectMultiple,
+            choices=[(image.key, image.key) for image in stored],
+        ),
+    }
