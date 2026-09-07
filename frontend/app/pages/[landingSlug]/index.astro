@@ -24,7 +24,11 @@ const query = landing === null ? asked : { ...asked, values: landing.values };
 const page: CategoryPage | null = landing === null
   ? null
   : await foundOrNull(landing.category_slug, (slug) => api.categoryProducts(slug, catalogSearch(query)));
+// The page prints the lead of the owner's copy and nothing more: a wall of
+// text between the heading and the grid pushes what the visitor came for
+// below the fold.
 const paragraphs = landing === null ? [] : landing.text.split("\n").filter((line) => line.trim() !== "");
+const [lead] = paragraphs;
 const crumbs = landing === null ? [] : [
   { href: "/", label: "Главная" },
   { href: "/catalog/", label: "Каталог" },
@@ -52,8 +56,8 @@ const crumbs = landing === null ? [] : [
       <span class="count">{page.total} {productPlural(page.total)}</span>
     </div>
 
-    {paragraphs.length > 0 && (
-      <div class="page wrap landing-text">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>
+    {lead !== undefined && (
+      <div class="wrap"><p class="landing-lead">{lead}</p></div>
     )}
 
     <div class="wrap">

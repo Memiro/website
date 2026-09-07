@@ -18,6 +18,7 @@ import {
 } from "../../../lib/catalog-query.ts";
 import { foundOrNull } from "../../../lib/not-found.ts";
 import { productPlural } from "../../../lib/plural.ts";
+import { landingsOfCategory } from "../../../lib/tiles.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
@@ -30,6 +31,9 @@ if (page === null) {
   Astro.response.status = 404;
 }
 const category = page === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
+// The landings of this section: a visitor picks one, and a crawler reaches
+// them from here — the page it indexes is the one the owner wrote (ADR-0003).
+const landings = page === null ? [] : landingsOfCategory((await api.landings()).items, categorySlug);
 const name = category?.name ?? "Каталог зеркал";
 const crumbs = [
   { href: "/", label: "Главная" },
@@ -114,6 +118,12 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
       <div class="drawer-backdrop" data-drawer-close hidden></div>
 
       <main>
+        {landings.length > 0 && (
+          <nav class="landing-links" aria-label="Подборки раздела">
+            {landings.map((landing) => <a class="chip-f" href={landing.href}>{landing.label}</a>)}
+          </nav>
+        )}
+
         {page.items.length > 0 ? (
           <div class="grid-3">{page.items.map((product) => <CatalogCard categorySlug={categorySlug} product={product} />)}</div>
         ) : (

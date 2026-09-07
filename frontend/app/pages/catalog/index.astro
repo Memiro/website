@@ -3,15 +3,22 @@ import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import CatalogTiles from "../../components/CatalogTiles.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi } from "../../lib/catalog-api.ts";
-import { catalogTiles } from "../../lib/tiles.ts";
+import { categoryTiles } from "../../lib/tiles.ts";
 
-const tiles = await catalogTiles(internalCatalogApi());
+const tiles = await categoryTiles(internalCatalogApi());
+const [only] = tiles;
+// With a single section the root has no content of its own: the landings stand
+// on the home page, and the products and the filters live in the section. The
+// redirect is temporary — a second section gives the root its tiles back.
+if (tiles.length === 1 && only !== undefined) {
+  return Astro.redirect(only.href);
+}
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/catalog/", label: "Каталог" }];
 ---
 
 <BaseLayout
   title="Каталог зеркал — Memiro"
-  description="Каталог интерьерных зеркал мастерской Memiro: подборки и категории зеркал с ценой от минимальной конфигурации."
+  description="Каталог интерьерных зеркал мастерской Memiro: разделы каталога с ценой от минимальной конфигурации."
   crumbs={crumbs}
 >
   <Breadcrumbs crumbs={crumbs} />

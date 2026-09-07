@@ -23,7 +23,7 @@ async def test_the_storefront_lists_its_landings_as_tiles(api_client: ApiClient,
     await prime_landing(engine)
 
     assert (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content() == LandingsList(
-        items=[LandingSummary(slug="kruglye-zerkala", heading="Круглые зеркала")],
+        items=[LandingSummary(slug="kruglye-zerkala", heading="Круглые зеркала", category_slug="mirrors")],
         total=1,
         page=1,
     )

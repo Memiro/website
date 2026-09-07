@@ -83,10 +83,13 @@ class CategoriesList(BaseModel):
 
 
 class LandingSummary(BaseModel):
-    """One landing as the storefront's tiles show it."""
+    """One landing as the storefront's tiles and the chips of a category show it."""
 
     slug: str
     heading: str
+    # The category the page narrows: the storefront shows the landings of one
+    # category on that category, which is how a crawler reaches them (ADR-0003).
+    category_slug: str
 
 
 class LandingsList(BaseModel):

@@ -44,13 +44,13 @@ export interface CategoryPage extends ListEnvelope<ProductSummary> {
 export interface LandingSummary {
   slug: string;
   heading: string;
+  category_slug: string;
 }
 
 export interface Landing extends LandingSummary {
   title: string;
   description: string;
   text: string;
-  category_slug: string;
   category_name: string;
   values: string[];
 }
@@ -178,7 +178,10 @@ export function isCalculatedPrice(value: unknown): value is CalculatedPrice {
 
 function isLandingSummary(value: unknown): value is LandingSummary {
   const landing = asRecord(value);
-  return landing !== null && typeof landing.slug === "string" && typeof landing.heading === "string";
+  return landing !== null
+    && typeof landing.slug === "string"
+    && typeof landing.heading === "string"
+    && typeof landing.category_slug === "string";
 }
 
 function isLanding(value: unknown): value is Landing {
@@ -189,7 +192,6 @@ function isLanding(value: unknown): value is Landing {
   return typeof landing.title === "string"
     && typeof landing.description === "string"
     && typeof landing.text === "string"
-    && typeof landing.category_slug === "string"
     && typeof landing.category_name === "string"
     && isArrayOf(landing.values, (item): item is string => typeof item === "string");
 }
