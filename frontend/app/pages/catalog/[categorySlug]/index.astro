@@ -85,7 +85,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
           <span class="drawer-title">Фильтры</span>
           <button class="drawer-close" type="button" data-drawer-close aria-label="Закрыть фильтры">✕</button>
         </div>
-        <form id="catalog-filters" method="get" action={path}>
+        <form id="catalog-filters" method="get" action={path} data-filters data-category={categorySlug}>
           {page.groups.map((group) => (
             <div class="fgroup">
               <h3>{group.name}</h3>
@@ -107,7 +107,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
               </div>
             </div>
           )}
-          <button class="btn btn-primary apply" type="submit">Показать {page.total} {productPlural(page.total)}</button>
+          <button class="btn btn-primary apply" type="submit" data-apply>Показать {page.total} {productPlural(page.total)}</button>
           {narrowed && <a class="reset-link" href={path}>Сбросить фильтры</a>}
         </form>
       </aside>

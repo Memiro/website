@@ -405,7 +405,10 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 /* ---------- Landing pages ---------- */
 .landing-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 26px; }
 .landing-links a { text-decoration: none; }
-.landing-text { padding-top: 22px; padding-bottom: 30px; max-width: 76ch; }
+/* The column is bounded on the paragraphs, not on the .wrap itself: a narrow wrap
+   centres itself and the text drifts away from the heading above it. */
+.landing-text { padding-top: 22px; padding-bottom: 30px; }
+.landing-text p { max-width: 76ch; }
 .landing-all { padding-top: 32px; }
 
 /* ---------- Product detail ---------- */
