@@ -1,0 +1,14 @@
+---
+import type { Requisite } from "../lib/site-api.ts";
+
+interface Props { seller: Requisite[]; }
+const { seller } = Astro.props;
+---
+
+{seller.length > 0 && (
+  <ul class="seller-requisites">
+    {seller.map((requisite) => (
+      <li>{requisite.label !== "" && <span class="seller-label">{requisite.label}:</span>}{requisite.label !== "" ? " " : ""}{requisite.value}</li>
+    ))}
+  </ul>
+)}

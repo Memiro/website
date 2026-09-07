@@ -22,6 +22,7 @@ from memiro.adapters.db.gateways.category import SACategoryGateway
 from memiro.adapters.db.gateways.inquiry import SAInquiryGateway
 from memiro.adapters.db.gateways.pricing import SAPricingSettingsGateway
 from memiro.adapters.db.gateways.product import SAProductGateway
+from memiro.adapters.db.gateways.site import SASiteGateway
 from memiro.adapters.events.in_process import InProcessEventBus
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus, Transport, smtp_transport
 from memiro.adapters.storage.local_product_image import LocalProductImageStorage
@@ -41,6 +42,7 @@ class AdapterProvider(Provider):
     category_gateway = provide(WithParents[SACategoryGateway], scope=Scope.REQUEST)
     inquiry_gateway = provide(WithParents[SAInquiryGateway], scope=Scope.REQUEST)
     pricing_settings_gateway = provide(WithParents[SAPricingSettingsGateway], scope=Scope.REQUEST)
+    site_gateway = provide(WithParents[SASiteGateway], scope=Scope.REQUEST)
     inquiry_notification_bus = provide(WithParents[SMTPInquiryNotificationBus], scope=Scope.REQUEST)
     event_bus = provide(WithParents[InProcessEventBus], scope=Scope.REQUEST)
     product_image_storage = provide(WithParents[LocalProductImageStorage], scope=Scope.APP)

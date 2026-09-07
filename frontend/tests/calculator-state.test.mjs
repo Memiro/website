@@ -12,8 +12,8 @@ const MIRROR = {
   price_from: null,
   image_keys: [],
   attributes: [
-    { id: "frame", name: "Рама", kind: "select", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
-    { id: "cut-outs", name: "Вырезы", kind: "number", values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
+    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
   ],
   variants: [
     { width_mm: 800, height_mm: 600, price: "8900", overrides: [{ attribute_id: "frame", value_id: "black", quantity: null }] },
@@ -126,8 +126,8 @@ test("a quantity that is not a number is highlighted under its own attribute", a
 const MIRROR_WITH_CUT_OUTS = {
   ...MIRROR,
   attributes: [
-    { id: "frame", name: "Рама", kind: "select", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
-    { id: "cut-outs", name: "Вырезы", kind: "number", values: [{ id: null, name: "Вырез", quantity: "1.0000" }] },
+    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, values: [{ id: null, name: "Вырез", quantity: "1.0000" }] },
   ],
 };
 

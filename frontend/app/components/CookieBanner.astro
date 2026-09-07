@@ -1,0 +1,21 @@
+---
+// Yandex.Metrika loads only after an active "Принять": a passive "by using
+// the site you agree" is not a consent Роскомнадзор accepts. With no counter
+// configured there is nothing to ask about, and the banner stays away.
+const metrikaId = import.meta.env.PUBLIC_METRIKA_ID ?? "";
+---
+
+{metrikaId !== "" && (
+  <div class="cookie-banner" data-cookie-banner data-metrika-id={metrikaId} role="dialog" aria-label="Файлы cookie и аналитика" hidden>
+    <p class="cookie-text">Мы хотим подключить Яндекс.Метрику, чтобы видеть, как посетители пользуются сайтом. Она сохраняет файлы cookie и передаёт обезличенную статистику. Без вашего согласия аналитика не загружается — подробности в <a href="/privacy/#cookie">политике обработки персональных данных</a>.</p>
+    <div class="cookie-actions">
+      <button class="btn btn-primary" type="button" data-cookie-accept>Принять</button>
+      <button class="btn btn-ghost" type="button" data-cookie-decline>Отклонить</button>
+    </div>
+  </div>
+  <script>
+    import { mountCookieBanner } from "../islands/cookies.ts";
+
+    mountCookieBanner(document);
+  </script>
+)}

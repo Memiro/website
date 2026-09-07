@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  freeFormInquiry,
   canAddCalculatorConfiguration,
   canShowInquiryEditor,
   addInquiryItem,
@@ -142,3 +143,12 @@ class MapStorage {
     this.#values.set(key, value);
   }
 }
+
+test("a free-form inquiry carries a comment and no items", () => {
+  const request = freeFormInquiry({ name: "Аня", phone: "+79990000000", email: "", consent: true }, "Нужна арка");
+
+  assert.equal(request.source, "FREE_FORM");
+  assert.equal(request.comment, "Нужна арка");
+  assert.equal(request.email, null);
+  assert.deepEqual(request.items, []);
+});

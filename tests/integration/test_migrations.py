@@ -112,7 +112,7 @@ async def test_pricing_migrations_preserve_existing_rows(
         attribute = (
             await connection.execute(
                 text(
-                    """SELECT category_id, kind, parent_ids, is_customer_changeable
+                    """SELECT category_id, kind, parent_ids, is_customer_changeable, is_filterable
                        FROM attributes WHERE id = :id"""
                 ),
                 {"id": seeded.attribute_id},
@@ -152,6 +152,7 @@ async def test_pricing_migrations_preserve_existing_rows(
                        WHERE table_schema = 'public'
                          AND column_name IN (
                            'category_id', 'kind', 'parent_ids', 'is_customer_changeable',
+                           'is_filterable',
                            'marks_absence', 'is_published', 'hides_calculated_price',
                            'max_long_side_mm', 'max_short_side_mm',
                            'scaled_by_size_surcharge', 'created_at', 'updated_at'
@@ -174,7 +175,7 @@ async def test_pricing_migrations_preserve_existing_rows(
         )
     await engine.dispose()
 
-    assert attribute == (product.category_id, "SELECT", [], True)
+    assert attribute == (product.category_id, "SELECT", [], True, False)
     assert value == (False,)
     assert product.is_published
     assert not product.hides_calculated_price

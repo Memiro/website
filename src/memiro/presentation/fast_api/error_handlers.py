@@ -14,6 +14,7 @@ from memiro.application.errors.catalog import (
     AttributeValueInUseError,
     AttributeValueNotFoundError,
     CategoryNotFoundError,
+    LandingNotFoundError,
     ProductImageNotFoundError,
     ProductNotFoundError,
     ProductSlugTakenError,
@@ -54,6 +55,7 @@ CONCURRENT_CHANGE_CODE = "CONCURRENT_CHANGE"
 # design, and it is logged as one. Its human mirror is docs/errors/.
 ERROR_STATUSES: dict[type[AppError], int] = {
     CategoryNotFoundError: status.HTTP_404_NOT_FOUND,
+    LandingNotFoundError: status.HTTP_404_NOT_FOUND,
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
     ProductImageNotFoundError: status.HTTP_404_NOT_FOUND,
     VariantNotFoundError: status.HTTP_404_NOT_FOUND,

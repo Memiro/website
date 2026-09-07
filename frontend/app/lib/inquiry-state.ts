@@ -26,8 +26,10 @@ export interface InquiryContacts {
   consent: boolean;
 }
 
+export type InquirySource = "SELECTION" | "FREE_FORM";
+
 export interface SubmitInquiryRequest {
-  source: "SELECTION";
+  source: InquirySource;
   name: string;
   phone: string;
   email: string | null;
@@ -122,6 +124,19 @@ export function selectionInquiry(items: InquiryItem[], contacts: InquiryContacts
       })),
       wish: item.wish,
     })),
+  };
+}
+
+/** The free-form inquiry of the home page: a question with a comment and no items. */
+export function freeFormInquiry(contacts: InquiryContacts, comment: string): SubmitInquiryRequest {
+  return {
+    source: "FREE_FORM",
+    name: contacts.name,
+    phone: contacts.phone,
+    email: contacts.email || null,
+    consent: contacts.consent,
+    comment,
+    items: [],
   };
 }
 

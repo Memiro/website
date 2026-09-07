@@ -68,6 +68,8 @@ PRODUCT: ProductId = _id("mirror-in-a-frame")
 SECOND_CATEGORY: CategoryId = _id("cabinets")
 FOREIGN_PRODUCT: ProductId = _id("mirror-cabinet")
 SECOND_PRODUCT: ProductId = _id("mirror-with-a-shelf")
+THIRD_PRODUCT: ProductId = _id("large-mirror")
+LANDING: UUID = _id("round-mirrors-landing")
 
 # One inquiry a manager already has in hand: what a product removed later
 # leaves behind is read off its position.
@@ -88,6 +90,9 @@ def demo_blade() -> Attribute:
         category_id=CATEGORY,
         name="Тип полотна",
         sort_order=1,
+        # Any mirror is made of any blade, so a "silver / graphite" group
+        # would hide products that do fit.
+        is_filterable=False,
         values=[
             AttributeValue(
                 id=SILVER,
@@ -118,6 +123,7 @@ def demo_shape() -> Attribute:
         category_id=CATEGORY,
         name="Форма",
         sort_order=2,
+        is_filterable=True,
         values=[
             AttributeValue(
                 id=RECTANGULAR,
@@ -146,6 +152,7 @@ def demo_frame() -> Attribute:
         category_id=CATEGORY,
         name="Рама",
         sort_order=3,
+        is_filterable=True,
         values=[
             AttributeValue(
                 id=ALUMINIUM,
@@ -175,6 +182,7 @@ def demo_backlight() -> Attribute:
         category_id=CATEGORY,
         name="Подсветка",
         sort_order=4,
+        is_filterable=True,
         values=[
             # The tape is measured in the same linear metre as the frame
             # but does not grow on a curved cut — hence its own flag.
@@ -206,6 +214,7 @@ def demo_mount() -> Attribute:
         category_id=CATEGORY,
         name="Крепление",
         sort_order=5,
+        is_filterable=True,
         values=[
             AttributeValue(
                 id=WITH_MOUNT,
@@ -238,6 +247,7 @@ def demo_heating() -> Attribute:
         parent_ids=(BACKLIGHT,),
         is_customer_changeable=True,
         sort_order=6,
+        is_filterable=True,
         values=[
             AttributeValue(
                 id=WITH_HEATING,
