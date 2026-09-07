@@ -20,6 +20,7 @@ class PricingVerdict(StrEnum):
     HIDDEN = "HIDDEN"
     BEYOND_LIMITS = "BEYOND_LIMITS"
     NOT_PRICEABLE = "NOT_PRICEABLE"
+    SELECTION_NOT_PRICEABLE = "SELECTION_NOT_PRICEABLE"
 
 
 # The verdicts that carry a total. Kept as a set so the invariant stays in one

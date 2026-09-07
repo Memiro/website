@@ -61,7 +61,7 @@ async function addToInquiry(): Promise<void> {
   await calculator.whenSettled();
   const priced = calculator.priced;
   const kind = price.value?.kind;
-  if (priced === null || (kind !== "priced" && kind !== "wish")) {
+  if (priced === null || !canAddCalculatorConfiguration(kind, wish.value)) {
     return;
   }
   items.value = addInquiryItem(

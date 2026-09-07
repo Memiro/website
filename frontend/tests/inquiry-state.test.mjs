@@ -152,3 +152,18 @@ test("a free-form inquiry carries a comment and no items", () => {
   assert.equal(request.email, null);
   assert.deepEqual(request.items, []);
 });
+
+test("a configuration the calculator could not price is still a position of the inquiry", () => {
+  assert.equal(canShowInquiryEditor("unpriced"), true);
+  assert.equal(canAddCalculatorConfiguration("unpriced", ""), true);
+});
+
+test("a hidden price does not take the position away either", () => {
+  assert.equal(canShowInquiryEditor("hidden"), true);
+  assert.equal(canAddCalculatorConfiguration("hidden", ""), true);
+});
+
+test("a product outside the calculable set has no configuration to add", () => {
+  assert.equal(canShowInquiryEditor("unavailable"), false);
+  assert.equal(canAddCalculatorConfiguration("unavailable", ""), false);
+});

@@ -75,17 +75,20 @@ def price_product_for_customer(
     selections: Selections,
 ) -> Quotation:
     """Price a customer's question after applying the storefront gates."""
-    owner_configuration_is_priceable = is_product_priceable(product, attributes)
-    selected_configuration_is_priceable = is_product_priceable(product, attributes, selections)
-    if not product.is_published or not owner_configuration_is_priceable or not selected_configuration_is_priceable:
+    if not product.is_published or not is_product_priceable(product, attributes):
         return _refusal(PricingVerdict.NOT_PRICEABLE)
+    # Past this line the product itself is calculable, so a refusal is about
+    # the choice and nothing else: the configuration the customer built stays
+    # worth carrying into an inquiry (``Inquiry``, rule 8).
+    if not is_product_priceable(product, attributes, selections):
+        return _refusal(PricingVerdict.SELECTION_NOT_PRICEABLE)
     attribute_index = {attribute.id: attribute for attribute in attributes}
     # A selection naming an attribute outside the dictionary is a refusal, not
     # a defect: the gate above tolerates the stranger by dropping it, so this
     # line must not be the one that decides it was a crash.
     chosen = [attribute_index.get(attribute_id) for attribute_id in selections]
     if any(attribute is None or not attribute.is_customer_changeable for attribute in chosen):
-        return _refusal(PricingVerdict.NOT_PRICEABLE)
+        return _refusal(PricingVerdict.SELECTION_NOT_PRICEABLE)
     if not settings.is_within_limits(dimensions):
         return _refusal(PricingVerdict.BEYOND_LIMITS)
     quotation = price_product(

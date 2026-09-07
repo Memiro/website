@@ -13,7 +13,7 @@ export interface CalculatorState {
 }
 
 export interface PricePresentation {
-  kind: "priced" | "wish" | "hidden" | "unavailable";
+  kind: "priced" | "wish" | "hidden" | "unpriced" | "unavailable";
   total: string | null;
   message: string | null;
   deltas: PriceDelta[];
@@ -103,6 +103,13 @@ export function pricePresentation(result: CalculatedPrice): PricePresentation {
         kind: "hidden",
         total: null,
         message: "Стоимость этой конфигурации уточнит менеджер.",
+        deltas: [],
+      };
+    case "SELECTION_NOT_PRICEABLE":
+      return {
+        kind: "unpriced",
+        total: null,
+        message: "Цену такого сочетания назовёт менеджер — добавьте его в заявку.",
         deltas: [],
       };
     case "NOT_PRICEABLE":

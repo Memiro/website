@@ -522,3 +522,10 @@ test("an attribute the product declared nothing on opens on no value at all", ()
 
   assert.equal(calculator.chosenValue("frame"), "");
 });
+
+test("a choice the calculator refuses names the manager, not a dead end", () => {
+  const presentation = pricePresentation({ verdict: "SELECTION_NOT_PRICEABLE", total: null, selection_deltas: [] });
+
+  assert.equal(presentation.kind, "unpriced");
+  assert.equal(presentation.total, null);
+});
