@@ -181,13 +181,13 @@ test("an invalid configuration cancels the answer to the request it superseded",
   assert.deepEqual(calculator.request, { status: "invalid", fields: ["widthMm"] });
 });
 
-test("an attribute the variant does not override shows no choice and sends none", async () => {
+test("an attribute the variant does not override shows the declaration and sends none", async () => {
   const pricing = recordingPricing();
   const calculator = new Calculator(MIRROR, pricing.calculate);
 
   await calculator.chooseVariant(1);
 
-  assert.equal(calculator.chosenValue("frame"), "");
+  assert.equal(calculator.chosenValue("frame"), "black");
   assert.deepEqual(pricing.requests[0].selections, []);
 });
 
@@ -207,7 +207,7 @@ test("clearing a value returns the attribute to the value the product declares",
 
   await calculator.chooseValue("frame", "");
 
-  assert.equal(calculator.chosenValue("frame"), "");
+  assert.equal(calculator.chosenValue("frame"), "black");
   assert.deepEqual(pricing.requests[0].selections, []);
 });
 
@@ -493,4 +493,32 @@ test("nothing to wait for settles at once", async () => {
   await calculator.whenSettled();
 
   assert.deepEqual(pricing.requests, []);
+});
+
+/** The mirror whose first ready size overrides nothing, so every select opens on the declaration. */
+const MIRROR_WITHOUT_OVERRIDES = { ...MIRROR, variants: [MIRROR.variants[1]] };
+
+test("a select the customer has not touched opens on the value the product declares", () => {
+  const calculator = new Calculator(MIRROR_WITHOUT_OVERRIDES, recordingPricing().calculate);
+
+  assert.equal(calculator.chosenValue("frame"), "black");
+});
+
+test("choosing a value replaces the declaration the select opened on", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator(MIRROR_WITHOUT_OVERRIDES, pricing.calculate);
+
+  await calculator.chooseValue("frame", "white");
+
+  assert.equal(calculator.chosenValue("frame"), "white");
+});
+
+test("an attribute the product declared nothing on opens on no value at all", () => {
+  const undeclared = {
+    ...MIRROR_WITHOUT_OVERRIDES,
+    attributes: MIRROR.attributes.map((attribute) => ({ ...attribute, declared_value_id: null })),
+  };
+  const calculator = new Calculator(undeclared, recordingPricing().calculate);
+
+  assert.equal(calculator.chosenValue("frame"), "");
 });
