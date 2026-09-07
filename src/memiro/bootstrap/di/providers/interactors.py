@@ -17,6 +17,8 @@ from memiro.application.manage_products import (
     DeclareValues,
     DuplicateVariantWithSize,
     ListPricingGaps,
+    ListVariants,
+    QuoteVariant,
     RemoveProduct,
     RemoveVariant,
 )
@@ -47,6 +49,8 @@ class InteractorProvider(Provider):
         ChangeVariant,
         DuplicateVariantWithSize,
         ListPricingGaps,
+        ListVariants,
+        QuoteVariant,
         RemoveVariant,
         RepriceProducts,
         SubmitInquiry,

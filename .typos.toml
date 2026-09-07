@@ -1,2 +1,4 @@
 [default.extend-words]
 ba = "ba"
+# Django's own name for the asynchronous ``count()`` of a queryset.
+acount = "acount"

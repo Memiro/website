@@ -101,12 +101,16 @@ ignore = [
 "src/memiro/presentation/django_admin/forms.py" = ["D106", "RUF001", "RUF002"]
 "src/memiro/presentation/django_admin/refusals.py" = ["RUF001", "RUF002"]
 "src/memiro/presentation/django_admin/writes.py" = ["RUF001", "RUF002"]
+"src/memiro/presentation/django_admin/variant_builder.py" = ["RUF001", "RUF002"]
 # The transliteration table is Cyrillic by definition, and so are the names the
 # owner gives his products in the tests that exercise the address it derives.
 "src/memiro/entities/common/slug.py" = ["RUF001"]
 "tests/unit/entities/common/test_slug.py" = ["RUF001"]
 "tests/unit/entities/catalog/product/test_root.py" = ["RUF001"]
 "tests/integration/manage_products/*" = ["RUF001"]
+# The panel speaks to the owner in Russian, and its rows carry the sizes of a
+# mirror: the multiplication sign is not a Latin lookalike.
+"tests/integration/admin/test_owner_builds_the_variants.py" = ["RUF001", "RUF003"]
 # The canonical @interactor decorator (§5.4) wraps execute() generically — Any is deliberate there.
 "src/memiro_common/interactor.py" = ["ANN401"]
 # Tests speak in asserts (S101); test databases are named with f-strings over
