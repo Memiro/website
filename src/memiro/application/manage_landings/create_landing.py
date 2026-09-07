@@ -64,10 +64,10 @@ class CreateLanding:
                 text=data.text,
                 is_published=data.is_published,
                 sort_order=data.sort_order,
+                conditions=conditions,
             ),
             clock=self.clock,
         )
-        landing.narrow_by(conditions, clock=self.clock)
         self.uow.add(landing)
         await self.uow.commit()
         logger.info("Landing created", landing_id=landing.id)

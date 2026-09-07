@@ -8,7 +8,7 @@ from memiro.application.manage_landings.shared import (
     loaded_for_update,
     narrowing_of,
 )
-from memiro.entities.catalog.landing.entity import LandingCopy, settled_slug
+from memiro.entities.catalog.landing.entity import ChangeLandingData, settled_slug
 from memiro.entities.common.identifiers import LandingId
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
@@ -46,7 +46,7 @@ class ChangeLanding:
             except_landing=landing_id,
         )
         landing.change(
-            LandingCopy(
+            ChangeLandingData(
                 slug=data.slug,
                 title=data.title,
                 heading=data.heading,

@@ -15,7 +15,9 @@
 `ChangeAttributeForm` — те же поля корня, что и у
 [заведения](create-attribute.md) (`name`, `kind`, `parent_ids`,
 `is_customer_changeable`, `is_filterable`, `sort_order`), кроме `category_id`
-и `values`: раздел атрибута не переезжает.
+и `values`: раздел атрибута не переезжает. Форма описывает корень целиком, а не
+присланные поля: непереданный `is_filterable` — это «строит фильтр», как и у
+заведения, а не «оставь как было».
 
 ## Output
 

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from memiro.entities.common.entity import Entity
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, LandingId
-from memiro.entities.common.slug import slugify
+from memiro.entities.common.slug import derive_slug
 from memiro.entities.errors.landing import InvalidLandingNarrowingError, InvalidLandingSlugError
 from memiro_common.clock import Clock
 
@@ -28,8 +28,8 @@ class LandingCondition(Entity):
 
 
 @dataclass(frozen=True, slots=True)
-class LandingCopy:
-    """What the owner writes on a landing: its address and the words on it."""
+class ChangeLandingData:
+    """Owner-controlled fields of a saved landing: the category it narrows is not among them."""
 
     slug: str
     title: str
@@ -41,18 +41,37 @@ class LandingCopy:
 
 
 @dataclass(frozen=True, slots=True)
-class CreateLandingData(LandingCopy):
-    """Owner-controlled fields of the landing being created."""
+class CreateLandingData:
+    """Owner-controlled fields of the landing being created, its narrowing included."""
 
     category_id: CategoryId
+    slug: str
+    title: str
+    heading: str
+    description: str
+    text: str
+    is_published: bool
+    sort_order: int
+    conditions: tuple[LandingCondition, ...]
+
+
+def _ensure_the_page_stands_for_something(conditions: list[LandingCondition]) -> None:
+    """Refuse a narrowing that is empty, repeated or wider than a landing may be."""
+    if not conditions:
+        raise InvalidLandingNarrowingError(message="A landing narrows its category by at least one value")
+    value_ids = [condition.value_id for condition in conditions]
+    if len(set(value_ids)) != len(value_ids):
+        raise InvalidLandingNarrowingError(message="A landing names each value once")
+    attribute_ids = {condition.attribute_id for condition in conditions}
+    if len(attribute_ids) > MAX_LANDING_ATTRIBUTES:
+        raise InvalidLandingNarrowingError(
+            message=f"A landing narrows by at most {MAX_LANDING_ATTRIBUTES} attributes",
+        )
 
 
 def settled_slug(slug: str, heading: str) -> str:
-    """Take the address the owner typed, or derive one from the heading he wrote."""
-    settled = slug or slugify(heading)
-    if not settled:
-        raise InvalidLandingSlugError
-    return settled
+    """Take the address the owner typed, or derive one from the heading of the page."""
+    return derive_slug(slug, heading, missing=InvalidLandingSlugError)
 
 
 @dataclass
@@ -86,7 +105,7 @@ class Landing(Entity):
         """List the attributes the page narrows by, each once, in the order they were written."""
         return tuple(dict.fromkeys(condition.attribute_id for condition in self._conditions))
 
-    def change(self, data: LandingCopy, *, clock: Clock) -> None:
+    def change(self, data: ChangeLandingData, *, clock: Clock) -> None:
         """Restate what the owner writes on the page; the category it narrows is not his to move."""
         self.slug = settled_slug(data.slug, data.heading)
         self.title = data.title
@@ -110,6 +129,7 @@ class Landing(Entity):
 
 def landing_factory(data: CreateLandingData, *, clock: Clock) -> Landing:
     """Create a landing with an unforgeable identifier; both dates come from one reading of the clock."""
+    _ensure_the_page_stands_for_something(list(data.conditions))
     now = clock.now()
     return Landing(
         id=uuid4(),
@@ -121,20 +141,10 @@ def landing_factory(data: CreateLandingData, *, clock: Clock) -> Landing:
         text=data.text,
         is_published=data.is_published,
         sort_order=data.sort_order,
+        _conditions=[
+            LandingCondition(attribute_id=condition.attribute_id, value_id=condition.value_id)
+            for condition in data.conditions
+        ],
         created_at=now,
         updated_at=now,
     )
-
-
-def _ensure_the_page_stands_for_something(conditions: list[LandingCondition]) -> None:
-    """Refuse a narrowing that is empty, repeated or wider than a landing may be."""
-    if not conditions:
-        raise InvalidLandingNarrowingError(message="A landing narrows its category by at least one value")
-    value_ids = [condition.value_id for condition in conditions]
-    if len(set(value_ids)) != len(value_ids):
-        raise InvalidLandingNarrowingError(message="A landing names each value once")
-    attribute_ids = {condition.attribute_id for condition in conditions}
-    if len(attribute_ids) > MAX_LANDING_ATTRIBUTES:
-        raise InvalidLandingNarrowingError(
-            message=f"A landing narrows by at most {MAX_LANDING_ATTRIBUTES} attributes",
-        )

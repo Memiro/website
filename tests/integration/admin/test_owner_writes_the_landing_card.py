@@ -8,7 +8,7 @@ from django.apps import apps
 from django.db.models import Manager
 from django.test import AsyncClient
 
-from memiro.application.errors.catalog import AttributeValueInUseError
+from memiro.application.errors.catalog import AttributeInUseError
 from memiro.entities.common.identifiers import LandingId
 from memiro.entities.errors.landing import InvalidLandingNarrowingError
 from memiro.presentation.django_admin.refusals import REFUSAL_MESSAGES
@@ -90,8 +90,8 @@ async def test_the_owner_takes_a_page_off_the_storefront_from_its_card(owner_cli
     assert not await _landings().filter(pk=landing_id).aexists()
 
 
-async def test_a_value_a_landing_narrows_by_cannot_leave_the_dictionary(owner_client: AsyncClient) -> None:
-    """ATTRIBUTE_VALUE_IN_USE: the page would stop being the page its address promises."""
+async def test_an_attribute_a_landing_narrows_by_cannot_leave_the_dictionary(owner_client: AsyncClient) -> None:
+    """ATTRIBUTE_IN_USE: the page would stop being the page its address promises."""
     arranged_landing(heading="Круглые зеркала", slug="kruglye-zerkala-3")
     shape = await apps.get_model(APP, "AttributeValue").objects.aget(pk=ROUND)
 
@@ -101,5 +101,36 @@ async def test_a_value_a_landing_narrows_by_cannot_leave_the_dictionary(owner_cl
         follow=True,
     )
 
-    shown = response.content.decode()
-    assert REFUSAL_MESSAGES[AttributeValueInUseError] in shown or "Посадочные" in shown
+    assert REFUSAL_MESSAGES[AttributeInUseError] in response.content.decode()
+
+
+async def test_staff_without_the_permission_enters_no_landing(clerk_client: AsyncClient) -> None:
+    """Signing in is not the permission: the card refuses before a command is ever sent."""
+    response = await clerk_client.post(ADD_URL, landing_post(heading="Чужая страница", slug="chuzhaya"))
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert not await _landings().filter(slug="chuzhaya").aexists()
+
+
+async def test_staff_without_the_permission_changes_no_landing(clerk_client: AsyncClient) -> None:
+    """The card of a saved page is as closed as the empty one."""
+    landing_id = arranged_landing(heading="Напольные зеркала", slug="zerkala-napolnye")
+
+    response = await clerk_client.post(
+        _card_url(landing_id),
+        landing_post(heading="Переписанная", slug="zerkala-napolnye", stored_conditions=1),
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    stored = await _landings().aget(pk=landing_id)
+    assert stored.heading == "Напольные зеркала"
+
+
+async def test_staff_without_the_permission_removes_no_landing(clerk_client: AsyncClient) -> None:
+    """Deletion goes through the same guard as the form."""
+    landing_id = arranged_landing(heading="Зеркала без рамы", slug="zerkala-bez-ramy")
+
+    response = await clerk_client.post(f"{CHANGELIST_URL}{landing_id}/delete/", {"post": "yes"})
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert await _landings().filter(pk=landing_id).aexists()

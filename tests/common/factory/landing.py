@@ -1,10 +1,10 @@
 """The landing every test of the write path arranges with."""
 
 from memiro.entities.catalog.landing.entity import (
+    ChangeLandingData,
     CreateLandingData,
     Landing,
     LandingCondition,
-    LandingCopy,
     landing_factory,
 )
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId
@@ -25,14 +25,15 @@ def demo_landing_data(**overrides: object) -> CreateLandingData:
         "text": "Круг читается мягче прямоугольника.",  # noqa: RUF001
         "is_published": True,
         "sort_order": 1,
+        "conditions": (demo_condition(),),
     }
     return CreateLandingData(**(fields | overrides))  # type: ignore[arg-type]  # the overrides are the test's own fields
 
 
-def demo_landing_copy(**overrides: object) -> LandingCopy:
+def demo_landing_copy(**overrides: object) -> ChangeLandingData:
     """Build what the owner restates on a saved page: everything but the category it narrows."""
     data = demo_landing_data(**overrides)
-    return LandingCopy(
+    return ChangeLandingData(
         slug=data.slug,
         title=data.title,
         heading=data.heading,
@@ -53,6 +54,4 @@ def demo_condition(
 
 def demo_landing(**overrides: object) -> Landing:
     """Build the demo landing already narrowed to round mirrors."""
-    landing = landing_factory(demo_landing_data(**overrides), clock=CLOCK)
-    landing.narrow_by([demo_condition()], clock=CLOCK)
-    return landing
+    return landing_factory(demo_landing_data(**overrides), clock=CLOCK)
