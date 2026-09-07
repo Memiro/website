@@ -34,6 +34,15 @@ MAX_WISH_LENGTH = 1_000
 # scrolls through, not a catalogue of its own.
 MAX_ATTRIBUTE_VALUES = 50
 
+# The narrowing of one landing: a page stands for a question or two, and the
+# values of one attribute are what the sidebar offers under it.
+MAX_LANDING_CONDITIONS = 50
+
+# The SEO text of a landing: the owner's copy on the page, bounded by the
+# column that stores it.
+MAX_LANDING_TEXT_LENGTH = 20_000
+MAX_META_DESCRIPTION_LENGTH = 1_000
+
 # Dependence between attributes is read by the customer as "this appears when
 # that is chosen"; a chain no one can follow is not a form.
 MAX_ATTRIBUTE_PARENTS = 10

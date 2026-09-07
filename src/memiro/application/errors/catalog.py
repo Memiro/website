@@ -20,6 +20,19 @@ class LandingNotFoundError(AppError):
 
 
 @app_error
+class LandingSlugTakenError(AppError):
+    """Raised when the public address of a landing belongs to another landing.
+
+    Uniqueness is a fact of the transaction and not of the aggregate — one
+    landing cannot see the addresses of the others — so the refusal lives here
+    and not in ``entities/errors/`` (§12.2).
+    """
+
+    code: ClassVar[str] = "LANDING_SLUG_TAKEN"
+    message: str = "The landing address is already taken"
+
+
+@app_error
 class ProductNotFoundError(AppError):
     """Raised when the requested product does not exist."""
 
@@ -64,12 +77,13 @@ class AttributeValueInUseError(AppError):
     code: ClassVar[str] = "ATTRIBUTE_VALUE_IN_USE"
     message: str = "A dictionary value declared by products cannot be removed"
     products: tuple[str, ...] = ()
+    landings: tuple[str, ...] = ()
 
     @property
     @override
     def meta(self) -> dict[str, Any] | None:
-        """Name the products the owner has to free before the row can go."""
-        return {"products": list(self.products)}
+        """Name the products and the landing pages the owner has to free before the row can go."""
+        return {"products": list(self.products), "landings": list(self.landings)}
 
 
 @app_error
@@ -80,12 +94,17 @@ class AttributeInUseError(AppError):
     message: str = "An attribute something still uses cannot be removed"
     products: tuple[str, ...] = ()
     attributes: tuple[str, ...] = ()
+    landings: tuple[str, ...] = ()
 
     @property
     @override
     def meta(self) -> dict[str, Any] | None:
         """Name everything the owner has to free before the attribute can go."""
-        return {"products": list(self.products), "attributes": list(self.attributes)}
+        return {
+            "products": list(self.products),
+            "attributes": list(self.attributes),
+            "landings": list(self.landings),
+        }
 
 
 @app_error

@@ -1,6 +1,7 @@
 import structlog
 
 from memiro.application.common.gateway.attribute import AttributeGateway
+from memiro.application.common.gateway.landing import LandingGateway
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.errors.catalog import AttributeInUseError
 from memiro.application.manage_attributes.shared import loaded_for_update
@@ -19,6 +20,7 @@ class RemoveAttribute:
 
     uow: UoW
     attribute_gateway: AttributeGateway
+    landing_gateway: LandingGateway
     product_gateway: ProductGateway
 
     async def execute(self, attribute_id: AttributeId) -> None:
@@ -28,7 +30,8 @@ class RemoveAttribute:
         dictionary = await self.attribute_gateway.list_with_values()
         dependents = names_depending_on(attribute_id, dictionary=dictionary)
         products = await self.product_gateway.names_declaring_attribute(attribute_id)
-        if products or dependents:
+        landings = await self.landing_gateway.headings_narrowing_by_attribute(attribute_id)
+        if products or dependents or landings:
             # One refusal for one question — "who still needs it" — so the
             # owner reads a single list instead of two codes for one wall.
             logger.warning(
@@ -36,8 +39,13 @@ class RemoveAttribute:
                 attribute_id=attribute_id,
                 product_count=len(products),
                 dependent_count=len(dependents),
+                landing_count=len(landings),
             )
-            raise AttributeInUseError(products=tuple(products), attributes=dependents)
+            raise AttributeInUseError(
+                products=tuple(products),
+                attributes=dependents,
+                landings=tuple(landings),
+            )
         await self.uow.delete(attribute)
         await self.uow.commit()
         logger.info("Attribute removed", attribute_id=attribute_id)

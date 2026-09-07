@@ -15,6 +15,7 @@ from memiro.application.errors.catalog import (
     AttributeValueNotFoundError,
     CategoryNotFoundError,
     LandingNotFoundError,
+    LandingSlugTakenError,
     ProductImageNotFoundError,
     ProductNotFoundError,
     ProductSlugTakenError,
@@ -33,6 +34,7 @@ from memiro.entities.errors.inquiry import (
     InvalidInquiryContentsError,
     InvalidPhoneError,
 )
+from memiro.entities.errors.landing import InvalidLandingNarrowingError, InvalidLandingSlugError
 from memiro.entities.errors.measure import EmptyDimensionsError, NegativeMeasureError
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro.entities.errors.product import (
@@ -72,9 +74,12 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     InvalidVariantConfigurationError: status.HTTP_400_BAD_REQUEST,
     InvalidVariantSortOrderError: status.HTTP_400_BAD_REQUEST,
     InvalidQuantityError: status.HTTP_400_BAD_REQUEST,
+    InvalidLandingNarrowingError: status.HTTP_400_BAD_REQUEST,
+    InvalidLandingSlugError: status.HTTP_400_BAD_REQUEST,
     InvalidProductSlugError: status.HTTP_400_BAD_REQUEST,
     DuplicateVariantError: status.HTTP_409_CONFLICT,
     DuplicateProductImageError: status.HTTP_409_CONFLICT,
+    LandingSlugTakenError: status.HTTP_409_CONFLICT,
     ProductSlugTakenError: status.HTTP_409_CONFLICT,
     ProductSectionNotEmptyError: status.HTTP_409_CONFLICT,
     AttributeValueInUseError: status.HTTP_409_CONFLICT,

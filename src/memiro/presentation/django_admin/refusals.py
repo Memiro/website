@@ -16,6 +16,8 @@ from memiro.application.errors.catalog import (
     AttributeValueInUseError,
     AttributeValueNotFoundError,
     CategoryNotFoundError,
+    LandingNotFoundError,
+    LandingSlugTakenError,
     ProductImageNotFoundError,
     ProductNotFoundError,
     ProductSlugTakenError,
@@ -27,6 +29,7 @@ from memiro.entities.errors.attribute import (
     InvalidAttributeValueSetError,
     InvalidFactorRateError,
 )
+from memiro.entities.errors.landing import InvalidLandingNarrowingError, InvalidLandingSlugError
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
 from memiro.entities.errors.product import (
     DuplicateProductImageError,
@@ -69,11 +72,18 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
     ),
     InvalidVariantSortOrderError: "Порядок варианта не бывает отрицательным.",
     InvalidQuantityError: "Количество не бывает отрицательным.",
+    LandingNotFoundError: "Посадочная не найдена: похоже, её удалили в другом окне.",
+    LandingSlugTakenError: "Этот адрес уже занят другой посадочной: придумайте другой.",
+    InvalidLandingSlugError: "Адрес посадочной — латинские слова через дефис, и пустым он выводится из заголовка.",
+    InvalidLandingNarrowingError: (
+        "Так сузить нельзя: страница сужается значениями одного-двух фильтруемых атрибутов своего раздела, "
+        "и весь справочник атрибута — это сам раздел, а не посадочная."
+    ),
     LockTimeoutError: "Эту строку сейчас правят в другом окне: повторите сохранение.",
 }
 
 # The names the refusal carries in its ``meta``, in the owner's words.
-HOLDER_TITLES = {"products": "Товары", "attributes": "Атрибуты"}
+HOLDER_TITLES = {"products": "Товары", "attributes": "Атрибуты", "landings": "Посадочные"}
 
 logger: Logger = structlog.get_logger(__name__)
 

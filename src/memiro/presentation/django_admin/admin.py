@@ -38,6 +38,7 @@ from memiro.presentation.django_admin.forms import (
     AttributeCardForm,
     AttributeValueRowForm,
     CategoryCardForm,
+    LandingCardForm,
     MaterialPriceRowForm,
     PricingSettingsForm,
     ProductCardForm,
@@ -46,6 +47,7 @@ from memiro.presentation.django_admin.forms import (
     declared_value_fields,
     photo_fields,
 )
+from memiro.presentation.django_admin.landing_card import create_landing, remove_landing, restate_landing
 from memiro.presentation.django_admin.materials_and_prices import restate_priced_row
 from memiro.presentation.django_admin.models import (
     Attribute,
@@ -733,9 +735,11 @@ class InquiryItemAdmin(ReadOnlyAdmin):
 
 
 class LandingConditionInline(ReadOnlyInline):
-    """Conditions of a landing: what it narrows its category by."""
+    """Сужение как оно сохранено: правят его полем «Сужение» на карточке."""
 
     model = LandingCondition
+    verbose_name = "условие"
+    verbose_name_plural = "сужение страницы"
     fields = (
         "attribute",
         "value",
@@ -743,9 +747,14 @@ class LandingConditionInline(ReadOnlyInline):
 
 
 @admin.register(Landing)
-class LandingAdmin(ReadOnlyAdmin):
-    """Landing pages of the catalogue."""
+class LandingAdmin(GuardsItsForm, admin.ModelAdmin):
+    """Посадочные страницы: карточка пишет домен командами агрегата."""
 
+    form = LandingCardForm
+    inlines = (LandingConditionInline,)
+    # No bulk action: a page is removed from its own card, and a queryset half
+    # deleted before a refusal is not something the owner asked for.
+    actions = None
     list_display = (
         "heading",
         "slug",
@@ -761,8 +770,62 @@ class LandingAdmin(ReadOnlyAdmin):
         "heading",
         "slug",
     )
-    ordering = ("sort_order",)
-    inlines = (LandingConditionInline,)
+    ordering = (
+        "sort_order",
+        "heading",
+    )
+
+    @override
+    def get_readonly_fields(self, request: HttpRequest, obj: Model | None = None) -> tuple[str, ...]:
+        """Keep a saved page on its category: a move would leave it without one condition of its own."""
+        return () if obj is None else ("category",)
+
+    @override
+    def delete_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Send the deletion through the same guard the form goes through."""
+        view = partial(super().delete_view, request, object_id, extra_context)
+        return guarded_write(request, view)
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
+        """Write nothing here: the whole card is sent to the interactors by ``save_related``."""
+
+    @override
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: ModelForm,
+        formsets: list[BaseInlineFormSet],
+        change: bool,
+    ) -> None:
+        """Send the card — the copy and the narrowing — as the command of the aggregate."""
+        if change:
+            restate_landing(form.instance.pk, form.cleaned_data)
+            return
+        # The mirror row is never inserted by Django, so the identifier the
+        # command issued is what the history and the redirect are given.
+        form.instance.pk = create_landing(form.cleaned_data)
+
+    @override
+    def construct_change_message(
+        self,
+        request: HttpRequest,
+        form: Form,
+        formsets: Iterable[Any] | None,
+        add: bool = False,
+    ) -> list[dict[str, dict[str, list[str]]]]:
+        """Describe the change from the card alone: the narrowing is replaced whole, not row by row."""
+        return super().construct_change_message(request, form, (), add=add)
+
+    @override
+    def delete_model(self, request: HttpRequest, obj: Model) -> None:
+        """Remove the page through the interactor that takes its narrowing with it."""
+        remove_landing(obj.pk)
 
 
 @admin.register(SiteContacts)

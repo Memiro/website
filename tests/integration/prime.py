@@ -362,6 +362,12 @@ async def prime_landing(
         )
 
 
+async def count_landings_directly(engine: AsyncEngine) -> int:
+    """Count the landing rows outside the interactor, to prove a refusal stored none."""
+    async with engine.connect() as connection:
+        return (await connection.execute(select(func.count()).select_from(landings_table))).scalar_one()
+
+
 async def prime_product_images(engine: AsyncEngine) -> None:
     """Give the canonical product two photo keys whose owner order is neither alphabetical nor insertion order."""
     async with engine.begin() as connection:
