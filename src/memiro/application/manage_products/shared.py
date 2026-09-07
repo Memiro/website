@@ -173,6 +173,21 @@ async def loaded_for_update(gateway: ProductGateway, product_id: ProductId, *, c
     return product
 
 
+async def loaded_for_reading(
+    gateway: ProductGateway,
+    product_id: ProductId,
+    *,
+    command: str,
+    with_variants: bool = False,
+) -> Product:
+    """Load one product for a question, taking no lock, refusing an identifier nobody issued."""
+    product = await gateway.get(product_id, eager_variants=with_variants)
+    if product is None:
+        logger.warning("A question named an unknown product", product_id=product_id, command=command)
+        raise ProductNotFoundError
+    return product
+
+
 async def ensure_the_address_is_free(
     gateway: ProductGateway,
     slug: str,

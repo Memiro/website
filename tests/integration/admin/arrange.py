@@ -21,6 +21,7 @@ from memiro.application.manage_products import (
     AddVariantForm,
     CreateProduct,
     CreateProductForm,
+    ListVariants,
     RemoveVariant,
 )
 from memiro.entities.catalog.attribute.entity import AttributeKind
@@ -278,6 +279,19 @@ async def _removed(scope: AsyncContainer, variant_id: VariantId) -> None:
     """Run the removing interactor in a REQUEST scope of the admin's own container."""
     interactor = await scope.get(RemoveVariant)
     await interactor.execute(PRODUCT, variant_id)
+
+
+def cleared_variants() -> None:
+    """Take every variant off the demo product again: the admin's database outlives one test."""
+    bridge().call(_cleared)
+
+
+async def _cleared(scope: AsyncContainer) -> None:
+    """Run the listing and the removals in one REQUEST scope of the admin's own container."""
+    listing = await scope.get(ListVariants)
+    removing = await scope.get(RemoveVariant)
+    for variant in (await listing.execute(PRODUCT)).items:
+        await removing.execute(PRODUCT, variant.id)
 
 
 # Photos are an inline of the product card: Django reads their management form

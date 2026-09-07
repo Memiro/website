@@ -22,3 +22,15 @@ async def test_nginx_serves_the_admin_static_collectstatic_produced() -> None:
 
     assert response.status_code == OK_STATUS
     assert response.headers["content-type"].startswith("text/css")
+
+
+async def test_nginx_serves_the_script_the_variant_builder_runs_on() -> None:
+    """The panel of the product card is driven by static, and static is nginx's job (ADR-0011)."""
+    async with httpx.AsyncClient(base_url=PUBLIC_URL) as client:
+        script = await client.get("/admin-static/memiro/js/admin-variant-builder.js")
+        styles = await client.get("/admin-static/memiro/css/admin-variants.css")
+
+    assert script.status_code == OK_STATUS
+    assert "DOMContentLoaded" in script.text
+    assert styles.status_code == OK_STATUS
+    assert styles.headers["content-type"].startswith("text/css")

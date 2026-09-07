@@ -25,7 +25,7 @@ from django.contrib.admin.views.main import ChangeList
 from django.db.models import Model, QuerySet
 from django.forms import BaseInlineFormSet, Form, ModelForm
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.urls import reverse
+from django.urls import URLPattern, path, reverse
 
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
 from memiro.application.manage_products import PricingGapsModel
@@ -65,6 +65,13 @@ from memiro.presentation.django_admin.product_card import (
 )
 from memiro.presentation.django_admin.reprice import reprice_catalogue
 from memiro.presentation.django_admin.section_card import stamped_now
+from memiro.presentation.django_admin.variant_builder import (
+    answered,
+    builder_context,
+    quoted,
+    removed,
+    saved,
+)
 from memiro.presentation.django_admin.writes import guarded_write
 
 # What the list says about a product whose calculator is not ready: the
@@ -351,6 +358,15 @@ class AttributeValueAdmin(GuardsItsForm, admin.ModelAdmin):
         restate_priced_row(cast("AttributeValue", obj))
 
 
+def _panel(product_id: ProductId) -> dict[str, Any]:
+    """Build the panel of one saved product, its three addresses resolved by the URL conf."""
+    return builder_context(product_id) | {
+        "price_url": reverse(f"admin:{VARIANT_PRICE_URL}", args=[product_id]),
+        "save_url": reverse(f"admin:{VARIANT_SAVE_URL}", args=[product_id]),
+        "delete_url": reverse(f"admin:{VARIANT_DELETE_URL}", args=[product_id]),
+    }
+
+
 class ProductChangeList(ChangeList):
     """Список товаров, который спрашивает домен обо всей своей странице разом."""
 
@@ -369,6 +385,13 @@ def _card_form(obj: Model | None) -> type[ModelForm]:
     return type(ProductCardForm.__name__, (ProductCardForm,), declared_value_fields(section))
 
 
+# The three addresses of the panel, under the card of the product they belong
+# to: a variant of nobody's product does not exist.
+VARIANT_PRICE_URL = "memiro_product_variant_price"
+VARIANT_SAVE_URL = "memiro_product_variant_save"
+VARIANT_DELETE_URL = "memiro_product_variant_delete"
+
+
 @admin.register(Product)
 class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
     """Товары витрины: карточка пишет домен командами агрегата, а пересчёт цен зовёт хендлер событий."""
@@ -376,6 +399,14 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
     form = ProductCardForm
     inlines = (ProductImageInline,)
     actions = ("reprice_products",)
+    change_form_template = "admin/memiro/product/change_form.html"
+
+    class Media:
+        """Django prints the panel's script and styles into the head of the card."""
+
+        css = {"all": ("memiro/css/admin-variants.css",)}  # noqa: RUF012  # Django reads Media options off the class as plain values
+        js = ("memiro/js/admin-variant-builder.js",)
+
     list_display = (
         "name",
         "slug",
@@ -423,6 +454,54 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
         """Give a saved product a field per attribute of its section: a new one has no section yet."""
         kwargs["form"] = _card_form(obj)
         return super().get_form(request, obj, change=change, **kwargs)
+
+    @override
+    def get_urls(self) -> list[URLPattern]:
+        """Hang the three answers of the panel under the card of the product they belong to."""
+        own = [
+            path(
+                "<uuid:product_id>/variants/price/",
+                self.admin_site.admin_view(self.variant_price),
+                name=VARIANT_PRICE_URL,
+            ),
+            path(
+                "<uuid:product_id>/variants/save/",
+                self.admin_site.admin_view(self.variant_save),
+                name=VARIANT_SAVE_URL,
+            ),
+            path(
+                "<uuid:product_id>/variants/delete/",
+                self.admin_site.admin_view(self.variant_delete),
+                name=VARIANT_DELETE_URL,
+            ),
+        ]
+        return own + super().get_urls()
+
+    @override
+    def render_change_form(
+        self,
+        request: HttpRequest,
+        context: dict[str, Any],
+        add: bool = False,
+        change: bool = False,
+        form_url: str = "",
+        obj: Model | None = None,
+    ) -> HttpResponse:
+        """Give the card of a saved product its panel: an unsaved one has nothing to build variants of."""
+        context["variant_builder"] = None if obj is None else _panel(cast("Product", obj).id)
+        return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
+
+    def variant_price(self, request: HttpRequest, product_id: ProductId) -> HttpResponse:
+        """Answer what the assembled variant would cost, by the function that would save it."""
+        return answered(request, lambda: quoted(request, product_id))
+
+    def variant_save(self, request: HttpRequest, product_id: ProductId) -> HttpResponse:
+        """Write the assembled variant and answer with the whole redrawn panel."""
+        return answered(request, lambda: saved(request, product_id))
+
+    def variant_delete(self, request: HttpRequest, product_id: ProductId) -> HttpResponse:
+        """Take one variant off the product and answer with the whole redrawn panel."""
+        return answered(request, lambda: removed(request, product_id))
 
     @override
     def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:

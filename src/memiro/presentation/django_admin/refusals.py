@@ -18,6 +18,7 @@ from memiro.application.errors.catalog import (
     CategoryNotFoundError,
     ProductNotFoundError,
     ProductSlugTakenError,
+    VariantNotFoundError,
 )
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
@@ -26,7 +27,14 @@ from memiro.entities.errors.attribute import (
     InvalidFactorRateError,
 )
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
-from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
+from memiro.entities.errors.product import (
+    DuplicateVariantError,
+    InvalidProductSlugError,
+    InvalidQuantityError,
+    InvalidVariantConfigurationError,
+    InvalidVariantSortOrderError,
+    ProductSectionNotEmptyError,
+)
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
 
@@ -50,6 +58,13 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
         "Товар нельзя перенести в другой раздел непустым: сначала снимите объявленные значения и варианты."
     ),
     AttributeValueNotFoundError: "Значение не найдено: оно чужого атрибута или атрибут не из раздела товара.",
+    VariantNotFoundError: "Вариант не найден: похоже, его удалили в другом окне.",
+    DuplicateVariantError: "Такой вариант уже есть: тот же размер и те же значения.",
+    InvalidVariantConfigurationError: (
+        "Цену такого варианта посчитать нечем: товар объявил не все платные значения — заполните карточку."
+    ),
+    InvalidVariantSortOrderError: "Порядок варианта не бывает отрицательным.",
+    InvalidQuantityError: "Количество не бывает отрицательным.",
     LockTimeoutError: "Эту строку сейчас правят в другом окне: повторите сохранение.",
 }
 
