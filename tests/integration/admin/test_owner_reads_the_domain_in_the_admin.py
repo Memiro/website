@@ -29,6 +29,10 @@ APP = "memiro"
 # The one changelist that is not a screen: the site has a single row of
 # calculation parameters, and the list of it redirects to the object.
 SETTINGS_CHANGELIST_URL = f"/admin/{APP}/pricingsettings/"
+# The mirror the owner reaches through neither a changelist nor an inline: a
+# product declares its values in fields of its own card, one per attribute of
+# the section (ticket 10).
+DECLARED_VALUES_MIRROR = "productdeclaredvalue"
 
 
 def _inline_model(inline: type[InlineModelAdmin[Model, Model]]) -> type[Model]:
@@ -89,6 +93,7 @@ async def test_every_mirror_is_reachable_as_a_changelist_or_an_inline() -> None:
         }
         - registered
         - _inlined_models()
+        - {DECLARED_VALUES_MIRROR}
     )
 
     assert unreachable == set()
@@ -103,23 +108,27 @@ async def test_the_owner_sees_a_changelist_for_every_registered_mirror(owner_cli
 
 
 async def test_the_owner_is_offered_no_form_to_add_a_domain_row(owner_client: AsyncClient) -> None:
-    """The add view of a mirror refuses: the domain is written through interactors."""
-    response = await owner_client.get("/admin/memiro/product/add/")
+    """The add view of a mirror without its own ticket refuses: the domain is written through interactors."""
+    response = await owner_client.get(f"/admin/{APP}/productvariant/add/")
 
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
-async def test_the_owner_opens_a_product_card_with_the_child_rows_inlined(
+async def test_the_owner_opens_a_product_card_with_the_child_rows_on_it(
     owner_client: AsyncClient,
     primed_catalog: None,  # noqa: ARG001
 ) -> None:
-    """Photos and declared values have no changelist of their own: the card is where they live."""
+    """Photos and declared values have no changelist of their own: the card is where they live.
+
+    The declared values are named by the attributes of the section, a field
+    each (ticket 10); the photos stay an inline of their own.
+    """
     product = await apps.get_model(APP, "Product").objects.afirst()
 
     response = await owner_client.get(f"/admin/{APP}/product/{product.pk}/change/")
 
     assert response.status_code == HTTPStatus.OK
-    assert "Объявленные значения" in response.content.decode()
+    assert "Тип полотна" in response.content.decode()
     assert "Фотографии" in response.content.decode()
 
 

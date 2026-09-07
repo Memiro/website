@@ -38,6 +38,15 @@ class ProductGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def list_by_ids(self, product_ids: Sequence[ProductId]) -> Sequence[Product]:
+        """Load these products with their declared values, silently skipping the ones that are gone.
+
+        One page of the owner's list is one question: a product per query
+        would put the length of the page into the number of round trips.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def all_ids(self) -> Sequence[ProductId]:
         """List the identifier of every product, in one stable order.
 

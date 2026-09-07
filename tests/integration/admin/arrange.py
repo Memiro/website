@@ -16,10 +16,16 @@ from memiro.application.manage_pricing_settings import (
     ChangePricingSettingsForm,
     SizeSurchargeRowForm,
 )
-from memiro.application.manage_products import AddVariant, AddVariantForm, RemoveVariant
+from memiro.application.manage_products import (
+    AddVariant,
+    AddVariantForm,
+    CreateProduct,
+    CreateProductForm,
+    RemoveVariant,
+)
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
-from memiro.entities.common.identifiers import AttributeId, AttributeValueId, VariantId
+from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
 from memiro.presentation.django_admin.bridge import bridge
 from tests.common.factory.catalog import CATEGORY, PRODUCT
 
@@ -272,3 +278,56 @@ async def _removed(scope: AsyncContainer, variant_id: VariantId) -> None:
     """Run the removing interactor in a REQUEST scope of the admin's own container."""
     interactor = await scope.get(RemoveVariant)
     await interactor.execute(PRODUCT, variant_id)
+
+
+# Photos are an inline of the product card: Django reads their management form
+# on every save, whether or not the owner touched a row.
+PHOTO_PREFIX = "images"
+
+
+def product_post(  # noqa: PLR0913  # one keyword per field of the card the owner fills in
+    *,
+    name: str,
+    slug: str = "",
+    description: str = "",
+    category: CategoryId = CATEGORY,
+    declared: Sequence[tuple[AttributeId, str]] = (),
+    photos: int = 0,
+    is_published: bool = True,
+) -> dict[str, Any]:
+    """Spell the whole product card — the root and the declared values — as one POST body."""
+    # Imported here: the card fields are named after the attributes of the
+    # section, and the mirror may not be touched before ``django.setup()``.
+    from memiro.presentation.django_admin.forms import declared_field_name  # noqa: PLC0415
+
+    posted: dict[str, Any] = {
+        "category": str(category),
+        "name": name,
+        "slug": slug,
+        "description": description,
+        f"{PHOTO_PREFIX}-TOTAL_FORMS": str(photos),
+        f"{PHOTO_PREFIX}-INITIAL_FORMS": str(photos),
+        f"{PHOTO_PREFIX}-MIN_NUM_FORMS": "0",
+        f"{PHOTO_PREFIX}-MAX_NUM_FORMS": str(photos),
+    }
+    posted |= {"is_published": "on"} if is_published else {}
+    posted |= {declared_field_name(attribute_id): value for attribute_id, value in declared}
+    return posted
+
+
+def category_post(*, name: str, slug: str, sort_order: int = 0) -> dict[str, str]:
+    """Spell the card of a section: content without rules, written straight to the mirror."""
+    return {"name": name, "slug": slug, "sort_order": str(sort_order)}
+
+
+def arranged_product(*, name: str, slug: str = "") -> ProductId:
+    """Put one product of the demo section into the database through its own command."""
+    form = CreateProductForm(category_id=CATEGORY, name=name, slug=slug)
+    return bridge().call(lambda scope: _entered(scope, form))
+
+
+async def _entered(scope: AsyncContainer, form: CreateProductForm) -> ProductId:
+    """Run the creating interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(CreateProduct)
+    created = await interactor.execute(form)
+    return created.id

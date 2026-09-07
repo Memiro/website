@@ -61,6 +61,20 @@ class SAProductGateway(ProductGateway):
         return result.scalar_one_or_none()
 
     @override
+    async def list_by_ids(self, product_ids: Sequence[ProductId]) -> Sequence[Product]:
+        """Read one page of products with their declarations in a single statement."""
+        if not product_ids:
+            return ()
+        result = await self._session.execute(
+            select(Product)
+            .where(products_table.c.id.in_(product_ids))
+            .options(
+                selectinload(Product._declared_values),  # type: ignore[arg-type]  # noqa: SLF001  # pyright: ignore[reportArgumentType,reportPrivateUsage]
+            ),
+        )
+        return result.scalars().all()
+
+    @override
     async def all_ids(self) -> Sequence[ProductId]:
         """Read the identifiers of the whole catalogue in the one order that cannot repeat itself."""
         result = await self._session.execute(select(products_table.c.id).order_by(products_table.c.id))

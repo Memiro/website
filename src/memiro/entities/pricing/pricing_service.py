@@ -22,16 +22,48 @@ type Selections = Mapping[AttributeId, ChosenValue]
 type ResolvedValues = tuple[tuple[AttributeId, AttributeValue, Decimal | None], ...]
 
 
+@dataclass(frozen=True, slots=True)
+class PricingGaps:
+    """What a configuration still lacks before it can be priced.
+
+    The storefront reads the answer as a yes or a no; the owner reads the same
+    answer as the reason his product shows no calculator (``product.md``,
+    rule 10).
+    """
+
+    undeclared: tuple[AttributeId, ...]
+    nothing_is_paid: bool
+
+    def nothing_is_missing(self) -> bool:
+        """Tell whether the configuration is complete and has something to charge for."""
+        return not self.undeclared and not self.nothing_is_paid
+
+
+def pricing_gaps(
+    product: Product,
+    attributes: Sequence[Attribute],
+    selections: Selections | None = None,
+) -> PricingGaps:
+    """Name what declarations overlaid with choices still lack before the calculation."""
+    chosen_values, applicable = _applicable(product, attributes, selections or {})
+    filled = tuple(attribute for attribute in applicable if _has_complete_value(chosen_values, attribute))
+    undeclared = tuple(attribute.id for attribute in applicable if attribute not in filled)
+    return PricingGaps(
+        undeclared=undeclared,
+        # Said only about a configuration that lacks nothing else: the
+        # attribute nobody filled in may be exactly the paid one.
+        nothing_is_paid=not undeclared
+        and not any(_is_paid(_resolve(attribute, chosen_values[attribute.id])) for attribute in filled),
+    )
+
+
 def is_product_priceable(
     product: Product,
     attributes: Sequence[Attribute],
     selections: Selections | None = None,
 ) -> bool:
     """Tell whether declarations overlaid with choices form a calculable configuration."""
-    chosen_values, applicable = _applicable(product, attributes, selections or {})
-    if any(not _has_complete_value(chosen_values, attribute) for attribute in applicable):
-        return False
-    return any(_is_paid(_resolve(attribute, chosen_values[attribute.id])) for attribute in applicable)
+    return pricing_gaps(product, attributes, selections).nothing_is_missing()
 
 
 def price_product_for_customer(

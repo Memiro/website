@@ -12,9 +12,11 @@ from memiro.application.manage_products.duplicate_variant_with_size import (
     DuplicateVariantWithSize,
     DuplicateVariantWithSizeForm,
 )
+from memiro.application.manage_products.list_pricing_gaps import ListPricingGaps, ProductPricingGaps
 from memiro.application.manage_products.remove_product import RemoveProduct
 from memiro.application.manage_products.remove_variant import RemoveVariant
 from memiro.application.manage_products.shared import (
+    SLUG_PATTERN,
     CreatedVariant,
     DeclarationForm,
     ProductForm,
@@ -23,6 +25,7 @@ from memiro.application.manage_products.shared import (
 )
 
 __all__ = [
+    "SLUG_PATTERN",
     "AddVariant",
     "AddVariantForm",
     "ChangeProduct",
@@ -38,7 +41,9 @@ __all__ = [
     "DeclareValuesForm",
     "DuplicateVariantWithSize",
     "DuplicateVariantWithSizeForm",
+    "ListPricingGaps",
     "ProductForm",
+    "ProductPricingGaps",
     "RemoveProduct",
     "RemoveVariant",
     "VariantForm",
