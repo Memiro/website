@@ -14,16 +14,22 @@ changing and deleting.
 """
 
 from collections.abc import Iterable
+from contextvars import ContextVar
 from functools import partial
 from typing import Any, cast, override
+from uuid import UUID
 
 from django.contrib import admin
+from django.contrib.admin.options import Action, ActionLocation
+from django.contrib.admin.views.main import ChangeList
 from django.db.models import Model, QuerySet
 from django.forms import BaseInlineFormSet, Form, ModelForm
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import reverse
 
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
+from memiro.application.manage_products import ProductPricingGaps
+from memiro.entities.common.identifiers import ProductId
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID
 from memiro.presentation.django_admin.attribute_card import create_attribute, remove_attribute, restate_attribute
 from memiro.presentation.django_admin.forms import (
@@ -31,8 +37,10 @@ from memiro.presentation.django_admin.forms import (
     AttributeValueRowForm,
     MaterialPriceRowForm,
     PricingSettingsForm,
+    ProductCardForm,
     SizeSurchargeFormSet,
     SizeSurchargeTierForm,
+    declared_value_fields,
 )
 from memiro.presentation.django_admin.materials_and_prices import restate_priced_row
 from memiro.presentation.django_admin.models import (
@@ -43,14 +51,30 @@ from memiro.presentation.django_admin.models import (
     InquiryItem,
     PricingSettings,
     Product,
-    ProductDeclaredValue,
     ProductImage,
     ProductVariant,
     SizeSurcharge,
 )
 from memiro.presentation.django_admin.pricing_settings_card import restate_pricing_settings
+from memiro.presentation.django_admin.product_card import (
+    create_product,
+    pricing_gaps_of,
+    remove_product,
+    restate_product,
+)
 from memiro.presentation.django_admin.reprice import reprice_catalogue
 from memiro.presentation.django_admin.writes import guarded_write
+
+# What the list says about a product whose calculator is not ready: the
+# machine answer comes from the domain, the sentence is the admin's (§12.4).
+NOTHING_TO_SAY = "—"
+UNDECLARED = "Не заполнено:"
+NOTHING_IS_PAID = "Ни одно значение не стоит денег."
+
+# What one rendering of the product list learned about its own rows: asked
+# once by the list, read by every row of it, and dropped with the request.
+_NO_GAPS: dict[ProductId, ProductPricingGaps] = {}
+_page_gaps: ContextVar[dict[ProductId, ProductPricingGaps]] = ContextVar("memiro_admin_pricing_gaps", default=_NO_GAPS)
 
 
 def _submitted_rows(formsets: list[BaseInlineFormSet]) -> list[dict[str, Any]]:
@@ -120,20 +144,9 @@ class ProductImageInline(ReadOnlyInline):
     )
 
 
-class ProductDeclaredValueInline(ReadOnlyInline):
-    """Объявленные значения товара."""
-
-    model = ProductDeclaredValue
-    fields = (
-        "attribute",
-        "value",
-        "quantity",
-    )
-
-
 @admin.register(Category)
-class CategoryAdmin(ReadOnlyAdmin):
-    """Разделы каталога."""
+class CategoryAdmin(admin.ModelAdmin):
+    """Разделы каталога: содержимое без правил, поэтому его правят напрямую (решение 3)."""
 
     list_display = (
         "name",
@@ -325,10 +338,30 @@ class AttributeValueAdmin(GuardsItsForm, admin.ModelAdmin):
         restate_priced_row(cast("AttributeValue", obj))
 
 
-@admin.register(Product)
-class ProductAdmin(ReadOnlyAdmin):
-    """Товары витрины: карточка только читает, а пересчёт цен зовёт хендлер событий."""
+class ProductChangeList(ChangeList):
+    """Список товаров, который спрашивает домен обо всей своей странице разом."""
 
+    @override
+    def get_results(self, request: HttpRequest) -> None:
+        """Ask about the page in one question: a row at a time would be a query per row."""
+        super().get_results(request)
+        _page_gaps.set(pricing_gaps_of([cast("Product", product).id for product in self.result_list]))
+
+
+def _card_form(obj: Model | None) -> type[ModelForm]:
+    """Build the card of one product: the declared half is a field per attribute of its section."""
+    if obj is None:
+        return ProductCardForm
+    section: UUID = cast("Product", obj).category_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
+    return type(ProductCardForm.__name__, (ProductCardForm,), declared_value_fields(section))
+
+
+@admin.register(Product)
+class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
+    """Товары витрины: карточка пишет домен командами агрегата, а пересчёт цен зовёт хендлер событий."""
+
+    form = ProductCardForm
+    inlines = (ProductImageInline,)
     actions = ("reprice_products",)
     list_display = (
         "name",
@@ -337,6 +370,7 @@ class ProductAdmin(ReadOnlyAdmin):
         "is_published",
         "hides_calculated_price",
         "price_from",
+        "missing_for_the_calculator",
     )
     list_filter = (
         "is_published",
@@ -348,16 +382,91 @@ class ProductAdmin(ReadOnlyAdmin):
         "slug",
     )
     ordering = ("name",)
-    inlines = (
-        ProductDeclaredValueInline,
-        ProductImageInline,
-    )
+
+    @override
+    def get_actions(
+        self,
+        request: HttpRequest,
+        action_location: ActionLocation = ActionLocation.CHANGE_LIST,
+    ) -> dict[str, Action | None]:
+        """Leave the bulk deletion off the list: a product is removed from its own card, one refusal at a time."""
+        actions = super().get_actions(request, action_location)
+        actions.pop("delete_selected", None)
+        return actions
+
+    @override
+    def get_changelist(self, request: HttpRequest, **kwargs: Any) -> type[ChangeList]:
+        """Use the list that asks the domain what its rows are still missing."""
+        return ProductChangeList
+
+    @override
+    def get_form(
+        self,
+        request: HttpRequest,
+        obj: Model | None = None,
+        change: bool = False,
+        **kwargs: Any,
+    ) -> type[ModelForm]:
+        """Give a saved product a field per attribute of its section: a new one has no section yet."""
+        kwargs["form"] = _card_form(obj)
+        return super().get_form(request, obj, change=change, **kwargs)
 
     @override
     def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
         """Send the action through the guard that owns refusals and the banner of the reprice."""
         view = partial(super().changelist_view, request, extra_context)
+        # Cleared before the list is built, never after: the changelist is a
+        # ``TemplateResponse``, and its rows are rendered once this view has
+        # already returned. What a previous page learned cannot leak into a
+        # rendering whose own ``get_results`` never ran.
+        _page_gaps.set(_NO_GAPS)
         return guarded_write(request, view)
+
+    @override
+    def delete_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Send the deletion through the same guard: what the command refuses comes back as a message."""
+        view = partial(super().delete_view, request, object_id, extra_context)
+        return guarded_write(request, view)
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
+        """Write nothing here: the whole card is sent to the interactors by ``save_related``."""
+
+    @override
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: ModelForm,
+        formsets: list[BaseInlineFormSet],
+        change: bool,
+    ) -> None:
+        """Send the card — the root and the declared set — as the commands of the aggregate."""
+        if change:
+            restate_product(form.instance.pk, form.cleaned_data)
+            return
+        # The mirror row is never inserted by Django, so the identifier the
+        # command issued is what the history and the redirect are given.
+        form.instance.pk = create_product(form.cleaned_data)
+
+    @override
+    def delete_model(self, request: HttpRequest, obj: Model) -> None:
+        """Remove the product through the interactor that owns everything belonging to it."""
+        remove_product(obj.pk)
+
+    @admin.display(description="Чего не хватает для калькулятора")
+    def missing_for_the_calculator(self, obj: Model) -> str:
+        """Say why the product shows no calculated price, in the owner's words (``product.md``, правило 10)."""
+        gaps = _page_gaps.get().get(cast("Product", obj).id)
+        if gaps is None:
+            return NOTHING_TO_SAY
+        if gaps.undeclared_attributes:
+            return f"{UNDECLARED} {', '.join(gaps.undeclared_attributes)}."
+        return NOTHING_IS_PAID if gaps.nothing_is_paid else NOTHING_TO_SAY
 
     @admin.action(description="Пересчитать цены")
     def reprice_products(self, request: HttpRequest, queryset: QuerySet[Model]) -> None:  # noqa: ARG002  # Django's action signature

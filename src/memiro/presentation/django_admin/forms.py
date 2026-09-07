@@ -13,21 +13,35 @@ application form and this one refuse the same value (§13.6).
 """
 
 from typing import Any, override
+from uuid import UUID
 
 from django import forms
+from django.core.validators import RegexValidator
 from django.forms import BaseInlineFormSet
 
 from memiro.application.common.input_limits import (
     MAX_AREA_M2,
     MAX_ATTRIBUTE_PARENTS,
+    MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
     MAX_ORDER_TOTAL,
+    MAX_QUANTITY,
     MAX_RATE_AMOUNT,
     MAX_SIDE_MM,
     MAX_SURCHARGE_FACTOR,
     MIN_NAME_LENGTH,
 )
-from memiro.presentation.django_admin.models import Attribute, AttributeValue, PricingSettings, SizeSurcharge
+from memiro.application.manage_products import SLUG_PATTERN
+from memiro.entities.catalog.attribute.entity import AttributeKind
+from memiro.entities.common.slug import MAX_SLUG_LENGTH
+from memiro.presentation.django_admin.models import (
+    Attribute,
+    AttributeValue,
+    PricingSettings,
+    Product,
+    ProductDeclaredValue,
+    SizeSurcharge,
+)
 
 PARENTS_FIELD = "parents"
 
@@ -38,6 +52,10 @@ BLANK_TIER_ROWS = 1
 # The name the mirror gives the composite key of a tier, and the name Django's
 # inline template looks the row's key up by.
 TIER_KEY_FIELD = "pk"
+
+# The prefix a card field carries when it declares an attribute of the section
+# rather than a column of the product itself.
+DECLARED_PREFIX = "declared_"
 
 
 class AttributeCardForm(forms.ModelForm):
@@ -202,3 +220,81 @@ class SizeSurchargeFormSet(BaseInlineFormSet):
         """
         super().add_fields(form, index)
         form.fields[TIER_KEY_FIELD] = forms.Field(required=False, disabled=True, widget=forms.HiddenInput)
+
+
+class ProductCardForm(forms.ModelForm):
+    """Карточка товара: корень, а под ним по полю на каждый атрибут раздела."""
+
+    name = forms.CharField(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH, label="Название")
+    slug = forms.CharField(
+        required=False,
+        max_length=MAX_SLUG_LENGTH,
+        validators=[RegexValidator(SLUG_PATTERN, message="Адрес — латинские слова через дефис.")],
+        label="Адрес",
+        help_text="Пустой адрес выводится из названия; дальше он правится руками.",
+    )
+    description = forms.CharField(
+        required=False,
+        max_length=MAX_DESCRIPTION_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        label="Описание",
+    )
+
+    class Meta:
+        model = Product
+        fields = (
+            "category",
+            "name",
+            "slug",
+            "description",
+            "is_published",
+            "hides_calculated_price",
+        )
+        labels = {  # noqa: RUF012  # Django reads Meta options off the class as plain values
+            "category": "Раздел",
+            "is_published": "Опубликован",
+            "hides_calculated_price": "Не называть цену расчёта",
+        }
+
+    @override
+    def validate_unique(self) -> None:
+        """Leave the address to the transaction that writes it: a card cannot see a race (``product.md``, п. 13)."""
+
+    @override
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Show what the product declares today: the fields themselves are built by the screen."""
+        super().__init__(*args, **kwargs)
+        for value in ProductDeclaredValue.objects.filter(product_id=self.instance.pk):
+            declared: UUID = value.attribute_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
+            chosen: UUID | None = value.value_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
+            field = declared_field_name(declared)
+            if field in self.fields:
+                self.initial[field] = value.quantity if chosen is None else chosen
+
+
+def declared_field_name(attribute_id: UUID) -> str:
+    """Name the card field one attribute of the section is declared in."""
+    return f"{DECLARED_PREFIX}{attribute_id.hex}"
+
+
+def declared_attribute_id(field: str) -> UUID:
+    """Read back which attribute a card field declares."""
+    return UUID(hex=field.removeprefix(DECLARED_PREFIX))
+
+
+def declared_value_fields(category_id: UUID) -> dict[str, forms.Field]:
+    """Build one field per attribute of the section, its kind deciding what the owner types."""
+    attributes = Attribute.objects.filter(category_id=category_id).order_by("sort_order", "name")
+    return {declared_field_name(attribute.id): _declared_field(attribute) for attribute in attributes}
+
+
+def _declared_field(attribute: Attribute) -> forms.Field:
+    """Build the field of one attribute: a number is typed, everything else is chosen."""
+    label = attribute.name
+    if attribute.kind == AttributeKind.NUMBER.name:
+        return forms.DecimalField(min_value=0, max_value=MAX_QUANTITY, required=False, label=label)
+    return forms.ModelChoiceField(
+        queryset=AttributeValue.objects.filter(attribute_id=attribute.id).order_by("sort_order", "name"),
+        required=False,
+        label=label,
+    )

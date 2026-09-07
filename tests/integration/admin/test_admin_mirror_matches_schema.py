@@ -4,7 +4,7 @@ Alembic owns the domain tables and Django only mirrors them, so nothing but a
 test can notice that a migration moved a column the mirror still declares.
 Compared: the set of tables, the columns, their nullability, their coarse type
 and the unique constraints. Defaults are not compared — they live in the
-domain, and the mirror never writes.
+domain, except on the one table Django writes directly (the sections).
 """
 
 # django-stubs makes Field and InlineModelAdmin generic, but the runtime

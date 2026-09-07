@@ -18,7 +18,7 @@ from memiro.application.errors.catalog import AttributeInUseError, AttributeValu
 from memiro.entities.common.identifiers import AttributeId
 from memiro.presentation.django_admin.refusals import REFUSAL_MESSAGES
 from memiro.presentation.django_admin.writes import PARTLY_SAVED
-from tests.common.factory.catalog import BACKLIGHT, CONTOUR, NO_BACKLIGHT, PRODUCT
+from tests.common.factory.catalog import BACKLIGHT, CONTOUR, NO_BACKLIGHT
 from tests.integration.admin.arrange import arranged_attribute, card_post, row, value_form
 
 pytestmark = pytest.mark.usefixtures("admin_site", "primed_catalog")
@@ -224,14 +224,16 @@ async def test_a_card_with_one_row_over_the_limit_is_refused_by_the_form(owner_c
 
 
 async def test_only_the_attribute_card_offers_the_owner_a_form(owner_client: AsyncClient) -> None:
-    """The refusal to write is lifted from the attribute screens alone (ticket 09)."""
+    """The mirrors without a ticket of their own still offer the owner no form."""
     statuses = {url: (await owner_client.get(url)).status_code for url in ADD_URLS}
 
     assert statuses == {
         ADD_URL: HTTPStatus.OK,
-        f"/admin/{APP}/category/add/": HTTPStatus.FORBIDDEN,
+        # The sections and the products got their own screens with ticket 10;
+        # this test keeps watch over the mirrors that still have none.
+        f"/admin/{APP}/category/add/": HTTPStatus.OK,
         f"/admin/{APP}/attributevalue/add/": HTTPStatus.FORBIDDEN,
-        f"/admin/{APP}/product/add/": HTTPStatus.FORBIDDEN,
+        f"/admin/{APP}/product/add/": HTTPStatus.OK,
         f"/admin/{APP}/productvariant/add/": HTTPStatus.FORBIDDEN,
         f"/admin/{APP}/pricingsettings/add/": HTTPStatus.FORBIDDEN,
         f"/admin/{APP}/inquiry/add/": HTTPStatus.FORBIDDEN,
@@ -241,7 +243,7 @@ async def test_only_the_attribute_card_offers_the_owner_a_form(owner_client: Asy
 
 async def test_another_mirror_refuses_the_card_the_owner_posts_to_it(owner_client: AsyncClient) -> None:
     """A write aimed at a read-only mirror is refused by the screen, not by the domain."""
-    response = await owner_client.post(f"/admin/{APP}/product/{PRODUCT}/change/", {"name": "Переименован"})
+    response = await owner_client.post(f"/admin/{APP}/inquiry/add/", {"name": "Незваный"})
 
     assert response.status_code == HTTPStatus.FORBIDDEN
 

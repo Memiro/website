@@ -6,11 +6,14 @@
 
 ``managed = False`` and an explicit ``db_table`` everywhere, ``DO_NOTHING`` on
 every foreign key — deletion rules belong to the database and to the domain.
+Django writes exactly one of these tables itself, the sections; everything
+with an invariant is written by the interactor that guards it.
 ``test_admin_mirror_matches_schema`` is what keeps these declarations honest.
 """
 
 from enum import StrEnum
 from typing import ClassVar, override
+from uuid import uuid4
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -39,12 +42,16 @@ class Mirror(models.Model):
 class Category(Mirror):
     """Раздел каталога."""
 
-    id = models.UUIDField(primary_key=True)
+    # The one domain table the admin writes directly: a section carries no
+    # rules, so it has no interactor to fill the key and the stamps for it
+    # (ADR-0012, decision 3). The columns have no default in the database,
+    # so Django fills them the way it fills any table of its own.
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=NAME_LENGTH)
     slug = models.CharField(max_length=NAME_LENGTH, unique=True)
     sort_order = models.IntegerField()
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta(Mirror.Meta):
         db_table = "categories"

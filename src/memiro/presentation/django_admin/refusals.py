@@ -14,7 +14,10 @@ from memiro.application.errors.catalog import (
     AttributeInUseError,
     AttributeNotFoundError,
     AttributeValueInUseError,
+    AttributeValueNotFoundError,
     CategoryNotFoundError,
+    ProductNotFoundError,
+    ProductSlugTakenError,
 )
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
@@ -23,6 +26,7 @@ from memiro.entities.errors.attribute import (
     InvalidFactorRateError,
 )
 from memiro.entities.errors.pricing import DuplicateSizeSurchargeError, InvalidSurchargeFactorError
+from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
 from memiro_common.errors import AppError
 from memiro_common.logger import Logger
 
@@ -39,6 +43,13 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
     PricingSettingsNotFoundError: "Параметров расчёта на сайте нет: заведите строку параметров.",
     InvalidSurchargeFactorError: "Коэффициент ступени должен быть больше единицы: наценка выключается пустой таблицей.",
     DuplicateSizeSurchargeError: "Две ступени не начинаются с одного размера: оставьте одну.",
+    ProductNotFoundError: "Товар не найден: похоже, его удалили в другом окне.",
+    ProductSlugTakenError: "Этот адрес уже занят другим товаром: придумайте другой.",
+    InvalidProductSlugError: "Адрес товара — латинские слова через дефис, и пустым он выводится из названия.",
+    ProductSectionNotEmptyError: (
+        "Товар нельзя перенести в другой раздел непустым: сначала снимите объявленные значения и варианты."
+    ),
+    AttributeValueNotFoundError: "Значение не найдено: оно чужого атрибута или атрибут не из раздела товара.",
     LockTimeoutError: "Эту строку сейчас правят в другом окне: повторите сохранение.",
 }
 
