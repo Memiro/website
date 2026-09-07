@@ -24,12 +24,11 @@ const query = landing === null ? asked : { ...asked, values: landing.values };
 const page: CategoryPage | null = landing === null
   ? null
   : await foundOrNull(landing.category_slug, (slug) => api.categoryProducts(slug, catalogSearch(query)));
-// The owner's copy reads in two places: the first paragraph introduces the
-// page next to its heading, and the rest waits under the goods — a wall of
+// The page prints the lead of the owner's copy and nothing more: a wall of
 // text between the heading and the grid pushes what the visitor came for
 // below the fold.
 const paragraphs = landing === null ? [] : landing.text.split("\n").filter((line) => line.trim() !== "");
-const [lead, ...rest] = paragraphs;
+const [lead] = paragraphs;
 const crumbs = landing === null ? [] : [
   { href: "/", label: "Главная" },
   { href: "/catalog/", label: "Каталог" },
@@ -75,13 +74,6 @@ const crumbs = landing === null ? [] : [
               <a class={number === page.page ? "here" : undefined} href={withPage(path, asked, number)} aria-current={number === page.page ? "page" : undefined}>{number}</a>
             ))}
           </nav>
-        )}
-
-        {rest.length > 0 && (
-          <section class="landing-text" aria-labelledby="about-landing">
-            <h2 class="overline" id="about-landing">О подборке</h2>
-            <div class="landing-copy">{rest.map((paragraph) => <p>{paragraph}</p>)}</div>
-          </section>
         )}
 
         <p class="landing-all">

@@ -408,10 +408,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 /* The lead reads with the heading; the rest of the copy waits below the goods,
    where a visitor who wants it looks and a crawler still finds it. */
 .landing-lead { padding-top: 20px; padding-bottom: 30px; font-size: 19px; line-height: 1.55; color: var(--body); max-width: 62ch; margin-right: auto; }
-.landing-text { margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--line); }
-.landing-text .overline { margin-bottom: 18px; }
-.landing-copy { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px 48px; color: var(--body); line-height: 1.6; }
-.landing-copy p { max-width: 66ch; }
+
 .landing-all { padding-top: 32px; }
 
 /* ---------- Product detail ---------- */
