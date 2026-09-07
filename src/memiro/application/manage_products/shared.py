@@ -164,9 +164,15 @@ def change_data(form: ProductForm) -> ChangeProductData:
     )
 
 
-async def loaded_for_update(gateway: ProductGateway, product_id: ProductId, *, command: str) -> Product:
+async def loaded_for_update(
+    gateway: ProductGateway,
+    product_id: ProductId,
+    *,
+    command: str,
+    eager_images: bool = False,
+) -> Product:
     """Load one product under its lock, with its children, refusing an identifier nobody issued."""
-    product = await gateway.get(product_id, for_update=True, eager_variants=True)
+    product = await gateway.get(product_id, for_update=True, eager_variants=True, eager_images=eager_images)
     if product is None:
         logger.warning("A command named an unknown product", product_id=product_id, command=command)
         raise ProductNotFoundError

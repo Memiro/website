@@ -10,6 +10,7 @@ from memiro.application.manage_attributes import (
 )
 from memiro.application.manage_pricing_settings import ChangePricingSettings
 from memiro.application.manage_products import (
+    AddImage,
     AddVariant,
     ChangeProduct,
     ChangeVariant,
@@ -19,6 +20,7 @@ from memiro.application.manage_products import (
     ListPricingGaps,
     ListVariants,
     QuoteVariant,
+    RemoveImage,
     RemoveProduct,
     RemoveVariant,
 )
@@ -32,6 +34,7 @@ class InteractorProvider(Provider):
     scope = Scope.REQUEST
 
     interactors = provide_all(
+        AddImage,
         AddVariant,
         ChangeAttribute,
         ChangePricingSettings,
@@ -40,6 +43,7 @@ class InteractorProvider(Provider):
         CreateProduct,
         DeclareValues,
         RemoveAttribute,
+        RemoveImage,
         RemoveProduct,
         ReplaceValues,
         ListCategories,

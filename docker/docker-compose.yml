@@ -66,6 +66,7 @@ services:
     volumes:
       - ../.config:/app/.config:ro
       - adminstatic:/app/staticfiles
+      - productmedia:/app/media
     depends_on:
       migrations:
         condition: service_completed_successfully
@@ -96,6 +97,7 @@ services:
     volumes:
       - ../.config/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - adminstatic:/usr/share/nginx/admin-static:ro
+      - productmedia:/usr/share/nginx/media:ro
     depends_on:
       api:
         condition: service_healthy
@@ -107,3 +109,4 @@ services:
 volumes:
   pgdata:
   adminstatic:
+  productmedia:

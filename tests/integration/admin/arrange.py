@@ -17,6 +17,9 @@ from memiro.application.manage_pricing_settings import (
     SizeSurchargeRowForm,
 )
 from memiro.application.manage_products import (
+    AddedImage,
+    AddImage,
+    AddImageForm,
     AddVariant,
     AddVariantForm,
     CreateProduct,
@@ -338,6 +341,19 @@ def arranged_product(*, name: str, slug: str = "") -> ProductId:
     """Put one product of the demo section into the database through its own command."""
     form = CreateProductForm(category_id=CATEGORY, name=name, slug=slug)
     return bridge().call(lambda scope: _entered(scope, form))
+
+
+def arranged_photo(product_id: ProductId, *, content: bytes) -> str:
+    """Put one photo on a product through its own command, and answer with the key the storage issued."""
+    form = AddImageForm(filename="mirror.jpg", content=content)
+    added: AddedImage = bridge().call(lambda scope: _uploaded(scope, product_id, form))
+    return added.key
+
+
+async def _uploaded(scope: AsyncContainer, product_id: ProductId, form: AddImageForm) -> AddedImage:
+    """Run the uploading interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(AddImage)
+    return await interactor.execute(product_id, form)
 
 
 async def _entered(scope: AsyncContainer, form: CreateProductForm) -> ProductId:

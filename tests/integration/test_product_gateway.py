@@ -73,13 +73,13 @@ async def test_the_product_gateway_round_trips_variants_and_the_derived_price(
         gateway = await request.get(ProductGateway)
         uow = await request.get(UoW)
         clock = await request.get(Clock)
-        product = await gateway.get(PRODUCT, for_update=True, eager_variants=True)
+        product = await gateway.get(PRODUCT, for_update=True, eager_variants=True, eager_images=True)
         assert product is not None
         product.add_variant(_variant_data(), price=Money(amount=Decimal(8900)), clock=clock)
         await uow.commit()
     async with container() as request:
         gateway = await request.get(ProductGateway)
-        loaded = await gateway.get(PRODUCT, eager_variants=True)
+        loaded = await gateway.get(PRODUCT, eager_variants=True, eager_images=True)
 
     assert loaded == product
 

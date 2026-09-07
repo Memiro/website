@@ -7,6 +7,7 @@ app registry, URL conf or middleware chain reddens here.
 
 import asyncio
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import django
 import pytest
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from testcontainers.community.postgres import PostgresContainer
 
 from memiro.adapters.db.config import DbConfig
+from memiro.adapters.storage.config import MediaConfig
 from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.django_admin.assembly import admin_settings
@@ -41,10 +43,17 @@ CLERK_PASSWORD = "clerk-password"  # noqa: S105  # nosec B105  # a throwaway acc
 
 
 @pytest.fixture(scope="session")
+def admin_media_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Give the admin's storage the directory it writes product photos into."""
+    return tmp_path_factory.mktemp("admin-media")
+
+
+@pytest.fixture(scope="session")
 async def admin_site(
     postgres: PostgresContainer,
     admin_engine: AsyncEngine,
     template_database: str,
+    admin_media_root: Path,
     tmp_path_factory: pytest.TempPathFactory,
 ) -> AsyncIterator[None]:
     """Bring Django up on a clone of the migrated database, with the owner's account.
@@ -64,6 +73,7 @@ async def admin_site(
         ),
         observability=ObservabilityConfig(enabled=False, log_level="WARNING"),
         legal=LegalConfig(consent_version="2026-08-31"),
+        media=MediaConfig(root=admin_media_root),
         admin=AdminConfig(
             secret_key="test-only-not-a-secret",  # noqa: S106  # nosec B106
             allowed_hosts=("testserver", "localhost"),

@@ -2,11 +2,14 @@
 
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
+from functools import partial
 from typing import Any
 
 from dishka import AsyncContainer
 
 from memiro.application.manage_products import (
+    AddImage,
+    AddImageForm,
     ChangeProduct,
     ChangeProductForm,
     CreatedProduct,
@@ -17,11 +20,17 @@ from memiro.application.manage_products import (
     DeclareValuesForm,
     ListPricingGaps,
     PricingGapsModel,
+    RemoveImage,
     RemoveProduct,
 )
 from memiro.entities.common.identifiers import AttributeValueId, ProductId
 from memiro.presentation.django_admin.bridge import bridge
-from memiro.presentation.django_admin.forms import DECLARED_PREFIX, declared_attribute_id
+from memiro.presentation.django_admin.forms import (
+    DECLARED_PREFIX,
+    PHOTOS_FIELD,
+    REMOVE_PHOTOS_FIELD,
+    declared_attribute_id,
+)
 from memiro.presentation.django_admin.writes import send
 
 
@@ -42,6 +51,20 @@ def restate_product(product_id: ProductId, card: Mapping[str, Any]) -> None:
     send(lambda scope: _change(scope, product_id, ChangeProductForm(**_root_fields(card))))
     declared = DeclareValuesForm(declarations=_declarations(card))
     send(lambda scope: _declare(scope, product_id, declared))
+
+
+def restate_gallery(product_id: ProductId, card: Mapping[str, Any]) -> None:
+    """Send the gallery half of the card: what the owner struck out, then what he uploaded.
+
+    A photo is its own command of the aggregate — the gallery is not replaced
+    as a set — and the struck-out keys name the gallery as it was when the
+    card was drawn, so they are answered before it grows.
+    """
+    for key in card.get(REMOVE_PHOTOS_FIELD, ()):
+        send(partial(_remove_image, product_id=product_id, key=key))
+    for photo in card.get(PHOTOS_FIELD, ()):
+        form = AddImageForm(filename=photo.name, content=photo.read())
+        send(partial(_add_image, product_id=product_id, form=form))
 
 
 def remove_product(product_id: ProductId) -> None:
@@ -104,3 +127,13 @@ async def _remove(scope: AsyncContainer, product_id: ProductId) -> None:
 async def _gaps(scope: AsyncContainer, product_ids: Sequence[ProductId]) -> dict[ProductId, PricingGapsModel]:
     interactor = await scope.get(ListPricingGaps)
     return await interactor.execute(product_ids)
+
+
+async def _add_image(scope: AsyncContainer, *, product_id: ProductId, form: AddImageForm) -> None:
+    interactor = await scope.get(AddImage)
+    await interactor.execute(product_id, form)
+
+
+async def _remove_image(scope: AsyncContainer, *, product_id: ProductId, key: str) -> None:
+    interactor = await scope.get(RemoveImage)
+    await interactor.execute(product_id, key)

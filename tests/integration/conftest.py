@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 
 import pytest
 from asgi_lifespan import LifespanManager
@@ -12,6 +13,7 @@ from testcontainers.community.postgres import PostgresContainer
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.db.migrations import apply_migrations
+from memiro.adapters.storage.config import MediaConfig
 from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.fast_api import create_app
@@ -75,12 +77,13 @@ async def database_name(
 
 
 @pytest.fixture
-def config(postgres: PostgresContainer, database_name: str) -> Config:
+def config(postgres: PostgresContainer, database_name: str, tmp_path: Path) -> Config:
     """Test config built by hand — never calls ``Config.load()`` (§14.5.2)."""
     return Config(
         db=_db_config(postgres, database_name),
         observability=ObservabilityConfig(enabled=False, log_level="WARNING"),
         legal=LegalConfig(consent_version="2026-08-31"),
+        media=MediaConfig(root=tmp_path / "media"),
     )
 
 

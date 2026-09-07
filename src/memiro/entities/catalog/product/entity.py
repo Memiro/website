@@ -13,6 +13,7 @@ from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.common.slug import slugify
 from memiro.entities.errors.product import (
+    DuplicateProductImageError,
     DuplicateVariantError,
     InvalidProductSlugError,
     InvalidVariantConfigurationError,
@@ -156,6 +157,21 @@ class Variant(Entity):
         )
 
 
+# Not frozen, for the reason ``DeclaredValue`` is not: SQLAlchemy instruments
+# a mapped class through ``__setattr__``.
+@dataclass
+class ProductImage(Entity):
+    """One photo of the product, named by the key its storage issued.
+
+    No identifier of its own: the key the storage gave back is what names the
+    photo everywhere — in the gallery, in the command that removes it and on
+    the storefront.
+    """
+
+    key: str
+    sort_order: int
+
+
 @dataclass(frozen=True, slots=True)
 class CreateProductData:
     """Owner-controlled fields of a product being entered into a section."""
@@ -210,6 +226,7 @@ class Product(Entity):
     _declared_values: list[DeclaredValue] = field(default_factory=list[DeclaredValue], repr=False)
     _price_from: Money | None = field(init=False, default=None, repr=False)
     _variants: list[Variant] = field(default_factory=list[Variant], repr=False)
+    _images: list[ProductImage] = field(default_factory=list[ProductImage], repr=False)
     created_at: datetime = field(kw_only=True)
     updated_at: datetime = field(kw_only=True)
 
@@ -239,6 +256,33 @@ class Product(Entity):
         """Replace what the owner declared for this product on the attributes of its category."""
         self._declared_values = list(values)
         self.updated_at = clock.now()
+
+    @property
+    def images(self) -> tuple[ProductImage, ...]:
+        """Return the gallery in the order the storefront shows it."""
+        return tuple(sorted(self._images, key=lambda image: (image.sort_order, image.key)))
+
+    def image(self, key: str) -> ProductImage | None:
+        """Return the photo the key names, if this product holds it."""
+        return next((image for image in self._images if image.key == key), None)
+
+    def add_image(self, key: str, *, clock: Clock) -> ProductImage:
+        """Take one stored photo into the gallery, behind the ones already in it."""
+        if self.image(key) is not None:
+            raise DuplicateProductImageError
+        image = ProductImage(key=key, sort_order=self._next_image_order())
+        self._images.append(image)
+        self.updated_at = clock.now()
+        return image
+
+    def remove_image(self, image: ProductImage, *, clock: Clock) -> None:
+        """Take one photo of this product out of its gallery."""
+        self._images.remove(image)
+        self.updated_at = clock.now()
+
+    def _next_image_order(self) -> int:
+        """Place a new photo behind the gallery the product already has."""
+        return max((image.sort_order for image in self._images), default=-1) + 1
 
     @property
     def variants(self) -> tuple[Variant, ...]:

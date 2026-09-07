@@ -19,6 +19,7 @@ from functools import partial
 from typing import Any, cast, override
 from uuid import UUID
 
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.options import Action, ActionLocation
 from django.contrib.admin.views.main import ChangeList
@@ -26,6 +27,7 @@ from django.db.models import Model, QuerySet
 from django.forms import BaseInlineFormSet, Form, ModelForm
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import URLPattern, path, reverse
+from django.utils.html import format_html
 
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
 from memiro.application.manage_products import PricingGapsModel
@@ -42,6 +44,7 @@ from memiro.presentation.django_admin.forms import (
     SizeSurchargeFormSet,
     SizeSurchargeTierForm,
     declared_value_fields,
+    photo_fields,
 )
 from memiro.presentation.django_admin.materials_and_prices import restate_priced_row
 from memiro.presentation.django_admin.models import (
@@ -61,6 +64,7 @@ from memiro.presentation.django_admin.product_card import (
     create_product,
     pricing_gaps_of,
     remove_product,
+    restate_gallery,
     restate_product,
 )
 from memiro.presentation.django_admin.reprice import reprice_catalogue
@@ -154,13 +158,21 @@ class ReadOnlyInline(RefusesWrites, admin.TabularInline):
 
 
 class ProductImageInline(ReadOnlyInline):
-    """Фотографии товара."""
+    """Фотографии товара: заводят и убирают их полями карточки, здесь их видно."""
 
     model = ProductImage
     fields = (
+        "preview",
         "key",
         "sort_order",
     )
+    readonly_fields = ("preview",)
+
+    @admin.display(description="Фотография")
+    def preview(self, obj: Model) -> str:
+        """Show the photo the way the storefront gets it: from the edge, by its key."""
+        key = cast("ProductImage", obj).key
+        return format_html('<img src="{}{}" alt="{}" style="max-height: 6rem">', settings.MEDIA_URL, key, key)
 
 
 @admin.register(Category)
@@ -388,11 +400,12 @@ class ProductChangeList(ChangeList):
 
 
 def _card_form(obj: Model | None) -> type[ModelForm]:
-    """Build the card of one product: the declared half is a field per attribute of its section."""
+    """Build the card of one product: a field per attribute of its section, and the gallery it already has."""
     if obj is None:
         return ProductCardForm
-    section: UUID = cast("Product", obj).category_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
-    return type(ProductCardForm.__name__, (ProductCardForm,), declared_value_fields(section))
+    product = cast("Product", obj)
+    section: UUID = product.category_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
+    return type(ProductCardForm.__name__, (ProductCardForm,), declared_value_fields(section) | photo_fields(product.id))
 
 
 @admin.register(Product)
@@ -550,9 +563,10 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
         formsets: list[BaseInlineFormSet],
         change: bool,
     ) -> None:
-        """Send the card — the root and the declared set — as the commands of the aggregate."""
+        """Send the card — the root, the declared set and the gallery — as the commands of the aggregate."""
         if change:
             restate_product(form.instance.pk, form.cleaned_data)
+            restate_gallery(form.instance.pk, form.cleaned_data)
             return
         # The mirror row is never inserted by Django, so the identifier the
         # command issued is what the history and the redirect are given.

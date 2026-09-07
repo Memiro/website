@@ -4,6 +4,7 @@ from dishka import STRICT_VALIDATION, AsyncContainer, make_async_container
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
+from memiro.adapters.storage.config import MediaConfig
 from memiro.application.submit_inquiry import LegalConfig
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.di.providers.adapters import AdapterProvider
@@ -17,6 +18,7 @@ def _context(config: Config) -> dict[Any, Any]:
         DbConfig: config.db,
         EmailConfig: config.email,
         LegalConfig: config.legal,
+        MediaConfig: config.media,
         ObservabilityConfig: config.observability,
     }
 

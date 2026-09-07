@@ -32,3 +32,8 @@ secret_key = "dev-only-not-a-secret"
 # Публичный вход — nginx, он и передаёт Host; список правится при деплое.
 allowed_hosts = ["localhost", "127.0.0.1", "admin"]
 static_root = "/app/staticfiles"
+
+[media]
+# Том с фотографиями товаров: та же папка смонтирована в nginx, который и
+# отдаёт её как /media/.
+root = "/app/media"

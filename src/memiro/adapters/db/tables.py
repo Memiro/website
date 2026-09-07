@@ -36,7 +36,7 @@ from memiro.adapters.db.types import (
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Rate, Unit
-from memiro.entities.catalog.product.entity import DeclaredValue, Product, Variant
+from memiro.entities.catalog.product.entity import DeclaredValue, Product, ProductImage, Variant
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.inquiry.consent import Consent
 from memiro.entities.inquiry.entity import (
@@ -287,10 +287,21 @@ mapper_registry.map_imperatively(
 )
 
 mapper_registry.map_imperatively(
+    ProductImage,
+    product_images_table,
+)
+
+mapper_registry.map_imperatively(
     Product,
     products_table,
     properties={
         "_price_from": products_table.c.price_from,
+        "_images": relationship(
+            ProductImage,
+            cascade="all, delete-orphan",
+            lazy="raise_on_sql",
+            order_by=(product_images_table.c.sort_order, product_images_table.c.key),
+        ),
         "_declared_values": relationship(DeclaredValue, cascade="all, delete-orphan", lazy="raise_on_sql"),
         "_variants": relationship(
             Variant,

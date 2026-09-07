@@ -4,6 +4,7 @@ import httpx
 
 PUBLIC_URL = os.environ.get("MEMIRO_PUBLIC_URL", "http://127.0.0.1:8080")
 OK_STATUS = 200
+NOT_FOUND_STATUS = 404
 
 
 async def test_nginx_serves_the_admin_login_page_under_its_public_prefix() -> None:
@@ -34,3 +35,12 @@ async def test_nginx_serves_the_script_the_variant_builder_runs_on() -> None:
     assert "DOMContentLoaded" in script.text
     assert styles.status_code == OK_STATUS
     assert styles.headers["content-type"].startswith("text/css")
+
+
+async def test_nginx_serves_the_volume_the_admin_puts_product_photos_on() -> None:
+    """Photos come off the media volume at the edge: nothing about /media/ reaches the storefront."""
+    async with httpx.AsyncClient(base_url=PUBLIC_URL) as client:
+        response = await client.get("/media/no-such-photo.jpg")
+
+    assert response.status_code == NOT_FOUND_STATUS
+    assert "nginx" in response.text

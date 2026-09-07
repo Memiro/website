@@ -27,8 +27,9 @@ class SAProductGateway(ProductGateway):
         *,
         for_update: bool = False,
         eager_variants: bool = False,
+        eager_images: bool = False,
     ) -> Product | None:
-        """Load declared values and optionally the locked variant collection."""
+        """Load declared values and optionally the child collections a command is about to touch."""
         statement = (
             select(Product)
             .where(products_table.c.id == product_id)
@@ -40,6 +41,8 @@ class SAProductGateway(ProductGateway):
         )
         if eager_variants:
             statement = statement.options(selectinload(Product._variants))  # type: ignore[arg-type]  # noqa: SLF001  # pyright: ignore[reportArgumentType,reportPrivateUsage]
+        if eager_images:
+            statement = statement.options(selectinload(Product._images))  # type: ignore[arg-type]  # noqa: SLF001  # pyright: ignore[reportArgumentType,reportPrivateUsage]
         if for_update:
             statement = statement.with_for_update()
         try:

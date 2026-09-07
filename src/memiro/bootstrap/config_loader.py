@@ -6,6 +6,7 @@ from typing import Self
 
 from memiro.adapters.db.config import DbConfig
 from memiro.adapters.smtp.config import EmailConfig
+from memiro.adapters.storage.config import MediaConfig
 from memiro.application.submit_inquiry import LegalConfig
 from memiro.presentation.django_admin.config import AdminConfig
 from memiro_common.observability.config import ObservabilityConfig
@@ -23,6 +24,7 @@ class Config:
     db: DbConfig
     observability: ObservabilityConfig
     legal: LegalConfig
+    media: MediaConfig
     email: EmailConfig = field(default_factory=EmailConfig)
     admin: AdminConfig = field(default_factory=AdminConfig)
 
@@ -36,5 +38,6 @@ class Config:
             observability=ObservabilityConfig(**data["observability"]),
             email=EmailConfig(**data.get("email", {})),
             legal=LegalConfig(**data["legal"]),
+            media=MediaConfig(root=Path(data["media"]["root"])),
             admin=AdminConfig.from_section(data.get("admin", {})),
         )

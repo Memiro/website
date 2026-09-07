@@ -52,3 +52,14 @@ MAX_SIZE_SURCHARGES = 20
 MAX_SURCHARGE_FACTOR = Decimal(100)
 MAX_AREA_M2 = Decimal(100)
 MAX_ORDER_TOTAL = Decimal(10_000_000)
+
+
+# A photo of the product card: what a camera hands the owner, not a print
+# master. The bound is an input bound — it keeps a single upload from filling
+# the volume the storefront reads from.
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+
+# The formats a browser shows without help. The extension is what the storage
+# keeps in the key it issues, so this is also the whitelist of what a key may
+# end with.
+IMAGE_EXTENSIONS = ("jpg", "jpeg", "png", "webp")
