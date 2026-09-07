@@ -4,6 +4,7 @@ import httpx
 
 PUBLIC_URL = os.environ.get("MEMIRO_PUBLIC_URL", "http://127.0.0.1:8080")
 OK_STATUS = 200
+FORBIDDEN_STATUS = 403
 NOT_FOUND_STATUS = 404
 
 
@@ -44,3 +45,24 @@ async def test_nginx_serves_the_volume_the_admin_puts_product_photos_on() -> Non
 
     assert response.status_code == NOT_FOUND_STATUS
     assert "nginx" in response.text
+
+
+async def test_the_edge_keeps_the_port_the_admin_checks_the_origin_against() -> None:
+    """A form of the admin survives the edge: nginx must pass the host with its port.
+
+    ``$host`` drops it, and Django then compares the browser's Origin — port
+    and all — against a host without one and refuses every write with a 403.
+    The credentials here are deliberately wrong: what is under test is that
+    the answer is the login form again and not the CSRF refusal.
+    """
+    async with httpx.AsyncClient(base_url=PUBLIC_URL) as client:
+        page = await client.get("/admin/login/")
+        token = page.cookies["csrftoken"]
+        response = await client.post(
+            "/admin/login/",
+            data={"csrfmiddlewaretoken": token, "username": "nobody", "password": "wrong"},
+            headers={"Origin": PUBLIC_URL, "Referer": f"{PUBLIC_URL}/admin/login/"},
+        )
+
+    assert response.status_code != FORBIDDEN_STATUS
+    assert response.status_code == OK_STATUS
