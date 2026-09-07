@@ -80,6 +80,7 @@ export interface ProductAttribute {
   id: string;
   name: string;
   kind: AttributeKind;
+  is_customer_changeable: boolean;
   /** The row the product itself is made of; a numeric attribute declares a quantity instead. */
   declared_value_id: string | null;
   values: ProductAttributeValue[];
@@ -289,6 +290,7 @@ function isProductAttribute(value: unknown): value is ProductAttribute {
     && typeof attribute.name === "string"
     && isAttributeKind(attribute.kind)
     && isNullableString(attribute.declared_value_id)
+    && typeof attribute.is_customer_changeable === "boolean"
     && isArrayOf(attribute.values, isProductAttributeValue);
 }
 

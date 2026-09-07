@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { Calculator, calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../app/lib/calculator-state.ts";
+import { Calculator, calculatorFields, calculatorStateForVariant, initialCalculatorState, pricePresentation, toCalculateRequest } from "../app/lib/calculator-state.ts";
 
 /** @type {import("../app/lib/catalog-api.ts").ProductCard} */
 const MIRROR = {
@@ -12,8 +12,8 @@ const MIRROR = {
   price_from: null,
   image_keys: [],
   attributes: [
-    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
-    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
+    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", is_customer_changeable: true, values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, is_customer_changeable: true, values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
   ],
   variants: [
     { width_mm: 800, height_mm: 600, price: "8900", overrides: [{ attribute_id: "frame", value_id: "black", quantity: null }] },
@@ -126,8 +126,8 @@ test("a quantity that is not a number is highlighted under its own attribute", a
 const MIRROR_WITH_CUT_OUTS = {
   ...MIRROR,
   attributes: [
-    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
-    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, values: [{ id: null, name: "Вырез", quantity: "1.0000" }] },
+    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", is_customer_changeable: true, values: [{ id: "black", name: "Чёрная", quantity: null }, { id: "white", name: "Белая", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, is_customer_changeable: true, values: [{ id: null, name: "Вырез", quantity: "1.0000" }] },
   ],
 };
 
@@ -391,4 +391,28 @@ test("a product without ready sizes prices the size the customer types", async (
     height_mm: 700,
     selections: [],
   });
+});
+
+/** @type {import("../app/lib/catalog-api.ts").ProductCard} */
+const MIRROR_WITH_A_FROZEN_CUT_OUT = {
+  ...MIRROR_WITH_CUT_OUTS,
+  attributes: MIRROR_WITH_CUT_OUTS.attributes.map((attribute) =>
+    attribute.id === "cut-outs" ? { ...attribute, is_customer_changeable: false } : attribute,
+  ),
+};
+
+test("an attribute the customer may not change is not a calculator field", () => {
+  assert.deepEqual(
+    calculatorFields(MIRROR_WITH_A_FROZEN_CUT_OUT).map((attribute) => attribute.id),
+    ["frame"],
+  );
+});
+
+test("the declared count of a frozen attribute never leaves as a customer selection", async () => {
+  const pricing = recordingPricing();
+  const calculator = new Calculator(MIRROR_WITH_A_FROZEN_CUT_OUT, pricing.calculate);
+
+  await calculator.refresh();
+
+  assert.deepEqual(pricing.requests[0].selections, [{ attribute_id: "frame", value_id: "black", quantity: null }]);
 });

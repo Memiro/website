@@ -8,6 +8,7 @@ const BLADE = {
   id: "blade",
   name: "Тип полотна",
   kind: "select",
+  is_customer_changeable: true,
   declared_value_id: "graphite",
   values: [{ id: "silver", name: "Серебро", quantity: null }, { id: "graphite", name: "Графит", quantity: null }],
 };
@@ -22,6 +23,7 @@ test("a numeric attribute is described by the count the product declared", () =>
     id: "cutouts",
     name: "Вырезы",
     kind: "number",
+    is_customer_changeable: true,
     declared_value_id: null,
     values: [{ id: null, name: "Вырез", quantity: "2.0000" }],
   };

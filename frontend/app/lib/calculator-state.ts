@@ -1,4 +1,4 @@
-import type { CalculatedPrice, CalculateRequest, ProductCard } from "./catalog-api.ts";
+import type { CalculatedPrice, CalculateRequest, ProductAttribute, ProductCard } from "./catalog-api.ts";
 
 export interface CalculatorSelection {
   attributeId: string;
@@ -49,11 +49,18 @@ export function calculatorStateForVariant(product: ProductCard, index: number): 
   };
 }
 
+// The pricing gate refuses a selection on an attribute the owner froze, so a
+// frozen attribute is a characteristic of the mirror and never a field: drawn
+// as one, it would answer every configuration with "cannot be calculated".
+export function calculatorFields(product: ProductCard): ProductAttribute[] {
+  return product.attributes.filter((attribute) => attribute.is_customer_changeable);
+}
+
 // A number the customer never typed is still priced: the product declares it.
 // The field opens on that count, or it would read as "none" while the total
 // says otherwise.
 function declaredQuantities(product: ProductCard, chosen: CalculatorSelection[]): CalculatorSelection[] {
-  return product.attributes
+  return calculatorFields(product)
     .filter((attribute) => attribute.kind === "number")
     .filter((attribute) => !chosen.some((selection) => selection.attributeId === attribute.id))
     .flatMap((attribute) =>
