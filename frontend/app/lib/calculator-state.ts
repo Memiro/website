@@ -179,8 +179,11 @@ export class Calculator {
     return index === -1 ? null : index;
   }
 
+  // Untouched, the select stands on what the product is made of. Named "as in
+  // the product", it made the customer open the list to learn what he already
+  // had — and the declaration is exactly what the price he sees was counted on.
   public chosenValue(attributeId: string): string {
-    return this.selectionOf(attributeId)?.valueId ?? "";
+    return this.selectionOf(attributeId)?.valueId ?? this.declaredValue(attributeId) ?? "";
   }
 
   public chosenQuantity(attributeId: string): string {
@@ -270,6 +273,10 @@ export class Calculator {
       this.settledPrice = null;
       this.request = { status: "error" };
     }
+  }
+
+  private declaredValue(attributeId: string): string | null {
+    return this.product.attributes.find((attribute) => attribute.id === attributeId)?.declared_value_id ?? null;
   }
 
   private selectionOf(attributeId: string): CalculatorSelection | undefined {
