@@ -31,8 +31,13 @@ const isSubmitting = ref(false);
 
 const fields = computed(() => calculatorFields(props.product));
 const price = computed(() => (calculator.request.status === "done" ? calculator.request.price : null));
-const canAddToInquiry = computed(() => canAddCalculatorConfiguration(price.value?.kind, wish.value));
-const canShowInquiryEditor = computed(() => isInquiryEditorVisible(price.value?.kind));
+const settledPrice = computed(() => calculator.settledPrice);
+// A price already on screen is not replaced by "counting…" while the next one
+// arrives: the block would collapse under the customer's cursor and the click
+// he aimed at "add to the inquiry" would land on nothing.
+const isRecounting = computed(() => calculator.request.status === "loading");
+const canAddToInquiry = computed(() => canAddCalculatorConfiguration(settledPrice.value?.kind, wish.value));
+const canShowInquiryEditor = computed(() => isInquiryEditorVisible(settledPrice.value?.kind));
 
 function typed(event: Event): string {
   return (event.target as HTMLInputElement | HTMLSelectElement).value;
@@ -49,7 +54,11 @@ function formatAmount(amount: string): string {
   return `${value > 0 ? "+" : ""}${value.toLocaleString("ru-RU")} ₽`;
 }
 
-function addToInquiry(): void {
+// The click lands while a recount the customer's own blur started is still in
+// flight: adding the previous configuration then would put a size he retyped
+// away into the inquiry.
+async function addToInquiry(): Promise<void> {
+  await calculator.whenSettled();
   const priced = calculator.priced;
   const kind = price.value?.kind;
   if (priced === null || (kind !== "priced" && kind !== "wish")) {
@@ -114,16 +123,16 @@ onMounted(() => {
       <label class="field"><span>Высота, мм</span><input :value="calculator.heightText" :class="{ invalid: calculator.isInvalid(HEIGHT_FIELD) }" type="number" min="1" inputmode="numeric" @change="calculator.setHeight(typed($event))" /></label>
       <label v-for="attribute in fields" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><select v-if="attribute.kind === 'select'" :value="calculator.chosenValue(attribute.id)" @change="calculator.chooseValue(attribute.id, typed($event))"><option value="">Как в товаре</option><option v-for="value in attribute.values.filter((value) => value.id !== null)" :key="value.id" :value="value.id">{{ value.name }}</option></select><input v-else :value="calculator.chosenQuantity(attribute.id)" :class="{ invalid: calculator.isInvalid(attribute.id) }" type="text" inputmode="decimal" @change="calculator.setQuantity(attribute.id, typed($event))" /></label>
     </div>
-    <div class="calc-result" aria-live="polite">
-      <p v-if="calculator.request.status === 'loading'" class="calc-note">Считаем стоимость…</p>
-      <p v-else-if="calculator.request.status === 'invalid'" class="calc-note">Проверьте выделенные поля: размер и количество должны быть числами.</p>
+    <div class="calc-result" :class="{ recounting: isRecounting }" aria-live="polite">
+      <p v-if="calculator.request.status === 'invalid'" class="calc-note">Проверьте выделенные поля: размер и количество должны быть числами.</p>
       <p v-else-if="calculator.request.status === 'error'" class="calc-note">Не удалось рассчитать стоимость. Попробуйте ещё раз.</p>
-      <template v-else-if="price"><template v-if="price.kind === 'priced'"><strong class="calc-total">{{ Number(price.total).toLocaleString('ru-RU') }} ₽</strong><ul v-if="price.deltas.length > 0" class="calc-additions"><li v-for="delta in price.deltas" :key="`${delta.attributeId}-${delta.valueId}`"><span>{{ deltaLabel(delta.attributeId, delta.valueId) }}</span><b>{{ formatAmount(delta.amount) }}</b></li></ul></template><p v-else class="calc-note">{{ price.message }}</p></template>
+      <template v-else-if="settledPrice"><template v-if="settledPrice.kind === 'priced'"><strong class="calc-total">{{ Number(settledPrice.total).toLocaleString('ru-RU') }} ₽</strong><ul v-if="settledPrice.deltas.length > 0" class="calc-additions"><li v-for="delta in settledPrice.deltas" :key="`${delta.attributeId}-${delta.valueId}`"><span>{{ deltaLabel(delta.attributeId, delta.valueId) }}</span><b>{{ formatAmount(delta.amount) }}</b></li></ul></template><p v-else class="calc-note">{{ settledPrice.message }}</p></template>
+      <p v-else-if="isRecounting" class="calc-note">Считаем стоимость…</p>
       <p v-else class="calc-note">Измените размер или материалы, чтобы увидеть стоимость.</p>
     </div>
     <div v-if="canShowInquiryEditor" class="inquiry-item-editor">
-      <label v-if="price?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
-      <button class="btn btn-primary inquiry-add" :disabled="!canAddToInquiry" type="button" @click="addToInquiry">Добавить в заявку</button>
+      <label v-if="settledPrice?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
+      <button class="btn btn-primary inquiry-add" :disabled="!canAddToInquiry" type="button" @click="void addToInquiry()">Добавить в заявку</button>
     </div>
     <section v-if="items.length > 0 || submitResult !== null" class="inquiry-panel" aria-live="polite">
       <template v-if="items.length > 0">

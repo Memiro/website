@@ -416,3 +416,81 @@ test("the declared count of a frozen attribute never leaves as a customer select
 
   assert.deepEqual(pricing.requests[0].selections, [{ attribute_id: "frame", value_id: "black", quantity: null }]);
 });
+
+test("the price already shown outlives the request for the next one", async () => {
+  const pricing = queuedPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+  const first = calculator.refresh();
+  pricing.releases[0].resolve(pricedAt("9000"));
+  await first;
+
+  void calculator.setWidth("1200");
+
+  assert.equal(calculator.request.status, "loading");
+  assert.equal(calculator.settledPrice?.total, "9000");
+});
+
+test("a size the calculator refuses to send takes the shown price down with it", async () => {
+  const pricing = queuedPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+  const first = calculator.refresh();
+  pricing.releases[0].resolve(pricedAt("9000"));
+  await first;
+
+  await calculator.setWidth("");
+
+  assert.equal(calculator.request.status, "invalid");
+  assert.equal(calculator.settledPrice, null);
+});
+
+test("a failed request takes the shown price down with it", async () => {
+  const pricing = queuedPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+  const first = calculator.refresh();
+  pricing.releases[0].resolve(pricedAt("9000"));
+  await first;
+
+  const second = calculator.setWidth("1200");
+  pricing.releases[1].reject(new Error("network"));
+  await second;
+
+  assert.equal(calculator.request.status, "error");
+  assert.equal(calculator.settledPrice, null);
+});
+
+test("waiting for the calculator to settle waits for the answer in flight", async () => {
+  const pricing = queuedPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+  void calculator.setWidth("1200");
+
+  const settled = calculator.whenSettled();
+  pricing.releases[0].resolve(pricedAt("12000"));
+  await settled;
+
+  assert.equal(calculator.request.status, "done");
+  assert.equal(calculator.priced?.widthMm, 1200);
+});
+
+test("waiting for the calculator to settle waits for the request the last answer started", async () => {
+  const pricing = queuedPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+  void calculator.setWidth("1200");
+
+  const settled = calculator.whenSettled();
+  pricing.releases[0].resolve(pricedAt("12000"));
+  void calculator.setWidth("1500");
+  pricing.releases[1].resolve(pricedAt("15000"));
+  await settled;
+
+  assert.equal(calculator.request.status, "done");
+  assert.equal(calculator.priced?.widthMm, 1500);
+});
+
+test("nothing to wait for settles at once", async () => {
+  const pricing = queuedPricing();
+  const calculator = new Calculator(MIRROR, pricing.calculate);
+
+  await calculator.whenSettled();
+
+  assert.deepEqual(pricing.requests, []);
+});
