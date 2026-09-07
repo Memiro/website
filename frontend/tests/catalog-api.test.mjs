@@ -12,8 +12,8 @@ const product = {
   image_keys: [],
   description: "Зеркало для ванной.",
   attributes: [
-    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", values: [{ id: "black", name: "Чёрная", quantity: null }] },
-    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
+    { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", is_customer_changeable: true, values: [{ id: "black", name: "Чёрная", quantity: null }] },
+    { id: "cut-outs", name: "Вырезы", kind: "number", declared_value_id: null, is_customer_changeable: true, values: [{ id: "cut-out", name: "Вырез", quantity: null }] },
   ],
   variants: [],
 };

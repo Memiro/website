@@ -157,6 +157,9 @@ class ProductAttribute(BaseModel):
     # prints the characteristics from it and opens the calculator on it.
     # A numeric attribute declares a quantity instead, carried by its row.
     declared_value_id: UUID | None
+    # The calculator draws a field only for what the customer may change:
+    # a selection on a frozen attribute is a refusal at the pricing gate.
+    is_customer_changeable: bool
     values: list["ProductAttributeValue"]
 
 

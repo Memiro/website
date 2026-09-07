@@ -276,6 +276,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                     attributes_table.c.id,
                     attributes_table.c.name,
                     attributes_table.c.kind,
+                    attributes_table.c.is_customer_changeable,
                     attribute_values_table.c.id.label("value_id"),
                     attribute_values_table.c.name.label("value_name"),
                     attribute_values_table.c.sort_order.label("value_sort_order"),
@@ -304,6 +305,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                     name=item.name,
                     kind=item.kind,
                     declared_value_id=item.declared_value_id,
+                    is_customer_changeable=item.is_customer_changeable,
                     values=[],
                 ),
             )

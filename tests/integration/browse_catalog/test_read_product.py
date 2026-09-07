@@ -35,6 +35,7 @@ from tests.common.factory.catalog import (
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
     prime_hidden_calculated_price,
+    prime_non_changeable_attribute,
     prime_numeric_catalog,
     prime_product_images,
     prime_product_publication,
@@ -75,6 +76,7 @@ def _expected_card(
                 declared_value_id=SILVER,
                 name="Тип полотна",
                 kind=AttributeKind.SELECT,
+                is_customer_changeable=True,
                 values=[
                     ProductAttributeValue(id=SILVER, name="Серебро", quantity=None),  # noqa: RUF001
                     ProductAttributeValue(id=GRAPHITE, name="Графит", quantity=None),
@@ -85,6 +87,7 @@ def _expected_card(
                 declared_value_id=RECTANGULAR,
                 name="Форма",
                 kind=AttributeKind.SELECT,
+                is_customer_changeable=True,
                 values=[
                     ProductAttributeValue(id=RECTANGULAR, name="Прямоугольное", quantity=None),
                     ProductAttributeValue(id=ROUND, name="Круглое", quantity=None),
@@ -95,6 +98,7 @@ def _expected_card(
                 declared_value_id=ALUMINIUM,
                 name="Рама",
                 kind=AttributeKind.SELECT,
+                is_customer_changeable=True,
                 values=[
                     ProductAttributeValue(id=ALUMINIUM, name="Алюминий", quantity=None),
                     ProductAttributeValue(id=NO_FRAME, name="Без рамы", quantity=None),
@@ -105,6 +109,7 @@ def _expected_card(
                 declared_value_id=NO_BACKLIGHT,
                 name="Подсветка",
                 kind=AttributeKind.SELECT,
+                is_customer_changeable=True,
                 values=[
                     ProductAttributeValue(id=CONTOUR, name="Контурная", quantity=None),
                     ProductAttributeValue(id=NO_BACKLIGHT, name="Без подсветки", quantity=None),
@@ -115,6 +120,7 @@ def _expected_card(
                 declared_value_id=WITH_MOUNT,
                 name="Крепление",
                 kind=AttributeKind.SELECT,
+                is_customer_changeable=True,
                 values=[
                     ProductAttributeValue(id=WITH_MOUNT, name="С креплением", quantity=None),  # noqa: RUF001
                     ProductAttributeValue(id=NO_MOUNT, name="Без крепления", quantity=None),
@@ -147,6 +153,24 @@ async def test_a_card_names_the_value_the_owner_declared_on_each_attribute(api_c
         FRAME: ALUMINIUM,
         BACKLIGHT: NO_BACKLIGHT,
         MOUNT: WITH_MOUNT,
+    }
+
+
+async def test_a_card_says_which_attributes_the_customer_may_change(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """The card marks the attribute the owner froze, so the calculator never offers it as a field."""
+    await prime_non_changeable_attribute(engine)
+
+    card = (await api_client.read_product("zerkalo-v-rame")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert {attribute.id: attribute.is_customer_changeable for attribute in card.attributes} == {
+        BLADE: False,
+        SHAPE: True,
+        FRAME: True,
+        BACKLIGHT: True,
+        MOUNT: True,
     }
 
 
@@ -187,6 +211,7 @@ async def test_a_card_names_the_kind_of_an_attribute_the_customer_types_a_number
             id=CUTOUTS,
             name="Вырезы",
             kind=AttributeKind.NUMBER,
+            is_customer_changeable=True,
             declared_value_id=None,
             values=[ProductAttributeValue(id=None, name="Вырез", quantity=Decimal(1))],
         )
@@ -208,6 +233,7 @@ async def test_the_kind_of_an_attribute_reaches_the_storefront_in_the_spelling_i
             "name": "Вырезы",
             "kind": "number",
             "declared_value_id": None,
+            "is_customer_changeable": True,
             "values": [{"id": None, "name": "Вырез", "quantity": "1.0000"}],
         }
     ]

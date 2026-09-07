@@ -5,7 +5,7 @@ import { calculatePrice } from "./calculate-price.ts";
 import { inquiryErrorMessage, SubmitInquiryError, submitInquiry } from "./submit-inquiry.ts";
 import type { ProductCard } from "../lib/catalog-api.ts";
 import { notifyInquiryChanged } from "../lib/inquiry-events.ts";
-import { Calculator, HEIGHT_FIELD, WIDTH_FIELD } from "../lib/calculator-state.ts";
+import { Calculator, calculatorFields, HEIGHT_FIELD, WIDTH_FIELD } from "../lib/calculator-state.ts";
 import {
   addInquiryItem,
   canAddCalculatorConfiguration,
@@ -29,6 +29,7 @@ const consent = ref(false);
 const submitResult = ref<{ text: string; isError: boolean } | null>(null);
 const isSubmitting = ref(false);
 
+const fields = computed(() => calculatorFields(props.product));
 const price = computed(() => (calculator.request.status === "done" ? calculator.request.price : null));
 const canAddToInquiry = computed(() => canAddCalculatorConfiguration(price.value?.kind, wish.value));
 const canShowInquiryEditor = computed(() => isInquiryEditorVisible(price.value?.kind));
@@ -111,7 +112,7 @@ onMounted(() => {
       <label v-if="product.variants.length > 1" class="field"><span>Готовый размер</span><select :value="calculator.variantIndex ?? ''" @change="calculator.chooseVariant(Number(typed($event)))"><option v-if="calculator.variantIndex === null" value="" disabled>Свой размер</option><option v-for="(variant, index) in product.variants" :key="`${variant.width_mm}-${variant.height_mm}-${index}`" :value="index">{{ variant.width_mm }} × {{ variant.height_mm }} мм</option></select></label>
       <label class="field"><span>Ширина, мм</span><input :value="calculator.widthText" :class="{ invalid: calculator.isInvalid(WIDTH_FIELD) }" type="number" min="1" inputmode="numeric" @change="calculator.setWidth(typed($event))" /></label>
       <label class="field"><span>Высота, мм</span><input :value="calculator.heightText" :class="{ invalid: calculator.isInvalid(HEIGHT_FIELD) }" type="number" min="1" inputmode="numeric" @change="calculator.setHeight(typed($event))" /></label>
-      <label v-for="attribute in product.attributes" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><select v-if="attribute.kind === 'select'" :value="calculator.chosenValue(attribute.id)" @change="calculator.chooseValue(attribute.id, typed($event))"><option value="">Как в товаре</option><option v-for="value in attribute.values.filter((value) => value.id !== null)" :key="value.id" :value="value.id">{{ value.name }}</option></select><input v-else :value="calculator.chosenQuantity(attribute.id)" :class="{ invalid: calculator.isInvalid(attribute.id) }" type="text" inputmode="decimal" @change="calculator.setQuantity(attribute.id, typed($event))" /></label>
+      <label v-for="attribute in fields" :key="attribute.id" class="field"><span>{{ attribute.name }}</span><select v-if="attribute.kind === 'select'" :value="calculator.chosenValue(attribute.id)" @change="calculator.chooseValue(attribute.id, typed($event))"><option value="">Как в товаре</option><option v-for="value in attribute.values.filter((value) => value.id !== null)" :key="value.id" :value="value.id">{{ value.name }}</option></select><input v-else :value="calculator.chosenQuantity(attribute.id)" :class="{ invalid: calculator.isInvalid(attribute.id) }" type="text" inputmode="decimal" @change="calculator.setQuantity(attribute.id, typed($event))" /></label>
     </div>
     <div class="calc-result" aria-live="polite">
       <p v-if="calculator.request.status === 'loading'" class="calc-note">Считаем стоимость…</p>
