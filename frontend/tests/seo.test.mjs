@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { absoluteUrl, breadcrumbsJsonLd, businessJsonLd, productJsonLd } from "../app/lib/seo.ts";
+import { absoluteUrl, breadcrumbsJsonLd, businessJsonLd, listingCanonicalPath, listingRobots, productJsonLd } from "../app/lib/seo.ts";
 
 const SITE = new URL("https://memiro.ru");
 
@@ -58,4 +58,38 @@ test("breadcrumbs are numbered from the home page down", () => {
   const crumbs = breadcrumbsJsonLd(SITE, [{ href: "/", label: "Главная" }, { href: "/catalog/", label: "Каталог" }]);
   assert.deepEqual(crumbs.itemListElement.map((item) => item.position), [1, 2]);
   assert.equal(crumbs.itemListElement[1].item, "https://memiro.ru/catalog/");
+});
+
+// A narrowing shows the category under another address, so it canonicalises to
+// the clean one (ADR-0003). A page number shows different products, so it
+// canonicalises to itself — pointing it at page 1 while also refusing it makes
+// the two signals contradict, and the refusal risks reaching the category.
+test("a page of a listing is its own canonical address", () => {
+  const query = { values: [], priceMin: "", priceMax: "", sort: /** @type {const} */ ("name"), page: 3 };
+  assert.equal(listingCanonicalPath("/catalog/mirrors/", query), "/catalog/mirrors/?page=3");
+});
+
+test("the first page carries no page number and so no duplicate", () => {
+  const query = { values: [], priceMin: "", priceMax: "", sort: /** @type {const} */ ("name"), page: 1 };
+  assert.equal(listingCanonicalPath("/catalog/mirrors/", query), "/catalog/mirrors/");
+});
+
+test("a narrowing canonicalises to the clean listing, on any page", () => {
+  const query = { values: ["v1"], priceMin: "", priceMax: "", sort: /** @type {const} */ ("name"), page: 2 };
+  assert.equal(listingCanonicalPath("/catalog/mirrors/", query), "/catalog/mirrors/");
+  const priced = { values: [], priceMin: "1000", priceMax: "", sort: /** @type {const} */ ("name"), page: 1 };
+  assert.equal(listingCanonicalPath("/catalog/mirrors/", priced), "/catalog/mirrors/");
+});
+
+test("only a narrowing is refused indexing; a page number is not", () => {
+  assert.equal(listingRobots({ values: [], priceMin: "", priceMax: "", sort: /** @type {const} */ ("name"), page: 4 }), undefined);
+  assert.equal(listingRobots({ values: ["v1"], priceMin: "", priceMax: "", sort: /** @type {const} */ ("name"), page: 1 }), "noindex, follow");
+});
+
+// Sorting reorders the same products: it stays indexable and folds onto the
+// clean address, which is what it already did.
+test("sorting does not create an address of its own", () => {
+  const query = { values: [], priceMin: "", priceMax: "", sort: /** @type {const} */ ("cheapest"), page: 1 };
+  assert.equal(listingCanonicalPath("/catalog/mirrors/", query), "/catalog/mirrors/");
+  assert.equal(listingRobots(query), undefined);
 });

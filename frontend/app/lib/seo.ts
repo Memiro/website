@@ -1,3 +1,4 @@
+import { FIRST_PAGE, isNarrowed, type CatalogQuery } from "./catalog-query.ts";
 import { SITE_NAME } from "./site.ts";
 import type { Contacts } from "./site-api.ts";
 
@@ -14,6 +15,25 @@ export function siteOrigin(site: URL | undefined): string | null {
 export function absoluteUrl(site: URL | undefined, path: string): string | null {
   const origin = siteOrigin(site);
   return origin === null ? null : new URL(path, origin).href;
+}
+
+/**
+ * The address a listing declares as its own. A narrowing shows the category
+ * under another address and folds onto the clean one (ADR-0003); a page number
+ * shows different products and stands on its own. Pointing a page at the first
+ * one while also refusing it indexing makes the two signals contradict, and the
+ * refusal risks being read against the category itself.
+ */
+export function listingCanonicalPath(path: string, query: CatalogQuery): string {
+  if (isNarrowed(query) || query.page === FIRST_PAGE) {
+    return path;
+  }
+  return `${path}?page=${query.page}`;
+}
+
+/** Only a narrowing is kept out of the index; paging is the way to the products past the first page. */
+export function listingRobots(query: CatalogQuery): string | undefined {
+  return isNarrowed(query) ? "noindex, follow" : undefined;
 }
 
 export interface PostalAddressDocument {

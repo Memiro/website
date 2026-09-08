@@ -11,14 +11,16 @@ interface Props {
   title: string;
   description: string;
   robots?: string;
+  /** The address this page declares as its own, when it is not simply its path. */
+  canonicalPath?: string;
   ogType?: string;
   ogImage?: string;
   crumbs?: Crumb[];
   jsonLd?: JsonLdDocument[];
 }
 
-const { title, description, robots, ogType = "website", ogImage = "/img/hero-1.jpg", crumbs = [], jsonLd = [] } = Astro.props;
-const canonical = absoluteUrl(Astro.site, Astro.url.pathname);
+const { title, description, robots, canonicalPath, ogType = "website", ogImage = "/img/hero-1.jpg", crumbs = [], jsonLd = [] } = Astro.props;
+const canonical = absoluteUrl(Astro.site, canonicalPath ?? Astro.url.pathname);
 const image = absoluteUrl(Astro.site, ogImage);
 const documents = crumbs.length > 0 ? [...jsonLd, breadcrumbsJsonLd(Astro.site, crumbs)] : jsonLd;
 const site = await readSite();
