@@ -12,6 +12,21 @@
 {% endcomment %}
 
 {% block after_related_objects %}
+{% if workbook_url %}
+<div class="module aligned" id="pricing-workbook">
+  <h2>Книга расчёта</h2>
+  <p class="help">
+    Та же арифметика, что на витрине, но формулами таблицы: поднимите
+    тариф, подвиньте порог наценки, посмотрите, что стало с крупным
+    зеркалом. Книга собирается из живых данных и ничего в них не пишет,
+    а лист «Сверка» показывает, что она считает так же, как сайт.
+  </p>
+  <p class="submit-row">
+    <a class="button" href="{{ workbook_url }}" download>Скачать книгу расчёта</a>
+  </p>
+</div>
+{% endif %}
+
 <div class="module aligned" id="variant-builder">
   <h2>Предпосчитанные варианты</h2>
 

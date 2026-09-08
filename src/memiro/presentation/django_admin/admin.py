@@ -20,7 +20,7 @@ from typing import Any, cast, override
 from uuid import UUID
 
 from django.conf import settings
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.options import Action, ActionLocation
 from django.contrib.admin.views.main import ChangeList
 from django.db.models import Model, QuerySet
@@ -86,6 +86,7 @@ from memiro.presentation.django_admin.variant_builder import (
     saved,
 )
 from memiro.presentation.django_admin.work_card import create_work, remove_work, restate_work
+from memiro.presentation.django_admin.workbook import ONE_AT_A_TIME, workbook_response
 from memiro.presentation.django_admin.writes import guarded_write
 
 # What the list says about a product whose calculator is not ready: the
@@ -99,6 +100,10 @@ NOTHING_IS_PAID = "Ни одно значение не стоит денег."
 VARIANT_PRICE_URL = "memiro_product_variant_price"
 VARIANT_SAVE_URL = "memiro_product_variant_save"
 VARIANT_DELETE_URL = "memiro_product_variant_delete"
+
+# The address the workbook is downloaded from — under the card of the product
+# whose markup the book opens on.
+PRODUCT_WORKBOOK_URL = "memiro_product_workbook"
 
 # One answer of the panel, as the URL conf hands it a request.
 type PanelView = Callable[[HttpRequest, ProductId], HttpResponse]
@@ -203,6 +208,16 @@ class CategoryAdmin(admin.ModelAdmin):
         "sort_order",
         "name",
     )
+    actions = ("download_workbook",)
+
+    @admin.action(description="Скачать книгу расчёта")
+    def download_workbook(self, request: HttpRequest, queryset: QuerySet[Model]) -> HttpResponse:
+        """Hand the owner the book of one section: its dictionary, its bounds and no product's markup."""
+        sections = list(queryset[:2])
+        if len(sections) != 1:
+            messages.error(request, ONE_AT_A_TIME)
+            return HttpResponseRedirect(request.get_full_path())
+        return workbook_response(request, category_id=sections[0].pk)
 
     @override
     def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
@@ -499,6 +514,11 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
                 self.admin_site.admin_view(self._permitted(self.variant_delete)),
                 name=VARIANT_DELETE_URL,
             ),
+            path(
+                "<uuid:product_id>/workbook/",
+                self.admin_site.admin_view(self._permitted(self.workbook)),
+                name=PRODUCT_WORKBOOK_URL,
+            ),
         ]
         return own + super().get_urls()
 
@@ -514,6 +534,9 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
     ) -> HttpResponse:
         """Give the card of a saved product its panel: an unsaved one has nothing to build variants of."""
         context["variant_builder"] = None if obj is None else _panel(cast("Product", obj).id)
+        context["workbook_url"] = (
+            None if obj is None else reverse(f"admin:{PRODUCT_WORKBOOK_URL}", args=[cast("Product", obj).id])
+        )
         return super().render_change_form(request, context, add=add, change=change, form_url=form_url, obj=obj)
 
     def _permitted(self, view: PanelView) -> PanelView:
@@ -537,6 +560,10 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
     def variant_delete(self, request: HttpRequest, product_id: ProductId) -> HttpResponse:
         """Take one variant off the product and answer with the whole redrawn panel."""
         return answered(request, lambda: removed(request, product_id))
+
+    def workbook(self, request: HttpRequest, product_id: ProductId) -> HttpResponse:
+        """Hand the owner the book this product's price is made in."""
+        return workbook_response(request, product_id=product_id)
 
     @override
     def changelist_view(self, request: HttpRequest, extra_context: dict[str, Any] | None = None) -> HttpResponse:
