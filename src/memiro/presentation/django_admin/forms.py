@@ -50,6 +50,7 @@ from memiro.presentation.django_admin.models import (
     ProductDeclaredValue,
     ProductImage,
     SizeSurcharge,
+    Work,
 )
 
 PARENTS_FIELD = "parents"
@@ -75,6 +76,10 @@ DECLARED_PREFIX = "declared_"
 # strikes out. Their order on the screen is the order the card sends them in.
 PHOTOS_FIELD = "photos"
 REMOVE_PHOTOS_FIELD = "remove_photos"
+
+# The one photograph a work stands on: on a saved card an empty field means
+# "keep the one it has", so the field is required only while the work is new.
+PHOTO_FIELD = "photo"
 
 PHOTO_TOO_LARGE = "Фотография не должна быть тяжелее %(limit)s МБ."
 BYTES_IN_A_MEGABYTE = 1024 * 1024
@@ -486,3 +491,45 @@ class LandingCardForm(forms.ModelForm):
             message = f"Не больше {MAX_LANDING_CONDITIONS} значений."
             raise forms.ValidationError(message)
         return chosen
+
+
+class WorkCardForm(forms.ModelForm):
+    """Карточка работы: фотография установки, подпись, зеркало с фотографии и место в галерее."""
+
+    photo = forms.FileField(
+        label="Фотография",
+        help_text="Пустое поле на сохранённой карточке оставляет прежнюю фотографию.",
+        # The name is a bound of the application form too, and a name past it
+        # there is a pydantic error no refusal table can say: the card holds
+        # the same bound so the owner reads it on the form.
+        max_length=MAX_NAME_LENGTH,
+        validators=[FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)), _photo_is_not_too_large],
+    )
+    title = forms.CharField(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH, label="Подпись")
+    description = forms.CharField(
+        required=False,
+        max_length=MAX_DESCRIPTION_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 4}),
+        label="Описание",
+    )
+    sort_order = forms.IntegerField(min_value=0, initial=0, label="Порядок")
+
+    class Meta:
+        model = Work
+        fields = (
+            "product",
+            "title",
+            "description",
+            "is_published",
+            "sort_order",
+        )
+        labels = {  # noqa: RUF012  # Django reads Meta options off the class as plain values
+            "product": "Зеркало с фотографии",
+            "is_published": "Опубликована",
+        }
+
+    @override
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Ask for a photograph only where there is none yet: a saved work already stands on one."""
+        super().__init__(*args, **kwargs)
+        self.fields[PHOTO_FIELD].required = self.instance.pk is None

@@ -20,6 +20,7 @@ from memiro.application.errors.catalog import (
     ProductNotFoundError,
     ProductSlugTakenError,
     VariantNotFoundError,
+    WorkNotFoundError,
 )
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
@@ -61,6 +62,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     ProductNotFoundError: status.HTTP_404_NOT_FOUND,
     ProductImageNotFoundError: status.HTTP_404_NOT_FOUND,
     VariantNotFoundError: status.HTTP_404_NOT_FOUND,
+    WorkNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeValueNotFoundError: status.HTTP_404_NOT_FOUND,
     AttributeNotFoundError: status.HTTP_404_NOT_FOUND,
     PricingSettingsNotFoundError: status.HTTP_404_NOT_FOUND,

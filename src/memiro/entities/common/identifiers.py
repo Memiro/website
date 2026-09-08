@@ -9,5 +9,6 @@ type LandingId = UUID
 type AttributeId = UUID
 type AttributeValueId = UUID
 type PricingSettingsId = UUID
+type WorkId = UUID
 type InquiryId = UUID
 type InquiryItemId = UUID

@@ -31,6 +31,7 @@ from memiro.application.manage_products import (
     RemoveProduct,
     RemoveVariant,
 )
+from memiro.application.manage_works import ChangeWork, CreateWork, RemoveWork
 from memiro.application.read_site import ReadSite
 from memiro.application.reprice_products import RepriceProducts
 from memiro.application.submit_inquiry import SubmitInquiry
@@ -64,12 +65,15 @@ class InteractorProvider(Provider):
         ReadProduct,
         CalculatePrice,
         ChangeVariant,
+        ChangeWork,
+        CreateWork,
         DuplicateVariantWithSize,
         ListPricingGaps,
         ListVariants,
         QuoteVariant,
         ReadSite,
         RemoveVariant,
+        RemoveWork,
         RepriceProducts,
         SubmitInquiry,
     )

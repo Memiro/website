@@ -142,6 +142,21 @@ landing_conditions_table = Table(
     Column("attribute_id", Uuid(), ForeignKey("attributes.id"), nullable=False),
 )
 
+# A work of the gallery is content: a photograph of an installation with a
+# caption, and no rule of its own (decision 49). The mirror it shows is a link
+# the catalogue may outlive, so the reference is dropped, never the work.
+works_table = Table(
+    "works",
+    mapper_registry.metadata,
+    Column("id", Uuid(), primary_key=True),
+    Column("photo_key", String(NAME_LENGTH), nullable=False),
+    Column("product_id", Uuid(), ForeignKey("products.id", ondelete="SET NULL"), nullable=True),
+    Column("title", String(NAME_LENGTH), nullable=False),
+    Column("description", String(2_000), nullable=False),
+    Column("is_published", Boolean(), nullable=False),
+    Column("sort_order", Integer(), nullable=False),
+)
+
 # Studio contacts and seller requisites are the owner's data, not constants in
 # code: the showroom moves more often than a release goes out. Neither has an
 # aggregate — nothing about them has a rule — so they live on the read path

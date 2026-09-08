@@ -30,6 +30,15 @@ class ProductGateway(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    async def exists(self, product_id: ProductId) -> bool:
+        """Tell whether the catalogue holds a product under this identifier.
+
+        What a work of the gallery needs from the catalogue is exactly this:
+        it names a mirror, it does not read one.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     async def slug_owner(self, slug: str) -> ProductId | None:
         """Name the product holding this public address, or ``None`` if it is free.
 

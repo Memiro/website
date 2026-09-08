@@ -22,6 +22,7 @@ from memiro.application.errors.catalog import (
     ProductNotFoundError,
     ProductSlugTakenError,
     VariantNotFoundError,
+    WorkNotFoundError,
 )
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
@@ -58,6 +59,7 @@ REFUSAL_MESSAGES: dict[type[AppError], str] = {
     DuplicateSizeSurchargeError: "Две ступени не начинаются с одного размера: оставьте одну.",
     ProductNotFoundError: "Товар не найден: похоже, его удалили в другом окне.",
     ProductImageNotFoundError: "Фотография не найдена: похоже, её убрали в другом окне.",
+    WorkNotFoundError: "Работа не найдена: похоже, её убрали в другом окне.",
     DuplicateProductImageError: "Такая фотография у товара уже есть.",
     ProductSlugTakenError: "Этот адрес уже занят другим товаром: придумайте другой.",
     InvalidProductSlugError: "Адрес товара — латинские слова через дефис, и пустым он выводится из названия.",

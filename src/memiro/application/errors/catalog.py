@@ -41,6 +41,14 @@ class ProductNotFoundError(AppError):
 
 
 @app_error
+class WorkNotFoundError(AppError):
+    """Raised when the requested work of the gallery does not exist."""
+
+    code: ClassVar[str] = "WORK_NOT_FOUND"
+    message: str = "Work not found"
+
+
+@app_error
 class VariantNotFoundError(AppError):
     """Raised when a requested child does not belong to the product."""
 
