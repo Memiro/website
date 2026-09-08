@@ -35,6 +35,11 @@ export const SITE_LINKS: readonly NavigationLink[] = [
   INQUIRY_LINK,
 ];
 
+/** The public address of a product card, spelled in one place for every page that links to one. */
+export function productPath(categorySlug: string, productSlug: string): string {
+  return `/catalog/${categorySlug}/${productSlug}/`;
+}
+
 // A section link is current for everything beneath it, but the root is not a
 // section: by prefix alone "/" would light up on every page of the site.
 export function isCurrentPath(pathname: string, href: string): boolean {
