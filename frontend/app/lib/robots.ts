@@ -1,18 +1,14 @@
 import { siteOrigin } from "./seo.ts";
 
-/**
- * The narrowings of the catalog listing: they show the same category under
- * another address, so Yandex is told to fold them away (ADR-0003). `page` is
- * absent on purpose — it changes the content, and folding it would hide every
- * product past the first page.
- */
+// The narrowings of the catalog listing: they show the same category under
+// another address, so Yandex is told to fold them away (ADR-0003). `page` is
+// absent on purpose — it changes the content, and folding it would hide every
+// product past the first page.
 export const CLEAN_PARAMS = ["value", "price_min", "price_max", "sort"];
 
-/**
- * Crawlers that answer questions with a language model. They are named to be
- * allowed, never to be refused: a workshop selling locally gains more from
- * appearing in an assistant's answer than it loses by being read.
- */
+// Crawlers that answer questions with a language model. They are named to be
+// allowed, never to be refused: a workshop selling locally gains more from
+// appearing in an assistant's answer than it loses by being read.
 export const AI_CRAWLERS = [
   "GPTBot",
   "OAI-SearchBot",
@@ -26,8 +22,12 @@ export const AI_CRAWLERS = [
 /** Addresses with nothing to index behind them. Photographs are not among them. */
 const CLOSED = ["/cart/", "/api/", "/admin/", "/admin-static/"];
 
-function block(agent: string): string[] {
-  return [`User-agent: ${agent}`, ...CLOSED.map((path) => `Disallow: ${path}`)];
+// A named group replaces the `*` group outright rather than adding to it, so
+// every group repeats what is closed: an AI crawler given only "Allow: /"
+// would be handed the cart, the API and the admin.
+function block(agent: string, allowRest = false): string[] {
+  const rules = CLOSED.map((path) => `Disallow: ${path}`);
+  return [`User-agent: ${agent}`, ...rules, ...(allowRest ? ["Allow: /"] : [])];
 }
 
 export function robotsText(site: URL | undefined): string {
@@ -38,7 +38,7 @@ export function robotsText(site: URL | undefined): string {
     ...block("Yandex"),
     `Clean-param: ${CLEAN_PARAMS.join("&")}`,
     "",
-    ...AI_CRAWLERS.flatMap((crawler) => [`User-agent: ${crawler}`, "Allow: /", ""]),
+    ...AI_CRAWLERS.flatMap((crawler) => [...block(crawler, true), ""]),
   ];
   if (origin !== null) {
     lines.push(`Sitemap: ${origin}/sitemap.xml`);

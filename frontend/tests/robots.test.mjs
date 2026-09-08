@@ -46,3 +46,17 @@ test("no AI crawler is refused", () => {
 test("the retired Host directive is not carried over", () => {
   assert.ok(!text.includes("Host:"));
 });
+
+// A named group replaces the `*` group outright: an AI crawler given only
+// "Allow: /" would be handed /cart/, /api/ and the admin.
+test("an AI crawler is allowed the site but not what is closed to everyone", () => {
+  const groups = text.split("\n\n");
+  for (const crawler of AI_CRAWLERS) {
+    const group = groups.find((block) => block.startsWith(`User-agent: ${crawler}`));
+    assert.ok(group !== undefined, `${crawler} has no group`);
+    for (const path of ["/cart/", "/api/", "/admin/", "/admin-static/"]) {
+      assert.ok(group.includes(`Disallow: ${path}`), `${crawler} is handed ${path}`);
+    }
+    assert.ok(group.includes("Allow: /"));
+  }
+});

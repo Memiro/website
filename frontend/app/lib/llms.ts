@@ -1,26 +1,21 @@
+import { categoryPath, landingPath } from "./navigation.ts";
 import { absoluteUrl } from "./seo.ts";
 import { SITE_NAME } from "./site.ts";
 
-interface Named {
-  slug: string;
-}
-
 /** What the document needs of the catalogue — the slice `CatalogApi` already offers. */
 export interface LlmsCatalog {
-  categories: () => Promise<{ items: (Named & { name: string })[] }>;
-  landings: () => Promise<{ items: (Named & { heading: string })[] }>;
+  categories: () => Promise<{ items: { slug: string; name: string }[] }>;
+  landings: () => Promise<{ items: { slug: string; heading: string }[] }>;
 }
 
 function link(site: URL, label: string, path: string): string {
   return `- [${label}](${absoluteUrl(site, path)})`;
 }
 
-/**
- * The site as a language model would rather read it. No large crawler reads
- * llms.txt today — what actually carries this storefront into an assistant's
- * answer is the server-rendered HTML and the JSON-LD. This is a cheap bet on
- * the proposal catching on, and it is the lowest priority of the SEO work.
- */
+// The site as a language model would rather read it. No large crawler reads
+// llms.txt today — what actually carries this storefront into an assistant's
+// answer is the server-rendered HTML and the JSON-LD. This is a cheap bet on
+// the proposal catching on, and it is the lowest priority of the SEO work.
 export async function llmsText(site: URL | undefined, api: LlmsCatalog): Promise<string | null> {
   if (site === undefined) {
     return null;
@@ -36,11 +31,11 @@ export async function llmsText(site: URL | undefined, api: LlmsCatalog): Promise
     "## Каталог",
     "",
     link(site, "Все зеркала", "/catalog/"),
-    ...categories.items.map((category) => link(site, category.name, `/catalog/${category.slug}/`)),
+    ...categories.items.map((category) => link(site, category.name, categoryPath(category.slug))),
     "",
     "## Подборки",
     "",
-    ...landings.items.map((landing) => link(site, landing.heading, `/${landing.slug}/`)),
+    ...landings.items.map((landing) => link(site, landing.heading, landingPath(landing.slug))),
     "",
     "## О студии",
     "",

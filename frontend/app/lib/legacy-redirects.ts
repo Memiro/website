@@ -1,16 +1,13 @@
 import { productPath } from "./navigation.ts";
 
-/**
- * The catalogue of the WordPress site this storefront replaced. Its products
- * kept their slugs but gained a category in the path, and the table below is
- * the only place that knows which. It is a table and not a call to the API on
- * purpose: a redirect has to work while the backend is down, or an outage
- * turns 88 indexed addresses into dead ones (ADR-0015).
- *
- * Collected from https://memiro.ru/catalog-sitemap.xml on 2026-09-08 against
- * the catalogue of the running contour; all 88 products were found, so no
- * product is gone.
- */
+// The catalogue of the WordPress site this storefront replaced. Its products
+// kept their slugs but gained a category in the path, and the table below is
+// the only place that knows which. It is a table and not a call to the API on
+// purpose: a redirect has to work while the backend is down, or an outage
+// turns 88 indexed addresses into dead ones (ADR-0015).
+// Collected from https://memiro.ru/catalog-sitemap.xml on 2026-09-08 against
+// the catalogue of the running contour; all 88 products were found, so no
+// product is gone.
 const LEGACY_PRODUCT_CATEGORY: Record<string, string> = {
   "aura": "zerkala",
   "brand-vue": "zerkala",
@@ -109,12 +106,10 @@ const MOVED_PAGES: Record<string, string> = {
   "/privacy-policy/": "/privacy/",
 };
 
-/**
- * What the old site published and the new one does not: a WordPress sample page,
- * its sample post and its default rubric. They are answered 410 rather than
- * redirected to a listing — a redirect there reads as a soft 404, saves no
- * weight and costs trust (ADR-0015).
- */
+// What the old site published and the new one does not: a WordPress sample page,
+// its sample post and its default rubric. They are answered 410 rather than
+// redirected to a listing — a redirect there reads as a soft 404, saves no
+// weight and costs trust (ADR-0015).
 export const GONE_PATHS = ["/testovaya-stranicza/", "/privet-mir/", "/category/bez-rubriki/"];
 
 export interface LegacyAnswer {
@@ -135,4 +130,10 @@ export function legacyResponse(pathname: string): LegacyAnswer | null {
   const slug = path.startsWith("/mirrors/") ? path.slice("/mirrors/".length, -1) : "";
   const category = LEGACY_PRODUCT_CATEGORY[slug];
   return category === undefined ? null : { status: 301, location: productPath(category, slug) };
+}
+
+// A campaign tag on an old link is the reason that visit is attributable; the
+// move to a new address must not eat it.
+export function redirectTarget(location: string, search: string): string {
+  return `${location}${search}`;
 }
