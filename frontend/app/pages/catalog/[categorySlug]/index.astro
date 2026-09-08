@@ -18,7 +18,7 @@ import {
 } from "../../../lib/catalog-query.ts";
 import { foundOrNull } from "../../../lib/not-found.ts";
 import { productPlural } from "../../../lib/plural.ts";
-import { listingCanonicalPath, listingRobots } from "../../../lib/seo.ts";
+import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../../lib/seo.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
@@ -44,6 +44,9 @@ const chips = (page?.groups ?? []).flatMap((group) =>
   })),
 );
 const narrowed = isNarrowed(query);
+const listing = narrowed || page === null
+  ? null
+  : productListJsonLd(Astro.site, categorySlug, page.items);
 // The hint inside the price field is a round sum, not a stored decimal.
 const roubles = (amount: string | null): string => (amount === null ? "" : String(Math.round(Number(amount))));
 ---
@@ -61,6 +64,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
     robots={listingRobots(query)}
     canonicalPath={listingCanonicalPath(path, query)}
     crumbs={crumbs}
+    jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
     <div class="cat-head wrap"><h1 class="h-section">{name}</h1><span class="count">{page.total} {productPlural(page.total)}</span></div>

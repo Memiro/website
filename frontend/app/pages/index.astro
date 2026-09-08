@@ -5,7 +5,7 @@ import OfferNote from "../components/OfferNote.astro";
 import InquiryForm from "../islands/InquiryForm.vue";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductSummary } from "../lib/catalog-api.ts";
-import { businessJsonLd } from "../lib/seo.ts";
+import { businessJsonLd, organizationJsonLd } from "../lib/seo.ts";
 import { readSite, socialLinks } from "../lib/site-api.ts";
 import { catalogTiles, type Tile } from "../lib/tiles.ts";
 
@@ -34,7 +34,7 @@ try {
 <BaseLayout
   title="Мастерская зеркал Memiro"
   description="Мастерская Memiro в Санкт-Петербурге: интерьерные зеркала на заказ любой сложности — изготовление, доставка и монтаж."
-  jsonLd={[businessJsonLd(Astro.site, contacts)]}
+  jsonLd={[businessJsonLd(Astro.site, contacts), organizationJsonLd(Astro.site)]}
 >
   <section class="wrap hero">
     <div>

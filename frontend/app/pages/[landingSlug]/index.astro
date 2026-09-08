@@ -5,9 +5,9 @@ import NotFound from "../../components/NotFound.astro";
 import OfferNote from "../../components/OfferNote.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/catalog-api.ts";
-import { catalogSearch, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
+import { catalogSearch, isNarrowed, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
 import { foundOrNull } from "../../lib/not-found.ts";
-import { listingCanonicalPath, listingRobots } from "../../lib/seo.ts";
+import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../lib/seo.ts";
 import { productPlural } from "../../lib/plural.ts";
 
 const api = internalCatalogApi();
@@ -25,6 +25,9 @@ const query = landing === null ? asked : { ...asked, values: landing.values };
 const page: CategoryPage | null = landing === null
   ? null
   : await foundOrNull(landing.category_slug, (slug) => api.categoryProducts(slug, catalogSearch(query)));
+const listing = page === null || landing === null || isNarrowed(asked)
+  ? null
+  : productListJsonLd(Astro.site, landing.category_slug, page.items);
 const paragraphs = landing === null ? [] : landing.text.split("\n").filter((line) => line.trim() !== "");
 const crumbs = landing === null ? [] : [
   { href: "/", label: "Главная" },
@@ -47,6 +50,7 @@ const crumbs = landing === null ? [] : [
     robots={listingRobots(asked)}
     canonicalPath={listingCanonicalPath(path, asked)}
     crumbs={crumbs}
+    jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
     <div class="cat-head wrap">
