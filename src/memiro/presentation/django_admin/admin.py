@@ -44,6 +44,7 @@ from memiro.presentation.django_admin.forms import (
     ProductCardForm,
     SizeSurchargeFormSet,
     SizeSurchargeTierForm,
+    WorkCardForm,
     declared_value_fields,
     photo_fields,
 )
@@ -64,6 +65,7 @@ from memiro.presentation.django_admin.models import (
     SellerRequisites,
     SiteContacts,
     SizeSurcharge,
+    Work,
 )
 from memiro.presentation.django_admin.pricing_settings_card import restate_pricing_settings
 from memiro.presentation.django_admin.product_card import (
@@ -83,6 +85,7 @@ from memiro.presentation.django_admin.variant_builder import (
     removed,
     saved,
 )
+from memiro.presentation.django_admin.work_card import create_work, remove_work, restate_work
 from memiro.presentation.django_admin.writes import guarded_write
 
 # What the list says about a product whose calculator is not ready: the
@@ -826,6 +829,73 @@ class LandingAdmin(GuardsItsForm, admin.ModelAdmin):
     def delete_model(self, request: HttpRequest, obj: Model) -> None:
         """Remove the page through the interactor that takes its narrowing with it."""
         remove_landing(obj.pk)
+
+
+@admin.register(Work)
+class WorkAdmin(GuardsItsForm, admin.ModelAdmin):
+    """Наши работы: карточка пишет галерею командами, фотография уходит на том через порт."""
+
+    form = WorkCardForm
+    # No bulk action: a work is removed from its own card, and a queryset half
+    # deleted before a refusal is not something the owner asked for.
+    actions = None
+    list_display = (
+        "preview",
+        "title",
+        "product",
+        "is_published",
+        "sort_order",
+    )
+    list_filter = ("is_published",)
+    search_fields = ("title",)
+    ordering = (
+        "sort_order",
+        "title",
+    )
+
+    @admin.display(description="Фотография")
+    def preview(self, obj: Model) -> str:
+        """Show the photo the way the storefront gets it: from the edge, by its key."""
+        work = cast("Work", obj)
+        return format_html(
+            '<img src="{}{}" alt="{}" style="max-height: 6rem">', settings.MEDIA_URL, work.photo_key, work.title
+        )
+
+    @override
+    def delete_view(
+        self,
+        request: HttpRequest,
+        object_id: str,
+        extra_context: dict[str, Any] | None = None,
+    ) -> HttpResponse:
+        """Send the deletion through the same guard the form goes through."""
+        view = partial(super().delete_view, request, object_id, extra_context)
+        return guarded_write(request, view)
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Model, form: ModelForm, change: bool) -> None:
+        """Write nothing here: the whole card is sent to the interactors by ``save_related``."""
+
+    @override
+    def save_related(
+        self,
+        request: HttpRequest,
+        form: ModelForm,
+        formsets: list[BaseInlineFormSet],
+        change: bool,
+    ) -> None:
+        """Send the card as the command of the gallery: the photograph goes with it."""
+        if change:
+            restate_work(form.instance.pk, form.cleaned_data)
+            return
+        # The mirror row is never inserted by Django, so the identifier the
+        # command issued is what the history and the redirect are given.
+        form.instance.pk = create_work(form.cleaned_data)
+
+    @override
+    def delete_model(self, request: HttpRequest, obj: Model) -> None:
+        """Remove the work through the interactor that takes its photograph with it."""
+        remove_work(obj.pk)
 
 
 @admin.register(SiteContacts)

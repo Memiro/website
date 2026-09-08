@@ -28,6 +28,7 @@ from memiro.application.manage_products import (
     ListVariants,
     RemoveVariant,
 )
+from memiro.application.manage_works import CreateWork, CreateWorkForm, PhotoForm
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
 from memiro.entities.common.identifiers import (
@@ -37,6 +38,7 @@ from memiro.entities.common.identifiers import (
     LandingId,
     ProductId,
     VariantId,
+    WorkId,
 )
 from memiro.presentation.django_admin.bridge import bridge
 from tests.common.factory.catalog import CATEGORY, PRODUCT, ROUND
@@ -420,5 +422,36 @@ def arranged_landing(*, heading: str, slug: str, narrowing: Sequence[AttributeVa
 async def _published(scope: AsyncContainer, form: CreateLandingForm) -> LandingId:
     """Run the creating interactor in a REQUEST scope of the admin's own container."""
     interactor = await scope.get(CreateLanding)
+    created = await interactor.execute(form)
+    return created.id
+
+
+def work_post(*, title: str, product: ProductId | None = None, sort_order: int = 1) -> dict[str, Any]:
+    """Spell the card of a work as one POST body, its file half apart."""
+    return {
+        "product": "" if product is None else str(product),
+        "title": title,
+        "description": "Поставили в прихожей квартиры на Ленина.",
+        "is_published": "on",
+        "sort_order": str(sort_order),
+    }
+
+
+def arranged_work(*, title: str, content: bytes, product: ProductId | None = None) -> WorkId:
+    """Put one work into the gallery through its own command."""
+    form = CreateWorkForm(
+        photo=PhotoForm(filename="installed.jpg", content=content),
+        product_id=product,
+        title=title,
+        description="",
+        is_published=True,
+        sort_order=1,
+    )
+    return bridge().call(lambda scope: _entered_work(scope, form))
+
+
+async def _entered_work(scope: AsyncContainer, form: CreateWorkForm) -> WorkId:
+    """Run the entering interactor in a REQUEST scope of the admin's own container."""
+    interactor = await scope.get(CreateWork)
     created = await interactor.execute(form)
     return created.id

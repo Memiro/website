@@ -14,6 +14,7 @@
 | `PRODUCT_NOT_FOUND` | 404 | `ProductNotFoundError` | Товара с названным идентификатором нет |
 | `PRODUCT_IMAGE_NOT_FOUND` | 404 | `ProductImageNotFoundError` | Ключ не называет ни одной фотографии этого товара |
 | `VARIANT_NOT_FOUND` | 404 | `VariantNotFoundError` | Вариант не принадлежит названному товару |
+| `WORK_NOT_FOUND` | 404 | `WorkNotFoundError` | Работы с названным идентификатором в галерее нет |
 | `ATTRIBUTE_VALUE_NOT_FOUND` | 404 | `AttributeValueNotFoundError` | Значения нет, оно чужого атрибута или атрибут не объявлен у товара |
 | `ATTRIBUTE_NOT_FOUND` | 404 | `AttributeNotFoundError` | Атрибута с названным идентификатором нет |
 | `PRICING_SETTINGS_NOT_FOUND` | 404 | `PricingSettingsNotFoundError` | Параметры расчёта в базе не заведены |

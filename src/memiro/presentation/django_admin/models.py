@@ -350,6 +350,36 @@ class InquiryItem(Mirror):
         return self.product_name
 
 
+class Work(Mirror):
+    """Работа: фотография установленного изделия у клиента."""
+
+    id = models.UUIDField(primary_key=True)
+    photo_key = models.CharField(max_length=NAME_LENGTH)
+    # The mirror on the photograph, while the catalogue still sells it: the
+    # database drops the reference and keeps the work (``works`` migration).
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.DO_NOTHING,
+        db_column="product_id",
+        related_name="works",
+        null=True,
+        blank=True,
+    )
+    title = models.CharField(max_length=NAME_LENGTH)
+    description = models.CharField(max_length=2_000)
+    is_published = models.BooleanField()
+    sort_order = models.IntegerField()
+
+    class Meta(Mirror.Meta):
+        db_table = "works"
+        verbose_name = "работа"
+        verbose_name_plural = "наши работы"
+
+    @override
+    def __str__(self) -> str:
+        return self.title
+
+
 class Landing(Mirror):
     """A landing page: one category narrowed by the values the owner wrote down."""
 

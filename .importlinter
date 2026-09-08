@@ -59,6 +59,7 @@ modules =
     memiro.application.manage_landings
     memiro.application.manage_pricing_settings
     memiro.application.manage_products
+    memiro.application.manage_works
     memiro.application.read_site
     memiro.application.reprice_products
     memiro.application.submit_inquiry

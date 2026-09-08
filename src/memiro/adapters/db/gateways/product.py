@@ -56,6 +56,14 @@ class SAProductGateway(ProductGateway):
         return result.scalar_one_or_none()
 
     @override
+    async def exists(self, product_id: ProductId) -> bool:
+        """Ask the table for the identifier alone: no aggregate is needed here."""
+        result = await self._session.execute(
+            select(products_table.c.id).where(products_table.c.id == product_id),
+        )
+        return result.scalar_one_or_none() is not None
+
+    @override
     async def slug_owner(self, slug: str) -> ProductId | None:
         """Ask the unique column who holds the address: no aggregate is needed to answer that."""
         result = await self._session.execute(
