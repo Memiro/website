@@ -10,7 +10,7 @@ export const onRequest = defineMiddleware((context, next) => {
   if (answer === null) {
     return next();
   }
-  return answer.location === null
+  return answer.status === 410
     ? new Response("Gone", { status: 410 })
     : context.redirect(redirectTarget(answer.location, context.url.search), answer.status);
 });
