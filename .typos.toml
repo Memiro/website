@@ -2,3 +2,8 @@
 ba = "ba"
 # Django's own name for the asynchronous ``count()`` of a queryset.
 acount = "acount"
+
+# Транслитерированные слаги старого WordPress — данные, а не текст: править их
+# значило бы сломать редиректы, которые ими и адресуются.
+[files]
+extend-exclude = ["frontend/app/lib/legacy-redirects.ts"]
