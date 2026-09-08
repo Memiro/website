@@ -1,10 +1,12 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import WorkTile from "../../components/WorkTile.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { productPath } from "../../lib/navigation.ts";
-import { WORKS } from "../../lib/works.ts";
+import { internalCatalogApi } from "../../lib/catalog-api.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/works/", label: "Наши работы" }];
+
+const works = (await internalCatalogApi().works()).items;
 ---
 
 <BaseLayout
@@ -18,23 +20,9 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/works/", label
     <h1 class="h-section">Наши работы</h1>
     <p class="page-lead">Фотографии реальных установок: зеркала, которые мы сделали и повесили у наших клиентов.</p>
 
-    {WORKS.length > 0 ? (
+    {works.length > 0 ? (
       <div class="works-grid">
-        {WORKS.map((work) => (
-          <figure class="work">
-            {work.product === null ? (
-              <Fragment>
-                <div class="pic"><img src={work.image} alt={work.title} loading="lazy" /></div>
-                <figcaption>{work.title}</figcaption>
-              </Fragment>
-            ) : (
-              <a class="card-link" href={productPath(work.product.categorySlug, work.product.slug)}>
-                <div class="pic"><img src={work.image} alt={work.title} loading="lazy" /></div>
-                <figcaption>{work.title} <span class="work-go">Смотреть зеркало →</span></figcaption>
-              </a>
-            )}
-          </figure>
-        ))}
+        {works.map((work) => <WorkTile work={work} />)}
       </div>
     ) : (
       <p class="muted">Раздел наполняется — загляните позже или посмотрите <a href="/catalog/">каталог</a>.</p>

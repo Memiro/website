@@ -4,7 +4,6 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { isCurrentPath, productPath, SITE_LINKS } from "../app/lib/navigation.ts";
-import { WORKS } from "../app/lib/works.ts";
 
 function pageFileFor(href) {
   return fileURLToPath(new URL(`../app/pages${href}index.astro`, import.meta.url));
@@ -42,10 +41,14 @@ test("a product address is the one the catalogue card and the works page both po
 });
 
 test("every installation photograph that names a mirror points at a whole product address", () => {
-  const addresses = WORKS.flatMap((work) =>
-    work.product === null ? [] : [productPath(work.product.categorySlug, work.product.slug)],
+  const works = [
+    { photo_key: "works/hallway.jpg", title: "Круглое зеркало", description: "", product: { category_slug: "zerkala", slug: "aura" } },
+    { photo_key: "works/bathroom.jpg", title: "Зеркало-капля", description: "", product: null },
+  ];
+
+  const addresses = works.flatMap((work) =>
+    work.product === null ? [] : [productPath(work.product.category_slug, work.product.slug)],
   );
 
-  assert.ok(addresses.length > 0);
-  assert.deepEqual(addresses.filter((address) => !/^\/catalog\/[^/]+\/[^/]+\/$/.test(address)), []);
+  assert.deepEqual(addresses, ["/catalog/zerkala/aura/"]);
 });

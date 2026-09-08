@@ -514,6 +514,7 @@ h1, h2, h3 { font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; }
 .work .card-link { display: flex; flex-direction: column; height: 100%; }
 .work .card-link:focus-visible { outline-offset: -2px; }
 .work-go { display: block; margin-top: 8px; font-size: 13px; font-weight: 400; color: var(--muted); }
+.work-note { display: block; margin-top: 8px; font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--muted); }
 .work .card-link:hover .work-go { color: var(--control); }
 
 /* ---------- Legal sections ---------- */

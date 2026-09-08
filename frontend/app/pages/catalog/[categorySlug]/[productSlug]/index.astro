@@ -6,7 +6,7 @@ import OfferNote from "../../../../components/OfferNote.astro";
 import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
-import { coverImageUrl, productImageUrl } from "../../../../lib/media.ts";
+import { coverImageUrl, mediaUrl } from "../../../../lib/media.ts";
 import { productPath } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
@@ -24,7 +24,7 @@ const price = product === null || product.price_from === null
   ? null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 const cover = product === null ? "" : coverImageUrl(product.image_keys);
-const thumbs = product === null ? [] : product.image_keys.map((key) => productImageUrl(key));
+const thumbs = product === null ? [] : product.image_keys.map((key) => mediaUrl(key));
 const specs = product === null ? [] : productSpecs(product.attributes);
 const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
 

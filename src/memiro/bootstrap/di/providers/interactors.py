@@ -4,6 +4,7 @@ from memiro.application.browse_catalog import (
     ListCategories,
     ListCategoryProducts,
     ListLandings,
+    ListWorks,
     ReadLanding,
     ReadProduct,
 )
@@ -70,6 +71,7 @@ class InteractorProvider(Provider):
         DuplicateVariantWithSize,
         ListPricingGaps,
         ListVariants,
+        ListWorks,
         QuoteVariant,
         ReadSite,
         RemoveVariant,

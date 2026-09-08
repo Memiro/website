@@ -28,6 +28,7 @@ from memiro.adapters.db.tables import (
     products_table,
     seller_requisites_table,
     site_contacts_table,
+    works_table,
 )
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
 from memiro.entities.common.measure import Millimeters
@@ -56,11 +57,13 @@ from tests.common.factory.catalog import (
     ROUND,
     SECOND_CATEGORY,
     SECOND_PRODUCT,
+    SECOND_WORK,
     SHAPE,
     SILVER,
     THIRD_PRODUCT,
     WITH_HEATING,
     WITH_MOUNT,
+    WORK,
     demo_attributes,
     demo_cutouts,
     demo_numeric_product,
@@ -359,6 +362,50 @@ async def prime_landing(
         await connection.execute(
             insert(landing_conditions_table),
             [{"landing_id": LANDING, "attribute_id": narrows_by[0], "value_id": narrows_by[1]}],
+        )
+
+
+async def prime_work(
+    engine: AsyncEngine,
+    *,
+    product_id: ProductId | None = PRODUCT,
+    is_published: bool = True,
+    sort_order: int = 1,
+) -> None:
+    """Add the photographed installation of the canonical mirror to the gallery."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(works_table),
+            [
+                {
+                    "id": WORK,
+                    "photo_key": "works/hallway.jpg",
+                    "product_id": product_id,
+                    "title": "Круглое зеркало в прихожей",
+                    "description": "Поставили в прихожей квартиры на Ленина.",
+                    "is_published": is_published,
+                    "sort_order": sort_order,
+                }
+            ],
+        )
+
+
+async def prime_second_work(engine: AsyncEngine, *, sort_order: int) -> None:
+    """Add one more work — a photograph of no catalogued mirror, and without a word under it."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(works_table),
+            [
+                {
+                    "id": SECOND_WORK,
+                    "photo_key": "works/bathroom.jpg",
+                    "product_id": None,
+                    "title": "Зеркало-капля в ванной",
+                    "description": "",
+                    "is_published": True,
+                    "sort_order": sort_order,
+                }
+            ],
         )
 
 

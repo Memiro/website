@@ -1,0 +1,24 @@
+---
+import type { Work } from "../lib/catalog-api.ts";
+import { mediaUrl } from "../lib/media.ts";
+import { productPath } from "../lib/navigation.ts";
+
+interface Props { work: Work; }
+const { work } = Astro.props;
+// A work whose mirror the catalogue no longer sells stays a still figure: the tile
+// keeps the photograph and loses the address, instead of pointing at the hidden.
+const href = work.product === null ? null : productPath(work.product.category_slug, work.product.slug);
+const Tile = href === null ? Fragment : "a";
+const link = href === null ? {} : { class: "card-link", href };
+---
+
+<figure class="work">
+  <Tile {...link}>
+    <div class="pic"><img src={mediaUrl(work.photo_key)} alt={work.title} loading="lazy" /></div>
+    <figcaption>
+      {work.title}
+      {work.description !== "" && <span class="work-note">{work.description}</span>}
+      {href !== null && <span class="work-go">Смотреть зеркало →</span>}
+    </figcaption>
+  </Tile>
+</figure>
