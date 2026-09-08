@@ -55,6 +55,7 @@ type = independence
 modules =
     memiro.application.browse_catalog
     memiro.application.calculate_price
+    memiro.application.export_pricing_workbook
     memiro.application.manage_attributes
     memiro.application.manage_landings
     memiro.application.manage_pricing_settings

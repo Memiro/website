@@ -29,6 +29,7 @@ from memiro.adapters.events.in_process import InProcessEventBus
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus, Transport, smtp_transport
 from memiro.adapters.storage.local_product_image import LocalProductImageStorage
 from memiro.adapters.storage.local_work_photo import LocalWorkPhotoStorage
+from memiro.adapters.xlsx.pricing_workbook import OpenpyxlPricingWorkbookRenderer
 from memiro.application.common.dispatch_log import DispatchLog
 from memiro_common.clock import SystemClock
 from memiro_common.uow import UoW
@@ -52,6 +53,7 @@ class AdapterProvider(Provider):
     event_bus = provide(WithParents[InProcessEventBus], scope=Scope.REQUEST)
     product_image_storage = provide(WithParents[LocalProductImageStorage], scope=Scope.APP)
     work_photo_storage = provide(WithParents[LocalWorkPhotoStorage], scope=Scope.APP)
+    pricing_workbook_renderer = provide(WithParents[OpenpyxlPricingWorkbookRenderer], scope=Scope.APP)
 
     @provide(scope=Scope.REQUEST)
     def get_dispatch_log(self) -> DispatchLog:

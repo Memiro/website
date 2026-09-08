@@ -9,6 +9,7 @@ from memiro.application.browse_catalog import (
     ReadProduct,
 )
 from memiro.application.calculate_price import CalculatePrice
+from memiro.application.export_pricing_workbook import ExportPricingWorkbook
 from memiro.application.manage_attributes import (
     ChangeAttribute,
     CreateAttribute,
@@ -69,6 +70,7 @@ class InteractorProvider(Provider):
         ChangeWork,
         CreateWork,
         DuplicateVariantWithSize,
+        ExportPricingWorkbook,
         ListPricingGaps,
         ListVariants,
         ListWorks,
