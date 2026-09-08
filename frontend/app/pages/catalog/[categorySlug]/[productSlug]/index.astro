@@ -7,6 +7,7 @@ import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
 import { coverImageUrl, productImageUrl } from "../../../../lib/media.ts";
+import { productPath } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
 import { productSpecs } from "../../../../lib/specs.ts";
@@ -37,7 +38,7 @@ const crumbs = product === null ? [] : [
   { href: "/", label: "Главная" },
   { href: "/catalog/", label: "Каталог" },
   { href: `/catalog/${categorySlug}/`, label: category?.name ?? "Каталог" },
-  { href: `/catalog/${categorySlug}/${product.slug}/`, label: product.name },
+  { href: productPath(categorySlug, product.slug), label: product.name },
 ];
 ---
 

@@ -1,6 +1,7 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { productPath } from "../../lib/navigation.ts";
 import { WORKS } from "../../lib/works.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/works/", label: "Наши работы" }];
@@ -21,8 +22,17 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/works/", label
       <div class="works-grid">
         {WORKS.map((work) => (
           <figure class="work">
-            <div class="pic"><img src={work.image} alt={work.title} loading="lazy" /></div>
-            <figcaption>{work.title}</figcaption>
+            {work.product === null ? (
+              <Fragment>
+                <div class="pic"><img src={work.image} alt={work.title} loading="lazy" /></div>
+                <figcaption>{work.title}</figcaption>
+              </Fragment>
+            ) : (
+              <a class="card-link" href={productPath(work.product.categorySlug, work.product.slug)}>
+                <div class="pic"><img src={work.image} alt={work.title} loading="lazy" /></div>
+                <figcaption>{work.title} <span class="work-go">Смотреть зеркало →</span></figcaption>
+              </a>
+            )}
           </figure>
         ))}
       </div>
