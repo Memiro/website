@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from typing import override
 
 from sqlalchemy import delete, insert, select, update
@@ -25,25 +26,19 @@ class SAWorkGateway(WorkGateway):
         )
         if row is None:
             return None
-        return WorkRow(
-            id=row["id"],
-            photo_key=row["photo_key"],
-            product_id=row["product_id"],
-            title=row["title"],
-            description=row["description"],
-            is_published=row["is_published"],
-            sort_order=row["sort_order"],
-        )
+        # The columns of the table are the fields of the row: a work is stored
+        # flat, and the mapping is what the migration and ``WorkRow`` agree on.
+        return WorkRow(**row)
 
     @override
     async def add(self, work: WorkRow) -> None:
         """Insert the row of one work into the transaction the interactor commits."""
-        await self._session.execute(insert(works_table).values(_columns(work)))
+        await self._session.execute(insert(works_table).values(asdict(work)))
 
     @override
     async def replace(self, work: WorkRow) -> None:
         """Write the whole card over the stored row, its photo key included."""
-        await self._session.execute(update(works_table).where(works_table.c.id == work.id).values(_columns(work)))
+        await self._session.execute(update(works_table).where(works_table.c.id == work.id).values(asdict(work)))
 
     @override
     async def remove(self, work_id: WorkId) -> None:
@@ -55,16 +50,3 @@ class SAWorkGateway(WorkGateway):
         """Ask the column alone whether some work already names this photo."""
         result = await self._session.execute(select(works_table.c.id).where(works_table.c.photo_key == key))
         return result.first() is not None
-
-
-def _columns(work: WorkRow) -> dict[str, object]:
-    """Spell one work in the columns that store it."""
-    return {
-        "id": work.id,
-        "photo_key": work.photo_key,
-        "product_id": work.product_id,
-        "title": work.title,
-        "description": work.description,
-        "is_published": work.is_published,
-        "sort_order": work.sort_order,
-    }

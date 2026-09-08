@@ -1,8 +1,11 @@
 """Forms and readings the three work scenarios share."""
 
+from typing import override
+
 from dishka import AsyncContainer
 
-from memiro.application.common.gateway.work import WorkGateway, WorkRow
+from memiro.application.common.gateway.product_image import ImageUpload
+from memiro.application.common.gateway.work import WorkGateway, WorkPhotoStorage, WorkRow
 from memiro.application.manage_works import (
     ChangeWork,
     ChangeWorkForm,
@@ -20,6 +23,29 @@ PHOTO = b"\xff\xd8\xff\xd9"
 SECOND_PHOTO = b"\xff\xd8\x00\xd9"
 
 WORK_TITLE = "Круглое зеркало в прихожей"
+
+# The column the issued key is stored in: a longer one is what the database
+# refuses after the file has already been written.
+STORED_KEY_LENGTH = 255
+
+
+class FakeWorkPhotoStorage(WorkPhotoStorage):
+    """Storage that issues one key over and over and remembers what was dropped."""
+
+    def __init__(self, key: str) -> None:
+        """Keep the one key this storage answers with and the log of removals."""
+        self.key = key
+        self.removed: list[str] = []
+
+    @override
+    async def put(self, upload: ImageUpload) -> str:
+        """Answer with the key this storage was built around."""
+        return self.key
+
+    @override
+    async def remove(self, key: str) -> None:
+        """Remember which key the caller dropped."""
+        self.removed.append(key)
 
 
 def photo_form(**overrides: object) -> dict[str, object]:
