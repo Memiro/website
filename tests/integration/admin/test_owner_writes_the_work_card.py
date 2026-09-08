@@ -28,6 +28,7 @@ SECOND_PHOTO = b"\xff\xd8\x00\xd9"
 WORK_REFUSALS = (WorkNotFoundError, ProductNotFoundError)
 
 ADD_URL = f"/admin/{APP}/work/add/"
+LOGIN_URL = "/admin/login/"
 
 
 def _works() -> Manager[Any]:
@@ -159,6 +160,46 @@ async def test_the_gallery_takes_nothing_from_anybody_who_may_not_write_it(
     assert response.status_code == HTTPStatus.FORBIDDEN
     assert not await _works().filter(title=title).aexists()
     assert await asyncio.to_thread(_stored_files, admin_media_root) == before
+
+
+async def test_the_card_of_a_saved_work_takes_nothing_from_anybody_who_may_not_write_it(
+    clerk_client: AsyncClient,
+    admin_media_root: Path,
+) -> None:
+    """Staff without the permission restates no work and replaces no photograph."""
+    work_id = arranged_work(title=f"Работа {uuid4().hex[:8]}", content=PHOTO)
+    entered = await _works().aget(pk=work_id)
+
+    response = await clerk_client.post(
+        _card_url(work_id),
+        work_post(title="Чужая подпись") | {"photo": _uploaded(SECOND_PHOTO)},
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    saved = await _works().aget(pk=work_id)
+    assert (saved.title, saved.photo_key) == (entered.title, entered.photo_key)
+    assert (admin_media_root / entered.photo_key).read_bytes() == PHOTO
+
+
+async def test_the_gallery_keeps_the_work_staff_without_the_permission_deleted(clerk_client: AsyncClient) -> None:
+    """Deletion is the same write: without the permission the work stays in the gallery."""
+    work_id = arranged_work(title=f"Работа {uuid4().hex[:8]}", content=PHOTO)
+
+    response = await clerk_client.post(_delete_url(work_id), {"post": "yes"})
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert await _works().filter(pk=work_id).aexists()
+
+
+async def test_a_stranger_enters_no_work_into_the_gallery() -> None:
+    """An unauthenticated POST is sent to the login page and leaves the gallery alone."""
+    stranger = AsyncClient()
+    title = f"Незваная работа {uuid4().hex[:8]}"
+
+    response = await stranger.post(ADD_URL, work_post(title=title) | {"photo": _uploaded()})
+
+    assert response.headers["Location"].startswith(LOGIN_URL)
+    assert not await _works().filter(title=title).aexists()
 
 
 def test_every_refusal_the_work_card_can_meet_is_named_in_the_owner_s_words() -> None:

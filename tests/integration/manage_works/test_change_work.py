@@ -2,14 +2,21 @@ from uuid import uuid4
 
 import pytest
 from dishka import AsyncContainer
+from sqlalchemy.exc import DBAPIError
 
+from memiro.application.common.gateway.product import ProductGateway
+from memiro.application.common.gateway.work import WorkGateway, WorkPhotoStorage
 from memiro.application.errors.catalog import ProductNotFoundError, WorkNotFoundError
 from memiro.application.manage_products import RemoveProduct
+from memiro.application.manage_works import ChangeWork
 from memiro.bootstrap.config_loader import Config
+from memiro_common.uow import UoW
 from tests.common.factory.catalog import PRODUCT
 from tests.integration.manage_works.arrange import (
     PHOTO,
     SECOND_PHOTO,
+    STORED_KEY_LENGTH,
+    FakeWorkPhotoStorage,
     change_form,
     change_work,
     create_form,
@@ -19,6 +26,16 @@ from tests.integration.manage_works.arrange import (
 )
 
 pytestmark = pytest.mark.usefixtures("catalog")
+
+
+async def _with_storage(request: AsyncContainer, storage: WorkPhotoStorage) -> ChangeWork:
+    """Build the production interactor over one fake: everything else comes from the app's own container."""
+    return ChangeWork(
+        uow=await request.get(UoW),
+        work_gateway=await request.get(WorkGateway),
+        product_gateway=await request.get(ProductGateway),
+        photo_storage=storage,
+    )
 
 
 async def test_the_owner_restates_the_card_of_a_work(container: AsyncContainer) -> None:
@@ -103,3 +120,50 @@ async def test_a_link_to_an_unknown_product_is_refused(container: AsyncContainer
 
     with pytest.raises(ProductNotFoundError):
         await change_work(container, created.id, change_form(product_id=uuid4()))
+
+
+async def test_a_photograph_the_database_refused_leaves_no_file_behind(
+    container: AsyncContainer,
+    config: Config,
+) -> None:
+    """A new photo no row ended up naming is dropped, and the work keeps the one it stood on."""
+    created = await create_work(container, create_form())
+    entered = await load_work(container, created.id)
+    assert entered is not None
+    # The interactor is composed here rather than overridden in the container:
+    # only its storage is a fake, and the app's own container stays the one
+    # every other test in this file talks to.
+    storage = FakeWorkPhotoStorage(key=f"{'x' * (STORED_KEY_LENGTH + 1)}.jpg")
+
+    async with container() as request:
+        interactor = await _with_storage(request, storage)
+
+        with pytest.raises(DBAPIError):
+            await interactor.execute(created.id, change_form(photo=photo_form(content=SECOND_PHOTO)))
+
+    assert storage.removed == [storage.key]
+    work = await load_work(container, created.id)
+    assert work is not None
+    assert work.photo_key == entered.photo_key
+    assert (config.media.root / entered.photo_key).read_bytes() == PHOTO
+
+
+async def test_a_key_the_storage_reissued_never_takes_the_stored_photograph_with_it(
+    container: AsyncContainer,
+) -> None:
+    """A key naming a photo the gallery already carries is a defect of the storage, not a refusal."""
+    created = await create_work(container, create_form())
+    entered = await load_work(container, created.id)
+    assert entered is not None
+    storage = FakeWorkPhotoStorage(key=entered.photo_key)
+
+    async with container() as request:
+        interactor = await _with_storage(request, storage)
+
+        with pytest.raises(RuntimeError, match="reissued a key"):
+            await interactor.execute(created.id, change_form(photo=photo_form(content=SECOND_PHOTO)))
+
+    assert storage.removed == []
+    work = await load_work(container, created.id)
+    assert work is not None
+    assert work.photo_key == entered.photo_key

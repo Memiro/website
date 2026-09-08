@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import override
 from uuid import uuid4
 
 import pytest
@@ -8,7 +7,6 @@ from pydantic import ValidationError
 from sqlalchemy.exc import DBAPIError
 
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.gateway.product_image import ImageUpload
 from memiro.application.common.gateway.work import WorkGateway, WorkPhotoStorage
 from memiro.application.common.input_limits import MAX_IMAGE_BYTES, MAX_NAME_LENGTH
 from memiro.application.errors.catalog import ProductNotFoundError
@@ -16,32 +14,18 @@ from memiro.application.manage_works import CreatedWork, CreateWork
 from memiro.bootstrap.config_loader import Config
 from memiro_common.uow import UoW
 from tests.common.factory.catalog import PRODUCT
-from tests.integration.manage_works.arrange import PHOTO, WORK_TITLE, create_form, create_work, load_work, photo_form
+from tests.integration.manage_works.arrange import (
+    PHOTO,
+    STORED_KEY_LENGTH,
+    WORK_TITLE,
+    FakeWorkPhotoStorage,
+    create_form,
+    create_work,
+    load_work,
+    photo_form,
+)
 
 pytestmark = pytest.mark.usefixtures("catalog")
-
-# The column the issued key is stored in: a longer one is what the database
-# refuses after the file has already been written.
-STORED_KEY_LENGTH = 255
-
-
-class FakeWorkPhotoStorage(WorkPhotoStorage):
-    """Storage that issues one key over and over and remembers what was dropped."""
-
-    def __init__(self, key: str) -> None:
-        """Keep the one key this storage answers with and the log of removals."""
-        self.key = key
-        self.removed: list[str] = []
-
-    @override
-    async def put(self, upload: ImageUpload) -> str:
-        """Answer with the key this storage was built around."""
-        return self.key
-
-    @override
-    async def remove(self, key: str) -> None:
-        """Remember which key the caller dropped."""
-        self.removed.append(key)
 
 
 async def _with_storage(request: AsyncContainer, storage: WorkPhotoStorage) -> CreateWork:
