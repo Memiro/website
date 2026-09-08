@@ -112,10 +112,11 @@ const MOVED_PAGES: Record<string, string> = {
 // weight and costs trust (ADR-0015).
 export const GONE_PATHS = ["/testovaya-stranicza/", "/privet-mir/", "/category/bez-rubriki/"];
 
-export interface LegacyAnswer {
-  status: 301 | 410;
-  location: string | null;
-}
+// A union and not one shape with a nullable field: 301 always carries a target
+// and 410 never does, and saying so lets the caller stop re-checking.
+export type LegacyAnswer =
+  | { status: 301; location: string }
+  | { status: 410; location: null };
 
 /** The answer an address of the old site earns, or null when it is not one. */
 export function legacyResponse(pathname: string): LegacyAnswer | null {
