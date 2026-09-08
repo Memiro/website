@@ -3,6 +3,7 @@ import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import CatalogTiles from "../../components/CatalogTiles.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi } from "../../lib/catalog-api.ts";
+import { itemListJsonLd } from "../../lib/seo.ts";
 import { catalogTiles } from "../../lib/tiles.ts";
 
 const tiles = await catalogTiles(internalCatalogApi());
@@ -13,6 +14,7 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/catalog/", lab
   title="Каталог зеркал — Memiro"
   description="Каталог интерьерных зеркал мастерской Memiro: подборки и категории зеркал с ценой от минимальной конфигурации."
   crumbs={crumbs}
+  jsonLd={[itemListJsonLd(Astro.site, tiles)].filter((document) => document !== null)}
 >
   <Breadcrumbs crumbs={crumbs} />
   <div class="wrap">

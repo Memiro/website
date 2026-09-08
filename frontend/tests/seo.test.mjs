@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { absoluteUrl, breadcrumbsJsonLd, businessJsonLd, listingCanonicalPath, listingRobots, productJsonLd } from "../app/lib/seo.ts";
+import { absoluteUrl, breadcrumbsJsonLd, businessJsonLd, itemListJsonLd, listingCanonicalPath, listingRobots, organizationJsonLd, productJsonLd } from "../app/lib/seo.ts";
 
 const SITE = new URL("https://memiro.ru");
 
@@ -92,4 +92,37 @@ test("sorting does not create an address of its own", () => {
   const query = { values: [], priceMin: "", priceMax: "", sort: /** @type {const} */ ("cheapest"), page: 1 };
   assert.equal(listingCanonicalPath("/catalog/mirrors/", query), "/catalog/mirrors/");
   assert.equal(listingRobots(query), undefined);
+});
+
+test("the organisation is named with a logo a crawler can fetch", () => {
+  const document = organizationJsonLd(SITE);
+  assert.equal(document["@type"], "Organization");
+  assert.equal(document.name, "Memiro");
+  assert.equal(document.logo, "https://memiro.ru/img/logo.png");
+  assert.equal(document.url, "https://memiro.ru/");
+});
+
+test("a listing offers its items in the order the page shows them", () => {
+  const document = itemListJsonLd(SITE, [
+    { href: "/catalog/zerkala/kolo/", label: "Кольцо" },
+    { href: "/catalog/zerkala/echo/", label: "Эхо" },
+  ]);
+  assert.ok(document !== null);
+  assert.equal(document["@type"], "ItemList");
+  assert.deepEqual(document.itemListElement, [
+    { "@type": "ListItem", position: 1, name: "Кольцо", url: "https://memiro.ru/catalog/zerkala/kolo/" },
+    { "@type": "ListItem", position: 2, name: "Эхо", url: "https://memiro.ru/catalog/zerkala/echo/" },
+  ]);
+});
+
+// Position counts from the top of the page, not of the catalogue: the document
+// describes what this address shows.
+test("the second page numbers its items from one", () => {
+  const document = itemListJsonLd(SITE, [{ href: "/catalog/zerkala/nave/", label: "Неф" }]);
+  assert.ok(document !== null);
+  assert.equal(document.itemListElement[0].position, 1);
+});
+
+test("an empty listing has no list to declare", () => {
+  assert.equal(itemListJsonLd(SITE, []), null);
 });

@@ -87,7 +87,33 @@ export interface BreadcrumbsDocument {
   itemListElement: ListItemDocument[];
 }
 
-export type JsonLdDocument = BusinessDocument | ProductDocument | BreadcrumbsDocument;
+export interface OrganizationDocument {
+  "@context": string;
+  "@type": "Organization";
+  name: string;
+  url: string | undefined;
+  logo: string | undefined;
+}
+
+export interface ItemListEntryDocument {
+  "@type": "ListItem";
+  position: number;
+  name: string;
+  url: string | undefined;
+}
+
+export interface ItemListDocument {
+  "@context": string;
+  "@type": "ItemList";
+  itemListElement: ItemListEntryDocument[];
+}
+
+export type JsonLdDocument =
+  | BusinessDocument
+  | ProductDocument
+  | BreadcrumbsDocument
+  | OrganizationDocument
+  | ItemListDocument;
 
 // Markup never names a profile the owner has not entered: an invented link is
 // a worse answer to a search engine than no link at all.
@@ -153,6 +179,38 @@ export function breadcrumbsJsonLd(site: URL | undefined, crumbs: Crumb[]): Bread
       position: index + 1,
       name: crumb.label,
       item: absoluteUrl(site, crumb.href) ?? undefined,
+    })),
+  };
+}
+
+/** The studio as an organisation: what puts its logo beside the name in a knowledge panel. */
+export function organizationJsonLd(site: URL | undefined): OrganizationDocument {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    url: absoluteUrl(site, "/") ?? undefined,
+    logo: absoluteUrl(site, "/img/logo.png") ?? undefined,
+  };
+}
+
+/**
+ * What a listing shows, in the order it shows it. Positions count from the top
+ * of the page and not of the catalogue: the document describes this address.
+ * An empty listing declares nothing — a list of nothing is worse than silence.
+ */
+export function itemListJsonLd(site: URL | undefined, entries: Crumb[]): ItemListDocument | null {
+  if (entries.length === 0) {
+    return null;
+  }
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: entries.map((entry, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: entry.label,
+      url: absoluteUrl(site, entry.href) ?? undefined,
     })),
   };
 }
