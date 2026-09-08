@@ -7,6 +7,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/catalog-api.ts";
 import { catalogSearch, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
 import { foundOrNull } from "../../lib/not-found.ts";
+import { listingCanonicalPath, listingRobots } from "../../lib/seo.ts";
 import { productPlural } from "../../lib/plural.ts";
 
 const api = internalCatalogApi();
@@ -43,7 +44,8 @@ const crumbs = landing === null ? [] : [
   <BaseLayout
     title={landing.title}
     description={landing.description}
-    robots={asked.page > 1 ? "noindex, follow" : undefined}
+    robots={listingRobots(asked)}
+    canonicalPath={listingCanonicalPath(path, asked)}
     crumbs={crumbs}
   >
     <Breadcrumbs crumbs={crumbs} />
