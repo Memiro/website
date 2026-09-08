@@ -37,14 +37,17 @@ def _works() -> Manager[Any]:
 
 
 def _card_url(work_id: WorkId) -> str:
+    """Address the card of one saved work."""
     return f"/admin/{APP}/work/{work_id}/change/"
 
 
 def _delete_url(work_id: WorkId) -> str:
+    """Address the deletion page of one saved work."""
     return f"/admin/{APP}/work/{work_id}/delete/"
 
 
 def _uploaded(content: bytes = PHOTO) -> SimpleUploadedFile:
+    """Hand the card a photograph the way a browser hands it one."""
     return SimpleUploadedFile("installed.jpg", content, content_type="image/jpeg")
 
 

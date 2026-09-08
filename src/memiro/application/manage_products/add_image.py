@@ -3,8 +3,9 @@ from pathlib import PurePosixPath
 import structlog
 from pydantic import BaseModel, Field, field_validator
 
+from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.gateway.product_image import ImageUpload, ProductImageStorage
+from memiro.application.common.gateway.product_image import ProductImageStorage
 from memiro.application.common.input_limits import IMAGE_EXTENSIONS, MAX_IMAGE_BYTES, MAX_NAME_LENGTH
 from memiro.application.manage_products.shared import loaded_for_update
 from memiro.entities.common.identifiers import ProductId

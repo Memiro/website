@@ -9,7 +9,7 @@ from memiro.application.manage_works.shared import (
     PhotoForm,
     WorkCopyForm,
     ensure_the_product_is_in_the_catalogue,
-    stored_photo,
+    store_photo,
 )
 from memiro.entities.common.identifiers import WorkId
 from memiro_common.interactor import interactor
@@ -42,7 +42,7 @@ class ChangeWork:
             logger.warning("An unknown work was restated", work_id=work_id)
             raise WorkNotFoundError
         await ensure_the_product_is_in_the_catalogue(self.product_gateway, data.product_id)
-        uploaded = None if data.photo is None else await stored_photo(self.photo_storage, self.work_gateway, data.photo)
+        uploaded = None if data.photo is None else await store_photo(self.photo_storage, self.work_gateway, data.photo)
         try:
             await self.work_gateway.replace(
                 replace(

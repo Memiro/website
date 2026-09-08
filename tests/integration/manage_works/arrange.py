@@ -4,7 +4,7 @@ from typing import override
 
 from dishka import AsyncContainer
 
-from memiro.application.common.gateway.product_image import ImageUpload
+from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.work import WorkGateway, WorkPhotoStorage, WorkRow
 from memiro.application.manage_works import (
     ChangeWork,

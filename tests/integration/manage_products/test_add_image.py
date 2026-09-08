@@ -7,8 +7,9 @@ from dishka import AsyncContainer
 from pydantic import ValidationError
 from sqlalchemy.exc import DBAPIError
 
+from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.gateway.product_image import ImageUpload, ProductImageStorage
+from memiro.application.common.gateway.product_image import ProductImageStorage
 from memiro.application.common.input_limits import MAX_IMAGE_BYTES, MAX_NAME_LENGTH
 from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.manage_products import AddImage, AddImageForm, CreatedProductImage

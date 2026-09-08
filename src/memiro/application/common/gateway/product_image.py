@@ -1,14 +1,7 @@
 from abc import abstractmethod
-from dataclasses import dataclass
 from typing import Protocol
 
-
-@dataclass(frozen=True, slots=True)
-class ImageUpload:
-    """The photo file the owner handed a screen, on its way to the storage."""
-
-    filename: str
-    content: bytes
+from memiro.application.common.gateway.image_upload import ImageUpload
 
 
 class ProductImageStorage(Protocol):
