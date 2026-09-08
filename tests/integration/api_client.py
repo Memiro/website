@@ -12,6 +12,7 @@ from memiro.application.browse_catalog import (
     LandingsList,
     ProductModel,
     ProductsList,
+    WorksList,
 )
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
 from memiro.application.read_site import SiteModel
@@ -116,6 +117,10 @@ class ApiClient:
         """Read one landing page by its public slug."""
         response = await self._client.get(f"/catalog/landings/{slug}")
         return ApiResponse(response, TypeAdapter(LandingModel))
+
+    async def list_works(self) -> ApiResponse[WorksList]:
+        """List the published works of the gallery."""
+        return ApiResponse(await self._client.get("/works"), TypeAdapter(WorksList))
 
     async def read_site(self) -> ApiResponse[SiteModel]:
         """Read the studio's contacts and the seller's requisites."""

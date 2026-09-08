@@ -10,6 +10,7 @@ from memiro.application.browse_catalog.models import (
     PriceBounds,
     ProductModel,
     ProductSummary,
+    WorkModel,
 )
 
 
@@ -48,6 +49,11 @@ class CatalogReadGateway(Protocol):
     @abstractmethod
     async def list_landings(self) -> tuple[list[LandingSummary], int]:
         """List the published landings in the owner's order, with the total that match."""
+        raise NotImplementedError
+
+    @abstractmethod
+    async def list_works(self) -> tuple[list[WorkModel], int]:
+        """List the published works in the owner's order, with the total that match."""
         raise NotImplementedError
 
     @abstractmethod

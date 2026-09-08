@@ -15,6 +15,7 @@ from memiro.adapters.db.tables import (
     product_images_table,
     product_variants_table,
     products_table,
+    works_table,
 )
 from memiro.application.browse_catalog.models import (
     PAGE_SIZE,
@@ -32,6 +33,8 @@ from memiro.application.browse_catalog.models import (
     ProductSummary,
     ProductVariant,
     VariantOverride,
+    WorkModel,
+    WorkProduct,
 )
 from memiro.application.common.gateway.catalog_read import CatalogReadGateway
 from memiro.entities.catalog.attribute.entity import AttributeKind
@@ -192,6 +195,43 @@ class SACatalogReadGateway(CatalogReadGateway):
         ).all()
         landings = [LandingSummary(slug=row.slug, heading=row.heading) for row in rows]
         return landings, len(landings)
+
+    @override
+    async def list_works(self) -> tuple[list[WorkModel], int]:
+        """Read the published works in the owner's order, each with the address of its published mirror."""
+        rows = (
+            await self._session.execute(
+                select(
+                    works_table.c.photo_key,
+                    works_table.c.title,
+                    works_table.c.description,
+                    products_table.c.slug.label("product_slug"),
+                    categories_table.c.slug.label("category_slug"),
+                )
+                .select_from(works_table)
+                .outerjoin(
+                    products_table,
+                    (works_table.c.product_id == products_table.c.id) & products_table.c.is_published,
+                )
+                .outerjoin(categories_table, products_table.c.category_id == categories_table.c.id)
+                .where(works_table.c.is_published)
+                .order_by(works_table.c.sort_order, works_table.c.id)
+            )
+        ).all()
+        works = [
+            WorkModel(
+                photo_key=row.photo_key,
+                title=row.title,
+                description=row.description,
+                product=(
+                    None
+                    if row.product_slug is None
+                    else WorkProduct(category_slug=row.category_slug, slug=row.product_slug)
+                ),
+            )
+            for row in rows
+        ]
+        return works, len(works)
 
     @override
     async def read_landing(self, slug: str) -> LandingModel | None:

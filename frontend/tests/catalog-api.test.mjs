@@ -20,6 +20,17 @@ const product = {
 
 const cardWithoutAttributeKind = { ...product, attributes: [{ id: "frame", name: "Рама", values: [] }] };
 
+const works = {
+  items: [
+    { photo_key: "works/hallway.jpg", title: "Круглое зеркало в прихожей", description: "Прихожая на Ленина.", product: { category_slug: "mirrors", slug: "lira" } },
+    { photo_key: "works/bathroom.jpg", title: "Зеркало-капля в ванной", description: "", product: null },
+  ],
+  total: 2,
+  page: 1,
+};
+
+const workWithoutTitle = { items: [{ photo_key: "works/hallway.jpg", description: "", product: null }], total: 1, page: 1 };
+
 const categories = { items: [{ name: "Зеркала", slug: "mirrors" }], total: 1, page: 1 };
 
 const categoryProducts = {
@@ -75,4 +86,19 @@ test("the SSR client refuses a product card whose attribute does not say how it 
   const api = await withApi(t, (_, response) => response.end(JSON.stringify(cardWithoutAttributeKind)));
 
   await assert.rejects(api.product("lira"));
+});
+
+test("the SSR client reads the gallery, a work without a mirror included", async (t) => {
+  const api = await withApi(t, (request, response) => {
+    assert.equal(request.url, "/works");
+    response.end(JSON.stringify(works));
+  });
+
+  assert.deepEqual(await api.works(), works);
+});
+
+test("the SSR client refuses a work that does not say what is on the photograph", async (t) => {
+  const api = await withApi(t, (_, response) => response.end(JSON.stringify(workWithoutTitle)));
+
+  await assert.rejects(api.works());
 });

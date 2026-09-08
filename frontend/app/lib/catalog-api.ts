@@ -55,6 +55,19 @@ export interface Landing extends LandingSummary {
   values: string[];
 }
 
+/** The address of the mirror standing on a photograph, while the catalogue still sells it. */
+export interface WorkProduct {
+  category_slug: string;
+  slug: string;
+}
+
+export interface Work {
+  photo_key: string;
+  title: string;
+  description: string;
+  product: WorkProduct | null;
+}
+
 export interface Category {
   name: string;
   slug: string;
@@ -151,6 +164,10 @@ export class CatalogApi {
 
   public async landing(slug: string): Promise<Landing> {
     return this.get(`/catalog/landings/${encodeURIComponent(slug)}`, isLanding);
+  }
+
+  public async works(): Promise<ListEnvelope<Work>> {
+    return this.get("/works", listOf(isWork));
   }
 
   public async product(slug: string): Promise<ProductCard> {
@@ -252,6 +269,22 @@ function listOf<Item>(isItem: (value: unknown) => value is Item): (value: unknow
       && typeof envelope.total === "number"
       && typeof envelope.page === "number";
   };
+}
+
+function isWork(value: unknown): value is Work {
+  const work = asRecord(value);
+  if (work === null) {
+    return false;
+  }
+  return typeof work.photo_key === "string"
+    && typeof work.title === "string"
+    && typeof work.description === "string"
+    && (work.product === null || isWorkProduct(work.product));
+}
+
+function isWorkProduct(value: unknown): value is WorkProduct {
+  const product = asRecord(value);
+  return product !== null && typeof product.category_slug === "string" && typeof product.slug === "string";
 }
 
 function isCategory(value: unknown): value is Category {

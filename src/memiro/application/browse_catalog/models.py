@@ -177,3 +177,27 @@ class VariantOverride(BaseModel):
     attribute_id: UUID
     value_id: UUID | None
     quantity: Decimal | None
+
+
+class WorkProduct(BaseModel):
+    """The address of the mirror standing on a photograph."""
+
+    category_slug: str
+    slug: str
+
+
+class WorkModel(BaseModel):
+    """One photographed installation as the gallery shows it."""
+
+    photo_key: str
+    title: str
+    description: str
+    product: WorkProduct | None
+
+
+class WorksList(BaseModel):
+    """One page of the published works of the gallery."""
+
+    items: list[WorkModel]
+    total: int
+    page: int

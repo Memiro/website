@@ -4,7 +4,6 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { isCurrentPath, productPath, SITE_LINKS } from "../app/lib/navigation.ts";
-import { WORKS } from "../app/lib/works.ts";
 
 function pageFileFor(href) {
   return fileURLToPath(new URL(`../app/pages${href}index.astro`, import.meta.url));
@@ -39,13 +38,4 @@ test("the home link is current only on the home page, not on every page beneath 
 
 test("a product address is the one the catalogue card and the works page both point at", () => {
   assert.equal(productPath("zerkala", "aura"), "/catalog/zerkala/aura/");
-});
-
-test("every installation photograph that names a mirror points at a whole product address", () => {
-  const addresses = WORKS.flatMap((work) =>
-    work.product === null ? [] : [productPath(work.product.categorySlug, work.product.slug)],
-  );
-
-  assert.ok(addresses.length > 0);
-  assert.deepEqual(addresses.filter((address) => !/^\/catalog\/[^/]+\/[^/]+\/$/.test(address)), []);
 });

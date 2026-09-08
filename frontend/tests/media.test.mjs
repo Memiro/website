@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { coverImageUrl, hasPhotographs, productImageUrl } from "../app/lib/media.ts";
+import { coverImageUrl, hasPhotographs, mediaUrl } from "../app/lib/media.ts";
 
 test("a stored key becomes a media address the edge serves", () => {
-  assert.equal(productImageUrl("products/small/lira.webp"), "/media/products/small/lira.webp");
+  assert.equal(mediaUrl("products/small/lira.webp"), "/media/products/small/lira.webp");
 });
 
 test("a card shows the first photograph of the product", () => {

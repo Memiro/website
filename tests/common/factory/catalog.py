@@ -71,6 +71,9 @@ SECOND_PRODUCT: ProductId = _id("mirror-with-a-shelf")
 THIRD_PRODUCT: ProductId = _id("large-mirror")
 LANDING: UUID = _id("round-mirrors-landing")
 
+WORK: UUID = _id("mirror-in-a-hallway")
+SECOND_WORK: UUID = _id("mirror-in-a-bathroom")
+
 # One inquiry a manager already has in hand: what a product removed later
 # leaves behind is read off its position.
 INQUIRY: InquiryId = _id("inquiry")
