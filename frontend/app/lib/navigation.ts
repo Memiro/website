@@ -40,6 +40,16 @@ export function productPath(categorySlug: string, productSlug: string): string {
   return `/catalog/${categorySlug}/${productSlug}/`;
 }
 
+/** The public address of a category listing. */
+export function categoryPath(slug: string): string {
+  return `/catalog/${slug}/`;
+}
+
+/** The public address of a landing: the owner's own slug sits at the root. */
+export function landingPath(slug: string): string {
+  return `/${slug}/`;
+}
+
 // A section link is current for everything beneath it, but the root is not a
 // section: by prefix alone "/" would light up on every page of the site.
 export function isCurrentPath(pathname: string, href: string): boolean {

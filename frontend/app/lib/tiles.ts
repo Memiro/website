@@ -1,4 +1,5 @@
 import type { CatalogApi } from "./catalog-api.ts";
+import { categoryPath, landingPath } from "./navigation.ts";
 
 export interface Tile {
   href: string;
@@ -12,8 +13,8 @@ export interface Tile {
 export async function catalogTiles(api: CatalogApi): Promise<Tile[]> {
   const landings = (await api.landings()).items;
   if (landings.length > 0) {
-    return landings.map((landing) => ({ href: `/${landing.slug}/`, label: landing.heading }));
+    return landings.map((landing) => ({ href: landingPath(landing.slug), label: landing.heading }));
   }
   const categories = (await api.categories()).items;
-  return categories.map((category) => ({ href: `/catalog/${category.slug}/`, label: category.name }));
+  return categories.map((category) => ({ href: categoryPath(category.slug), label: category.name }));
 }

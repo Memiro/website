@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import { GONE_PATHS, legacyResponse } from "../app/lib/legacy-redirects.ts";
+import { GONE_PATHS, legacyResponse, redirectTarget } from "../app/lib/legacy-redirects.ts";
 
 /** Every address the WordPress sitemap index published on 2026-09-08. */
-const LEGACY = fs.readFileSync(new URL("../../.scratch/seo/legacy-urls.txt", import.meta.url), "utf8")
+const LEGACY = fs.readFileSync(new URL("./legacy-urls.txt", import.meta.url), "utf8")
   .split("\n").filter((line) => line !== "").map((url) => url.replace("https://memiro.ru", ""));
 
 // The list is the specification: an address nobody thought about must be red
@@ -66,4 +66,12 @@ test("no redirect lands on an address that redirects again", () => {
 test("nothing outside the old site is touched", () => {
   assert.equal(legacyResponse("/catalog/zerkala/krugloe-zerkalo-kolo/"), null);
   assert.equal(legacyResponse("/works/"), null);
+});
+
+test("a redirect keeps the query the visitor arrived with", () => {
+  assert.equal(
+    redirectTarget("/catalog/zerkala/kolo/", "?utm_source=yandex"),
+    "/catalog/zerkala/kolo/?utm_source=yandex",
+  );
+  assert.equal(redirectTarget("/catalog/zerkala/kolo/", ""), "/catalog/zerkala/kolo/");
 });

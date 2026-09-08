@@ -1,11 +1,10 @@
 import { FIRST_PAGE, isNarrowed, type CatalogQuery } from "./catalog-query.ts";
+import { productPath, type NavigationLink } from "./navigation.ts";
 import { SITE_NAME } from "./site.ts";
 import type { Contacts } from "./site-api.ts";
 
-export interface Crumb {
-  href: string;
-  label: string;
-}
+/** A labelled address. Breadcrumbs, tiles and list items are all made of these. */
+export type Crumb = NavigationLink;
 
 /** The site's public origin; canonical and og:url are absolute or absent. */
 export function siteOrigin(site: URL | undefined): string | null {
@@ -17,13 +16,11 @@ export function absoluteUrl(site: URL | undefined, path: string): string | null 
   return origin === null ? null : new URL(path, origin).href;
 }
 
-/**
- * The address a listing declares as its own. A narrowing shows the category
- * under another address and folds onto the clean one (ADR-0003); a page number
- * shows different products and stands on its own. Pointing a page at the first
- * one while also refusing it indexing makes the two signals contradict, and the
- * refusal risks being read against the category itself.
- */
+// The address a listing declares as its own. A narrowing shows the category
+// under another address and folds onto the clean one (ADR-0003); a page number
+// shows different products and stands on its own. Pointing a page at the first
+// one while also refusing it indexing makes the two signals contradict, and the
+// refusal risks being read against the category itself.
 export function listingCanonicalPath(path: string, query: CatalogQuery): string {
   if (isNarrowed(query) || query.page === FIRST_PAGE) {
     return path;
@@ -194,12 +191,10 @@ export function organizationJsonLd(site: URL | undefined): OrganizationDocument 
   };
 }
 
-/**
- * What a listing shows, in the order it shows it. Positions count from the top
- * of the page and not of the catalogue: the document describes this address.
- * An empty listing declares nothing — a list of nothing is worse than silence.
- */
-export function itemListJsonLd(site: URL | undefined, entries: Crumb[]): ItemListDocument | null {
+// What a listing shows, in the order it shows it. Positions count from the top
+// of the page and not of the catalogue: the document describes this address.
+// An empty listing declares nothing — a list of nothing is worse than silence.
+export function itemListJsonLd(site: URL | undefined, entries: NavigationLink[]): ItemListDocument | null {
   if (entries.length === 0) {
     return null;
   }
@@ -213,4 +208,16 @@ export function itemListJsonLd(site: URL | undefined, entries: Crumb[]): ItemLis
       url: absoluteUrl(site, entry.href) ?? undefined,
     })),
   };
+}
+
+/** The products a listing page shows, as the list document describing that page. */
+export function productListJsonLd(
+  site: URL | undefined,
+  categorySlug: string,
+  products: { slug: string; name: string }[],
+): ItemListDocument | null {
+  return itemListJsonLd(site, products.map((product) => ({
+    href: productPath(categorySlug, product.slug),
+    label: product.name,
+  })));
 }

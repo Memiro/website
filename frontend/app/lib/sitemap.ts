@@ -1,27 +1,22 @@
-import { productPath } from "./navigation.ts";
+import { categoryPath, landingPath, productPath } from "./navigation.ts";
 import { absoluteUrl } from "./seo.ts";
 
 /** The pages that exist without the catalogue. `/cart/`, 404 and 500 are closed and absent. */
 export const STATIC_PATHS = ["/", "/catalog/", "/works/", "/about/", "/delivery/", "/contacts/", "/privacy/"];
 
-interface Paged<Item> {
-  items: Item[];
-}
-
-interface Listing {
+interface Slugs {
   items: { slug: string }[];
-  pages: number;
 }
 
 /** What the sitemap needs of the catalogue — the slice `CatalogApi` already offers. */
 export interface SitemapCatalog {
-  categories: () => Promise<Paged<{ slug: string }>>;
-  landings: () => Promise<Paged<{ slug: string }>>;
-  categoryProducts: (slug: string, search?: string) => Promise<Listing>;
+  categories: () => Promise<Slugs>;
+  landings: () => Promise<Slugs>;
+  categoryProducts: (slug: string, search?: string) => Promise<Slugs & { pages: number }>;
 }
 
 async function categoryPaths(api: SitemapCatalog, slug: string): Promise<string[]> {
-  const paths = [`/catalog/${slug}/`];
+  const paths = [categoryPath(slug)];
   const first = await api.categoryProducts(slug, "");
   for (let page = 1; page <= first.pages; page += 1) {
     const listing = page === 1 ? first : await api.categoryProducts(slug, `page=${page}`);
@@ -30,18 +25,16 @@ async function categoryPaths(api: SitemapCatalog, slug: string): Promise<string[
   return paths;
 }
 
-/**
- * Every address a crawler may index, in reading order. The listing is walked
- * page by page: a catalogue that outgrows one page would otherwise lose its
- * tail without anything failing.
- */
+// Every address a crawler may index, in reading order. The listing is walked
+// page by page: a catalogue that outgrows one page would otherwise lose its
+// tail without anything failing.
 export async function sitemapPaths(api: SitemapCatalog): Promise<string[]> {
   const [categories, landings] = await Promise.all([api.categories(), api.landings()]);
   const catalog: string[] = [];
   for (const category of categories.items) {
     catalog.push(...await categoryPaths(api, category.slug));
   }
-  return [...STATIC_PATHS, ...catalog, ...landings.items.map((landing) => `/${landing.slug}/`)];
+  return [...STATIC_PATHS, ...catalog, ...landings.items.map((landing) => landingPath(landing.slug))];
 }
 
 // No lastmod: the API carries no updated_at for any of these. No changefreq and
