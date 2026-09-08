@@ -6,7 +6,8 @@ from uuid import uuid4
 import structlog
 
 from memiro.adapters.storage.config import MediaConfig
-from memiro.application.common.gateway.product_image import ImageUpload, ProductImageStorage
+from memiro.application.common.gateway.image_upload import ImageUpload
+from memiro.application.common.gateway.product_image import ProductImageStorage
 from memiro.application.common.input_limits import IMAGE_EXTENSIONS
 from memiro_common.logger import Logger
 

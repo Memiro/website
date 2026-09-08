@@ -4,8 +4,8 @@ from pathlib import PurePosixPath
 
 from pydantic import BaseModel, Field, field_validator
 
+from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.gateway.product_image import ImageUpload
 from memiro.application.common.gateway.work import WorkGateway, WorkPhotoStorage
 from memiro.application.common.input_limits import (
     IMAGE_EXTENSIONS,
@@ -50,7 +50,7 @@ async def ensure_the_product_is_in_the_catalogue(gateway: ProductGateway, produc
         raise ProductNotFoundError
 
 
-async def stored_photo(storage: WorkPhotoStorage, gateway: WorkGateway, photo: PhotoForm) -> str:
+async def store_photo(storage: WorkPhotoStorage, gateway: WorkGateway, photo: PhotoForm) -> str:
     """Write the file to the storage and answer with the key the row will carry."""
     key = await storage.put(ImageUpload(filename=photo.filename, content=photo.content))
     if await gateway.holds_photo(key):

@@ -9,7 +9,7 @@ from memiro.application.manage_works.shared import (
     PhotoForm,
     WorkCopyForm,
     ensure_the_product_is_in_the_catalogue,
-    stored_photo,
+    store_photo,
 )
 from memiro.entities.common.identifiers import WorkId
 from memiro_common.interactor import interactor
@@ -36,15 +36,15 @@ class CreateWork:
     """Interactor for entering one installed mirror into the gallery of works."""
 
     uow: UoW
-    work_gateway: WorkGateway
     product_gateway: ProductGateway
+    work_gateway: WorkGateway
     photo_storage: WorkPhotoStorage
 
     async def execute(self, data: CreateWorkForm) -> CreatedWork:
         """Store the photo, name it by a work of the gallery and commit."""
         logger.debug("Entering a work", product_id=data.product_id)
         await ensure_the_product_is_in_the_catalogue(self.product_gateway, data.product_id)
-        key = await stored_photo(self.photo_storage, self.work_gateway, data.photo)
+        key = await store_photo(self.photo_storage, self.work_gateway, data.photo)
         work = WorkRow(
             id=uuid4(),
             photo_key=key,

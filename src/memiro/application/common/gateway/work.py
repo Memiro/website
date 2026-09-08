@@ -2,7 +2,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Protocol
 
-from memiro.application.common.gateway.product_image import ImageUpload
+from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.entities.common.identifiers import ProductId, WorkId
 
 
