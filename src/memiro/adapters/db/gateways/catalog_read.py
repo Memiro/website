@@ -210,10 +210,9 @@ class SACatalogReadGateway(CatalogReadGateway):
                 )
                 .select_from(works_table)
                 .outerjoin(
-                    products_table,
+                    products_table.join(categories_table, products_table.c.category_id == categories_table.c.id),
                     (works_table.c.product_id == products_table.c.id) & products_table.c.is_published,
                 )
-                .outerjoin(categories_table, products_table.c.category_id == categories_table.c.id)
                 .where(works_table.c.is_published)
                 .order_by(works_table.c.sort_order, works_table.c.id)
             )

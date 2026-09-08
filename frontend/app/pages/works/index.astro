@@ -1,9 +1,8 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import WorkTile from "../../components/WorkTile.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi } from "../../lib/catalog-api.ts";
-import { mediaUrl } from "../../lib/media.ts";
-import { productPath } from "../../lib/navigation.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/works/", label: "Наши работы" }];
 
@@ -23,28 +22,7 @@ const works = (await internalCatalogApi().works()).items;
 
     {works.length > 0 ? (
       <div class="works-grid">
-        {works.map((work) => (
-          <figure class="work">
-            {work.product === null ? (
-              <Fragment>
-                <div class="pic"><img src={mediaUrl(work.photo_key)} alt={work.title} loading="lazy" /></div>
-                <figcaption>
-                  {work.title}
-                  {work.description !== "" && <span class="work-note">{work.description}</span>}
-                </figcaption>
-              </Fragment>
-            ) : (
-              <a class="card-link" href={productPath(work.product.category_slug, work.product.slug)}>
-                <div class="pic"><img src={mediaUrl(work.photo_key)} alt={work.title} loading="lazy" /></div>
-                <figcaption>
-                  {work.title}
-                  {work.description !== "" && <span class="work-note">{work.description}</span>}
-                  <span class="work-go">Смотреть зеркало →</span>
-                </figcaption>
-              </a>
-            )}
-          </figure>
-        ))}
+        {works.map((work) => <WorkTile work={work} />)}
       </div>
     ) : (
       <p class="muted">Раздел наполняется — загляните позже или посмотрите <a href="/catalog/">каталог</a>.</p>

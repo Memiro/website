@@ -16,6 +16,14 @@ HALLWAY = WorkModel(
 )
 
 
+HALLWAY_WITHOUT_PRODUCT = WorkModel(
+    photo_key="works/hallway.jpg",
+    title="Круглое зеркало в прихожей",
+    description="Поставили в прихожей квартиры на Ленина.",
+    product=None,
+)
+
+
 BATHROOM = WorkModel(
     photo_key="works/bathroom.jpg",
     title="Зеркало-капля в ванной",
@@ -75,9 +83,9 @@ async def test_a_work_that_names_no_mirror_is_a_photograph_and_nothing_more(
     """A work without a product carries no address: there is nothing to walk out to."""
     await prime_work(engine, product_id=None)
 
-    works = (await api_client.list_works()).assert_status(status.HTTP_200_OK).ensure_content()
-
-    assert works.items == [HALLWAY.model_copy(update={"product": None})]
+    assert (await api_client.list_works()).assert_status(status.HTTP_200_OK).ensure_content() == WorksList(
+        items=[HALLWAY_WITHOUT_PRODUCT], total=1, page=1
+    )
 
 
 async def test_a_work_does_not_point_at_a_mirror_the_catalogue_stopped_selling(
@@ -88,6 +96,6 @@ async def test_a_work_does_not_point_at_a_mirror_the_catalogue_stopped_selling(
     await prime_work(engine)
     await prime_product_publication(engine, is_published=False)
 
-    works = (await api_client.list_works()).assert_status(status.HTTP_200_OK).ensure_content()
-
-    assert works.items == [HALLWAY.model_copy(update={"product": None})]
+    assert (await api_client.list_works()).assert_status(status.HTTP_200_OK).ensure_content() == WorksList(
+        items=[HALLWAY_WITHOUT_PRODUCT], total=1, page=1
+    )

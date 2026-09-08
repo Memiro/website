@@ -39,3 +39,16 @@ test("the home link is current only on the home page, not on every page beneath 
 test("a product address is the one the catalogue card and the works page both point at", () => {
   assert.equal(productPath("zerkala", "aura"), "/catalog/zerkala/aura/");
 });
+
+test("every installation photograph that names a mirror points at a whole product address", () => {
+  const works = [
+    { photo_key: "works/hallway.jpg", title: "Круглое зеркало", description: "", product: { category_slug: "zerkala", slug: "aura" } },
+    { photo_key: "works/bathroom.jpg", title: "Зеркало-капля", description: "", product: null },
+  ];
+
+  const addresses = works.flatMap((work) =>
+    work.product === null ? [] : [productPath(work.product.category_slug, work.product.slug)],
+  );
+
+  assert.deepEqual(addresses, ["/catalog/zerkala/aura/"]);
+});
