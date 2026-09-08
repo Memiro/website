@@ -19,6 +19,7 @@ dependencies = [
     "django==6.1",
     "psycopg[binary]==3.3.5",
     "gunicorn==26.2.0",
+    "openpyxl==3.1.5",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +31,7 @@ lint = [
     "typos==1.49.0",
     "bandit==1.9.4",
     "django-stubs==6.1.0",
+    "types-openpyxl==3.1.5.20260827",
 ]
 test = [
     "asgi-lifespan==2.1.0",
@@ -102,6 +104,11 @@ ignore = [
 "src/memiro/presentation/django_admin/refusals.py" = ["RUF001", "RUF002"]
 "src/memiro/presentation/django_admin/writes.py" = ["RUF001", "RUF002"]
 "src/memiro/presentation/django_admin/variant_builder.py" = ["RUF001", "RUF002"]
+# The workbook speaks to the owner in Russian, and its formulas quote the very
+# words its sheets print — sheet names, unit labels and the sizes of a mirror.
+"src/memiro/adapters/xlsx/*" = ["RUF001", "RUF002", "RUF003"]
+"tests/unit/adapters/test_pricing_workbook.py" = ["RUF001"]
+"tests/integration/export_pricing_workbook/*" = ["RUF001", "RUF003"]
 # The transliteration table is Cyrillic by definition, and so are the names the
 # owner gives his products in the tests that exercise the address it derives.
 "src/memiro/entities/common/slug.py" = ["RUF001"]
