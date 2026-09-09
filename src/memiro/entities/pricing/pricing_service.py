@@ -141,12 +141,10 @@ def applicable_values(
     attributes: Sequence[Attribute],
     selections: Selections,
 ) -> ResolvedValues:
-    """Resolve the declarations overlaid with choices into the rows that apply, in the owner's order.
-
-    What the inquiry snapshot names and what the breakdown charges are the
-    same set: an attribute is in the specification exactly when it has a
-    value and its dependency parents are present.
-    """
+    """Resolve the declarations overlaid with choices into the rows that apply, in the owner's order."""
+    # What the inquiry snapshot names and what the breakdown charges are the
+    # same set: an attribute is in the specification exactly when it has a
+    # value and its dependency parents are present.
     return _values(_applicable_values(product, attributes, selections), attributes)
 
 

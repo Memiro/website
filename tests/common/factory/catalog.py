@@ -24,6 +24,7 @@ from memiro.entities.common.identifiers import (
 )
 from memiro.entities.common.measure import Area, Millimeters
 from memiro.entities.common.money import Money
+from memiro.entities.inquiry.entity import ConfigurationValue
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID, PricingSettings, SizeSurcharge
 from tests.clock import CLOCK, NOW
 
@@ -425,6 +426,19 @@ def demo_numeric_product(*, quantity: Decimal) -> Product:
         clock=CLOCK,
     )
     return product
+
+
+def canonical_specification(*chosen: ConfigurationValue) -> tuple[ConfigurationValue, ...]:
+    """Tell what the canonical mirror reads as in an inquiry, the given choices standing in for declared values."""
+    replacements = {value.attribute_name: value for value in chosen}
+    declared = (
+        ConfigurationValue(attribute_name="Тип полотна", value_name="Серебро", quantity=None),
+        ConfigurationValue(attribute_name="Форма", value_name="Прямоугольное", quantity=None),
+        ConfigurationValue(attribute_name="Рама", value_name="Алюминий", quantity=None),
+        ConfigurationValue(attribute_name="Подсветка", value_name="Без подсветки", quantity=None),
+        ConfigurationValue(attribute_name="Крепление", value_name="С креплением", quantity=None),
+    )
+    return tuple(replacements.get(value.attribute_name, value) for value in declared)
 
 
 def demo_defaults() -> dict[AttributeId, ChosenValue]:

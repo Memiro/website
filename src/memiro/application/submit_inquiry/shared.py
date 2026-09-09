@@ -60,11 +60,10 @@ class PreviewedConfiguration(BaseModel):
 
 
 class PreviewedItem(BaseModel):
-    """One position as the customer may see it: the snapshot minus the breakdown and the hidden price.
+    """One position as the customer may see it: the snapshot minus the breakdown and the hidden price."""
 
-    Empty except for ``product_id`` and ``wish`` when the product is not
-    available: the storefront then offers to remove the position.
-    """
+    # Empty except for ``product_id`` and ``wish`` when the product is not
+    # available: the storefront then offers to remove the position.
 
     product_id: UUID
     is_available: bool
@@ -120,6 +119,20 @@ def item_snapshot(form: InquiryItemForm, product: Product, context: PricingConte
     )
 
 
+def _projected_configuration(configuration: InquiryConfiguration | None) -> PreviewedConfiguration | None:
+    """Project the size and the named values of one snapshot."""
+    if configuration is None:
+        return None
+    return PreviewedConfiguration(
+        width_mm=configuration.dimensions.width.value,
+        height_mm=configuration.dimensions.height.value,
+        values=[
+            PreviewedValue(attribute_name=value.attribute_name, value_name=value.value_name, quantity=value.quantity)
+            for value in configuration.values
+        ],
+    )
+
+
 def projected_item(snapshot: InquiryItemData) -> PreviewedItem:
     """Project one snapshot for the customer: the price through the storefront gate, the breakdown withheld."""
     price = customer_price(snapshot.verdict, snapshot.calculated_price)
@@ -146,18 +159,4 @@ def unavailable_item(form: InquiryItemForm) -> PreviewedItem:
         price=None,
         configuration=None,
         wish=form.wish,
-    )
-
-
-def _projected_configuration(configuration: InquiryConfiguration | None) -> PreviewedConfiguration | None:
-    """Project the size and the named values of one snapshot."""
-    if configuration is None:
-        return None
-    return PreviewedConfiguration(
-        width_mm=configuration.dimensions.width.value,
-        height_mm=configuration.dimensions.height.value,
-        values=[
-            PreviewedValue(attribute_name=value.attribute_name, value_name=value.value_name, quantity=value.quantity)
-            for value in configuration.values
-        ],
     )

@@ -17,8 +17,9 @@ from memiro.application.submit_inquiry import (
     SubmitInquiryForm,
 )
 from memiro.entities.common.measure import Millimeters
+from memiro.entities.inquiry.entity import ConfigurationValue
 from memiro.entities.pricing.quotation import PricingVerdict
-from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, GRAPHITE, PRODUCT
+from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, GRAPHITE, PRODUCT, canonical_specification
 from tests.common.factory.pricing import SelectionFactory
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
@@ -30,16 +31,6 @@ from tests.integration.prime import (
 )
 
 pytestmark = pytest.mark.usefixtures("catalog")
-
-# The canonical mirror as the customer reads it back: every declared value by
-# name, in the owner's order — the customer chose none of them.
-CANONICAL_VALUES = [
-    PreviewedValue(attribute_name="Тип полотна", value_name="Серебро", quantity=None),  # noqa: RUF001
-    PreviewedValue(attribute_name="Форма", value_name="Прямоугольное", quantity=None),
-    PreviewedValue(attribute_name="Рама", value_name="Алюминий", quantity=None),
-    PreviewedValue(attribute_name="Подсветка", value_name="Без подсветки", quantity=None),
-    PreviewedValue(attribute_name="Крепление", value_name="С креплением", quantity=None),  # noqa: RUF001
-]
 
 
 def _item(**overrides: object) -> InquiryItemForm:
@@ -60,11 +51,19 @@ def _preview(*items: InquiryItemForm) -> PreviewInquiryForm:
 
 def _specified(width_mm: int, height_mm: int, *chosen: PreviewedValue) -> PreviewedConfiguration:
     """Build the canonical specification with the customer's choices standing in for the declared values."""
-    replacements = {value.attribute_name: value for value in chosen}
+    values = canonical_specification(
+        *(
+            ConfigurationValue(attribute_name=v.attribute_name, value_name=v.value_name, quantity=v.quantity)
+            for v in chosen
+        )
+    )
     return PreviewedConfiguration(
         width_mm=width_mm,
         height_mm=height_mm,
-        values=[replacements.get(value.attribute_name, value) for value in CANONICAL_VALUES],
+        values=[
+            PreviewedValue(attribute_name=v.attribute_name, value_name=v.value_name, quantity=v.quantity)
+            for v in values
+        ],
     )
 
 
@@ -273,7 +272,6 @@ async def test_a_submitted_inquiry_answers_with_the_positions_the_preview_showed
             wish="Warm light",
         ),
     ]
-    preview = (await api_client.preview_inquiry(_preview(*items))).assert_status(200).ensure_content()
     form = SubmitInquiryForm(
         source=InquirySource.SELECTION,
         name="Anna",
@@ -286,7 +284,19 @@ async def test_a_submitted_inquiry_answers_with_the_positions_the_preview_showed
 
     created = (await api_client.submit_inquiry(form)).assert_status(200).ensure_content()
 
-    assert created.items == preview.items
+    # The very list the preview test above expects of the same selection.
+    assert created.items == [
+        _previewed(price=Decimal(8820), configuration=_specified(800, 600)),
+        _previewed(
+            price=Decimal(14090),
+            configuration=_specified(
+                900,
+                900,
+                PreviewedValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),
+            ),
+            wish="Warm light",
+        ),
+    ]
 
 
 async def test_a_hidden_price_stays_out_of_the_submit_answer_too(
@@ -312,15 +322,6 @@ async def test_a_hidden_price_stays_out_of_the_submit_answer_too(
     ]
 
 
-async def test_a_preview_rejects_a_choice_outside_the_product(api_client: ApiClient) -> None:
-    """A choice the product never declared is refused with ATTRIBUTE_VALUE_NOT_FOUND, as at submission."""
-    form = _preview(_item(selections=[SelectionFactory.build(attribute_id=BLADE, quantity=None)]))
-
-    response = await api_client.preview_inquiry(form)
-
-    response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")
-
-
 @pytest.mark.parametrize(("items", "code"), OVER_THE_INPUT_BOUNDS)
 async def test_a_preview_fails_if_a_field_is_over_its_input_bound(
     api_client: ApiClient,
@@ -333,3 +334,12 @@ async def test_a_preview_fails_if_a_field_is_over_its_input_bound(
     response = await api_client.preview_inquiry(dishonest)
 
     response.assert_error(422, code)
+
+
+async def test_a_preview_rejects_a_choice_outside_the_product(api_client: ApiClient) -> None:
+    """A choice the product never declared is refused with ATTRIBUTE_VALUE_NOT_FOUND, as at submission."""
+    form = _preview(_item(selections=[SelectionFactory.build(attribute_id=BLADE, quantity=None)]))
+
+    response = await api_client.preview_inquiry(form)
+
+    response.assert_error(404, "ATTRIBUTE_VALUE_NOT_FOUND")

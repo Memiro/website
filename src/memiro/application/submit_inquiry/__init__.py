@@ -15,11 +15,10 @@ from memiro.application.submit_inquiry.shared import (
     PreviewedItem,
     PreviewedValue,
 )
-from memiro.application.submit_inquiry.submit_inquiry import CreatedInquiry, SubmitInquiry, SubmitInquiryForm
+from memiro.application.submit_inquiry.submit_inquiry import SubmitInquiry, SubmitInquiryForm, SubmittedInquiry
 from memiro.entities.inquiry.entity import InquirySource
 
 __all__ = [
-    "CreatedInquiry",
     "InquiryItemForm",
     "InquiryPreview",
     "InquirySource",
@@ -31,4 +30,5 @@ __all__ = [
     "PreviewedValue",
     "SubmitInquiry",
     "SubmitInquiryForm",
+    "SubmittedInquiry",
 ]
