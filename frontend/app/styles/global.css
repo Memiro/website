@@ -523,6 +523,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   font-size: var(--text-xs); color: var(--color-muted);
 }
 .inquiry-remove:hover { color: var(--color-ink); }
+.inquiry-spec { list-style: none; display: grid; gap: var(--space-3xs); font-size: var(--text-xs); color: var(--color-muted); }
+.inquiry-price { font-family: var(--font-outlier); font-size: var(--text-md); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.inquiry-price--words { font-family: inherit; font-size: var(--text-sm); color: var(--color-ink-2); white-space: normal; max-width: var(--measure-lede); }
+.inquiry-price--gone { color: var(--color-ink); font-weight: 600; }
+.inquiry-item--gone b { color: var(--color-muted); text-decoration: line-through; }
+.inquiry-wish { padding-top: var(--space-2xs); }
+.inquiry-retry { padding: 0; border: 0; background: none; cursor: pointer; color: inherit; text-decoration: underline; font: inherit; }
 
 /* ---------- Pages (lead in --measure, sections, no cards) ---------- */
 .page { display: grid; gap: var(--space-xl); padding-top: var(--space-lg); }

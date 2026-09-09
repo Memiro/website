@@ -2,9 +2,8 @@ from collections.abc import Sequence
 from uuid import UUID
 
 import structlog
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
-from memiro.application.common.customer_selection import Selection, customer_selections
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.gateway.product import ProductGateway
@@ -14,20 +13,21 @@ from memiro.application.common.input_limits import (
     MAX_INQUIRY_ITEMS,
     MAX_NAME_LENGTH,
     MAX_PHONE_LENGTH,
-    MAX_SELECTIONS,
-    MAX_SIDE_MM,
-    MAX_WISH_LENGTH,
     MIN_NAME_LENGTH,
     MIN_PHONE_LENGTH,
-    MIN_SIDE_MM,
 )
 from memiro.application.common.notification import InquiryNotificationBus
 from memiro.application.errors.catalog import ProductNotFoundError
-from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.submit_inquiry.config import LegalConfig
-from memiro.entities.catalog.attribute.entity import Attribute
+from memiro.application.submit_inquiry.shared import (
+    InquiryItemForm,
+    PreviewedItem,
+    PricingContext,
+    item_snapshot,
+    pricing_context,
+    projected_item,
+)
 from memiro.entities.common.identifiers import ProductId
-from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.inquiry.consent import given_consent
 from memiro.entities.inquiry.entity import (
     InquiryData,
@@ -36,35 +36,13 @@ from memiro.entities.inquiry.entity import (
     ensure_new_inquiry_shape,
     inquiry_factory,
 )
-from memiro.entities.inquiry.inquiry_service import inquiry_configuration, inquiry_item_snapshot
 from memiro.entities.inquiry.phone import normalized_phone
-from memiro.entities.pricing.pricing_service import price_product_for_customer
-from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro_common.clock import Clock
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 from memiro_common.uow import UoW
 
 logger: Logger = structlog.get_logger(__name__)
-
-
-class InquiryItemForm(BaseModel):
-    """One chosen product submitted in a visitor selection."""
-
-    product_id: UUID
-    width_mm: int = Field(ge=MIN_SIDE_MM, le=MAX_SIDE_MM)
-    height_mm: int = Field(ge=MIN_SIDE_MM, le=MAX_SIDE_MM)
-    selections: list[Selection] = Field(default_factory=list[Selection], max_length=MAX_SELECTIONS)
-    wish: str = Field(max_length=MAX_WISH_LENGTH)
-
-    @model_validator(mode="after")
-    def _one_choice_per_attribute(self) -> "InquiryItemForm":
-        """Refuse a second choice whose saved snapshot would be ambiguous."""
-        attribute_ids = [selection.attribute_id for selection in self.selections]
-        if len(set(attribute_ids)) != len(attribute_ids):
-            msg = "An attribute can be chosen only once"
-            raise ValueError(msg)
-        return self
 
 
 class SubmitInquiryForm(BaseModel):
@@ -80,9 +58,10 @@ class SubmitInquiryForm(BaseModel):
 
 
 class CreatedInquiry(BaseModel):
-    """The public acknowledgement of a stored inquiry."""
+    """The public acknowledgement of a stored inquiry: its identifier and what was stored, position by position."""
 
     id: UUID
+    items: list[PreviewedItem]
 
 
 @interactor
@@ -120,48 +99,23 @@ class SubmitInquiry:
         await self.uow.commit()
         await self.event_bus.notify(inquiry.id)
         logger.info("Inquiry submitted", inquiry_id=inquiry.id, item_count=len(inquiry.items))
-        return CreatedInquiry(id=inquiry.id)
+        # The stored positions are these snapshots field for field (the factory
+        # copies them), so the customer's summary is a projection of what was
+        # written, the same projection the preview showed (rule 20).
+        return CreatedInquiry(id=inquiry.id, items=[projected_item(item) for item in items])
 
     async def _items(self, forms: Sequence[InquiryItemForm]) -> list[InquiryItemData]:
         """Build server-owned snapshots for every item before the aggregate is created."""
         if not forms:
             return []
-        settings = await self.pricing_settings_gateway.get_with_surcharges()
-        if settings is None:
-            logger.warning("Inquiry submitted before pricing settings were created")
-            raise PricingSettingsNotFoundError
-        attributes = await self.attribute_gateway.list_with_values()
-        return [await self._item(form, attributes, settings) for form in forms]
+        context = await pricing_context(self.pricing_settings_gateway, self.attribute_gateway)
+        return [await self._item(form, context) for form in forms]
 
-    async def _item(
-        self,
-        form: InquiryItemForm,
-        attributes: Sequence[Attribute],
-        settings: PricingSettings,
-    ) -> InquiryItemData:
+    async def _item(self, form: InquiryItemForm, context: PricingContext) -> InquiryItemData:
         """Load, price and freeze one product configuration."""
         product_id: ProductId = form.product_id
         product = await self.product_gateway.get(product_id)
         if product is None:
             logger.warning("Inquiry named an unknown product", product_id=product_id)
             raise ProductNotFoundError
-        dimensions = Dimensions(width=Millimeters(form.width_mm), height=Millimeters(form.height_mm))
-        selections = customer_selections(product, attributes, form.selections)
-        quotation = price_product_for_customer(
-            product=product,
-            attributes=attributes,
-            settings=settings,
-            dimensions=dimensions,
-            selections=selections,
-        )
-        return inquiry_item_snapshot(
-            product=product,
-            configuration=inquiry_configuration(
-                product=product,
-                attributes=attributes,
-                dimensions=dimensions,
-                selections=selections,
-            ),
-            quotation=quotation,
-            wish=form.wish,
-        )
+        return item_snapshot(form, product, context)
