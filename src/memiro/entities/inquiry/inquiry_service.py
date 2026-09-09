@@ -17,12 +17,10 @@ def inquiry_configuration(
     dimensions: Dimensions,
     selections: Mapping[AttributeId, ChosenValue],
 ) -> InquiryConfiguration:
-    """Name the whole specification of the mirror: every applicable value, the customer's choice over the product's own.
-
-    The snapshot outlives the product's markup, so it carries the values the
-    customer never touched too; which of them he chose it does not say
-    (``Inquiry``, rule 21).
-    """
+    """Name the whole specification of the mirror: every applicable value, the choice over the declaration."""
+    # The snapshot outlives the product's markup, so it carries the values the
+    # customer never touched too; which of them he chose it does not say
+    # (``Inquiry``, rule 21).
     index = {attribute.id: attribute for attribute in attributes}
     values = tuple(
         ConfigurationValue(

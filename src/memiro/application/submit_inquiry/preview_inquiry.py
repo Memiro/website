@@ -37,9 +37,9 @@ class InquiryPreview(BaseModel):
 class PreviewInquiry:
     """Show a selection the way a submission would store it, storing nothing."""
 
-    product_gateway: ProductGateway
     pricing_settings_gateway: PricingSettingsGateway
     attribute_gateway: AttributeGateway
+    product_gateway: ProductGateway
 
     async def execute(self, data: PreviewInquiryForm) -> InquiryPreview:
         """Build every position with the code of a submission and project it for the customer."""

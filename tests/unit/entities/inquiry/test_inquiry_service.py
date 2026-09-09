@@ -16,6 +16,7 @@ from tests.common.factory.catalog import (
     GRAPHITE,
     HEATING,
     NO_HEATING,
+    canonical_specification,
     demo_attributes,
     demo_cutouts,
     demo_numeric_product,
@@ -29,13 +30,7 @@ _PRICE = Money(amount=Decimal(8820))
 _DIMENSIONS = Dimensions(width=Millimeters(value=800), height=Millimeters(value=600))
 _CONFIGURATION = InquiryConfiguration(dimensions=_DIMENSIONS, values=())
 
-# The canonical mirror as the manager reads it: every declared value by name,
-# in the owner's order of the dictionary.
-_BLADE = ConfigurationValue(attribute_name="Тип полотна", value_name="Серебро", quantity=None)  # noqa: RUF001
-_SHAPE = ConfigurationValue(attribute_name="Форма", value_name="Прямоугольное", quantity=None)
-_FRAME = ConfigurationValue(attribute_name="Рама", value_name="Алюминий", quantity=None)
-_NO_BACKLIGHT = ConfigurationValue(attribute_name="Подсветка", value_name="Без подсветки", quantity=None)
-_MOUNT = ConfigurationValue(attribute_name="Крепление", value_name="С креплением", quantity=None)  # noqa: RUF001
+_BLADE, _SHAPE, _FRAME, _NO_BACKLIGHT, _MOUNT = canonical_specification()
 _CONTOUR = ConfigurationValue(attribute_name="Подсветка", value_name="Контурная", quantity=None)
 
 
@@ -92,6 +87,21 @@ def test_a_configuration_names_every_declared_value_of_the_product_in_dictionary
     assert configuration == InquiryConfiguration(
         dimensions=_DIMENSIONS,
         values=(_BLADE, _SHAPE, _FRAME, _NO_BACKLIGHT, _MOUNT),
+    )
+
+
+def test_an_absent_feature_stays_in_the_configuration_by_its_name() -> None:
+    """A value marking absence is a value all the same: the manager reads "no backlight", not a missing line."""
+    configuration = inquiry_configuration(
+        product=_MIRROR,
+        attributes=demo_attributes(),
+        dimensions=_DIMENSIONS,
+        selections={},
+    )
+
+    assert (
+        ConfigurationValue(attribute_name="Подсветка", value_name="Без подсветки", quantity=None)
+        in configuration.values
     )
 
 

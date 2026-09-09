@@ -17,10 +17,10 @@ from memiro.application.browse_catalog import (
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
 from memiro.application.read_site import SiteModel
 from memiro.application.submit_inquiry import (
-    CreatedInquiry,
     InquiryPreview,
     PreviewInquiryForm,
     SubmitInquiryForm,
+    SubmittedInquiry,
 )
 from memiro.presentation.fast_api.error_handlers import ErrorResponse
 from memiro.presentation.fast_api.routers.health import HealthStatus
@@ -140,7 +140,7 @@ class ApiClient:
         response = await self._client.post("/inquiries/preview", json=data.model_dump(mode="json"))
         return ApiResponse(response, TypeAdapter(InquiryPreview))
 
-    async def submit_inquiry(self, data: SubmitInquiryForm) -> ApiResponse[CreatedInquiry]:
+    async def submit_inquiry(self, data: SubmitInquiryForm) -> ApiResponse[SubmittedInquiry]:
         """Submit one visitor inquiry."""
         response = await self._client.post("/inquiries", json=data.model_dump(mode="json"))
-        return ApiResponse(response, TypeAdapter(CreatedInquiry))
+        return ApiResponse(response, TypeAdapter(SubmittedInquiry))

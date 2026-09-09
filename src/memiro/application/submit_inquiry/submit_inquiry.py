@@ -57,8 +57,8 @@ class SubmitInquiryForm(BaseModel):
     items: list[InquiryItemForm] = Field(default_factory=list[InquiryItemForm], max_length=MAX_INQUIRY_ITEMS)
 
 
-class CreatedInquiry(BaseModel):
-    """The public acknowledgement of a stored inquiry: its identifier and what was stored, position by position."""
+class SubmittedInquiry(BaseModel):
+    """The stored inquiry as the customer reads it back: its identifier and the stored positions, projected."""
 
     id: UUID
     items: list[PreviewedItem]
@@ -69,14 +69,14 @@ class SubmitInquiry:
     """Store a visitor's inquiry together with server-built item snapshots."""
 
     uow: UoW
-    product_gateway: ProductGateway
     pricing_settings_gateway: PricingSettingsGateway
     attribute_gateway: AttributeGateway
+    product_gateway: ProductGateway
     event_bus: InquiryNotificationBus
     clock: Clock
     legal: LegalConfig
 
-    async def execute(self, data: SubmitInquiryForm) -> CreatedInquiry:
+    async def execute(self, data: SubmitInquiryForm) -> SubmittedInquiry:
         """Reprice all submitted configurations and commit one inquiry aggregate."""
         logger.debug("Submitting inquiry", source=data.source, item_count=len(data.items))
         consent = given_consent(given=data.consent, version=self.legal.consent_version)
@@ -99,10 +99,7 @@ class SubmitInquiry:
         await self.uow.commit()
         await self.event_bus.notify(inquiry.id)
         logger.info("Inquiry submitted", inquiry_id=inquiry.id, item_count=len(inquiry.items))
-        # The stored positions are these snapshots field for field (the factory
-        # copies them), so the customer's summary is a projection of what was
-        # written, the same projection the preview showed (rule 20).
-        return CreatedInquiry(id=inquiry.id, items=[projected_item(item) for item in items])
+        return SubmittedInquiry(id=inquiry.id, items=[projected_item(item) for item in items])
 
     async def _items(self, forms: Sequence[InquiryItemForm]) -> list[InquiryItemData]:
         """Build server-owned snapshots for every item before the aggregate is created."""
