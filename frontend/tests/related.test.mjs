@@ -42,6 +42,18 @@ test("a mirror at the end of the list borrows its neighbours from before it", ()
   assert.deepEqual(neighbours(items, "g", 4).map((item) => item.slug), ["c", "d", "e", "f"]);
 });
 
+test("a mirror at the start of the list takes all its neighbours from after it", () => {
+  const items = listing(["a", "b", "c", "d", "e", "f", "g"]);
+
+  assert.deepEqual(neighbours(items, "a", 4).map((item) => item.slug), ["b", "c", "d", "e"]);
+});
+
+test("a mirror second in the list keeps its one predecessor and borrows the rest from after", () => {
+  const items = listing(["a", "b", "c", "d", "e", "f", "g"]);
+
+  assert.deepEqual(neighbours(items, "b", 4).map((item) => item.slug), ["a", "c", "d", "e"]);
+});
+
 test("a mirror missing from the list gives the head of the list", () => {
   const items = listing(["a", "b", "c", "d", "e"]);
 
@@ -67,7 +79,47 @@ test("related mirrors are asked from the category narrowed to the same shape", a
 
 test("the listing is walked page by page until the mirror itself is on it", async () => {
   /** @type {Record<number, import("../app/lib/catalog-api.ts").ProductSummary[]>} */
-  const pages = { 1: listing(["a", "b"]), 2: listing(["c", "halo"]), 3: listing(["d", "e"]) };
+  const pages = { 1: listing(["a", "b"]), 2: listing(["c", "halo", "d", "e"]), 3: listing(["f", "g"]) };
+  /** @type {number[]} */
+  const asked = [];
+  /** @type {import("../app/lib/related.ts").CategoryReader} */
+  const reader = {
+    async categoryProducts(_slug, search) {
+      const page = Number(new URLSearchParams(search).get("page") ?? "1");
+      asked.push(page);
+      return { items: pages[page] ?? [], total: 8, page, pages: 3, groups: [], price: null, sort: "name" };
+    },
+  };
+
+  const related = await relatedProducts(reader, "mirrors", product("halo"));
+
+  assert.deepEqual(asked, [1, 2]);
+  assert.deepEqual(related.map((item) => item.slug), ["b", "c", "d", "e"]);
+});
+
+test("a mirror at the foot of a page gets its successors from the next page", async () => {
+  /** @type {Record<number, import("../app/lib/catalog-api.ts").ProductSummary[]>} */
+  const pages = { 1: listing(["a", "b", "c", "halo"]), 2: listing(["d", "e", "f", "g"]) };
+  /** @type {number[]} */
+  const asked = [];
+  /** @type {import("../app/lib/related.ts").CategoryReader} */
+  const reader = {
+    async categoryProducts(_slug, search) {
+      const page = Number(new URLSearchParams(search).get("page") ?? "1");
+      asked.push(page);
+      return { items: pages[page] ?? [], total: 8, page, pages: 2, groups: [], price: null, sort: "name" };
+    },
+  };
+
+  const related = await relatedProducts(reader, "mirrors", product("halo"));
+
+  assert.deepEqual(asked, [1, 2]);
+  assert.deepEqual(related.map((item) => item.slug), ["b", "c", "d", "e"]);
+});
+
+test("a mirror absent from its own listing walks every page and gets the head", async () => {
+  /** @type {Record<number, import("../app/lib/catalog-api.ts").ProductSummary[]>} */
+  const pages = { 1: listing(["a", "b"]), 2: listing(["c", "d"]), 3: listing(["e", "f"]) };
   /** @type {number[]} */
   const asked = [];
   /** @type {import("../app/lib/related.ts").CategoryReader} */
@@ -81,8 +133,8 @@ test("the listing is walked page by page until the mirror itself is on it", asyn
 
   const related = await relatedProducts(reader, "mirrors", product("halo"));
 
-  assert.deepEqual(asked, [1, 2]);
-  assert.deepEqual(related.map((item) => item.slug), ["a", "b", "c"]);
+  assert.deepEqual(asked, [1, 2, 3]);
+  assert.deepEqual(related.map((item) => item.slug), ["a", "b", "c", "d"]);
 });
 
 test("a mirror without a shape gets its plain category neighbours", async () => {

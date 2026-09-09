@@ -35,7 +35,10 @@ const specs = product === null ? [] : productSpecs(product.attributes);
 const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
 const categoryName = category?.name ?? "Каталог";
 
-const related: ProductSummary[] = product === null ? [] : (await foundOrNull(categorySlug, (slug) => relatedProducts(api, slug, product))) ?? [];
+let related: ProductSummary[] = [];
+if (product !== null) {
+  related = (await foundOrNull(categorySlug, (slug) => relatedProducts(api, slug, product))) ?? [];
+}
 
 const crumbs = product === null ? [] : [
   { href: "/", label: "Главная" },

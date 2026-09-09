@@ -1,5 +1,5 @@
 import type { CategoryPage, ProductCard, ProductSummary } from "./catalog-api.ts";
-import { FIRST_PAGE, catalogSearch } from "./catalog-query.ts";
+import { EMPTY_QUERY, FIRST_PAGE, catalogSearch } from "./catalog-query.ts";
 
 export const RELATED_SIZE = 4;
 // The attribute is matched by its name: attributes are rows of the owner's
@@ -16,23 +16,20 @@ export function shapeValueId(product: ProductCard): string | null {
   return shape?.declared_value_id ?? null;
 }
 
-/** Up to `size` items closest to `slug` in list order, the next ones first; the whole head when `slug` is absent. */
+/** How many items after `index` the neighbours want: half of `size`, plus what the start of the list cannot supply. */
+function wantedAfter(index: number, size: number): number {
+  return size - Math.min(index, Math.floor(size / 2));
+}
+
+/** Up to `size` items around `slug` in list order — half after, half before, the edges borrowing from the other side; the head when `slug` is absent. */
 export function neighbours<Item extends { slug: string }>(items: readonly Item[], slug: string, size: number): Item[] {
   const index = items.findIndex((item) => item.slug === slug);
   if (index === -1) {
     return items.slice(0, size);
   }
-  const after = items.slice(index + 1);
-  const before = items.slice(0, index).reverse();
-  const picked: Item[] = [];
-  while (picked.length < size && (after.length > 0 || before.length > 0)) {
-    const takeAfter = after.length > 0 && (picked.length % 2 === 0 || before.length === 0);
-    const next = takeAfter ? after.shift() : before.shift();
-    if (next !== undefined) {
-      picked.push(next);
-    }
-  }
-  return picked.sort((left, right) => items.indexOf(left) - items.indexOf(right));
+  const after = Math.min(items.length - index - 1, wantedAfter(index, size));
+  const before = Math.min(index, size - after);
+  return [...items.slice(index - before, index), ...items.slice(index + 1, index + 1 + after)];
 }
 
 /** Mirrors of the same shape standing next to this one in the category listing; the category itself without a shape. */
@@ -40,13 +37,17 @@ export async function relatedProducts(reader: CategoryReader, categorySlug: stri
   const shape = shapeValueId(product);
   const values = shape === null ? [] : [shape];
   const items: ProductSummary[] = [];
+  let index = -1;
   let page = FIRST_PAGE;
-  let pages = FIRST_PAGE;
-  // The listing arrives one page at a time; walk it until this mirror is on it,
-  // so the neighbours are the real alphabetical ones and not the first page's.
-  while (page <= pages && !items.some((item) => item.slug === product.slug)) {
-    const listing = await reader.categoryProducts(categorySlug, catalogSearch({ values, priceMin: "", priceMax: "", sort: "name", page }));
+  let pages = 1; // one page until the listing says how many
+  // The listing arrives one page at a time; walk it until this mirror is on it
+  // with enough items after it, so the neighbours are the real alphabetical
+  // ones and not the first page's. A mirror missing from its own listing
+  // (a shape row renamed under it) walks every page and falls back to the head.
+  while (page <= pages && (index === -1 || items.length - index - 1 < wantedAfter(index, RELATED_SIZE))) {
+    const listing = await reader.categoryProducts(categorySlug, catalogSearch({ ...EMPTY_QUERY, values, page }));
     items.push(...listing.items);
+    index = items.findIndex((item) => item.slug === product.slug);
     pages = listing.pages;
     page += 1;
   }

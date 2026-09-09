@@ -10,6 +10,8 @@ export interface CatalogQuery {
 
 export const FIRST_PAGE = 1;
 export const VALUE_PARAM = "value";
+/** The listing as the API gives it unasked: every filter off, by name, the first page. */
+export const EMPTY_QUERY: CatalogQuery = { values: [], priceMin: "", priceMax: "", sort: "name", page: FIRST_PAGE };
 const SORT_LABELS: Record<CatalogSort, string> = {
   name: "По названию",
   cheapest: "Сначала дешёвые",
