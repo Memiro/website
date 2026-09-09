@@ -128,7 +128,7 @@ p, .name { text-wrap: pretty; }
   overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
 .price, .price-now, .price-note, .calc-total, .calc-additions b, .cart-price, .variant-price,
-.nav__count, a[href^="tel:"], .hero__facts b, .steps__n, .cat-head .count, .pager a,
+.nav__count, a[href^="tel:"], .hero__facts b, .steps__n, .head__count, .pager a, .fgroup .n,
 .fprice input { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -148,7 +148,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
    label, menu row and caption inherits it here so no place drifts to its own
    tracking or weight. Size and colour stay per place. */
 .label, .nav__link, .nav__count, .mobile-menu a, .foot__contacts, .chip, .field > span,
-.index a, .ticker__track span, .steps__n {
+.index a, .ticker__track span, .steps__n, .crumbs, .head__count, .chip-f, .sort, .drawer-title,
+.fgroup legend, .fgroup .n, .reset-link, .pager a:not(.btn) {
   font-family: var(--font-outlier); font-weight: 500;
   letter-spacing: 0.06em; text-transform: uppercase;
 }
@@ -297,11 +298,14 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* ---------- Section head (S2: mono label above the heading, ghost button right) ---------- */
 .section { padding-top: 104px; }
 .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; margin-bottom: 40px; flex-wrap: wrap; }
-.section-note { font-size: 15px; color: var(--muted); max-width: 320px; }
 .head { display: grid; gap: var(--space-xs); padding-top: var(--space-2xl); padding-bottom: var(--space-md); }
 .head__row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
 .head h2, .dark__text h2 { font-size: var(--text-section); line-height: 1.04; text-transform: uppercase; overflow-wrap: anywhere; min-width: 0; }
 .head h2 { max-width: 24ch; }
+/* The same head opens a page: the h1 stands on a mono label, a mono count sits right, an ink rule closes it. */
+.head--page { padding-top: var(--space-lg); border-bottom: var(--rule-hair) solid var(--color-ink); }
+.head h1 { max-width: 20ch; min-width: 0; overflow-wrap: anywhere; }
+.head__count { padding-bottom: var(--space-3xs); font-size: var(--text-xs); color: var(--color-muted); }
 
 /* ---------- Bento of categories ---------- */
 .bento {
@@ -317,7 +321,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
 /* ---------- Product cards (F6: photo, uppercase name, mono price; the whole tile is the link) ---------- */
 .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-lg) var(--space-sm); }
-.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-lg) var(--space-sm); }
 .product-card .card-link { display: grid; gap: var(--space-xs); align-content: start; color: var(--color-ink); }
 .product-card .pic { position: relative; aspect-ratio: 1 / 1.08; background: var(--color-paper-2); overflow: hidden; }
 .product-card .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -470,67 +473,89 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .foot__line a:hover { color: var(--color-accent); }
 
 /* ---------- Breadcrumbs ---------- */
-.crumbs { padding-top: 26px; font-size: 13px; color: var(--muted); }
-.crumbs a { color: var(--muted); }
-.crumbs a:hover { color: var(--text); }
+.crumbs { padding-top: var(--space-md); font-size: var(--text-xs); color: var(--color-muted); }
+.crumbs a { color: var(--color-muted); }
+.crumbs a:hover { color: var(--color-ink); }
 
-/* ---------- Catalogue ---------- */
-.cat-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; flex-wrap: wrap; padding-top: 14px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
-.cat-head h1 { font-size: clamp(34px, 4.4vw, 62px); line-height: 1; letter-spacing: -0.035em; }
-.cat-head .count { font-size: 15px; font-weight: 500; color: var(--muted); }
+.page-body { padding-top: var(--space-md); }
 
-.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 22px; padding-bottom: 26px; flex-wrap: wrap; }
-.chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.chip-f {
-  font-size: 13px; font-weight: 600; padding: 8px 12px;
-  background: var(--ink); color: var(--bg); border: 1px solid var(--ink);
-  font-family: inherit; cursor: pointer;
+/* ---------- Catalogue: toolbar, filters, grid, pager ---------- */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap;
+  padding-top: var(--space-md); padding-bottom: var(--space-md);
 }
-.chip-f:hover { background: var(--accent); border-color: var(--accent); color: var(--color-accent-ink); }
-.chip-f.only-mobile, .chip-f.reset { background: none; color: var(--text); border-color: var(--control); }
-.chip-f.reset:hover { border-color: var(--text); background: none; color: var(--text); }
-.sort { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--muted); }
-.sort select { font: inherit; font-weight: 600; color: var(--text); border: 1px solid var(--control); background: var(--bg-card); padding: 9px 12px; cursor: pointer; }
+.chips { display: flex; gap: var(--space-2xs); flex-wrap: wrap; }
+/* No display here: the «Фильтры» chip is .only-mobile and must keep that rule's display: none. */
+.chip-f {
+  padding: var(--space-2xs) var(--space-xs); font-size: var(--text-xs); cursor: pointer;
+  background: var(--color-ink); color: var(--color-paper); border: var(--rule-hair) solid var(--color-ink);
+}
+.chip-f:hover { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-accent-ink); }
+.chip-f.only-mobile, .chip-f.reset { background: none; color: var(--color-ink); }
+.chip-f.only-mobile:hover, .chip-f.reset:hover { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
+.sort { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-xs); color: var(--color-muted); }
+.sort select {
+  min-height: 36px; padding: 0 var(--space-xs);
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--color-ink);
+  background: var(--color-paper); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-input); cursor: pointer;
+}
 
-.layout { display: grid; grid-template-columns: 268px 1fr; gap: 40px; align-items: start; }
-.filters { position: sticky; top: 104px; background: var(--bg-card); border: 1px solid var(--line-panel); }
-.drawer-head { align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid var(--line-panel); }
-.drawer-title { font-size: 15px; font-weight: 600; }
-.drawer-close { border: none; background: none; font-size: 18px; cursor: pointer; color: var(--muted); font-family: inherit; }
-.drawer-backdrop { position: fixed; inset: 0; z-index: 29; background: color-mix(in oklab, var(--color-ink) 40%, transparent); }
-.fgroup { padding: 20px 22px; border-bottom: 1px solid var(--line-panel); display: grid; gap: 12px; }
-.fgroup h3 { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.fgroup label { display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--body); cursor: pointer; }
-.fgroup label.off { color: var(--muted); cursor: default; }
-.fgroup input { appearance: none; width: 15px; height: 15px; border: 1px solid var(--control); background: var(--bg-card); cursor: pointer; flex: none; }
-.fgroup input:checked { background: var(--text); border-color: var(--text); box-shadow: inset 0 0 0 3px var(--bg-card); }
-.fgroup .n { margin-left: auto; font-size: 12px; color: var(--muted); }
-.price-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.fprice label { gap: 8px; font-size: 13px; color: var(--muted); }
-.fprice input { appearance: textfield; width: 100%; height: auto; min-width: 0; flex: 1 1 auto; padding: 9px 10px; font: inherit; font-size: 15px; color: var(--text); border: 1px solid var(--control); background: var(--bg-card); }
+.layout { display: grid; grid-template-columns: 268px minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
+.filters { position: sticky; top: calc(var(--nav-height) + var(--space-md)); border-top: var(--rule-hair) solid var(--color-ink); }
+.drawer-head {
+  align-items: center; justify-content: space-between;
+  min-height: var(--nav-height); padding: 0 var(--page-gutter); border-bottom: var(--rule-hair) solid var(--color-ink);
+}
+.drawer-title { font-size: var(--text-xs); }
+.drawer-close {
+  width: 44px; height: 44px; margin-right: calc(-1 * var(--space-xs));
+  border: 0; background: none; font: inherit; font-size: var(--text-lg); color: var(--color-ink); cursor: pointer;
+}
+.drawer-close:hover { color: var(--color-accent); }
+/* The drawer and its backdrop sit above the sticky nav (z-index 50): the
+   close button lives in the drawer's head, where the nav would cover it. */
+.drawer-backdrop { position: fixed; inset: 0; z-index: 51; background: color-mix(in oklab, var(--color-ink) 40%, transparent); }
+/* A floated legend stops being the fieldset's rendered legend and joins the grid like any row. */
+.fgroup { display: grid; gap: var(--space-3xs); min-inline-size: 0; padding: var(--space-sm) 0; border: 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+.fgroup legend { float: left; width: 100%; padding: 0; margin-bottom: var(--space-2xs); font-size: var(--text-xs); color: var(--color-muted); }
+.fgroup label { display: flex; align-items: center; gap: var(--space-xs); min-height: 32px; font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
+.fgroup label:hover { color: var(--color-ink); }
+.fgroup label.off { color: var(--color-muted); cursor: default; }
+.fgroup input[type="checkbox"] {
+  appearance: none; flex: none; width: var(--space-sm); height: var(--space-sm); cursor: pointer;
+  background: var(--color-paper); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-input);
+}
+.fgroup input[type="checkbox"]:checked { background: var(--color-ink); box-shadow: inset 0 0 0 var(--rule-fine) var(--color-paper); }
+.fgroup input[type="checkbox"]:disabled { border-color: var(--color-rule); cursor: default; }
+.fgroup .n { margin-left: auto; font-size: var(--text-xs); color: var(--color-muted); }
+.price-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2xs); }
+.fprice label { gap: var(--space-2xs); font-size: var(--text-xs); color: var(--color-muted); }
+.fprice input {
+  appearance: textfield; width: 100%; min-width: 0; padding: var(--space-2xs) 0;
+  font-family: var(--font-outlier); font-size: var(--text-sm); color: var(--color-ink);
+  background: none; border: 0; border-bottom: var(--rule-hair) solid var(--color-muted); border-radius: var(--radius-input);
+}
+.fprice input:focus { border-bottom-color: var(--color-ink); }
 .fprice input::-webkit-inner-spin-button { appearance: none; margin: 0; }
-.fprice input:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+.filters__foot { display: grid; gap: var(--space-xs); padding-top: var(--space-sm); }
 .filters .apply { width: 100%; }
-.filters .reset-link { display: block; padding: 14px 22px; font-size: 13px; font-weight: 600; color: var(--accent); }
+.filters .reset-link { justify-self: start; font-size: var(--text-xs); color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
 
-.empty { background: var(--bg-card); border: 1px solid var(--line-panel); padding: 60px 40px; text-align: center; display: grid; gap: 16px; justify-items: center; }
-.empty h2 { font-size: 24px; font-weight: 600; }
-.empty p { color: var(--secondary); max-width: var(--measure-lede); }
+.empty { display: grid; gap: var(--space-sm); justify-items: start; padding: var(--space-lg) 0; border-top: var(--rule-hair) solid var(--color-rule); }
 
-.show-more { display: flex; justify-content: center; padding-top: 36px; }
-.pager { display: flex; justify-content: center; gap: 8px; padding-top: 28px; flex-wrap: wrap; }
-.pager a { display: grid; place-items: center; min-width: 42px; height: 42px; padding: 0 12px; font-weight: 600; font-size: 14px; color: var(--body); border: 1px solid var(--line-card); background: var(--bg-card); }
-.pager a.here { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-.pager a:hover:not(.here) { border-color: var(--text); color: var(--text); }
+.pager { display: flex; justify-content: center; align-items: center; gap: var(--space-2xs); flex-wrap: wrap; padding-top: var(--space-lg); }
+.pager a:not(.btn) {
+  display: grid; place-items: center; min-width: var(--tap-target); height: var(--tap-target); padding: 0 var(--space-xs);
+  font-size: var(--text-sm); color: var(--color-ink); border: var(--rule-hair) solid var(--color-rule);
+}
+.pager a.here { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+.pager a:hover:not(.here, .btn) { border-color: var(--color-ink); }
+.pager .btn { margin-left: var(--space-2xs); }
 
 /* ---------- Landing pages ---------- */
-.landing-links { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 26px; }
-.landing-links a { text-decoration: none; }
-/* The column is bounded on the paragraphs, not on the .wrap itself: a narrow wrap
-   centres itself and the text drifts away from the heading above it. */
-.landing-text { padding-top: 22px; padding-bottom: 30px; }
-.landing-text p { max-width: 76ch; }
-.landing-all { padding-top: 32px; }
+.landing-text { display: grid; gap: var(--space-sm); padding-top: var(--space-md); }
+.landing-text p { max-width: var(--measure); color: var(--color-ink-2); }
+.landing-all { padding-top: var(--space-lg); }
 
 /* ---------- Product detail ---------- */
 .pdp { display: grid; grid-template-columns: 1.15fr 1fr; gap: 56px; align-items: start; padding-top: 22px; }
@@ -675,6 +700,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .nav__center { gap: var(--space-sm); }
   .nav__phone { display: none; }
   .grid-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .layout { grid-template-columns: 240px minmax(0, 1fr); gap: var(--space-md); }
   .pdp { grid-template-columns: 1fr; gap: 36px; }
   .calc-fields { grid-template-columns: 1fr; }
   .collection-grid { grid-template-columns: 1fr; gap: 28px; }
@@ -684,9 +710,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .works-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* 900, not the pages' 960: five mono links with letter-spacing outgrow the row
-   earlier than the old 15 px links did. The footer folds at the same width so
-   the chrome switches to its mobile layout in one step. */
+/* 900: five mono links with letter-spacing outgrow the row earlier than the
+   old 15 px links did. The footer and the filter drawer fold at the same width
+   so the whole page switches to its mobile layout in one step. */
 @media (max-width: 900px) {
   .nav__inner { grid-template-columns: auto 1fr; }
   .nav__center { display: none; }
@@ -700,20 +726,18 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .steps li { grid-template-columns: 4ch minmax(0, 1fr); }
   .steps p { grid-column: 2; }
   .inquiry { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
-}
-
-@media (max-width: 960px) {
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
   .only-mobile { display: flex; }
   .filters {
-    position: fixed; inset: 0 auto 0 0; z-index: 30; width: min(320px, 88vw);
-    overflow-y: auto; transform: translateX(-102%);
+    position: fixed; inset: 0 auto 0 0; z-index: 52; width: min(320px, 88vw);
+    overflow-y: auto; background: var(--color-paper); border-top: 0; border-right: var(--rule-hair) solid var(--color-ink);
+    transform: translateX(-102%);
     /* Visibility removes the off-canvas drawer from tab order after transition. */
     visibility: hidden; transition: transform var(--dur-short) var(--ease-out), visibility 0s var(--dur-short);
   }
   .filters.open { transform: none; visibility: visible; transition-delay: 0s; }
+  .filters form { padding: 0 var(--page-gutter) var(--space-md); }
   .drawer-head { display: flex; }
-  .grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ---------- Mobile ---------- */
@@ -729,7 +753,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .section-head { margin-bottom: 22px; gap: 14px; }
 
   /* Only explicit carousels scroll horizontally; catalogue grids remain lists. */
-  .grid-3 { grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
   .carousel {
     display: grid; grid-template-columns: none;
     grid-auto-flow: column; grid-auto-columns: 208px;

@@ -1,8 +1,10 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import CatalogCard from "../../components/CatalogCard.astro";
+import EmptyState from "../../components/EmptyState.astro";
 import NotFound from "../../components/NotFound.astro";
 import OfferNote from "../../components/OfferNote.astro";
+import PageHead from "../../components/PageHead.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/catalog-api.ts";
 import { catalogSearch, isNarrowed, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
@@ -53,21 +55,18 @@ const crumbs = landing === null ? [] : [
     jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
-    <div class="cat-head wrap">
-      <h1 class="h-section">{landing.heading}</h1>
-      <span class="count">{page.total} {productPlural(page.total)}</span>
-    </div>
+    <PageHead label={landing.category_name} heading={landing.heading} count={`${page.total} ${productPlural(page.total)}`} />
 
     {paragraphs.length > 0 && (
-      <div class="page wrap landing-text">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>
+      <div class="wrap landing-text">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>
     )}
 
-    <div class="wrap">
+    <div class="wrap page-body">
       <main>
         {page.items.length > 0 ? (
-          <div class="grid-3">{page.items.map((product) => <CatalogCard categorySlug={landing.category_slug} product={product} />)}</div>
+          <div class="grid-4">{page.items.map((product) => <CatalogCard categorySlug={landing.category_slug} product={product} />)}</div>
         ) : (
-          <p class="sub">Под эту подборку сейчас ничего не подошло — посмотрите весь раздел.</p>
+          <EmptyState text="Под эту подборку сейчас ничего не подошло — посмотрите весь раздел." href={`/catalog/${landing.category_slug}/`} action="Весь раздел" />
         )}
 
         {page.pages > 1 && (
@@ -75,6 +74,7 @@ const crumbs = landing === null ? [] : [
             {pageNumbers(page.pages).map((number) => (
               <a class={number === page.page ? "here" : undefined} href={withPage(path, asked, number)} aria-current={number === page.page ? "page" : undefined}>{number}</a>
             ))}
+            {page.page < page.pages && <a class="btn btn--ghost btn--sm" href={withPage(path, asked, page.page + 1)}>Ещё<span class="arrow">→</span></a>}
           </nav>
         )}
 
