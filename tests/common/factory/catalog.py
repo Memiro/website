@@ -83,6 +83,13 @@ INQUIRY_ITEM: InquiryItemId = _id("inquiry-item")
 # only value is the one the customer chose, and it must read as it always did.
 LEGACY_INQUIRY: InquiryId = _id("legacy-inquiry")
 LEGACY_INQUIRY_ITEM: InquiryItemId = _id("legacy-inquiry-item")
+# One inquiry with every kind of position a manager reads off the card: a
+# priced mirror still in the catalogue, a hidden price of a product removed
+# since, and a choice the calculation refused.
+SPECIFIED_INQUIRY: InquiryId = _id("specified-inquiry")
+PRICED_INQUIRY_ITEM: InquiryItemId = _id("priced-inquiry-item")
+HIDDEN_INQUIRY_ITEM: InquiryItemId = _id("hidden-inquiry-item")
+REFUSED_INQUIRY_ITEM: InquiryItemId = _id("refused-inquiry-item")
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 

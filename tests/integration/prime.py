@@ -46,6 +46,7 @@ from tests.common.factory.catalog import (
     FOREIGN_PRODUCT,
     FRAME,
     HEATING,
+    HIDDEN_INQUIRY_ITEM,
     INQUIRY,
     INQUIRY_ITEM,
     LANDING,
@@ -54,18 +55,22 @@ from tests.common.factory.catalog import (
     NO_FRAME,
     NO_HEATING,
     NO_MOUNT,
+    PRICED_INQUIRY_ITEM,
     PRODUCT,
     RECTANGULAR,
+    REFUSED_INQUIRY_ITEM,
     ROUND,
     SECOND_CATEGORY,
     SECOND_PRODUCT,
     SECOND_WORK,
     SHAPE,
     SILVER,
+    SPECIFIED_INQUIRY,
     THIRD_PRODUCT,
     WITH_HEATING,
     WITH_MOUNT,
     WORK,
+    canonical_specification,
     demo_attributes,
     demo_cutouts,
     demo_numeric_product,
@@ -735,6 +740,75 @@ async def prime_legacy_inquiry(engine: AsyncEngine) -> None:
                     "calculated_price": Money(amount=Decimal(10020)),
                     "verdict": PricingVerdict.PRICED,
                     "wish": "Тёплый свет",
+                },
+            ],
+        )
+
+
+async def prime_specified_inquiry(engine: AsyncEngine) -> None:
+    """Leave a manager one inquiry with a priced, a hidden and a refused position, one of a product removed since."""
+    dimensions = Dimensions(width=Millimeters(value=800), height=Millimeters(value=600))
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(inquiries_table),
+            [
+                {
+                    "id": SPECIFIED_INQUIRY,
+                    "source": InquirySource.SELECTION,
+                    "name": "Мария",
+                    "phone": Phone(value="+79990000002"),
+                    "email": "maria@example.test",
+                    "comment": "",
+                    "consent_version": "2026-01-01",
+                    "created_at": CATALOG_STAMP,
+                },
+            ],
+        )
+        await connection.execute(
+            insert(inquiry_items_table),
+            [
+                {
+                    "id": PRICED_INQUIRY_ITEM,
+                    "inquiry_id": SPECIFIED_INQUIRY,
+                    "product_id": PRODUCT,
+                    "product_name": "Зеркало в раме",
+                    "price_from": Money(amount=Decimal(8820)),
+                    "configuration": InquiryConfiguration(dimensions=dimensions, values=canonical_specification()),
+                    "calculated_price": Money(amount=Decimal(8820)),
+                    "verdict": PricingVerdict.PRICED,
+                    "wish": "Повесить над комодом",
+                },
+                {
+                    "id": HIDDEN_INQUIRY_ITEM,
+                    "inquiry_id": SPECIFIED_INQUIRY,
+                    "product_id": None,
+                    "product_name": "Зеркало из прошлого каталога",
+                    "price_from": None,
+                    "configuration": InquiryConfiguration(
+                        dimensions=dimensions,
+                        values=canonical_specification(
+                            ConfigurationValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),
+                        ),
+                    ),
+                    "calculated_price": Money(amount=Decimal(10020)),
+                    "verdict": PricingVerdict.HIDDEN,
+                    "wish": "",
+                },
+                {
+                    "id": REFUSED_INQUIRY_ITEM,
+                    "inquiry_id": SPECIFIED_INQUIRY,
+                    "product_id": PRODUCT,
+                    "product_name": "Зеркало в раме",
+                    "price_from": None,
+                    "configuration": InquiryConfiguration(
+                        dimensions=dimensions,
+                        values=canonical_specification(
+                            ConfigurationValue(attribute_name="Подсветка", value_name="Контурная", quantity=None),
+                        ),
+                    ),
+                    "calculated_price": None,
+                    "verdict": PricingVerdict.SELECTION_NOT_PRICEABLE,
+                    "wish": "",
                 },
             ],
         )

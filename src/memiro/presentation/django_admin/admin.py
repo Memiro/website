@@ -29,10 +29,14 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.urls import URLPattern, path, reverse
 from django.utils.html import format_html
 
+from memiro.adapters.common.inquiry_wording import price_words, size_words, specification_line
+from memiro.adapters.db.types import InquiryConfigurationPayload, inquiry_configuration_from_payload
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
 from memiro.application.manage_products import PricingGapsModel
 from memiro.entities.common.identifiers import ProductId
+from memiro.entities.inquiry.entity import InquiryConfiguration, InquirySource
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID
+from memiro.entities.pricing.quotation import PricingVerdict
 from memiro.presentation.django_admin.attribute_card import create_attribute, remove_attribute, restate_attribute
 from memiro.presentation.django_admin.forms import (
     AttributeCardForm,
@@ -727,6 +731,66 @@ class PricingSettingsAdmin(GuardsItsForm, admin.ModelAdmin):
         return super().construct_change_message(request, form, (), add=add)
 
 
+class InquiryItemInline(ReadOnlyInline):
+    """Позиции заявки: спецификация, цена и пожелание — снимком, как в письме менеджеру."""
+
+    model = InquiryItem
+    fields = (
+        "product_link",
+        "size",
+        "specification",
+        "price",
+        "wish",
+    )
+    readonly_fields = (
+        "product_link",
+        "size",
+        "specification",
+        "price",
+    )
+    verbose_name = "позиция"
+    verbose_name_plural = "Позиции"
+
+    @admin.display(description="Товар")
+    def product_link(self, obj: Model) -> str:
+        """Name the product as it was called, linking to its card only while the catalogue still has it."""
+        item = cast("InquiryItem", obj)
+        product_id: UUID | None = item.product_id  # pyright: ignore[reportAttributeAccessIssue]  # the raw column behind a mirror foreign key
+        if product_id is None:
+            return item.product_name
+        return format_html(
+            '<a href="{}">{}</a>', reverse("admin:memiro_product_change", args=[product_id]), item.product_name
+        )
+
+    @admin.display(description="Размер")
+    def size(self, obj: Model) -> str:
+        """Spell the size the customer typed, or nothing for a position without a configuration."""
+        configuration = _stored_configuration(cast("InquiryItem", obj))
+        return "" if configuration is None else size_words(configuration.dimensions)
+
+    @admin.display(description="Спецификация")
+    def specification(self, obj: Model) -> str:
+        """Print the specification a line per value, the way the manager email prints it."""
+        configuration = _stored_configuration(cast("InquiryItem", obj))
+        if configuration is None:
+            return ""
+        return format_html(
+            "<br>".join(["{}"] * len(configuration.values)), *map(specification_line, configuration.values)
+        )
+
+    @admin.display(description="Цена")
+    def price(self, obj: Model) -> str:
+        """Say what the calculation did with the position in the words of the manager email."""
+        item = cast("InquiryItem", obj)
+        return price_words(PricingVerdict(item.verdict), item.calculated_price_money())
+
+
+def _stored_configuration(item: "InquiryItem") -> InquiryConfiguration | None:
+    """Rebuild the stored snapshot through the domain constructors, so a corrupted row never renders quietly."""
+    payload = cast("InquiryConfigurationPayload | None", item.configuration)
+    return None if payload is None else inquiry_configuration_from_payload(payload)
+
+
 @admin.register(Inquiry)
 class InquiryAdmin(ReadOnlyAdmin):
     """Заявки посетителей."""
@@ -747,6 +811,24 @@ class InquiryAdmin(ReadOnlyAdmin):
         "email",
     )
     ordering = ("-created_at",)
+    fields = (
+        "name",
+        "phone",
+        "email",
+        "source",
+        "consent_version",
+        "created_at",
+        "comment",
+    )
+    inlines = (InquiryItemInline,)
+
+    @override
+    def get_fields(self, request: HttpRequest, obj: Model | None = None) -> tuple[str, ...]:
+        """Show the comment only where the visitor could write one: the free form has no positions to attach it to."""
+        fields = cast("tuple[str, ...]", tuple(super().get_fields(request, obj)))
+        if obj is not None and cast("Inquiry", obj).source == InquirySource.FREE_FORM:
+            return fields
+        return tuple(field for field in fields if field != "comment")
 
 
 @admin.register(InquiryItem)

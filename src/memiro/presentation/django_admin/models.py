@@ -11,8 +11,9 @@ with an invariant is written by the interactor that guards it.
 ``test_admin_mirror_matches_schema`` is what keeps these declarations honest.
 """
 
+from decimal import Decimal
 from enum import StrEnum
-from typing import ClassVar, override
+from typing import ClassVar, cast, override
 from uuid import uuid4
 
 from django.contrib.postgres.fields import ArrayField
@@ -20,6 +21,7 @@ from django.db import models
 
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
+from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import InquirySource
 from memiro.entities.pricing.quotation import PricingVerdict
 
@@ -348,6 +350,10 @@ class InquiryItem(Mirror):
     @override
     def __str__(self) -> str:
         return self.product_name
+
+    def calculated_price_money(self) -> Money | None:
+        """Read the stored price through the domain constructor, as the gateway does."""
+        return None if self.calculated_price is None else Money(amount=cast("Decimal", self.calculated_price))  # type: ignore[redundant-cast]  # pyright reads the column as unknown
 
 
 class Work(Mirror):
