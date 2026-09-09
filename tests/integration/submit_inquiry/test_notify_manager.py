@@ -1,3 +1,4 @@
+from decimal import Decimal
 from email.message import EmailMessage
 
 import pytest
@@ -11,12 +12,13 @@ from memiro.application.common.customer_selection import Selection
 from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.submit_inquiry import InquiryItemForm, InquirySource, SubmitInquiry, SubmitInquiryForm
 from memiro.entities.common.measure import Millimeters
-from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, GRAPHITE, LEGACY_INQUIRY, PRODUCT
+from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, CUTOUTS, GRAPHITE, LEGACY_INQUIRY, PRODUCT
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
     prime_hidden_calculated_price,
     prime_legacy_inquiry,
-    prime_product_publication,
+    prime_numeric_catalog,
+    prime_product_without_paid_values,
     prime_production_limits,
 )
 
@@ -164,7 +166,7 @@ async def test_a_product_without_a_calculation_reaches_the_manager_without_a_spe
     smtp_server: tuple[int, list[str]],
 ) -> None:
     """A NOT_PRICEABLE position says so in words and prints neither size nor values (rule 8)."""
-    await prime_product_publication(engine, is_published=False)
+    await prime_product_without_paid_values(engine)
 
     response = await notifying_api_client.submit_inquiry(_ONE_ITEM_FORM)
 
@@ -174,6 +176,25 @@ async def test_a_product_without_a_calculation_reaches_the_manager_without_a_spe
     assert "Товар без расчёта" in received_emails[0]
     assert "Размер" not in received_emails[0]
     assert "NOT_PRICEABLE" not in received_emails[0]
+
+
+async def test_a_count_reaches_the_manager_as_the_customer_typed_it(
+    notifying_api_client: ApiClient,
+    engine: AsyncEngine,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """A numeric value prints in the customer's units, not in the scale the database keeps it in."""
+    await prime_numeric_catalog(engine)
+    two_and_a_half = Selection(attribute_id=CUTOUTS, quantity=Decimal("2.5"))
+    form = _form(InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[two_and_a_half], wish=""))
+
+    response = await notifying_api_client.submit_inquiry(form)
+
+    _, received_emails = smtp_server
+
+    assert response.assert_status(200).ensure_content().id
+    assert "Вырезы: 2.5" in received_emails[0]
+    assert "2.5000" not in received_emails[0]
 
 
 async def test_a_snapshot_stored_before_the_whole_specification_is_printed_as_it_was(

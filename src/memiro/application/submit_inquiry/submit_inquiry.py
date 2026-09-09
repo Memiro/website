@@ -26,6 +26,7 @@ from memiro.application.submit_inquiry.shared import (
     item_snapshot,
     pricing_context,
     projected_item,
+    storefront_product,
 )
 from memiro.entities.common.identifiers import ProductId
 from memiro.entities.inquiry.consent import given_consent
@@ -111,8 +112,8 @@ class SubmitInquiry:
     async def _item(self, form: InquiryItemForm, context: PricingContext) -> InquiryItemData:
         """Load, price and freeze one product configuration."""
         product_id: ProductId = form.product_id
-        product = await self.product_gateway.get(product_id)
+        product = storefront_product(await self.product_gateway.get(product_id))
         if product is None:
-            logger.warning("Inquiry named an unknown product", product_id=product_id)
+            logger.warning("Inquiry named a product the storefront does not sell", product_id=product_id)
             raise ProductNotFoundError
         return item_snapshot(form, product, context)

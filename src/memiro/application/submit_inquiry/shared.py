@@ -83,6 +83,20 @@ class PricingContext:
     attributes: Sequence[Attribute]
 
 
+def _projected_configuration(configuration: InquiryConfiguration | None) -> PreviewedConfiguration | None:
+    """Project the size and the named values of one snapshot."""
+    if configuration is None:
+        return None
+    return PreviewedConfiguration(
+        width_mm=configuration.dimensions.width.value,
+        height_mm=configuration.dimensions.height.value,
+        values=[
+            PreviewedValue(attribute_name=value.attribute_name, value_name=value.value_name, quantity=value.quantity)
+            for value in configuration.values
+        ],
+    )
+
+
 async def pricing_context(
     pricing_settings_gateway: PricingSettingsGateway,
     attribute_gateway: AttributeGateway,
@@ -93,6 +107,11 @@ async def pricing_context(
         logger.warning("Inquiry positions asked for before pricing settings were created")
         raise PricingSettingsNotFoundError
     return PricingContext(settings=settings, attributes=await attribute_gateway.list_with_values())
+
+
+def storefront_product(product: Product | None) -> Product | None:
+    """Hand the product on only while the storefront sells it: one taken off it is gone for an inquiry."""
+    return product if product is not None and product.is_published else None
 
 
 def item_snapshot(form: InquiryItemForm, product: Product, context: PricingContext) -> InquiryItemData:
@@ -116,20 +135,6 @@ def item_snapshot(form: InquiryItemForm, product: Product, context: PricingConte
         ),
         quotation=quotation,
         wish=form.wish,
-    )
-
-
-def _projected_configuration(configuration: InquiryConfiguration | None) -> PreviewedConfiguration | None:
-    """Project the size and the named values of one snapshot."""
-    if configuration is None:
-        return None
-    return PreviewedConfiguration(
-        width_mm=configuration.dimensions.width.value,
-        height_mm=configuration.dimensions.height.value,
-        values=[
-            PreviewedValue(attribute_name=value.attribute_name, value_name=value.value_name, quantity=value.quantity)
-            for value in configuration.values
-        ],
     )
 
 
