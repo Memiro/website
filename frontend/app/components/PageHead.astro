@@ -1,5 +1,7 @@
 ---
-interface Props { label: string; heading: string; count?: string; }
+import { productPlural } from "../lib/plural.ts";
+
+interface Props { label: string; heading: string; count?: number; }
 const { label, heading, count } = Astro.props;
 ---
 
@@ -8,7 +10,7 @@ const { label, heading, count } = Astro.props;
     <p class="label">{label}</p>
     <div class="head__row">
       <h1 class="h-section">{heading}</h1>
-      {count !== undefined && <span class="head__count">{count}</span>}
+      {count !== undefined && <span class="head__count">{count} {productPlural(count)}</span>}
     </div>
   </header>
 </div>

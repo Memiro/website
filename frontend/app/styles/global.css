@@ -128,7 +128,7 @@ p, .name { text-wrap: pretty; }
   overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
 .price, .price-now, .price-note, .calc-total, .calc-additions b, .cart-price, .variant-price,
-.nav__count, a[href^="tel:"], .hero__facts b, .steps__n, .head__count, .pager a, .fgroup .n,
+.nav__count, a[href^="tel:"], .hero__facts b, .steps__n, .head__count, .pager a:not(.btn), .fgroup .n,
 .fprice input { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -302,9 +302,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .head__row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
 .head h2, .dark__text h2 { font-size: var(--text-section); line-height: 1.04; text-transform: uppercase; overflow-wrap: anywhere; min-width: 0; }
 .head h2 { max-width: 24ch; }
-/* The same head opens a page: the h1 stands on a mono label, a mono count sits right, an ink rule closes it. */
+/* Pages open on the same .head as the home sections so both keep one rhythm. */
 .head--page { padding-top: var(--space-lg); border-bottom: var(--rule-hair) solid var(--color-ink); }
-.head h1 { max-width: 20ch; min-width: 0; overflow-wrap: anywhere; }
+.head--page h1 { max-width: 20ch; min-width: 0; overflow-wrap: anywhere; }
 .head__count { padding-bottom: var(--space-3xs); font-size: var(--text-xs); color: var(--color-muted); }
 
 /* ---------- Bento of categories ---------- */
@@ -496,7 +496,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .sort { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-xs); color: var(--color-muted); }
 .sort select {
   min-height: 36px; padding: 0 var(--space-xs);
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--color-ink);
+  font: inherit; color: var(--color-ink);
   background: var(--color-paper); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-input); cursor: pointer;
 }
 
@@ -508,16 +508,17 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 }
 .drawer-title { font-size: var(--text-xs); }
 .drawer-close {
-  width: 44px; height: 44px; margin-right: calc(-1 * var(--space-xs));
+  width: var(--tap-target); height: var(--tap-target); margin-right: calc(-1 * var(--space-xs));
   border: 0; background: none; font: inherit; font-size: var(--text-lg); color: var(--color-ink); cursor: pointer;
 }
 .drawer-close:hover { color: var(--color-accent); }
-/* The drawer and its backdrop sit above the sticky nav (z-index 50): the
-   close button lives in the drawer's head, where the nav would cover it. */
-.drawer-backdrop { position: fixed; inset: 0; z-index: 51; background: color-mix(in oklab, var(--color-ink) 40%, transparent); }
+/* The drawer and its backdrop sit above the sticky nav (50) and the cookie
+   banner (70): the nav would cover the close button in the drawer's head, the
+   banner would cover «Показать» at its foot. */
+.drawer-backdrop { position: fixed; inset: 0; z-index: 71; background: color-mix(in oklab, var(--color-ink) 40%, transparent); }
 /* A floated legend stops being the fieldset's rendered legend and joins the grid like any row. */
-.fgroup { display: grid; gap: var(--space-3xs); min-inline-size: 0; padding: var(--space-sm) 0; border: 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
-.fgroup legend { float: left; width: 100%; padding: 0; margin-bottom: var(--space-2xs); font-size: var(--text-xs); color: var(--color-muted); }
+.fgroup { display: grid; gap: var(--space-3xs); min-inline-size: 0; margin: 0; padding: var(--space-sm) 0; border: 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+.fgroup legend { float: left; padding: 0; margin-bottom: var(--space-2xs); font-size: var(--text-xs); color: var(--color-muted); }
 .fgroup label { display: flex; align-items: center; gap: var(--space-xs); min-height: 32px; font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
 .fgroup label:hover { color: var(--color-ink); }
 .fgroup label.off { color: var(--color-muted); cursor: default; }
@@ -550,7 +551,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 }
 .pager a.here { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
 .pager a:hover:not(.here, .btn) { border-color: var(--color-ink); }
-.pager .btn { margin-left: var(--space-2xs); }
+.pager .btn { min-height: var(--tap-target); margin-left: var(--space-2xs); }
 
 /* ---------- Landing pages ---------- */
 .landing-text { display: grid; gap: var(--space-sm); padding-top: var(--space-md); }
@@ -729,7 +730,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .layout { grid-template-columns: minmax(0, 1fr); }
   .only-mobile { display: flex; }
   .filters {
-    position: fixed; inset: 0 auto 0 0; z-index: 52; width: min(320px, 88vw);
+    position: fixed; inset: 0 auto 0 0; z-index: 72; width: min(320px, 88vw);
     overflow-y: auto; background: var(--color-paper); border-top: 0; border-right: var(--rule-hair) solid var(--color-ink);
     transform: translateX(-102%);
     /* Visibility removes the off-canvas drawer from tab order after transition. */

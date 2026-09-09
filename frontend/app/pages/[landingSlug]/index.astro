@@ -10,7 +10,6 @@ import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/c
 import { catalogSearch, isNarrowed, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
 import { foundOrNull } from "../../lib/not-found.ts";
 import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../lib/seo.ts";
-import { productPlural } from "../../lib/plural.ts";
 
 const api = internalCatalogApi();
 const landingSlug = Astro.params.landingSlug ?? "";
@@ -55,7 +54,7 @@ const crumbs = landing === null ? [] : [
     jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
-    <PageHead label={landing.category_name} heading={landing.heading} count={`${page.total} ${productPlural(page.total)}`} />
+    <PageHead label={landing.category_name} heading={landing.heading} count={page.total} />
 
     {paragraphs.length > 0 && (
       <div class="wrap landing-text">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>

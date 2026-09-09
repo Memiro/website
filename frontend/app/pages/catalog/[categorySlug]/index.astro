@@ -69,7 +69,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
     jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
-    <PageHead label="Каталог" heading={name} count={`${page.total} ${productPlural(page.total)}`} />
+    <PageHead label="Каталог" heading={name} count={page.total} />
 
     <div class="toolbar wrap">
       <div class="chips">

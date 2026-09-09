@@ -28,7 +28,10 @@ test("two to four categories take the genitive singular", () => {
   assert.equal(categoryPlural(4), "категории");
 });
 
-test("five categories and the teens are counted in the plural", () => {
+test("five or more categories are counted in the plural", () => {
   assert.equal(categoryPlural(6), "категорий");
+});
+
+test("eleven categories are counted in the plural despite the last digit", () => {
   assert.equal(categoryPlural(11), "категорий");
 });

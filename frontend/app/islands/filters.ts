@@ -11,12 +11,14 @@ export function mountFilters(root: Document): void {
   const drawer = root.querySelector<HTMLElement>("[data-drawer]");
   const backdrop = root.querySelector<HTMLElement>(".drawer-backdrop");
   const open = root.querySelector<HTMLElement>("[data-drawer-open]");
+  // Focus follows the drawer in and out, or a keyboard stays under the backdrop.
   const close = (): void => {
     drawer?.classList.remove("open");
     open?.setAttribute("aria-expanded", "false");
     if (backdrop !== null) {
       backdrop.hidden = true;
     }
+    open?.focus();
   };
   open?.addEventListener("click", () => {
     drawer?.classList.add("open");
@@ -24,6 +26,7 @@ export function mountFilters(root: Document): void {
     if (backdrop !== null) {
       backdrop.hidden = false;
     }
+    drawer?.querySelector<HTMLElement>("[data-drawer-close]")?.focus();
   });
   for (const button of root.querySelectorAll("[data-drawer-close]")) {
     button.addEventListener("click", close);
