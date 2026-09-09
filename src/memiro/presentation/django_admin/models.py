@@ -19,10 +19,11 @@ from uuid import uuid4
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from memiro.adapters.db.types import InquiryConfigurationPayload, inquiry_configuration_from_payload
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.catalog.attribute.rate import Unit
 from memiro.entities.common.money import Money
-from memiro.entities.inquiry.entity import InquirySource
+from memiro.entities.inquiry.entity import InquiryConfiguration, InquirySource
 from memiro.entities.pricing.quotation import PricingVerdict
 
 NAME_LENGTH = 255
@@ -354,6 +355,11 @@ class InquiryItem(Mirror):
     def calculated_price_money(self) -> Money | None:
         """Read the stored price through the domain constructor, as the gateway does."""
         return None if self.calculated_price is None else Money(amount=cast("Decimal", self.calculated_price))  # type: ignore[redundant-cast]  # pyright reads the column as unknown
+
+    def configuration_snapshot(self) -> InquiryConfiguration | None:
+        """Rebuild the stored specification through the domain constructors: a corrupted row must not render quietly."""
+        payload = cast("InquiryConfigurationPayload | None", self.configuration)
+        return None if payload is None else inquiry_configuration_from_payload(payload)
 
 
 class Work(Mirror):
