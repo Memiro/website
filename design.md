@@ -58,6 +58,7 @@ rhythm judged visually.
 - Product block · F6 grid 4-up (3 / 2 / 1 on narrower widths), photo 1:1.08 on paper-2, uppercase name, mono «от 12 900 ₽» tabular-nums, small filled button.
 - Footer · Ft1 mast-headed: Logo4, one-sentence tagline, mono contact column right, legal line with ®.
 - Dark block («О мастерской», cookie banner) · paper ↔ ink inverted, no logo, same type.
+- Scale · every token but the hairlines is in rem; the root is `clamp(16px, 0.9375vw, 24px)` — unchanged up to 1707 px, 150 % at 2560 px (QHD at 100 % OS scale), capped there. Breakpoints stay in px.
 
 ## CTA voice
 - Primary · ink fill · radius 0 · 44 px / 36 px small · label + mono `→` trailing · hover = accent fill

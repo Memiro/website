@@ -76,7 +76,7 @@
 /* clip, not hidden: hidden would turn the root into a scroll container and
    detach position: sticky on the filters and the gallery. */
 html, body { overflow-x: clip; }
-html { -webkit-text-size-adjust: 100%; }
+html { font-size: var(--root-size); -webkit-text-size-adjust: 100%; }
 body {
   background: var(--color-paper);
   color: var(--color-ink);
