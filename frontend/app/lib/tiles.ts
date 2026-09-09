@@ -26,5 +26,5 @@ export type TileSpan = "2x2" | "1x1" | "2x1";
 const BENTO: readonly TileSpan[] = ["2x2", "1x1", "1x1", "2x1", "2x1", "2x1"];
 
 export function tileSpan(index: number): TileSpan {
-  return BENTO[index % BENTO.length] ?? "1x1";
+  return BENTO[index % BENTO.length];
 }

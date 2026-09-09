@@ -46,10 +46,16 @@
   --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-micro: 120ms;  --dur-short: 240ms;  --dur-long: 400ms;
+  --dur-ticker: 48s;
+  --underline-offset: 3px;
 
   /* Layout */
   --page-max: 1440px;
   --page-gutter: clamp(16px, 3vw, 48px);
   --nav-height: 64px;
   --measure: 60ch;
+  --measure-lede: 46ch;
+  --tap-target: 48px;
+  --bento-row: clamp(150px, 16vw, 240px);
+  --bento-row-narrow: clamp(140px, 30vw, 220px);
 }

@@ -214,7 +214,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .nav__link:hover { color: var(--color-ink); }
 .nav__link[aria-current="page"] {
   color: var(--color-ink);
-  text-decoration: underline var(--rule-hair); text-underline-offset: 6px;
+  text-decoration: underline var(--rule-hair); text-underline-offset: calc(2 * var(--underline-offset));
 }
 .nav__link:active { color: var(--color-accent); }
 .nav__right { justify-self: end; display: flex; align-items: center; gap: var(--space-sm); }
@@ -238,13 +238,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 }
 .mobile-menu a {
   display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm);
-  min-height: 48px; border-bottom: var(--rule-hair) solid var(--color-on-dark-rule);
+  min-height: var(--tap-target); border-bottom: var(--rule-hair) solid var(--color-on-dark-rule);
   font-size: var(--text-sm); color: var(--color-on-dark-2);
 }
 .mobile-menu a:hover { color: var(--color-on-dark); }
 .mobile-menu a[aria-current="page"] {
   color: var(--color-on-dark);
-  text-decoration: underline var(--rule-hair); text-underline-offset: 6px;
+  text-decoration: underline var(--rule-hair); text-underline-offset: calc(2 * var(--underline-offset));
 }
 
 /* ---------- Hero (H2 split 6/6: headline left, photo + category index right) ---------- */
@@ -256,7 +256,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .hero__text { display: grid; gap: var(--space-md); align-content: start; padding-top: var(--space-sm); }
 .hero h1 { font-size: var(--text-display); line-height: 1.02; text-transform: uppercase; max-width: 13ch; overflow-wrap: anywhere; }
 .hero h1 .accent { color: var(--color-accent); }
-.hero .lede { color: var(--color-ink-2); max-width: 46ch; line-height: 1.55; }
+.hero .lede { color: var(--color-ink-2); max-width: var(--measure-lede); line-height: 1.55; }
 .hero__actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-top: var(--space-2xs); }
 .hero__facts {
   display: flex; gap: var(--space-lg); flex-wrap: wrap;
@@ -272,13 +272,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   max-width: calc(100% - 2 * var(--space-sm)); padding: var(--space-2xs) var(--space-xs); line-height: 1.2;
   background: var(--color-chip); color: var(--color-ink); font-size: var(--text-xs);
 }
-.chip .n { color: var(--color-muted); }
+.chip__n { color: var(--color-muted); }
 .hero__media .chip, .cell .chip { position: absolute; left: var(--space-sm); top: var(--space-sm); }
 .index { list-style: none; border-top: var(--rule-hair) solid var(--color-ink); }
 .index li { border-bottom: var(--rule-hair) solid var(--color-rule); }
 .index a {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-md);
-  min-height: 48px; padding: 0 var(--space-3xs);
+  min-height: var(--tap-target); padding: 0 var(--space-3xs);
   font-size: var(--text-sm); color: var(--color-ink);
 }
 .index a:hover { background: var(--color-paper-2); color: var(--color-ink); }
@@ -288,7 +288,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
 /* ---------- Ticker ---------- */
 .ticker { border-top: var(--rule-hair) solid var(--color-ink); border-bottom: var(--rule-hair) solid var(--color-ink); overflow: hidden; }
-.ticker__track { display: flex; width: max-content; padding: var(--space-xs) 0; white-space: nowrap; animation: ticker 48s linear infinite; }
+.ticker__track { display: flex; width: max-content; padding: var(--space-xs) 0; white-space: nowrap; animation: ticker var(--dur-ticker) linear infinite; }
 .ticker__track span { font-size: var(--text-xs); }
 .ticker__track i { font-style: normal; color: var(--color-accent); padding: 0 var(--space-md); }
 /* The track holds two copies of the text, so half a track is one seamless loop. */
@@ -306,11 +306,11 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* ---------- Bento of categories ---------- */
 .bento {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-auto-rows: clamp(150px, 16vw, 240px); grid-auto-flow: dense; gap: var(--space-2xs);
+  grid-auto-rows: var(--bento-row); grid-auto-flow: dense; gap: var(--space-2xs);
 }
 .cell { position: relative; display: block; overflow: hidden; background: var(--color-paper-2); }
 /* Overflow clips an outward ring, so the cell draws it inside. */
-.cell:focus-visible { outline-offset: -2px; }
+.cell:focus-visible { outline-offset: calc(-1 * var(--rule-fine)); }
 .cell img { width: 100%; height: 100%; object-fit: cover; }
 .cell--2x2 { grid-column: span 2; grid-row: span 2; }
 .cell--2x1 { grid-column: span 2; }
@@ -345,7 +345,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .dark__grid > img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--color-on-dark-rule); }
 .dark__text { display: grid; gap: var(--space-md); justify-items: start; }
 .dark__text h2 { max-width: 16ch; }
-.dark__text p { color: var(--color-on-dark-2); max-width: 46ch; }
+.dark__text p { color: var(--color-on-dark-2); max-width: var(--measure-lede); }
 .dark__text .btn { margin-top: var(--space-2xs); }
 
 /* ---------- Steps: numbered rows with hairlines ---------- */
@@ -380,7 +380,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   padding-top: var(--space-sm);
 }
 .inquiry__text { display: grid; gap: var(--space-md); }
-.inquiry__text > p { color: var(--color-ink-2); max-width: 46ch; }
+.inquiry__text > p { color: var(--color-ink-2); max-width: var(--measure-lede); }
 .inquiry__mail { text-transform: none; }
 .inquiry-form { display: grid; gap: var(--space-md); }
 .field { display: grid; gap: var(--space-2xs); }
@@ -397,8 +397,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .field input::placeholder, .field textarea::placeholder { color: var(--color-muted); }
 .field input.invalid { border-bottom-color: var(--color-accent); }
 .consent { display: flex; gap: var(--space-xs); align-items: flex-start; font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
-.consent input { accent-color: var(--color-ink); width: 18px; height: 18px; margin-top: 2px; flex: none; }
-.consent a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: 3px; }
+.consent input { accent-color: var(--color-ink); width: var(--space-sm); height: var(--space-sm); margin-top: var(--space-3xs); flex: none; }
+.consent a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
 .inquiry-submit { width: 100%; }
 .inquiry-note { min-height: var(--space-md); font-size: var(--text-sm); color: var(--color-accent); }
 .inquiry-note.error { color: var(--color-ink); font-weight: 600; }
@@ -466,7 +466,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   font-family: var(--font-outlier); font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--color-muted);
 }
 .foot__line { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); }
-.foot__line a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: 3px; }
+.foot__line a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
 .foot__line a:hover { color: var(--color-accent); }
 
 /* ---------- Breadcrumbs ---------- */
@@ -515,7 +515,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
 .empty { background: var(--bg-card); border: 1px solid var(--line-panel); padding: 60px 40px; text-align: center; display: grid; gap: 16px; justify-items: center; }
 .empty h2 { font-size: 24px; font-weight: 600; }
-.empty p { color: var(--secondary); max-width: 46ch; }
+.empty p { color: var(--secondary); max-width: var(--measure-lede); }
 
 .show-more { display: flex; justify-content: center; padding-top: 36px; }
 .pager { display: flex; justify-content: center; gap: 8px; padding-top: 28px; flex-wrap: wrap; }
@@ -573,7 +573,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .calc-result { margin-top: 22px; display: grid; gap: 12px; justify-items: start; }
 .calc-result.recounting { opacity: 0.45; }
 .calc-total { font-size: 34px; font-weight: 700; letter-spacing: -0.03em; white-space: nowrap; }
-.calc-note { font-size: 15px; line-height: 1.55; color: var(--body); max-width: 46ch; }
+.calc-note { font-size: 15px; line-height: 1.55; color: var(--body); max-width: var(--measure-lede); }
 .calc-additions { list-style: none; display: grid; gap: 8px; width: 100%; font-size: 15px; }
 .calc-additions li { display: flex; justify-content: space-between; gap: 24px; color: var(--muted); }
 .calc-additions b { font-weight: 600; color: var(--text); white-space: nowrap; }
@@ -633,7 +633,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* A work that names a mirror is a whole-tile link, like a catalogue card. */
 .work:has(.card-link):hover { border-color: var(--control); }
 .work .card-link { display: flex; flex-direction: column; height: 100%; }
-.work .card-link:focus-visible { outline-offset: -2px; }
+.work .card-link:focus-visible { outline-offset: calc(-1 * var(--rule-fine)); }
 .work-go { display: block; margin-top: 8px; font-size: 13px; font-weight: 400; color: var(--muted); }
 .work-note { display: block; margin-top: 8px; font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--muted); }
 .work .card-link:hover .work-go { color: var(--control); }
@@ -694,7 +694,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .foot__inner { grid-template-columns: minmax(0, 1fr); }
   .foot__contacts { justify-items: start; text-align: left; }
   .hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); padding-top: var(--space-lg); padding-bottom: var(--space-xl); }
-  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: clamp(140px, 30vw, 220px); }
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: var(--bento-row-narrow); }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dark__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); padding-top: var(--space-xl); padding-bottom: var(--space-xl); }
   .steps li { grid-template-columns: 4ch minmax(0, 1fr); }
