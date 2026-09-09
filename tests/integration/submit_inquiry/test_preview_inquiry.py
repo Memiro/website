@@ -5,7 +5,13 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.common.customer_selection import Selection
-from memiro.application.common.input_limits import MAX_INQUIRY_ITEMS, MAX_SELECTIONS, MAX_WISH_LENGTH
+from memiro.application.common.input_limits import (
+    MAX_INQUIRY_ITEMS,
+    MAX_SELECTIONS,
+    MAX_SIDE_MM,
+    MAX_WISH_LENGTH,
+    MIN_SIDE_MM,
+)
 from memiro.application.submit_inquiry import (
     InquiryItemForm,
     InquiryPreview,
@@ -53,16 +59,18 @@ def _specified(width_mm: int, height_mm: int, *chosen: PreviewedValue) -> Previe
     """Build the canonical specification with the customer's choices standing in for the declared values."""
     values = canonical_specification(
         *(
-            ConfigurationValue(attribute_name=v.attribute_name, value_name=v.value_name, quantity=v.quantity)
-            for v in chosen
+            ConfigurationValue(
+                attribute_name=value.attribute_name, value_name=value.value_name, quantity=value.quantity
+            )
+            for value in chosen
         )
     )
     return PreviewedConfiguration(
         width_mm=width_mm,
         height_mm=height_mm,
         values=[
-            PreviewedValue(attribute_name=v.attribute_name, value_name=v.value_name, quantity=v.quantity)
-            for v in values
+            PreviewedValue(attribute_name=value.attribute_name, value_name=value.value_name, quantity=value.quantity)
+            for value in values
         ],
     )
 
@@ -87,6 +95,8 @@ def _previewed(
     )
 
 
+_TWICE_CHOSEN = SelectionFactory.build()
+
 # One entry per input bound of the form; the code pins the layer that catches
 # it — the form itself, before any aggregate is read.
 OVER_THE_INPUT_BOUNDS: list[tuple[list[InquiryItemForm], str]] = [
@@ -94,6 +104,9 @@ OVER_THE_INPUT_BOUNDS: list[tuple[list[InquiryItemForm], str]] = [
     ([], "VALIDATION_ERROR"),
     ([_item(wish="a" * (MAX_WISH_LENGTH + 1))], "VALIDATION_ERROR"),
     ([_item(selections=SelectionFactory.batch(MAX_SELECTIONS + 1))], "VALIDATION_ERROR"),
+    ([_item(selections=[_TWICE_CHOSEN, _TWICE_CHOSEN])], "VALIDATION_ERROR"),
+    ([_item(width_mm=MAX_SIDE_MM + 1)], "VALIDATION_ERROR"),
+    ([_item(height_mm=MIN_SIDE_MM - 1)], "VALIDATION_ERROR"),
 ]
 
 

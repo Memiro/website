@@ -12,6 +12,7 @@ from memiro.application.submit_inquiry.shared import (
     item_snapshot,
     pricing_context,
     projected_item,
+    storefront_product,
     unavailable_item,
 )
 from memiro.entities.common.identifiers import ProductId
@@ -50,7 +51,7 @@ class PreviewInquiry:
     async def _item(self, form: InquiryItemForm, context: PricingContext) -> PreviewedItem:
         """Answer one position, an unavailable product as an empty position rather than a refusal."""
         product_id: ProductId = form.product_id
-        product = await self.product_gateway.get(product_id)
-        if product is None or not product.is_published:
+        product = storefront_product(await self.product_gateway.get(product_id))
+        if product is None:
             return unavailable_item(form)
         return projected_item(item_snapshot(form, product, context))

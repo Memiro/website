@@ -30,6 +30,7 @@ from tests.integration.prime import (
     count_inquiries_directly,
     prime_numeric_catalog,
     prime_product_publication,
+    prime_product_without_paid_values,
     prime_production_limits,
     update_attribute_value_rate_directly,
 )
@@ -259,7 +260,7 @@ async def test_a_not_priceable_product_keeps_no_configuration_in_an_inquiry(
     request_container: AsyncContainer,
 ) -> None:
     """A NOT_PRICEABLE item stores no configuration snapshot."""
-    await prime_product_publication(engine, is_published=False)
+    await prime_product_without_paid_values(engine)
 
     created = (await api_client.submit_inquiry(_form())).assert_status(200).ensure_content()
     gateway: InquiryGateway = await request_container.get(InquiryGateway)
@@ -362,6 +363,19 @@ async def test_an_inquiry_naming_an_unknown_product_stores_nothing(
     form = _form(items=[_item(), _item(product_id=uuid4())])
 
     response = await api_client.submit_inquiry(form)
+
+    response.assert_error(404, "PRODUCT_NOT_FOUND")
+    assert await count_inquiries_directly(engine) == 0
+
+
+async def test_an_inquiry_naming_a_product_off_the_storefront_stores_nothing(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """An item naming a product no longer published is refused with PRODUCT_NOT_FOUND, as a missing one is."""
+    await prime_product_publication(engine, is_published=False)
+
+    response = await api_client.submit_inquiry(_form())
 
     response.assert_error(404, "PRODUCT_NOT_FOUND")
     assert await count_inquiries_directly(engine) == 0
