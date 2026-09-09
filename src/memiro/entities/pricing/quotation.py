@@ -34,11 +34,9 @@ def carries_total(verdict: PricingVerdict) -> bool:
 
 
 def customer_price(verdict: PricingVerdict, total: Money | None) -> Money | None:
-    """Give the sum the storefront may name: a hidden price and a refusal name none (ADR-0008).
-
-    The one gate for the calculator, the preview of an inquiry and the
-    summary after it: what the card did not name, no other page names.
-    """
+    """Give the sum the storefront may name: a hidden price and a refusal name none (ADR-0008)."""
+    # The one gate for the calculator, the preview of an inquiry and the
+    # summary after it: what the card did not name, no other page names.
     return total if verdict is PricingVerdict.PRICED else None
 
 

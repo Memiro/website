@@ -23,7 +23,7 @@ from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfiguration, InquiryItem
 from memiro.entities.pricing.quotation import PricingVerdict
-from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, CUTOUTS, GRAPHITE, PRODUCT
+from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, CUTOUTS, GRAPHITE, PRODUCT, canonical_specification
 from tests.common.factory.pricing import SelectionFactory
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
@@ -61,17 +61,6 @@ def _form(**overrides: object) -> SubmitInquiryForm:
     ).model_copy(update=overrides)
 
 
-# The canonical mirror as the manager reads it: every value the product
-# declares, by name, in the owner's order — the customer chose none of them.
-CANONICAL_SPECIFICATION = (
-    ConfigurationValue(attribute_name="Тип полотна", value_name="Серебро", quantity=None),  # noqa: RUF001
-    ConfigurationValue(attribute_name="Форма", value_name="Прямоугольное", quantity=None),
-    ConfigurationValue(attribute_name="Рама", value_name="Алюминий", quantity=None),
-    ConfigurationValue(attribute_name="Подсветка", value_name="Без подсветки", quantity=None),
-    ConfigurationValue(attribute_name="Крепление", value_name="С креплением", quantity=None),  # noqa: RUF001
-)
-
-
 def _configuration(width_mm: int, height_mm: int, *values: ConfigurationValue) -> InquiryConfiguration:
     """Build the frozen configuration of one item snapshot."""
     return InquiryConfiguration(
@@ -82,12 +71,7 @@ def _configuration(width_mm: int, height_mm: int, *values: ConfigurationValue) -
 
 def _specified(width_mm: int, height_mm: int, *chosen: ConfigurationValue) -> InquiryConfiguration:
     """Build the canonical specification with the customer's choices standing in for the declared values."""
-    replacements = {value.attribute_name: value for value in chosen}
-    return _configuration(
-        width_mm,
-        height_mm,
-        *(replacements.get(value.attribute_name, value) for value in CANONICAL_SPECIFICATION),
-    )
+    return _configuration(width_mm, height_mm, *canonical_specification(*chosen))
 
 
 def _snapshot(

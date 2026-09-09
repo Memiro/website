@@ -3,12 +3,12 @@ from dishka.integrations.fastapi import DishkaRoute
 from fastapi import APIRouter
 
 from memiro.application.submit_inquiry import (
-    CreatedInquiry,
     InquiryPreview,
     PreviewInquiry,
     PreviewInquiryForm,
     SubmitInquiry,
     SubmitInquiryForm,
+    SubmittedInquiry,
 )
 
 router = APIRouter(tags=["inquiries"], route_class=DishkaRoute, prefix="/inquiries")
@@ -18,7 +18,7 @@ router = APIRouter(tags=["inquiries"], route_class=DishkaRoute, prefix="/inquiri
 async def submit_inquiry(
     interactor: FromDishka[SubmitInquiry],
     data: SubmitInquiryForm,
-) -> CreatedInquiry:
+) -> SubmittedInquiry:
     """HTTP endpoint for submitting one visitor inquiry."""
     return await interactor.execute(data)
 

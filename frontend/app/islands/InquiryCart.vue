@@ -42,6 +42,9 @@ const comment = ref("");
 const consent = ref(false);
 const isSubmitting = ref(false);
 const result = ref<{ text: string; isError: boolean } | null>(null);
+// A preview answering after a position was removed would be paired with the
+// wrong rows: only the latest request is allowed to land.
+let previewGeneration = 0;
 
 const isEmpty = computed(() => isLoaded.value && sent.value === null && items.value.length === 0);
 const hasGone = computed(() => preview.value !== null && hasUnavailableItem(preview.value));
@@ -98,21 +101,28 @@ function priceText(price: PricePresentation): string {
 }
 
 async function loadPreview(): Promise<void> {
+  const generation = ++previewGeneration;
   previewFailed.value = false;
   if (items.value.length === 0) {
     preview.value = [];
     return;
   }
   try {
-    preview.value = (await previewInquiry(previewRequest(items.value))).items;
+    const answered = (await previewInquiry(previewRequest(items.value))).items;
+    if (generation === previewGeneration) {
+      preview.value = answered;
+    }
   } catch {
-    previewFailed.value = true;
+    if (generation === previewGeneration) {
+      previewFailed.value = true;
+    }
   }
 }
 
 function removeItem(index: number): void {
   items.value = removeInquiryItem(window.localStorage, items.value, index);
   preview.value = preview.value?.filter((_, itemIndex) => itemIndex !== index) ?? null;
+  previewGeneration += 1;
   notifyInquiryChanged(window);
 }
 
