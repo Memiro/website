@@ -1,42 +1,37 @@
 ---
 import SellerRequisites from "./SellerRequisites.astro";
-import { FOOTER_CATALOG_LINKS, FOOTER_CUSTOMER_LINKS, FOOTER_LEGAL_LINKS } from "../lib/navigation.ts";
+import { FOOTER_LEGAL_LINKS } from "../lib/navigation.ts";
+import { SITE_NAME } from "../lib/site.ts";
 import { addressLine, socialLinks, type Site } from "../lib/site-api.ts";
 
 interface Props { site: Site; }
 const { site } = Astro.props;
 const contacts = site.contacts;
 const social = contacts === null ? [] : socialLinks(contacts);
+const address = contacts === null ? "" : addressLine(contacts);
 ---
 
-<footer class="footer">
-  <div class="wrap footer-grid">
+<footer class="foot">
+  <div class="wrap foot__inner">
     <div>
-      <a class="wordmark" href="/">memiro</a>
-      <p class="footer-about">Производство интерьерных зеркал на заказ в Санкт-Петербурге: изготовление, доставка и установка.</p>
+      <a class="foot__brand" href="/"><img src="/img/logo/logo4-black.svg" alt={SITE_NAME} width="437" height="112" /></a>
+      <p class="foot__tag">Производство интерьерных зеркал на заказ в Санкт-Петербурге: изготовление, доставка и установка.</p>
     </div>
-    <div>
-      <h4>Каталог</h4>
-      <ul>{FOOTER_CATALOG_LINKS.map((link) => <li><a href={link.href}>{link.label}</a></li>)}</ul>
-    </div>
-    <div>
-      <h4>Покупателю</h4>
-      <ul>{FOOTER_CUSTOMER_LINKS.map((link) => <li><a href={link.href}>{link.label}</a></li>)}</ul>
-    </div>
-    <div>
-      <h4>Контакты</h4>
-      <ul>
-        {contacts !== null && contacts.phone !== "" && <li><a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a></li>}
-        {contacts !== null && contacts.email !== "" && <li><a href={`mailto:${contacts.email}`}>{contacts.email}</a></li>}
-        {social.map((link) => <li><a href={link.value} target="_blank" rel="noopener">{link.label}</a></li>)}
-        {contacts !== null && <li>{addressLine(contacts)}</li>}
-      </ul>
-      <SellerRequisites seller={site.seller} />
-    </div>
+    {contacts !== null && (
+      <address class="foot__contacts">
+        {contacts.phone !== "" && <a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>}
+        {contacts.email !== "" && <a class="foot__mail" href={`mailto:${contacts.email}`}>{contacts.email}</a>}
+        {address !== "" && <span>{address}</span>}
+        {social.map((link) => <a href={link.value} target="_blank" rel="noopener">{link.label}</a>)}
+      </address>
+    )}
   </div>
-  <div class="wrap footer-bottom">
-    <span>© memiro, 2026</span>
-    {FOOTER_LEGAL_LINKS.map((link) => <a href={link.href}>{link.label}</a>)}
-    <span>{contacts?.city ?? "Санкт-Петербург"}</span>
+  <div class="wrap foot__legal">
+    <SellerRequisites seller={site.seller} />
+    {/* The registered mark shows once on the whole site: here, in the legal line. */}
+    <p class="foot__line">
+      <span>© {SITE_NAME}®, 2026</span>
+      {FOOTER_LEGAL_LINKS.map((link) => <a href={link.href}>{link.label}</a>)}
+    </p>
   </div>
 </footer>

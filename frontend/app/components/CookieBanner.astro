@@ -9,8 +9,8 @@ const metrikaId = import.meta.env.PUBLIC_METRIKA_ID ?? "";
   <div class="cookie-banner" data-cookie-banner data-metrika-id={metrikaId} role="dialog" aria-label="Файлы cookie и аналитика" hidden>
     <p class="cookie-text">Мы хотим подключить Яндекс.Метрику, чтобы видеть, как посетители пользуются сайтом. Она сохраняет файлы cookie и передаёт обезличенную статистику. Без вашего согласия аналитика не загружается — подробности в <a href="/privacy/#cookie">политике обработки персональных данных</a>.</p>
     <div class="cookie-actions">
-      <button class="btn btn-primary" type="button" data-cookie-accept>Принять</button>
-      <button class="btn btn-ghost" type="button" data-cookie-decline>Отклонить</button>
+      <button class="btn btn--sm" type="button" data-cookie-accept>Принять <span class="arrow" aria-hidden="true">→</span></button>
+      <button class="btn btn--sm btn--ghost" type="button" data-cookie-decline>Отклонить</button>
     </div>
   </div>
   <script>
