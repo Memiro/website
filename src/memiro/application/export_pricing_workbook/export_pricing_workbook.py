@@ -7,7 +7,7 @@ from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.category import CategoryGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.gateway.workbook import (
+from memiro.application.common.pricing_workbook import (
     CheckedSize,
     PricingWorkbookRenderer,
     PricingWorkbookSource,
@@ -24,14 +24,14 @@ from memiro.entities.pricing.quotation import Quotation
 from memiro_common.interactor import interactor
 from memiro_common.logger import Logger
 
-logger: Logger = structlog.get_logger(__name__)
-
 # The sizes of the check sheet: one small enough to rest on the minimum
 # billable area, two ordinary ones and one large enough to reach the size
 # surcharge. Together they show every bottom rule of the calculation at once.
 CHECKED_SIZES: tuple[tuple[int, int], ...] = ((400, 300), (800, 600), (1200, 700), (2300, 900))
 
 DEFAULT_NAME = "raschet.xlsx"
+
+logger: Logger = structlog.get_logger(__name__)
 
 
 class ExportPricingWorkbookForm(BaseModel):
@@ -62,8 +62,8 @@ class ExportPricingWorkbook:
 
     product_gateway: ProductGateway
     category_gateway: CategoryGateway
-    attribute_gateway: AttributeGateway
     pricing_settings_gateway: PricingSettingsGateway
+    attribute_gateway: AttributeGateway
     renderer: PricingWorkbookRenderer
 
     async def execute(self, data: ExportPricingWorkbookForm) -> PricingWorkbookFile:

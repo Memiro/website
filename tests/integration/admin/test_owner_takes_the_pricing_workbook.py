@@ -3,6 +3,7 @@
 from collections.abc import AsyncIterator
 from http import HTTPStatus
 from io import BytesIO
+from uuid import uuid4
 
 import pytest
 from django.test import AsyncClient
@@ -10,7 +11,7 @@ from openpyxl import load_workbook
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from memiro.adapters.xlsx.pricing_workbook import CALCULATION, CHECK
-from memiro.presentation.django_admin.workbook import ONE_AT_A_TIME, XLSX
+from memiro.presentation.django_admin.workbook import ADMIN_INDEX, ONE_AT_A_TIME, XLSX
 from tests.common.factory.catalog import CATEGORY, PRODUCT, SECOND_CATEGORY
 from tests.integration.prime import prime_second_category
 
@@ -20,6 +21,7 @@ APP = "memiro"
 PRODUCT_WORKBOOK_URL = f"/admin/{APP}/product/{PRODUCT}/workbook/"
 SECTIONS_URL = f"/admin/{APP}/category/"
 WORKBOOK_ACTION = "download_workbook"
+ELSEWHERE = "https://example.invalid/prices"
 
 
 @pytest.fixture
@@ -97,3 +99,19 @@ async def test_the_workbook_sits_behind_the_login_of_the_admin(admin_site: None)
 
     assert response.status_code == HTTPStatus.FOUND
     assert response.headers["location"].startswith("/admin/login/")
+
+
+async def test_a_product_the_catalogue_lost_is_refused_with_a_message(owner_client: AsyncClient) -> None:
+    """A refusal of the domain is a line the owner reads, not a five hundred: PRODUCT_NOT_FOUND."""
+    response = await owner_client.get(f"/admin/{APP}/product/{uuid4()}/workbook/", follow=True)
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.headers["Content-Type"] != XLSX
+
+
+async def test_a_refusal_never_sends_the_owner_off_this_site(owner_client: AsyncClient) -> None:
+    """The page a refused download returns to is named by the request, so it is checked before it is trusted."""
+    response = await owner_client.get(f"/admin/{APP}/product/{uuid4()}/workbook/", headers={"referer": ELSEWHERE})
+
+    assert response.status_code == HTTPStatus.FOUND
+    assert response.headers["location"] == ADMIN_INDEX
