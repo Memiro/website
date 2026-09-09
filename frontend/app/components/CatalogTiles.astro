@@ -1,16 +1,16 @@
 ---
-interface Tile { href: string; label: string; }
+import { tileSpan, type Tile } from "../lib/tiles.ts";
+
 interface Props { tiles: Tile[]; }
 const { tiles } = Astro.props;
 ---
 
 {tiles.length > 0 && (
-  <div class="tiles-grid">
+  <div class="bento">
     {tiles.map((tile, index) => (
-      <a class="tile" href={tile.href}>
+      <a class={`cell cell--${tileSpan(index)}`} href={tile.href}>
         <img src={`/img/hero-${(index % 3) + 1}.jpg`} alt="" loading="lazy" />
-        <span class="veil"></span>
-        <span class="label">{tile.label}</span>
+        <span class="chip"><span class="n">{String(index + 1).padStart(2, "0")}</span>{tile.label}</span>
       </a>
     ))}
   </div>

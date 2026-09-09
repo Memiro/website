@@ -13,6 +13,6 @@ const price = product.price_from === null ? null : new Intl.NumberFormat("ru-RU"
 <article class="product-card">
   <a class="card-link" href={productPath(categorySlug, product.slug)}>
     <div class="pic"><img src={coverImageUrl(product.image_keys)} alt={product.name} loading="lazy" /></div>
-    <div class="meta"><div class="name">{product.name}</div>{price !== null && <span class="price">от {price} ₽</span>}</div>
+    <div class="meta"><h3 class="name">{product.name}</h3>{price !== null && <span class="price">от {price} ₽</span>}</div>
   </a>
 </article>

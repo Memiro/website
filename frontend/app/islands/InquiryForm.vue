@@ -47,7 +47,9 @@ async function send(): Promise<void> {
     <label class="field"><span>Комментарий</span><textarea v-model="comment" rows="3" maxlength="2000" /></label>
     <!-- Never pre-ticked: Роскомнадзор does not accept a pre-ticked consent (ст. 9 152-ФЗ). -->
     <label class="consent"><input v-model="consent" type="checkbox" required /><span>Я даю <a href="/privacy/#consent" target="_blank" rel="noopener">согласие на обработку персональных данных</a> и принимаю <a href="/privacy/" target="_blank" rel="noopener">политику обработки персональных данных</a></span></label>
-    <button class="btn btn-primary inquiry-submit" :disabled="isSubmitting" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }}</button>
-    <p v-if="result !== null" class="inquiry-note" :class="{ error: result.isError }" aria-live="polite">{{ result.text }}</p>
+    <button class="btn inquiry-submit" :disabled="isSubmitting" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }} <span class="arrow" aria-hidden="true">→</span></button>
+    <!-- The live region exists before it has text: a region inserted with its
+         message is not announced, and a reserved slot keeps the form from jumping. -->
+    <p class="inquiry-note" :class="{ error: result?.isError === true }" aria-live="polite">{{ result?.text ?? "" }}</p>
   </form>
 </template>
