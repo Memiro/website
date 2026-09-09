@@ -59,6 +59,7 @@
   --measure: 60ch;
   --measure-lede: 46ch;
   --measure-legal: 70ch;
+  --measure-row: 52ch;
   --tap-target: 48px;
   --bento-row: clamp(150px, 16vw, 240px);
   --bento-row-narrow: clamp(140px, 30vw, 220px);

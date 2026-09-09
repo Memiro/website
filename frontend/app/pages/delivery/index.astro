@@ -2,7 +2,7 @@
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import PageHead from "../../components/PageHead.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { ordinal } from "../../lib/ordinal.ts";
+import Rows from "../../components/Rows.astro";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/delivery/", label: "Доставка и возврат" }];
 
@@ -22,15 +22,7 @@ const OPTIONS = [
   <Breadcrumbs crumbs={crumbs} />
   <PageHead label="Условия" heading="Доставка и возврат" />
   <div class="wrap page">
-    <ol class="rows">
-      {OPTIONS.map((option, index) => (
-        <li>
-          <span class="rows__n">{ordinal(index + 1)}</span>
-          <h2>{option.title}</h2>
-          <p>{option.text}</p>
-        </li>
-      ))}
-    </ol>
+    <Rows items={OPTIONS} />
 
     <section class="legal-note">
       <h2>Возврат</h2>

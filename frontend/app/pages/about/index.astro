@@ -2,7 +2,7 @@
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import PageHead from "../../components/PageHead.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { ordinal } from "../../lib/ordinal.ts";
+import Rows from "../../components/Rows.astro";
 import { readSite } from "../../lib/site-api.ts";
 
 const crumbs = [{ href: "/", label: "Главная" }, { href: "/about/", label: "О нас" }];
@@ -29,15 +29,7 @@ const FEATURES = [
       <p>Мы контролируем все этапы — от закупки материалов до упаковки и монтажа, поэтому уверены в качестве каждого изделия. На все зеркала действует гарантия 1 год.</p>
     </div>
 
-    <ol class="rows">
-      {FEATURES.map((feature, index) => (
-        <li>
-          <span class="rows__n">{ordinal(index + 1)}</span>
-          <h2>{feature.title}</h2>
-          <p>{feature.text}</p>
-        </li>
-      ))}
-    </ol>
+    <Rows items={FEATURES} />
 
     <section class="page__section">
       <h2>Сотрудничество</h2>

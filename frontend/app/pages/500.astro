@@ -16,7 +16,7 @@ const contacts = (await readSite()).contacts;
     </div>
     {contacts !== null && (
       <ul class="index">
-        <IndexRow class="inquiry__mail" href={`mailto:${contacts.email}`} label={contacts.email} />
+        <IndexRow href={`mailto:${contacts.email}`} label={contacts.email} />
       </ul>
     )}
   </div>

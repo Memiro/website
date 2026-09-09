@@ -1,10 +1,10 @@
 ---
-interface Props { href: string; label: string; class?: string; external?: boolean; }
-const { href, label, class: className, external = false } = Astro.props;
+interface Props { href: string; label: string; external?: boolean; }
+const { href, label, external = false } = Astro.props;
 ---
 
 <li>
-  <a class={className} href={href} target={external ? "_blank" : undefined} rel={external ? "noopener" : undefined}>
+  <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener" : undefined}>
     <span>{label}</span><span class="arrow" aria-hidden="true">→</span>
   </a>
 </li>

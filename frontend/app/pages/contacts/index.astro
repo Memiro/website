@@ -26,26 +26,26 @@ const social = contacts === null ? [] : socialLinks(contacts);
       <div>
         <dl class="contacts__list">
           {contacts !== null && (
-            <div>
+            <div class="contacts__row">
               <dt>Шоурум</dt>
               <dd>{addressLine(contacts)}</dd>
               <dd>{contacts.hours} — напишите или позвоните заранее, встретим и всё покажем.</dd>
             </div>
           )}
           {contacts !== null && contacts.phone !== "" && (
-            <div>
+            <div class="contacts__row">
               <dt>Телефон</dt>
               <dd><a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a></dd>
             </div>
           )}
           {contacts !== null && contacts.email !== "" && (
-            <div>
+            <div class="contacts__row">
               <dt>Почта</dt>
               <dd><a href={`mailto:${contacts.email}`}>{contacts.email}</a></dd>
             </div>
           )}
           {social.length > 0 && (
-            <div>
+            <div class="contacts__row">
               <dt>Мессенджеры и соцсети</dt>
               <dd>
                 <ul class="index">{social.map((link) => <IndexRow href={link.value} label={link.label} external />)}</ul>
@@ -53,7 +53,7 @@ const social = contacts === null ? [] : socialLinks(contacts);
             </div>
           )}
           {site.seller.length > 0 && (
-            <div>
+            <div class="contacts__row">
               <dt>Реквизиты продавца</dt>
               <dd><SellerRequisites seller={site.seller} /></dd>
             </div>

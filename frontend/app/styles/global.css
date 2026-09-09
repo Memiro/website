@@ -138,6 +138,12 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .arrow { font-family: var(--font-outlier); font-weight: 500; }
 .sub { color: var(--color-ink-2); }
 .muted { color: var(--color-muted); }
+/* Underlined text links: in copy, the consent, the footer's legal line, the reset and remove controls. */
+.consent a, .foot__line a, .reset-link, .inquiry-remove, .page__section a, .contacts__list dd > a, .contacts__policy a {
+  color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset);
+}
+.consent a:hover, .foot__line a:hover, .page__section a:hover, .contacts__list dd > a:hover, .contacts__policy a:hover { color: var(--color-accent); }
+.index a[href^="mailto:"] { text-transform: none; }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -330,8 +336,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   padding: var(--space-md) 0; border-bottom: var(--rule-hair) solid var(--color-rule);
 }
 .rows__n { font-size: var(--text-sm); color: var(--color-muted); line-height: 1.5; }
-.rows h2, .rows h3, .page__section h2, .legal-note h2, .legal-page section h2 { font-size: var(--text-lg); line-height: 1.2; text-transform: uppercase; }
-.rows p { color: var(--color-ink-2); max-width: 52ch; }
+.rows h2, .rows h3, .page__section h2, .legal-note h2 { font-size: var(--text-lg); line-height: 1.2; text-transform: uppercase; }
+.rows p { color: var(--color-ink-2); max-width: var(--measure-row); }
 
 /* ---------- Inquiry ---------- */
 .inquiry {
@@ -340,7 +346,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 }
 .inquiry__text { display: grid; gap: var(--space-md); }
 .inquiry__text > p { color: var(--color-ink-2); max-width: var(--measure-lede); }
-.inquiry__mail { text-transform: none; }
 .inquiry-form { display: grid; gap: var(--space-md); }
 .field { display: grid; gap: var(--space-2xs); }
 .field > span { font-size: var(--text-xs); color: var(--color-muted); }
@@ -358,7 +363,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .field input:disabled, .field select:disabled, .field textarea:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 .consent { display: flex; gap: var(--space-xs); align-items: flex-start; font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
 .consent input { accent-color: var(--color-ink); width: var(--space-sm); height: var(--space-sm); margin-top: var(--space-3xs); flex: none; }
-.consent a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
 .inquiry-submit { width: 100%; }
 .inquiry-note { min-height: var(--space-md); font-size: var(--text-sm); color: var(--color-accent); }
 .inquiry-note.error { color: var(--color-ink); font-weight: 600; }
@@ -388,8 +392,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   font-family: var(--font-outlier); font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--color-muted);
 }
 .foot__line { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); }
-.foot__line a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
-.foot__line a:hover { color: var(--color-accent); }
 
 /* ---------- Breadcrumbs ---------- */
 .crumbs { padding-top: var(--space-md); font-size: var(--text-xs); color: var(--color-muted); }
@@ -459,7 +461,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .fprice input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .filters__foot { display: grid; gap: var(--space-xs); padding-top: var(--space-sm); }
 .filters .apply { width: 100%; }
-.filters .reset-link { justify-self: start; font-size: var(--text-xs); color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
+.filters .reset-link { justify-self: start; font-size: var(--text-xs); }
 
 .empty { display: grid; gap: var(--space-sm); justify-items: start; padding: var(--space-lg) 0; border-top: var(--rule-hair) solid var(--color-rule); }
 
@@ -534,22 +536,19 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .inquiry-panel > .muted { font-size: var(--text-sm); }
 .inquiry-items { list-style: none; border-top: var(--rule-hair) solid var(--color-rule); }
 .inquiry-items li { display: flex; align-items: start; justify-content: space-between; gap: var(--space-sm); }
-.inquiry-items span { display: grid; gap: var(--space-3xs); }
+.inquiry-items li > span { display: grid; gap: var(--space-3xs); }
 .inquiry-items small { font-family: var(--font-outlier); font-size: var(--text-xs); color: var(--color-muted); }
 .inquiry-remove {
   padding: 0; border: 0; background: none; cursor: pointer;
   font-size: var(--text-xs); color: var(--color-muted);
-  text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset);
 }
 .inquiry-remove:hover { color: var(--color-ink); }
 
-/* ---------- Pages: one body under PageHead — lead in --measure, sections, no cards ---------- */
+/* ---------- Pages (lead in --measure, sections, no cards) ---------- */
 .page { display: grid; gap: var(--space-xl); padding-top: var(--space-lg); }
 .page__lead { display: grid; gap: var(--space-sm); max-width: var(--measure); font-size: var(--text-lg); line-height: 1.5; color: var(--color-ink-2); }
 .page__section { display: grid; gap: var(--space-xs); max-width: var(--measure); }
 .page__section p, .legal-note p, .legal-page li, .contacts__list dd { color: var(--color-ink-2); }
-.page__section a, .legal-page section a, .contacts__list dd > a, .contacts__policy a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
-.page__section a:hover, .legal-page section a:hover, .contacts__list dd > a:hover, .contacts__policy a:hover { color: var(--color-accent); }
 .page__actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
 .legal-note { display: grid; gap: var(--space-xs); padding: var(--space-md); background: var(--color-paper-2); border-top: var(--rule-hair) solid var(--color-ink); }
 .legal-note p { max-width: var(--measure); }
@@ -557,7 +556,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* The policy is the only page with long-form lists: a wider measure, sections as hairline rows. */
 .legal-page { --measure: var(--measure-legal); gap: 0; }
 .legal-page > .page__lead { padding-bottom: var(--space-lg); }
-.legal-page section { display: grid; gap: var(--space-xs); padding: var(--space-md) 0; border-top: var(--rule-hair) solid var(--color-rule); }
+.legal-page .page__section { max-width: none; padding: var(--space-md) 0; border-top: var(--rule-hair) solid var(--color-rule); }
 .legal-page p, .legal-page ul { max-width: var(--measure); }
 .legal-page ul { padding-left: var(--space-md); }
 .legal-page li { margin-top: var(--space-3xs); }
@@ -568,23 +567,24 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .foot .seller-requisites { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); font-size: inherit; line-height: inherit; }
 .foot .seller-label { font-size: inherit; color: inherit; }
 
-.offer-note { font-size: var(--text-xs); color: var(--color-muted); max-width: var(--measure); }
+.offer-note { margin-top: var(--space-lg); font-size: var(--text-xs); color: var(--color-muted); max-width: var(--measure); }
+.info .offer-note, .page .offer-note { margin-top: 0; }
 
-/* ---------- Contacts: mono rows left, the map in a hairline frame right ---------- */
+/* ---------- Contacts (mono rows · map in a hairline frame) ---------- */
 .contacts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-xl); align-items: start; }
 .contacts__list { display: grid; border-top: var(--rule-hair) solid var(--color-ink); }
-.contacts__list > div { display: grid; gap: var(--space-2xs); padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+.contacts__row { display: grid; gap: var(--space-2xs); padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
 .contacts__list dt { font-size: var(--text-xs); color: var(--color-muted); }
-.contacts__list dd { font-family: var(--font-outlier); font-size: var(--text-sm); }
+.contacts__list dd, .contacts__policy { font-family: var(--font-outlier); font-size: var(--text-sm); }
 .contacts__list .index { border-top: 0; }
 .contacts__list .index li:last-child { border-bottom: 0; }
-.contacts__policy { padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); font-family: var(--font-outlier); font-size: var(--text-sm); }
+.contacts__policy { padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
 .contacts__map { border: var(--rule-hair) solid var(--color-rule); background: var(--color-paper-2); }
 .contacts__map iframe { display: block; width: 100%; height: var(--map-height); border: 0; }
 .map-placeholder { height: var(--map-height); display: grid; align-content: center; justify-items: center; gap: var(--space-sm); padding: var(--space-lg); text-align: center; }
 .map-placeholder p { font-size: var(--text-sm); color: var(--color-ink-2); max-width: var(--measure-lede); }
 
-/* ---------- Works: 3-up grid of photographs with mono captions; a tile with a mirror is the link ---------- */
+/* ---------- Works (3-up photographs, mono captions) ---------- */
 /* Grid, not columns: the owner's row order stays. */
 .works { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-lg) var(--space-sm); }
 .work .pic { position: relative; aspect-ratio: var(--photo-ratio); background: var(--color-paper-2); overflow: hidden; }
