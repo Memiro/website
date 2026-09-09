@@ -1,18 +1,23 @@
 ---
+import IndexRow from "../components/IndexRow.astro";
+import PageHead from "../components/PageHead.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { readSite } from "../lib/site-api.ts";
 const contacts = (await readSite()).contacts;
 ---
 
 <BaseLayout title="Ошибка сервера — Memiro" description="На сайте Memiro произошла ошибка. Мы уже разбираемся." robots="noindex, nofollow">
-  <div class="page wrap">
-    <span class="overline">Ошибка 500</span>
-    <h1 class="h-section">Что-то сломалось на нашей стороне</h1>
-    <p class="page-lead">Страница не открылась из-за ошибки сервера. Попробуйте обновить её через минуту или напишите нам — заявку примем вручную.</p>
-    <div class="contact-links">
-      <a href="/">На главную</a>
-      {contacts !== null && <a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>}
-      {contacts !== null && <a href={`mailto:${contacts.email}`}>{contacts.email}</a>}
+  <PageHead label="Ошибка 500" heading="Что-то сломалось на нашей стороне" />
+  <div class="wrap page">
+    <div class="page__lead"><p>Страница не открылась из-за ошибки сервера. Попробуйте обновить её через минуту или напишите нам — заявку примем вручную.</p></div>
+    <div class="page__actions">
+      <a class="btn" href="/">На главную <span class="arrow" aria-hidden="true">→</span></a>
+      {contacts !== null && <a class="btn btn--ghost" href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>}
     </div>
+    {contacts !== null && (
+      <ul class="index">
+        <IndexRow class="inquiry__mail" href={`mailto:${contacts.email}`} label={contacts.email} />
+      </ul>
+    )}
   </div>
 </BaseLayout>

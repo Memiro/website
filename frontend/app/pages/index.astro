@@ -140,10 +140,10 @@ const sectionNumber = (): string => ordinal(++sectionCount);
       <p class="label">{sectionNumber()} / Как это работает</p>
       <div class="head__row"><h2 id="steps-heading">Как оформить заявку</h2></div>
     </header>
-    <ol class="steps">
+    <ol class="rows">
       {STEPS.map((step, index) => (
         <li>
-          <span class="steps__n">{ordinal(index + 1)}</span>
+          <span class="rows__n">{ordinal(index + 1)}</span>
           <h3>{step.title}</h3>
           <p>{step.text}</p>
         </li>

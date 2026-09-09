@@ -61,21 +61,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="collection-grid">
+  <div class="inquiry">
     <div>
-      <div v-if="items.length > 0" class="cart-list">
-        <div v-for="(item, index) in items" :key="`${item.productId}-${index}`" class="cart-row">
-          <div class="cart-meta">
-            <div class="cart-name">{{ item.productName }}</div>
+      <ul v-if="items.length > 0" class="inquiry-items">
+        <li v-for="(item, index) in items" :key="`${item.productId}-${index}`">
+          <span>
+            <b>{{ item.productName }}</b>
             <small>{{ item.widthMm }} × {{ item.heightMm }} мм<span v-if="item.isWish"> · индивидуальное пожелание</span></small>
-            <p v-if="item.wish" class="muted">{{ item.wish }}</p>
-          </div>
+            <span v-if="item.wish" class="muted">{{ item.wish }}</span>
+          </span>
           <button class="inquiry-remove" type="button" @click="removeItem(index)">Удалить</button>
-        </div>
+        </li>
+      </ul>
+      <div v-if="isEmpty" class="empty">
+        <p class="sub">Пока пусто.</p>
+        <a class="btn btn--ghost btn--sm" href="/catalog/">Перейти в каталог <span class="arrow" aria-hidden="true">→</span></a>
       </div>
-      <p v-if="isEmpty" class="collection-empty">
-        Пока пусто. <a class="link-underline" href="/catalog/">Перейти в каталог →</a>
-      </p>
     </div>
     <aside class="inquiry-panel">
       <h2>Оставить заявку</h2>
@@ -85,8 +86,8 @@ onMounted(() => {
         <label class="field"><span>Телефон *</span><input v-model="phone" required type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00" /></label>
         <label class="field"><span>E-mail</span><input v-model="email" type="email" maxlength="254" autocomplete="email" /></label>
         <label class="consent"><input v-model="consent" type="checkbox" required /><span>Я даю <a href="/privacy/#consent" target="_blank" rel="noopener">согласие на обработку персональных данных</a> и принимаю <a href="/privacy/" target="_blank" rel="noopener">политику обработки персональных данных</a></span></label>
-        <p v-if="items.length === 0" class="inquiry-cart-note">Добавьте зеркало из каталога — заявка уедет менеджеру вместе с ним.</p>
-        <button class="btn btn-primary inquiry-submit" :disabled="isSubmitting || items.length === 0" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }}</button>
+        <p v-if="items.length === 0" class="inquiry-hint">Добавьте зеркало из каталога — заявка уедет менеджеру вместе с ним.</p>
+        <button class="btn inquiry-submit" :disabled="isSubmitting || items.length === 0" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }} <span class="arrow" aria-hidden="true">→</span></button>
         <p v-if="result !== null" class="inquiry-note" :class="{ error: result.isError }" aria-live="polite">{{ result.text }}</p>
       </form>
     </aside>

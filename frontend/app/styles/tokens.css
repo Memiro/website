@@ -58,10 +58,13 @@
   --nav-height: 64px;
   --measure: 60ch;
   --measure-lede: 46ch;
+  --measure-legal: 70ch;
   --tap-target: 48px;
   --bento-row: clamp(150px, 16vw, 240px);
   --bento-row-narrow: clamp(140px, 30vw, 220px);
   --thumb-size: 72px;
+  --map-height: 460px;
+  --map-height-narrow: 320px;
   /* The product price on a narrow screen (decision 9, ADR-0004) sits between the 2xl and 3xl steps. */
   --text-price-narrow: 34px;
 }

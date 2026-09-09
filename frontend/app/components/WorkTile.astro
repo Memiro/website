@@ -16,9 +16,9 @@ const link = href === null ? {} : { class: "card-link", href };
   <Tile {...link}>
     <div class="pic"><img src={mediaUrl(work.photo_key)} alt={work.title} loading="lazy" /></div>
     <figcaption>
-      {work.title}
-      {work.description !== "" && <span class="work-note">{work.description}</span>}
-      {href !== null && <span class="work-go">Смотреть зеркало →</span>}
+      <span>{work.title}</span>
+      {work.description !== "" && <span class="work__note">{work.description}</span>}
+      {href !== null && <span class="work__go">Смотреть зеркало <span class="arrow" aria-hidden="true">→</span></span>}
     </figcaption>
   </Tile>
 </figure>

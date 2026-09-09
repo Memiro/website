@@ -1,5 +1,6 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import PageHead from "../../components/PageHead.astro";
 import OfferNote from "../../components/OfferNote.astro";
 import InquiryCart from "../../islands/InquiryCart.vue";
 import BaseLayout from "../../layouts/BaseLayout.astro";
@@ -14,11 +15,10 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/cart/", label:
   crumbs={crumbs}
 >
   <Breadcrumbs crumbs={crumbs} />
-  <section class="wrap page">
-    <span class="overline">Зеркала, которые вы выбрали</span>
-    <h1 class="h-section">Ваша заявка</h1>
-    <p class="page-lead">Соберите подборку — менеджер рассчитает стоимость под ваши размеры и свяжется в течение рабочего дня. Оплаты на сайте нет.</p>
+  <PageHead label="Зеркала, которые вы выбрали" heading="Ваша заявка" />
+  <div class="wrap page">
+    <div class="page__lead"><p>Соберите подборку — менеджер рассчитает стоимость под ваши размеры и свяжется в течение рабочего дня. Оплаты на сайте нет.</p></div>
     <InquiryCart client:only="vue" />
     <OfferNote />
-  </section>
+  </div>
 </BaseLayout>

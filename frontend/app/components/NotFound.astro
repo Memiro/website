@@ -1,4 +1,5 @@
 ---
+import PageHead from "./PageHead.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 interface Props {
@@ -11,11 +12,14 @@ const { heading, lead, description } = Astro.props;
 ---
 
 <BaseLayout title={`${heading} — Memiro`} description={description}>
+  <PageHead label="Ошибка 404" heading={heading} />
   <div class="wrap page">
-    <h1 class="h-section">{heading}</h1>
-    <div class="page-lead"><p>{lead}</p></div>
-    <div class="error-actions">
-      <slot><a class="btn btn-primary" href="/catalog/">Вернуться в каталог</a></slot>
+    <div class="page__lead"><p>{lead}</p></div>
+    <div class="page__actions">
+      <slot>
+        <a class="btn" href="/catalog/">Вернуться в каталог <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn btn--ghost" href="/">На главную</a>
+      </slot>
     </div>
   </div>
 </BaseLayout>
