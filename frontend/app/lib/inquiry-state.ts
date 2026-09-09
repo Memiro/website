@@ -113,14 +113,14 @@ export function inquiryItemFromCalculator(
   };
 }
 
-export function selectionInquiry(items: InquiryItem[], contacts: InquiryContacts): SubmitInquiryRequest {
+export function selectionInquiry(items: InquiryItem[], contacts: InquiryContacts, comment = ""): SubmitInquiryRequest {
   return {
     source: "SELECTION",
     name: contacts.name,
     phone: contacts.phone,
     email: contacts.email || null,
     consent: contacts.consent,
-    comment: "",
+    comment,
     items: items.map((item) => ({
       product_id: item.productId,
       width_mm: item.widthMm,

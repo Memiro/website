@@ -95,7 +95,6 @@ a:hover { color: var(--color-accent); }
 [hidden] { display: none !important; }
 :focus-visible { outline: var(--rule-fine) solid var(--color-focus); outline-offset: var(--rule-fine); }
 /* The accent sinks into ink. */
-.dark :focus-visible,
 .mobile-menu :focus-visible,
 .cookie-banner :focus-visible { outline-color: var(--color-on-dark); }
 p, .name { text-wrap: pretty; }
@@ -134,7 +133,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   letter-spacing: var(--tracking-mono); text-transform: uppercase;
 }
 .label { font-size: var(--text-xs); color: var(--color-muted); }
-.dark .label { color: var(--color-on-dark-2); }
 .arrow { font-family: var(--font-outlier); font-weight: 500; }
 .sub { color: var(--color-ink-2); }
 .muted { color: var(--color-muted); }
@@ -276,8 +274,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* ---------- Section head (S2: mono label above the heading, ghost button right) ---------- */
 .head { display: grid; gap: var(--space-xs); padding-top: var(--space-2xl); padding-bottom: var(--space-md); }
 .head__row { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
-.head h2, .dark__text h2, .info h1 { line-height: 1.04; text-transform: uppercase; overflow-wrap: anywhere; min-width: 0; }
-.head h2, .dark__text h2 { font-size: var(--text-section); }
+.head h2, .info h1 { line-height: 1.04; text-transform: uppercase; overflow-wrap: anywhere; min-width: 0; }
+.head h2 { font-size: var(--text-section); }
 .head h2 { max-width: 24ch; }
 /* Pages open on the same .head as the home sections so both keep one rhythm. */
 .head--page { padding-top: var(--space-lg); border-bottom: var(--rule-hair) solid var(--color-ink); }
@@ -316,20 +314,11 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .cell:hover img, .product-card .card-link:hover img, .work .card-link:hover img { transform: none; }
 }
 
-/* ---------- Dark block («О мастерской»: paper and ink inverted) ---------- */
-.dark { margin-top: var(--space-2xl); background: var(--color-ink); color: var(--color-on-dark); }
-.dark__grid {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-xl); align-items: center;
-  padding-top: var(--space-2xl); padding-bottom: var(--space-2xl);
-}
-.dark__grid > img { width: 100%; aspect-ratio: var(--photo-ratio-wide); object-fit: cover; background: var(--color-on-dark-rule); }
-.dark__text { display: grid; gap: var(--space-md); justify-items: start; }
-.dark__text h2 { max-width: 16ch; }
-.dark__text p { color: var(--color-on-dark-2); max-width: var(--measure-lede); }
-.dark__text .btn { margin-top: var(--space-2xs); }
 
 /* ---------- Rows: numbered rows with hairlines (home steps, page features) ---------- */
 .rows { list-style: none; border-top: var(--rule-hair) solid var(--color-ink); }
+/* Right under a page head the head's own rule is the line; a second one would double it. */
+.page > .rows:first-child { border-top: 0; }
 .rows li {
   display: grid; grid-template-columns: 4ch minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-md);
   padding: var(--space-md) 0; border-bottom: var(--rule-hair) solid var(--color-rule);
@@ -634,7 +623,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .hero { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); padding-top: var(--space-lg); padding-bottom: var(--space-xl); }
   .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: var(--bento-row-narrow); }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dark__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); padding-top: var(--space-xl); padding-bottom: var(--space-xl); }
   .rows li { grid-template-columns: 4ch minmax(0, 1fr); }
   .rows p { grid-column: 2; }
   .inquiry { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
@@ -673,9 +661,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
   .price-now { font-size: var(--text-price-narrow); }
   .calc-fields { grid-template-columns: minmax(0, 1fr); }
-
-  .dark { margin-top: var(--space-xl); }
-  .dark__grid { padding-top: var(--space-lg); padding-bottom: var(--space-lg); gap: var(--space-md); }
 
   .foot { margin-top: var(--space-lg); }
   .foot__inner { padding-top: var(--space-md); padding-bottom: var(--space-md); }
