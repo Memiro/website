@@ -6,10 +6,15 @@ import {
   canAddCalculatorConfiguration,
   canShowInquiryEditor,
   addInquiryItem,
+  hasUnavailableItem,
   inquiryItemFromCalculator,
+  isInquiryPreview,
+  previewRequest,
+  previewedPricePresentation,
   removeInquiryItem,
   loadInquiryItems,
   selectionInquiry,
+  specificationLine,
 } from "../app/lib/inquiry-state.ts";
 
 test("a beyond-limits calculator configuration becomes a selection wish without browser pricing", () => {
@@ -174,4 +179,93 @@ test("a hidden price does not take the position away either", () => {
 test("a product outside the calculable set has no configuration to add", () => {
   assert.equal(canShowInquiryEditor("unavailable"), false);
   assert.equal(canAddCalculatorConfiguration("unavailable", ""), false);
+});
+
+test("the preview asks with the very positions the submission will send", () => {
+  const item = {
+    productId: "mirror",
+    productName: "Зеркало Loft",
+    widthMm: 800,
+    heightMm: 600,
+    selections: [{ attributeId: "blade", valueId: "graphite", quantity: null }],
+    wish: "Тёплый свет",
+    isWish: false,
+  };
+
+  const request = previewRequest([item]);
+
+  assert.deepEqual(request, {
+    items: [
+      {
+        product_id: "mirror",
+        width_mm: 800,
+        height_mm: 600,
+        selections: [{ attribute_id: "blade", value_id: "graphite", quantity: null }],
+        wish: "Тёплый свет",
+      },
+    ],
+  });
+  assert.deepEqual(request.items, selectionInquiry([item], { name: "Анна", phone: "+79990000000", email: "", consent: true }).items);
+});
+
+test("a preview answer is read only when every position matches the contract", () => {
+  const priced = {
+    product_id: "mirror",
+    is_available: true,
+    product_name: "Зеркало Loft",
+    price_from: "8820.00",
+    verdict: "PRICED",
+    price: "10020.00",
+    configuration: {
+      width_mm: 800,
+      height_mm: 600,
+      values: [{ attribute_name: "Тип полотна", value_name: "Графит", quantity: null }],
+    },
+    wish: "",
+  };
+  const gone = {
+    product_id: "old",
+    is_available: false,
+    product_name: null,
+    price_from: null,
+    verdict: null,
+    price: null,
+    configuration: null,
+    wish: "Для холла",
+  };
+
+  assert.equal(isInquiryPreview({ items: [priced, gone] }), true);
+  assert.equal(isInquiryPreview({ items: [{ ...priced, configuration: { width_mm: "800" } }] }), false);
+  assert.equal(isInquiryPreview({ items: "none" }), false);
+  assert.equal(isInquiryPreview(null), false);
+});
+
+test("a selection with a product taken off the storefront cannot be sent until it is removed", () => {
+  /** @type {import("../app/lib/inquiry-state.ts").PreviewedItem} */
+  const available = { product_id: "a", is_available: true, product_name: "A", price_from: null, verdict: "PRICED", price: "1000", configuration: null, wish: "" };
+  /** @type {import("../app/lib/inquiry-state.ts").PreviewedItem} */
+  const gone = { ...available, product_id: "b", is_available: false, product_name: null, verdict: null, price: null };
+
+  assert.equal(hasUnavailableItem([available]), false);
+  assert.equal(hasUnavailableItem([available, gone]), true);
+});
+
+test("a previewed position is explained in the words of the product card, without deltas", () => {
+  const base = { product_id: "a", is_available: true, product_name: "A", price_from: null, configuration: null, wish: "" };
+
+  assert.deepEqual(previewedPricePresentation({ ...base, verdict: "PRICED", price: "10020.00" }), {
+    kind: "priced",
+    total: "10020.00",
+    message: null,
+    deltas: [],
+  });
+  assert.equal(previewedPricePresentation({ ...base, verdict: "HIDDEN", price: null })?.message, "Стоимость этой конфигурации уточнит менеджер.");
+  assert.equal(previewedPricePresentation({ ...base, verdict: "BEYOND_LIMITS", price: null })?.kind, "wish");
+  assert.equal(previewedPricePresentation({ ...base, is_available: false, verdict: null, price: null }), null);
+});
+
+test("a value of the specification reads as attribute and value, a count in whole units", () => {
+  assert.equal(specificationLine({ attribute_name: "Рама", value_name: "Без рамы", quantity: null }), "Рама: Без рамы");
+  assert.equal(specificationLine({ attribute_name: "Вырезы", value_name: null, quantity: "2.5000" }), "Вырезы: 2.5");
+  assert.equal(specificationLine({ attribute_name: "Вырезы", value_name: null, quantity: "1.0000" }), "Вырезы: 1");
 });

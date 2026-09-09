@@ -1,13 +1,16 @@
 import { ApiResponseError, asRecord, requestJson } from "../lib/http.ts";
-import type { SubmitInquiryRequest } from "../lib/inquiry-state.ts";
+import { isPreviewedItem } from "../lib/inquiry-state.ts";
+import type { PreviewedItem, SubmitInquiryRequest } from "../lib/inquiry-state.ts";
 
 const UNKNOWN_REFUSAL = "INTERNAL_ERROR";
 // Sending an inquiry writes: the server stores it and only then notifies the studio, so a
 // short abort would hide a stored inquiry behind "try again" and the retry would duplicate it.
 const SUBMIT_TIMEOUT_MS = 30_000;
 
+/** The stored inquiry: its identifier and the positions as they were written, for the summary. */
 export interface AcceptedInquiry {
   id: string;
+  items: PreviewedItem[];
 }
 
 export class SubmitInquiryError extends Error {
@@ -49,5 +52,6 @@ export function inquiryErrorMessage(error: SubmitInquiryError): string {
 }
 
 function isAcceptedInquiry(value: unknown): value is AcceptedInquiry {
-  return typeof asRecord(value)?.id === "string";
+  const accepted = asRecord(value);
+  return typeof accepted?.id === "string" && Array.isArray(accepted.items) && accepted.items.every(isPreviewedItem);
 }
