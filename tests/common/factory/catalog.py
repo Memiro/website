@@ -78,6 +78,10 @@ SECOND_WORK: UUID = _id("mirror-in-a-bathroom")
 # leaves behind is read off its position.
 INQUIRY: InquiryId = _id("inquiry")
 INQUIRY_ITEM: InquiryItemId = _id("inquiry-item")
+# One inquiry stored before the snapshot carried the whole specification: its
+# only value is the one the customer chose, and it must read as it always did.
+LEGACY_INQUIRY: InquiryId = _id("legacy-inquiry")
+LEGACY_INQUIRY_ITEM: InquiryItemId = _id("legacy-inquiry-item")
 
 FREE = Rate(amount=Money(amount=Decimal(0)), unit=Unit.PIECE)
 

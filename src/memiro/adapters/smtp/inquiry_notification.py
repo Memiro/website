@@ -8,11 +8,11 @@ from typing import override
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from memiro.adapters.common.inquiry_wording import price_words, size_words, specification_line
 from memiro.adapters.smtp.config import EmailConfig, SMTPEncryption
 from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.common.notification import InquiryNotificationBus
 from memiro.entities.common.identifiers import InquiryId
-from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import Inquiry, InquiryItem
 from memiro_common.logger import Logger
 
@@ -62,32 +62,14 @@ def _body(inquiry: Inquiry) -> str:
 
 def _item(index: int, item: InquiryItem) -> str:
     """Render one immutable mirror specification without fetching live data."""
-    lines = [f"Зеркало {index}: {item.product_name}", f"Вердикт: {item.verdict.value}"]
+    lines = [f"Зеркало {index}: {item.product_name}"]
     if item.configuration is not None:
-        dimensions = item.configuration.dimensions
-        lines.append(f"Размер: {dimensions.width.value} × {dimensions.height.value} мм")
-        lines.extend(_configuration_lines(item))
-    lines.append(f"Цена: {_money(item.calculated_price)}")
+        lines.append(f"Размер: {size_words(item.configuration.dimensions)}")
+        lines.extend(specification_line(value) for value in item.configuration.values)
+    lines.append(price_words(item.verdict, item.calculated_price))
     if item.wish:
         lines.append(f"Пожелание: {item.wish}")
     return "\n".join(lines)
-
-
-def _configuration_lines(item: InquiryItem) -> list[str]:
-    """Render named selections retained in the item snapshot."""
-    if item.configuration is None:
-        return []
-    return [
-        f"{value.attribute_name}: {value.value_name if value.value_name is not None else value.quantity}"
-        for value in item.configuration.values
-    ]
-
-
-def _money(value: Money | None) -> str:
-    """Render a retained money value for a manager-facing email."""
-    if value is None:
-        return "не рассчитана"
-    return f"{value.amount:,.2f}".replace(",", " ") + " ₽"
 
 
 class SMTPInquiryNotificationBus(InquiryNotificationBus):

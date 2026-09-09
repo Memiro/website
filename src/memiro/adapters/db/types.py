@@ -238,23 +238,26 @@ class InquiryConfigurationType(TypeDecorator[InquiryConfiguration]):
         dialect: Dialect,
     ) -> InquiryConfiguration | None:
         """Rebuild snapshots through the domain constructors when rows are loaded."""
-        if value is None:
-            return None
-        try:
-            return InquiryConfiguration(
-                dimensions=Dimensions(
-                    width=Millimeters(value["width_mm"]),
-                    height=Millimeters(value["height_mm"]),
-                ),
-                values=tuple(
-                    ConfigurationValue(
-                        attribute_name=str(chosen["attribute_name"]),
-                        value_name=chosen["value_name"],
-                        quantity=Decimal(chosen["quantity"]) if chosen["quantity"] is not None else None,
-                    )
-                    for chosen in value["values"]
-                ),
-            )
-        except (ArithmeticError, KeyError, TypeError, ValueError) as error:
-            message = "Stored inquiry has a corrupted configuration snapshot"
-            raise RuntimeError(message) from error
+        return None if value is None else inquiry_configuration_from_payload(value)
+
+
+def inquiry_configuration_from_payload(value: InquiryConfigurationPayload) -> InquiryConfiguration:
+    """Rebuild one stored snapshot through the domain constructors, so a corrupted row never loads silently (§8.5)."""
+    try:
+        return InquiryConfiguration(
+            dimensions=Dimensions(
+                width=Millimeters(value["width_mm"]),
+                height=Millimeters(value["height_mm"]),
+            ),
+            values=tuple(
+                ConfigurationValue(
+                    attribute_name=str(chosen["attribute_name"]),
+                    value_name=chosen["value_name"],
+                    quantity=Decimal(chosen["quantity"]) if chosen["quantity"] is not None else None,
+                )
+                for chosen in value["values"]
+            ),
+        )
+    except (ArithmeticError, KeyError, TypeError, ValueError) as error:
+        message = "Stored inquiry has a corrupted configuration snapshot"
+        raise RuntimeError(message) from error

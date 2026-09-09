@@ -1,15 +1,24 @@
+from email.message import EmailMessage
+
 import pytest
 from dishka import AsyncContainer
 from fastapi import FastAPI
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from memiro.adapters.smtp.config import EmailConfig
 from memiro.adapters.smtp.inquiry_notification import SMTPInquiryNotificationBus
 from memiro.application.common.customer_selection import Selection
 from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.submit_inquiry import InquiryItemForm, InquirySource, SubmitInquiry, SubmitInquiryForm
-from tests.common.factory.catalog import BLADE, GRAPHITE, PRODUCT
+from memiro.entities.common.measure import Millimeters
+from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, GRAPHITE, LEGACY_INQUIRY, PRODUCT
 from tests.integration.api_client import ApiClient
+from tests.integration.prime import (
+    prime_hidden_calculated_price,
+    prime_legacy_inquiry,
+    prime_product_publication,
+    prime_production_limits,
+)
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -23,29 +32,42 @@ _ONE_ITEM_FORM = SubmitInquiryForm(
     items=[InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[], wish="")],
 )
 
+# Mirror of price_product in entities/pricing/pricing_service.py, by hand:
+# 0.48 m2 x 4500 + 2.8 lm x 2200 + 500 = 8 820 for the canonical mirror and
+# 0.81 m2 x 7000 + 3.6 lm x 2200 + 500 = 14 090 for the graphite one; their
+# sum, 22 910, is exactly what the manager must not read (rule 18).
+_CANONICAL_PRICE_LINE = "Цена: 8 820 ₽"
+_GRAPHITE_PRICE_LINE = "Цена: 14 090 ₽"
+_SUM_OF_THE_TWO = "22 910"
 
-async def test_a_committed_inquiry_uses_the_enabled_port_configured_smtp_channel_to_send_each_saved_snapshot(
-    notifying_api_client: ApiClient,
-    smtp_server: tuple[int, list[str]],
-) -> None:
-    """A submitted inquiry sends a separate snapshot for every configured mirror."""
-    form = SubmitInquiryForm(
+
+def _form(*items: InquiryItemForm) -> SubmitInquiryForm:
+    """Build a consented selection of the given items."""
+    return SubmitInquiryForm(
         source=InquirySource.SELECTION,
         name="Anna",
         phone="+79990000000",
         email="anna@example.test",
         consent=True,
         comment="",
-        items=[
-            InquiryItemForm(
-                product_id=PRODUCT,
-                width_mm=800,
-                height_mm=600,
-                selections=[Selection(attribute_id=BLADE, value_id=GRAPHITE)],
-                wish="Warm light",
-            ),
-            InquiryItemForm(product_id=PRODUCT, width_mm=900, height_mm=900, selections=[], wish=""),
-        ],
+        items=list(items),
+    )
+
+
+async def test_a_committed_inquiry_uses_the_enabled_port_configured_smtp_channel_to_send_each_saved_snapshot(
+    notifying_api_client: ApiClient,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """A submitted inquiry sends a separate specification for every configured mirror, in words and without a sum."""
+    form = _form(
+        InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[], wish=""),
+        InquiryItemForm(
+            product_id=PRODUCT,
+            width_mm=900,
+            height_mm=900,
+            selections=[Selection(attribute_id=BLADE, value_id=GRAPHITE)],
+            wish="Warm light",
+        ),
     )
 
     response = await notifying_api_client.submit_inquiry(form)
@@ -54,14 +76,129 @@ async def test_a_committed_inquiry_uses_the_enabled_port_configured_smtp_channel
 
     assert response.assert_status(200).ensure_content().id
     assert len(received_emails) == 1
-    assert "Заявка" in received_emails[0]
-    assert "Зеркало 1" in received_emails[0]
-    assert "Зеркало 2" in received_emails[0]
-    assert "800 × 600 мм" in received_emails[0]
-    assert "Графит" in received_emails[0]
-    assert "Warm light" in received_emails[0]
-    assert "PRICED" in received_emails[0]
-    assert "10 020" in received_emails[0]
+    email = received_emails[0]
+    assert "Заявка" in email
+    assert "Зеркало 1: Зеркало в раме" in email
+    assert "Зеркало 2: Зеркало в раме" in email
+    assert "Размер: 800 × 600 мм" in email
+    assert "Размер: 900 × 900 мм" in email
+    assert "Тип полотна: Серебро" in email
+    assert "Тип полотна: Графит" in email
+    assert "Рама: Алюминий" in email
+    assert "Подсветка: Без подсветки" in email
+    assert "Пожелание: Warm light" in email
+    assert _CANONICAL_PRICE_LINE in email
+    assert _GRAPHITE_PRICE_LINE in email
+    assert "PRICED" not in email
+    assert _SUM_OF_THE_TWO not in email
+    assert "Итог" not in email
+
+
+async def test_a_hidden_price_reaches_the_manager_marked_as_unseen_by_the_customer(
+    notifying_api_client: ApiClient,
+    engine: AsyncEngine,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """A HIDDEN price is printed with the remark that the customer was never shown it (rule 19)."""
+    await prime_hidden_calculated_price(engine)
+
+    response = await notifying_api_client.submit_inquiry(_ONE_ITEM_FORM)
+
+    _, received_emails = smtp_server
+
+    assert response.assert_status(200).ensure_content().id
+    assert "Цена: 8 820 ₽ (покупателю не показана)" in received_emails[0]
+    assert "HIDDEN" not in received_emails[0]
+
+
+async def test_a_size_beyond_production_reaches_the_manager_in_words(
+    notifying_api_client: ApiClient,
+    engine: AsyncEngine,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """A BEYOND_LIMITS position names its reason in words, its specification still printed."""
+    await prime_production_limits(
+        engine,
+        max_long_side_mm=Millimeters(value=700),
+        max_short_side_mm=Millimeters(value=500),
+    )
+
+    response = await notifying_api_client.submit_inquiry(_ONE_ITEM_FORM)
+
+    _, received_emails = smtp_server
+
+    assert response.assert_status(200).ensure_content().id
+    assert "Цена не рассчитана: размер за пределом производства" in received_emails[0]
+    assert "Тип полотна: Серебро" in received_emails[0]
+    assert "BEYOND_LIMITS" not in received_emails[0]
+
+
+async def test_a_choice_the_calculation_refused_reaches_the_manager_in_words(
+    notifying_api_client: ApiClient,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """A SELECTION_NOT_PRICEABLE position names its reason in words, the refused choice in its specification."""
+    form = _form(
+        InquiryItemForm(
+            product_id=PRODUCT,
+            width_mm=800,
+            height_mm=600,
+            selections=[Selection(attribute_id=BACKLIGHT, value_id=CONTOUR)],
+            wish="",
+        ),
+    )
+
+    response = await notifying_api_client.submit_inquiry(form)
+
+    _, received_emails = smtp_server
+
+    assert response.assert_status(200).ensure_content().id
+    assert "Цена не рассчитана: расчёт не взял этот выбор" in received_emails[0]
+    assert "Подсветка: Контурная" in received_emails[0]
+    assert "SELECTION_NOT_PRICEABLE" not in received_emails[0]
+
+
+async def test_a_product_without_a_calculation_reaches_the_manager_without_a_specification(
+    notifying_api_client: ApiClient,
+    engine: AsyncEngine,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """A NOT_PRICEABLE position says so in words and prints neither size nor values (rule 8)."""
+    await prime_product_publication(engine, is_published=False)
+
+    response = await notifying_api_client.submit_inquiry(_ONE_ITEM_FORM)
+
+    _, received_emails = smtp_server
+
+    assert response.assert_status(200).ensure_content().id
+    assert "Товар без расчёта" in received_emails[0]
+    assert "Размер" not in received_emails[0]
+    assert "NOT_PRICEABLE" not in received_emails[0]
+
+
+async def test_a_snapshot_stored_before_the_whole_specification_is_printed_as_it_was(
+    engine: AsyncEngine,
+    request_container: AsyncContainer,
+) -> None:
+    """An old position with only the chosen value prints that value and nothing invented (rule 21)."""
+    await prime_legacy_inquiry(engine)
+    sent: list[EmailMessage] = []
+    bus = SMTPInquiryNotificationBus(
+        EmailConfig(enabled=True, from_address="site@example.test", manager_address="manager@example.test"),
+        await request_container.get(InquiryGateway),
+        await request_container.get(AsyncSession),
+        lambda _config, message: sent.append(message),
+    )
+
+    await bus.notify(LEGACY_INQUIRY)
+
+    body = sent[0].get_content()
+    assert "Зеркало 1: Зеркало в раме" in body
+    assert "Размер: 800 × 600 мм" in body
+    assert "Тип полотна: Графит" in body
+    assert "Рама" not in body
+    assert "Цена: 10 020 ₽" in body
+    assert "Пожелание: Тёплый свет" in body
 
 
 async def test_a_switched_off_channel_sends_nothing(
@@ -82,17 +219,7 @@ async def test_an_smtp_failure_keeps_the_saved_inquiry(
     failing_app: FastAPI,
 ) -> None:
     """An unavailable SMTP channel does not roll back a submitted inquiry."""
-    form = SubmitInquiryForm(
-        source=InquirySource.SELECTION,
-        name="Anna",
-        phone="+79990000000",
-        email=None,
-        consent=True,
-        comment="",
-        items=[InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[], wish="")],
-    )
-
-    created = (await failing_api_client.submit_inquiry(form)).assert_status(200).ensure_content()
+    created = (await failing_api_client.submit_inquiry(_ONE_ITEM_FORM)).assert_status(200).ensure_content()
     container: AsyncContainer = failing_app.state.dishka_container
     async with container() as request:
         gateway: InquiryGateway = await request.get(InquiryGateway)
@@ -108,17 +235,7 @@ async def test_an_empty_manager_address_keeps_the_saved_inquiry(
     empty_address_app: FastAPI,
 ) -> None:
     """An empty manager address skips mail without losing the submitted inquiry."""
-    form = SubmitInquiryForm(
-        source=InquirySource.SELECTION,
-        name="Anna",
-        phone="+79990000000",
-        email=None,
-        consent=True,
-        comment="",
-        items=[InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[], wish="")],
-    )
-
-    created = (await empty_address_api_client.submit_inquiry(form)).assert_status(200).ensure_content()
+    created = (await empty_address_api_client.submit_inquiry(_ONE_ITEM_FORM)).assert_status(200).ensure_content()
     container: AsyncContainer = empty_address_app.state.dishka_container
     async with container() as request:
         gateway: InquiryGateway = await request.get(InquiryGateway)

@@ -31,9 +31,9 @@ from memiro.adapters.db.tables import (
     works_table,
 )
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
-from memiro.entities.common.measure import Millimeters
+from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
-from memiro.entities.inquiry.entity import InquirySource
+from memiro.entities.inquiry.entity import ConfigurationValue, InquiryConfiguration, InquirySource
 from memiro.entities.inquiry.phone import Phone
 from memiro.entities.pricing.quotation import PricingVerdict
 from memiro_common.clock import SystemClock
@@ -49,6 +49,8 @@ from tests.common.factory.catalog import (
     INQUIRY,
     INQUIRY_ITEM,
     LANDING,
+    LEGACY_INQUIRY,
+    LEGACY_INQUIRY_ITEM,
     NO_FRAME,
     NO_HEATING,
     NO_MOUNT,
@@ -694,6 +696,45 @@ async def prime_inquiry_for_the_product(engine: AsyncEngine) -> None:
                     "calculated_price": None,
                     "verdict": PricingVerdict.NOT_PRICEABLE,
                     "wish": "",
+                },
+            ],
+        )
+
+
+async def prime_legacy_inquiry(engine: AsyncEngine) -> None:
+    """Leave a manager one inquiry stored before the snapshot carried the whole specification."""
+    async with engine.begin() as connection:
+        await connection.execute(
+            insert(inquiries_table),
+            [
+                {
+                    "id": LEGACY_INQUIRY,
+                    "source": InquirySource.SELECTION,
+                    "name": "Пётр",
+                    "phone": Phone(value="+79990000001"),
+                    "email": "petr@example.test",
+                    "comment": "",
+                    "consent_version": "2026-01-01",
+                    "created_at": CATALOG_STAMP,
+                },
+            ],
+        )
+        await connection.execute(
+            insert(inquiry_items_table),
+            [
+                {
+                    "id": LEGACY_INQUIRY_ITEM,
+                    "inquiry_id": LEGACY_INQUIRY,
+                    "product_id": PRODUCT,
+                    "product_name": "Зеркало в раме",
+                    "price_from": None,
+                    "configuration": InquiryConfiguration(
+                        dimensions=Dimensions(width=Millimeters(value=800), height=Millimeters(value=600)),
+                        values=(ConfigurationValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),),
+                    ),
+                    "calculated_price": Money(amount=Decimal(10020)),
+                    "verdict": PricingVerdict.PRICED,
+                    "wish": "Тёплый свет",
                 },
             ],
         )

@@ -61,11 +61,32 @@ def _form(**overrides: object) -> SubmitInquiryForm:
     ).model_copy(update=overrides)
 
 
+# The canonical mirror as the manager reads it: every value the product
+# declares, by name, in the owner's order — the customer chose none of them.
+CANONICAL_SPECIFICATION = (
+    ConfigurationValue(attribute_name="Тип полотна", value_name="Серебро", quantity=None),  # noqa: RUF001
+    ConfigurationValue(attribute_name="Форма", value_name="Прямоугольное", quantity=None),
+    ConfigurationValue(attribute_name="Рама", value_name="Алюминий", quantity=None),
+    ConfigurationValue(attribute_name="Подсветка", value_name="Без подсветки", quantity=None),
+    ConfigurationValue(attribute_name="Крепление", value_name="С креплением", quantity=None),  # noqa: RUF001
+)
+
+
 def _configuration(width_mm: int, height_mm: int, *values: ConfigurationValue) -> InquiryConfiguration:
     """Build the frozen configuration of one item snapshot."""
     return InquiryConfiguration(
         dimensions=Dimensions(width=Millimeters(value=width_mm), height=Millimeters(value=height_mm)),
         values=values,
+    )
+
+
+def _specified(width_mm: int, height_mm: int, *chosen: ConfigurationValue) -> InquiryConfiguration:
+    """Build the canonical specification with the customer's choices standing in for the declared values."""
+    replacements = {value.attribute_name: value for value in chosen}
+    return _configuration(
+        width_mm,
+        height_mm,
+        *(replacements.get(value.attribute_name, value) for value in CANONICAL_SPECIFICATION),
     )
 
 
@@ -112,7 +133,7 @@ async def test_a_customer_submits_multiple_configured_mirrors_in_one_inquiry(
     api_client: ApiClient,
     request_container: AsyncContainer,
 ) -> None:
-    """A SELECTION inquiry stores every chosen item in one aggregate."""
+    """A SELECTION inquiry stores every chosen item in one aggregate, each with the values the customer never chose."""
     form = _form(
         email="anna@example.test",
         items=[
@@ -138,13 +159,13 @@ async def test_a_customer_submits_multiple_configured_mirrors_in_one_inquiry(
     assert stored == [
         _snapshot(
             stored[0].id,
-            configuration=_configuration(800, 600),
+            configuration=_specified(800, 600),
             calculated_price=Money(Decimal(8820)),
             wish="",
         ),
         _snapshot(
             stored[1].id,
-            configuration=_configuration(
+            configuration=_specified(
                 900,
                 900,
                 ConfigurationValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),
@@ -180,7 +201,7 @@ async def test_an_inquiry_keeps_the_configuration_and_price_it_was_shown(
     # 0.48 m2 x 7000 + 2.8 lm x 2200 + 500 = 10 020.
     assert inquiry.items[0] == _snapshot(
         inquiry.items[0].id,
-        configuration=_configuration(
+        configuration=_specified(
             800,
             600,
             ConfigurationValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),
@@ -241,7 +262,7 @@ async def test_an_inquiry_beyond_production_limits_keeps_that_verdict(
     assert inquiry is not None
     assert inquiry.items[0] == _snapshot(
         inquiry.items[0].id,
-        configuration=_configuration(800, 600),
+        configuration=_specified(800, 600),
         calculated_price=None,
         wish="",
         verdict=PricingVerdict.BEYOND_LIMITS,
@@ -274,7 +295,7 @@ async def test_a_choice_the_price_refuses_still_reaches_the_manager_as_a_configu
     api_client: ApiClient,
     request_container: AsyncContainer,
 ) -> None:
-    """A SELECTION_NOT_PRICEABLE item keeps the size and the values the customer chose."""
+    """A SELECTION_NOT_PRICEABLE item keeps the size and the whole specification, the customer's choice in it."""
     selection = SelectionFactory.build(attribute_id=BACKLIGHT, value_id=CONTOUR, quantity=None)
 
     created = (
@@ -288,7 +309,7 @@ async def test_a_choice_the_price_refuses_still_reaches_the_manager_as_a_configu
     assert inquiry is not None
     assert inquiry.items[0] == _snapshot(
         inquiry.items[0].id,
-        configuration=_configuration(
+        configuration=_specified(
             800,
             600,
             ConfigurationValue(attribute_name="Подсветка", value_name="Контурная", quantity=None),
