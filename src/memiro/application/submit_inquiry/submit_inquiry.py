@@ -26,19 +26,17 @@ from memiro.application.errors.catalog import ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.submit_inquiry.config import LegalConfig
 from memiro.entities.catalog.attribute.entity import Attribute
-from memiro.entities.common.identifiers import AttributeId, ProductId
+from memiro.entities.common.identifiers import ProductId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.inquiry.consent import given_consent
 from memiro.entities.inquiry.entity import (
-    ConfigurationValue,
-    InquiryConfiguration,
     InquiryData,
     InquiryItemData,
     InquirySource,
     ensure_new_inquiry_shape,
     inquiry_factory,
 )
-from memiro.entities.inquiry.inquiry_service import inquiry_item_snapshot
+from memiro.entities.inquiry.inquiry_service import inquiry_configuration, inquiry_item_snapshot
 from memiro.entities.inquiry.phone import normalized_phone
 from memiro.entities.pricing.pricing_service import price_product_for_customer
 from memiro.entities.pricing.pricing_settings import PricingSettings
@@ -158,29 +156,12 @@ class SubmitInquiry:
         )
         return inquiry_item_snapshot(
             product=product,
-            configuration=_configuration(dimensions, form.selections, attributes),
+            configuration=inquiry_configuration(
+                product=product,
+                attributes=attributes,
+                dimensions=dimensions,
+                selections=selections,
+            ),
             quotation=quotation,
             wish=form.wish,
         )
-
-
-def _configuration(
-    dimensions: Dimensions,
-    selections: Sequence[Selection],
-    attributes: Sequence[Attribute],
-) -> InquiryConfiguration:
-    """Replace dictionary identifiers in a customer selection with names for the snapshot."""
-    index = {attribute.id: attribute for attribute in attributes}
-    values: list[ConfigurationValue] = []
-    for selection in selections:
-        attribute_id: AttributeId = selection.attribute_id
-        attribute = index[attribute_id]
-        value = attribute.value(selection.value_id) if selection.value_id is not None else None
-        values.append(
-            ConfigurationValue(
-                attribute_name=attribute.name,
-                value_name=value.name if value is not None else None,
-                quantity=selection.quantity,
-            )
-        )
-    return InquiryConfiguration(dimensions=dimensions, values=tuple(values))
