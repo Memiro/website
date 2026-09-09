@@ -8,17 +8,11 @@ import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
 import { coverImageUrl, mediaUrl } from "../../../../lib/media.ts";
 import { productPath } from "../../../../lib/navigation.ts";
-import { ordinal } from "../../../../lib/ordinal.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { relatedProducts } from "../../../../lib/related.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
 import { productSpecs } from "../../../../lib/specs.ts";
 
-const PROMISES = [
-  "Своё производство — цена без посредников",
-  "Изготовление от 1 рабочего дня, срок зависит от сложности",
-  "Доставка и монтаж по Санкт-Петербургу и области",
-];
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
 const productSlug = Astro.params.productSlug ?? "";
@@ -115,11 +109,6 @@ const crumbs = product === null ? [] : [
             <dl>{specs.map((spec) => <div class="spec"><dt>{spec.name}</dt><dd>{spec.value}</dd></div>)}</dl>
           </div>
         )}
-        <ul class="promises">
-          {PROMISES.map((promise, index) => (
-            <li><span class="promises__n">{ordinal(index + 1)}</span>{promise}</li>
-          ))}
-        </ul>
       </div>
     </div>
 
