@@ -98,7 +98,7 @@ test("the organisation is named with a logo a crawler can fetch", () => {
   const document = organizationJsonLd(SITE);
   assert.equal(document["@type"], "Organization");
   assert.equal(document.name, "Memiro");
-  assert.equal(document.logo, "https://memiro.ru/img/logo.png");
+  assert.equal(document.logo, "https://memiro.ru/img/logo/logo4-black.svg");
   assert.equal(document.url, "https://memiro.ru/");
 });
 
