@@ -10,7 +10,7 @@ from tests.common.factory.catalog import demo_product
 
 _MIRROR = demo_product()
 _PRODUCT: ProductId = _MIRROR.id
-_PRICE = Money(amount=Decimal(8900))
+_PRICE = Money(amount=Decimal(8820))
 _CONFIGURATION = InquiryConfiguration(
     dimensions=Dimensions(width=Millimeters(value=800), height=Millimeters(value=600)),
     values=(),

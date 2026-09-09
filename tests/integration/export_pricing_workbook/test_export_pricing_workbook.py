@@ -24,7 +24,7 @@ pytestmark = pytest.mark.usefixtures("catalog")
 
 # What the demo mirror costs at 800 × 600 — the canonical case the workbook
 # was checked against (§14.6.7 — hardcoded, never re-derived).
-CANONICAL_TOTAL = Decimal(8900)
+CANONICAL_TOTAL = Decimal(8820)
 
 
 async def _exported(container: AsyncContainer, form: ExportPricingWorkbookForm) -> PricingWorkbookFile:
@@ -44,7 +44,7 @@ async def test_the_owner_takes_the_workbook_of_a_named_product(container: AsyncC
 
 
 async def test_the_check_sheet_of_the_workbook_carries_the_engine_total(container: AsyncContainer) -> None:
-    """The canonical mirror costs 8 900 ₽, and the book says so with the engine's own number."""
+    """The canonical mirror costs 8 820 ₽, and the book says so with the engine's own number."""
     exported = await _exported(container, ExportPricingWorkbookForm(product_id=PRODUCT))
 
     sheet = load_workbook(BytesIO(exported.content))[CHECK]

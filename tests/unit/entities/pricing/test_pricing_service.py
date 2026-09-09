@@ -11,7 +11,6 @@ from memiro.entities.common.identifiers import AttributeId
 from memiro.entities.common.measure import Dimensions, Millimeters
 from memiro.entities.common.money import Money
 from memiro.entities.pricing.pricing_service import (
-    ROUNDING_STEP,
     price_product,
     selection_deltas,
 )
@@ -126,7 +125,7 @@ def test_the_owner_changes_an_attribute_reserved_for_the_owner() -> None:
 
     assert quotation == Quotation(
         verdict=PricingVerdict.PRICED,
-        total=Money(amount=Decimal(2700)),
+        total=Money(amount=Decimal(2660)),
         breakdown=(
             quotation_line(BLADE, SILVER, "0.48", ("4500", Unit.SQUARE_METER, "2160")),
             quotation_line(MOUNT, WITH_MOUNT, "1", ("500", Unit.PIECE, "500")),
@@ -135,7 +134,7 @@ def test_the_owner_changes_an_attribute_reserved_for_the_owner() -> None:
 
 
 def test_a_mirror_in_a_frame_costs_what_the_workbook_says() -> None:
-    """The canonical case of the xlsx workbook: 800 x 600 in an aluminium frame is 8 900 RUB."""
+    """The canonical case of the xlsx workbook: 800 x 600 in an aluminium frame is 8 820 RUB."""
     quotation = price_product(
         product=demo_product(),
         attributes=demo_attributes(),
@@ -146,7 +145,7 @@ def test_a_mirror_in_a_frame_costs_what_the_workbook_says() -> None:
 
     # 0.48 m2 x 4500 + 2.8 lm x 2200 + 500 = 8 820, rounded up to whole hundreds.
     # The same numbers live in docs/usecase/calculate_price/calculate-price.md.
-    assert quotation.total == Money(amount=Decimal(8900))
+    assert quotation.total == Money(amount=Decimal(8820))
     assert quotation.verdict is PricingVerdict.PRICED
 
 
@@ -164,7 +163,7 @@ def test_a_size_surcharge_multiplies_the_blade_but_not_the_frame() -> None:
     # 5.8 lm x 2200 = 12 760; mount = 500; 21 022.50 -> 21 100.
     assert quotation == Quotation(
         verdict=PricingVerdict.PRICED,
-        total=Money(amount=Decimal(21100)),
+        total=Money(amount=Decimal(21023)),
         breakdown=(
             quotation_line(BLADE, SILVER, "1.38", ("4500", Unit.SQUARE_METER, "6210")),
             quotation_line(FRAME, ALUMINIUM, "5.8", ("2200", Unit.LINEAR_METER, "12760")),
@@ -188,10 +187,10 @@ def test_shape_and_size_surcharge_factors_multiply_each_other() -> None:
     )
 
     # Blade: 1.38 m2 x 4500 x 1.5 x 1.25 = 11 643.75; mount = 500;
-    # 12 143.75 -> 12 200.
+    # 12 143.75 -> 12 144.
     assert quotation == Quotation(
         verdict=PricingVerdict.PRICED,
-        total=Money(amount=Decimal(12200)),
+        total=Money(amount=Decimal(12144)),
         breakdown=(
             quotation_line(BLADE, SILVER, "1.38", ("4500", Unit.SQUARE_METER, "6210")),
             quotation_line(MOUNT, WITH_MOUNT, "1", ("500", Unit.PIECE, "500")),
@@ -215,7 +214,7 @@ def test_a_selection_delta_carries_the_size_surcharge_factor() -> None:
 
 
 def test_a_curved_cut_multiplies_the_blade_but_not_the_backlight() -> None:
-    """A round mirror pays the shape factor on the blade only: 900 x 900 with a tape is 15 000 RUB."""
+    """A round mirror pays the shape factor on the blade only: 900 x 900 with a tape is 14 968 RUB."""
     quotation = price_product(
         product=demo_product(),
         attributes=demo_attributes(),
@@ -229,8 +228,8 @@ def test_a_curved_cut_multiplies_the_blade_but_not_the_backlight() -> None:
     )
 
     # 0.81 m2 x 4500 x 1.5 = 5 467.50 for the blade, 3.6 lm x 2500 = 9 000 for
-    # the tape untouched by the factor, 500 for the mount: 14 967.50 -> 15 000.
-    assert quotation.total == Money(amount=Decimal(15000))
+    # the tape untouched by the factor, 500 for the mount: 14 967.50 -> 14 968.
+    assert quotation.total == Money(amount=Decimal(14968))
 
 
 def test_a_small_mirror_is_priced_by_the_minimum_area_and_the_minimum_order() -> None:
@@ -342,7 +341,7 @@ def test_a_delta_is_taken_before_the_minimum_order_threshold() -> None:
 @pytest.mark.parametrize("_example_group", range(40))
 @settings(max_examples=25)
 @given(case=pricing_cases())
-def test_one_thousand_prices_are_whole_hundreds_at_or_above_the_minimum_order(
+def test_one_thousand_prices_are_whole_roubles_at_or_above_the_minimum_order(
     _example_group: int,
     case: tuple[Dimensions, dict[AttributeId, ChosenValue]],
 ) -> None:
@@ -358,10 +357,39 @@ def test_one_thousand_prices_are_whole_hundreds_at_or_above_the_minimum_order(
     )
 
     assert quotation.total is not None
-    assert quotation.total.amount % ROUNDING_STEP == Decimal(0)
+    assert quotation.total.amount == quotation.total.amount.to_integral_value()
     # The threshold is the owner's datum, so it is read from the same fixture
     # the calculation was given — the second place to fix is demo_settings().
     assert quotation.total >= demo_settings().min_order_total
+
+
+def test_shrinking_the_mirror_by_five_millimetres_moves_the_price() -> None:
+    """A small change of size changes the price: the reason the rounding step is a rouble.
+
+    Rounded up to whole hundreds, the two totals below collided, and the
+    calculator answered a customer who had just made his mirror smaller with
+    the price of the mirror he no longer wanted (ADR-0007).
+    """
+    defaults = demo_defaults()
+
+    bigger = price_product(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=demo_settings(),
+        dimensions=_dimensions(800, 600),
+        selections=defaults,
+    )
+    smaller = price_product(
+        product=demo_product(),
+        attributes=demo_attributes(),
+        settings=demo_settings(),
+        dimensions=_dimensions(800, 595),
+        selections=defaults,
+    )
+
+    assert bigger.total is not None
+    assert smaller.total is not None
+    assert smaller.total < bigger.total
 
 
 @settings(max_examples=25)

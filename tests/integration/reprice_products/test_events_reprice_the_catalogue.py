@@ -18,8 +18,8 @@ from tests.integration.reprice_products.arrange import arranged_variant, prices_
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
-SMALL_BEFORE = Money(amount=Decimal(8900))
-SMALL_AFTER = Money(amount=Decimal(9900))
+SMALL_BEFORE = Money(amount=Decimal(8820))
+SMALL_AFTER = Money(amount=Decimal(9820))
 RAISED_TO_THE_MINIMUM_ORDER = Money(amount=Decimal(20000))
 DEARER_MOUNT = Money(amount=Decimal(1500))
 

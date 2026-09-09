@@ -120,12 +120,12 @@ async def test_a_category_lists_its_published_products(
                 name="Зеркало в раме",
                 slug="zerkalo-v-rame",
                 # The cheaper of the two variants added by the fixture.
-                price_from=Decimal(2700),
+                price_from=Decimal(2660),
                 image_keys=["mirror-side.jpg", "mirror-front.jpg"],
             )
         ],
         counts=CANONICAL_DECLARATIONS,
-        price=PriceBounds(lowest=Decimal(2700), highest=Decimal(2700), selected_min=None, selected_max=None),
+        price=PriceBounds(lowest=Decimal(2660), highest=Decimal(2660), selected_min=None, selected_max=None),
     )
 
 

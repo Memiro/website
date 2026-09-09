@@ -104,10 +104,10 @@ async def test_the_owner_duplicates_a_variant_with_a_new_size_and_price(app: Fas
         source.id,
         width_mm=800,
         height_mm=600,
-        price="8900",
+        price="8820",
     )
-    assert duplicated == _expected_variant(result.id, width_mm=2200, height_mm=600, price="18800")
-    assert product.price_from == Money(amount=Decimal(8900))
+    assert duplicated == _expected_variant(result.id, width_mm=2200, height_mm=600, price="18760")
+    assert product.price_from == Money(amount=Decimal(8820))
     assert len(product.variants) == TWO_VARIANTS
 
 
@@ -139,14 +139,14 @@ async def test_a_duplicated_variant_keeps_the_overrides_of_its_source(app: FastA
         source.id,
         width_mm=800,
         height_mm=600,
-        price="10100",
+        price="10020",
         overrides=darker_blade,
     )
     assert duplicate == _expected_variant(
         created.id,
         width_mm=2200,
         height_mm=600,
-        price="22100",
+        price="22060",
         overrides=darker_blade,
     )
 
@@ -172,10 +172,10 @@ async def test_a_duplicated_variant_keeps_the_size_surcharge(
         source.id,
         width_mm=800,
         height_mm=600,
-        price="8900",
+        price="8820",
     )
-    assert duplicate == _expected_variant(created.id, width_mm=2200, height_mm=600, price="20300")
-    assert product.price_from == Money(amount=Decimal(8900))
+    assert duplicate == _expected_variant(created.id, width_mm=2200, height_mm=600, price="20245")
+    assert product.price_from == Money(amount=Decimal(8820))
     assert len(product.variants) == TWO_VARIANTS
 
 
@@ -201,15 +201,15 @@ async def test_concurrent_identical_duplications_preserve_variant_uniqueness(app
         source.id,
         width_mm=800,
         height_mm=600,
-        price="8900",
+        price="8820",
     )
     assert product.variant(created.id) == _expected_variant(
         created.id,
         width_mm=2200,
         height_mm=600,
-        price="18800",
+        price="18760",
     )
-    assert product.price_from == Money(amount=Decimal(8900))
+    assert product.price_from == Money(amount=Decimal(8820))
     assert len(product.variants) == TWO_VARIANTS
 
 

@@ -24,9 +24,9 @@ pytestmark = pytest.mark.usefixtures("catalog")
 
 # What the workbook says the demo mirror costs, before and after the owner
 # triples the price of a mount (§14.6.7 — hardcoded, never re-derived).
-SMALL_BEFORE = Money(amount=Decimal(8900))
-SMALL_AFTER = Money(amount=Decimal(9900))
-LARGE_AFTER = Money(amount=Decimal(13100))
+SMALL_BEFORE = Money(amount=Decimal(8820))
+SMALL_AFTER = Money(amount=Decimal(9820))
+LARGE_AFTER = Money(amount=Decimal(13020))
 MOUNT_AFTER = Money(amount=Decimal(1500))
 
 

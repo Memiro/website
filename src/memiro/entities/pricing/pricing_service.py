@@ -14,9 +14,12 @@ from memiro.entities.pricing.quotation import PricingVerdict, Quotation, Quotati
 
 _ZERO = Money(amount=Decimal(0))
 
-# The tail of the calculation rounds up to whole hundreds of roubles — the
-# owner's rule, not a display convention: the number is what he is paid.
-ROUNDING_STEP = Decimal(100)
+# The tail of the calculation rounds up to whole roubles — the owner's rule,
+# not a display convention: the number is what he is paid. A hundred was too
+# coarse a step to price by: it is some twenty millimetres of a side, and the
+# calculator answered a shrunken mirror with the price of the bigger one
+# (ADR-0007).
+ROUNDING_STEP = Decimal(1)
 
 type Selections = Mapping[AttributeId, ChosenValue]
 type ResolvedValues = tuple[tuple[AttributeId, AttributeValue, Decimal | None], ...]
@@ -391,6 +394,6 @@ def _apply_min_order(subtotal: Money, settings: PricingSettings) -> Money:
 
 
 def _round_up(total: Money) -> Money:
-    """Round the total up to whole hundreds — the last operation of the calculation."""
+    """Round the total up to whole roubles — the last operation of the calculation."""
     steps = (total.amount / ROUNDING_STEP).to_integral_value(rounding=ROUND_CEILING)
     return Money(amount=steps * ROUNDING_STEP)

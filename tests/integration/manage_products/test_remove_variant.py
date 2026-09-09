@@ -54,7 +54,7 @@ async def test_removing_the_cheapest_variant_raises_the_product_price(app: FastA
         product = await gateway.get(PRODUCT, eager_variants=True)
     assert product is not None
 
-    assert product.price_from == Money(amount=Decimal(13700))
+    assert product.price_from == Money(amount=Decimal(13620))
     assert product.variants == (
         Variant(
             remaining.id,
@@ -63,7 +63,7 @@ async def test_removing_the_cheapest_variant_raises_the_product_price(app: FastA
                 height=Millimeters(value=800),
             ),
             overrides=(),
-            price=Money(amount=Decimal(13700)),
+            price=Money(amount=Decimal(13620)),
             sort_order=0,
         ),
     )

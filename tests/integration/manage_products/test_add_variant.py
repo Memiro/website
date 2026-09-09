@@ -107,8 +107,8 @@ async def test_the_owner_adds_a_variant_priced_by_the_workbook(
     variant = product.variants[0]
 
     assert result == CreatedVariant(id=variant.id)
-    assert product.price_from == Money(amount=Decimal(8900))
-    assert product.variants == (_expected_variant(variant.id, width_mm=800, height_mm=600, price="8900", sort_order=2),)
+    assert product.price_from == Money(amount=Decimal(8820))
+    assert product.variants == (_expected_variant(variant.id, width_mm=800, height_mm=600, price="8820", sort_order=2),)
 
 
 async def test_adding_a_variant_marks_the_stored_product_as_changed(
@@ -132,7 +132,7 @@ async def test_adding_a_variant_marks_the_stored_product_as_changed(
             overrides=(),
             sort_order=0,
         ),
-        price=Money(amount=Decimal(8900)),
+        price=Money(amount=Decimal(8820)),
         clock=SystemClock(),
     )
     expected.variants[0].id = created.id
@@ -162,8 +162,8 @@ async def test_the_owner_prices_an_unpublished_hidden_variant_beyond_customer_li
 
     assert product is not None
     assert result == CreatedVariant(id=product.variants[0].id)
-    assert product.price_from == Money(amount=Decimal(8900))
-    assert product.variants == (_expected_variant(result.id, width_mm=800, height_mm=600, price="8900"),)
+    assert product.price_from == Money(amount=Decimal(8820))
+    assert product.variants == (_expected_variant(result.id, width_mm=800, height_mm=600, price="8820"),)
 
 
 async def test_the_owner_variant_keeps_the_size_surcharge(
@@ -181,8 +181,8 @@ async def test_the_owner_variant_keeps_the_size_surcharge(
     product = await _load_product(container)
 
     assert product is not None
-    assert product.price_from == Money(amount=Decimal(20300))
-    assert product.variants == (_expected_variant(result.id, width_mm=2200, height_mm=600, price="20300"),)
+    assert product.price_from == Money(amount=Decimal(20245))
+    assert product.variants == (_expected_variant(result.id, width_mm=2200, height_mm=600, price="20245"),)
 
 
 async def test_concurrent_identical_additions_preserve_variant_uniqueness(
@@ -204,8 +204,8 @@ async def test_concurrent_identical_additions_preserve_variant_uniqueness(
         "DuplicateVariantError",
     ]
     assert product is not None
-    assert product.price_from == Money(amount=Decimal(8900))
-    assert product.variants == (_expected_variant(product.variants[0].id, width_mm=800, height_mm=600, price="8900"),)
+    assert product.price_from == Money(amount=Decimal(8820))
+    assert product.variants == (_expected_variant(product.variants[0].id, width_mm=800, height_mm=600, price="8820"),)
 
 
 async def test_the_database_refuses_a_second_variant_with_the_same_fingerprint(

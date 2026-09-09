@@ -33,7 +33,7 @@ def canonical_quotation(verdict: PricingVerdict) -> Quotation:
     # workbook by hand, so a change there is fixed in two places (rule 010).
     return Quotation(
         verdict=verdict,
-        total=Money(amount=Decimal(8900)),
+        total=Money(amount=Decimal(8820)),
         breakdown=(
             quotation_line(BLADE, SILVER, "0.48", ("4500", Unit.SQUARE_METER, "2160")),
             quotation_line(FRAME, ALUMINIUM, "2.8", ("2200", Unit.LINEAR_METER, "6160")),
