@@ -1,0 +1,17 @@
+---
+import { ordinal } from "../lib/ordinal.ts";
+
+interface Props { items: readonly { title: string; text: string }[]; level?: 2 | 3; }
+const { items, level = 2 } = Astro.props;
+const Heading = `h${level}`;
+---
+
+<ol class="rows">
+  {items.map((item, index) => (
+    <li>
+      <span class="rows__n">{ordinal(index + 1)}</span>
+      <Heading>{item.title}</Heading>
+      <p>{item.text}</p>
+    </li>
+  ))}
+</ol>

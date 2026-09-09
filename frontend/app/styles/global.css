@@ -1,7 +1,6 @@
 /* Visual system from the owner's references (ADR-0016): tokens.css is the
-   only place with raw colour, font and easing values. The chrome and the home
-   page follow design.md; the remaining section styles are the handoff-era
-   layout kept alive on the new tokens until they are rewritten. */
+   only place with raw colour, font and easing values; every page follows
+   design.md. */
 
 @import "./tokens.css";
 
@@ -73,25 +72,6 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* Handoff-era names aliased to the system so the section styles below keep
-   working; they retire together with those styles. */
-:root {
-  --bg: var(--color-paper);
-  --bg-muted: var(--color-paper-3);
-  --bg-card: var(--color-paper-2);
-  --ink: var(--color-ink);
-  --line: var(--color-rule);
-  --line-card: var(--color-rule);
-  --line-panel: var(--color-rule);
-  --line-row: var(--color-rule-2);
-  --control: var(--color-muted);
-  --text: var(--color-ink);
-  --body: var(--color-ink-2);
-  --secondary: var(--color-ink-2);
-  --muted: var(--color-muted);
-  --accent: var(--color-accent);
-}
-
 /* ---------- Base ---------- */
 /* clip, not hidden: hidden would turn the root into a scroll container and
    detach position: sticky on the filters and the gallery. */
@@ -126,8 +106,8 @@ p, .name { text-wrap: pretty; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
-.price, .price-now, .calc-total, .calc-additions b, .cart-price, .variants th, .variants td, .spec dd,
-.nav__count, a[href^="tel:"], .hero__facts b, .steps__n, .promises__n, .head__count, .pager a:not(.btn), .fgroup .n,
+.price, .price-now, .calc-total, .calc-additions b, .variants th, .variants td, .spec dd, .seller-requisites,
+.nav__count, a[href^="tel:"], .hero__facts b, .rows__n, .promises__n, .head__count, .pager a:not(.btn), .fgroup .n,
 .fprice input, .inquiry-items small { font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -147,23 +127,23 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
    label, menu row and caption inherits it here so no place drifts to its own
    tracking or weight. Size and colour stay per place. */
 .label, .nav__link, .nav__count, .mobile-menu a, .foot__contacts, .chip, .field > span,
-.index a, .ticker__track span, .steps__n, .crumbs, .head__count, .chip-f, .sort, .drawer-title,
-.fgroup legend, .fgroup .n, .reset-link, .pager a:not(.btn), .info h2, .inquiry-panel h2, .promises__n {
+.index a, .ticker__track span, .rows__n, .crumbs, .head__count, .chip-f, .sort, .drawer-title,
+.fgroup legend, .fgroup .n, .reset-link, .pager a:not(.btn), .info h2, .inquiry-panel h2, .promises__n,
+.inquiry-remove, .work figcaption, .contacts__list dt, .seller-label {
   font-family: var(--font-outlier); font-weight: 500;
   letter-spacing: 0.06em; text-transform: uppercase;
 }
 .label { font-size: var(--text-xs); color: var(--color-muted); }
 .dark .label { color: var(--color-on-dark-2); }
 .arrow { font-family: var(--font-outlier); font-weight: 500; }
-.overline {
-  display: inline-flex; align-items: center; gap: 10px;
-  font-size: var(--text-sm); font-weight: 400; letter-spacing: 0.14em;
-  text-transform: uppercase; color: var(--color-accent);
-}
-.overline::before { content: ""; width: 28px; height: 1px; background: currentColor; }
-.overline.bare::before { content: none; }
 .sub { color: var(--color-ink-2); }
 .muted { color: var(--color-muted); }
+/* Underlined text links: in copy, the consent, the footer's legal line, the reset and remove controls. */
+.consent a, .foot__line a, .reset-link, .inquiry-remove, .page__section a, .contacts__list dd > a, .contacts__policy a {
+  color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset);
+}
+.consent a:hover, .foot__line a:hover, .page__section a:hover, .contacts__list dd > a:hover, .contacts__policy a:hover { color: var(--color-accent); }
+.index a[href^="mailto:"] { text-transform: none; }
 
 /* ---------- Buttons ---------- */
 .btn {
@@ -322,8 +302,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .product-card .card-link { display: grid; gap: var(--space-xs); align-content: start; color: var(--color-ink); }
 .product-card .pic { position: relative; aspect-ratio: var(--photo-ratio); background: var(--color-paper-2); overflow: hidden; }
 .product-card .pic img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.cell img, .product-card .pic img { transition: transform var(--dur-long) var(--ease-out); }
-.cell:hover img, .product-card .card-link:hover img { transform: scale(1.02); }
+.cell img, .product-card .pic img, .work .card-link img { transition: transform var(--dur-long) var(--ease-out); }
+.cell:hover img, .product-card .card-link:hover img, .work .card-link:hover img { transform: scale(1.02); }
 .product-card .meta { display: grid; gap: var(--space-3xs); }
 .product-card .name {
   font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600;
@@ -334,7 +314,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* After the rules it overrides: equal specificity, so source order decides. */
 @media (prefers-reduced-motion: reduce) {
   .ticker__track { animation: none; }
-  .cell:hover img, .product-card .card-link:hover img { transform: none; }
+  .cell:hover img, .product-card .card-link:hover img, .work .card-link:hover img { transform: none; }
 }
 
 /* ---------- Dark block («О мастерской»: paper and ink inverted) ---------- */
@@ -349,31 +329,15 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .dark__text p { color: var(--color-on-dark-2); max-width: var(--measure-lede); }
 .dark__text .btn { margin-top: var(--space-2xs); }
 
-/* ---------- Steps: numbered rows with hairlines ---------- */
-.steps { list-style: none; border-top: var(--rule-hair) solid var(--color-ink); }
-.steps li {
+/* ---------- Rows: numbered rows with hairlines (home steps, page features) ---------- */
+.rows { list-style: none; border-top: var(--rule-hair) solid var(--color-ink); }
+.rows li {
   display: grid; grid-template-columns: 4ch minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-md);
   padding: var(--space-md) 0; border-bottom: var(--rule-hair) solid var(--color-rule);
 }
-.steps__n { font-size: var(--text-sm); color: var(--color-muted); line-height: 1.5; }
-.steps h3 { font-size: var(--text-lg); line-height: 1.2; text-transform: uppercase; }
-.steps p { color: var(--color-ink-2); max-width: 52ch; }
-
-/* ---------- FAQ ---------- */
-.faq { border-top: 1px solid var(--line); }
-.faq-item { border-bottom: 1px solid var(--line); }
-.faq-item summary {
-  cursor: pointer; list-style: none; padding: 24px 40px 24px 0; position: relative;
-  font-size: 21px; font-weight: 600; letter-spacing: -0.01em;
-}
-.faq-item summary::-webkit-details-marker { display: none; }
-.faq-item summary::after {
-  content: "+"; position: absolute; right: 4px; top: 22px;
-  font-size: 22px; font-weight: 400; color: var(--accent);
-}
-.faq-item[open] summary::after { content: "−"; }
-.faq-item summary:hover { color: var(--accent); }
-.faq-item p { padding: 0 40px 26px 0; font-size: 16px; line-height: 1.6; color: var(--secondary); max-width: 78ch; }
+.rows__n { font-size: var(--text-sm); color: var(--color-muted); line-height: 1.5; }
+.rows h2, .rows h3, .page__section h2, .legal-note h2 { font-size: var(--text-lg); line-height: 1.2; text-transform: uppercase; }
+.rows p { color: var(--color-ink-2); max-width: var(--measure-row); }
 
 /* ---------- Inquiry ---------- */
 .inquiry {
@@ -382,7 +346,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 }
 .inquiry__text { display: grid; gap: var(--space-md); }
 .inquiry__text > p { color: var(--color-ink-2); max-width: var(--measure-lede); }
-.inquiry__mail { text-transform: none; }
 .inquiry-form { display: grid; gap: var(--space-md); }
 .field { display: grid; gap: var(--space-2xs); }
 .field > span { font-size: var(--text-xs); color: var(--color-muted); }
@@ -400,46 +363,10 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .field input:disabled, .field select:disabled, .field textarea:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 .consent { display: flex; gap: var(--space-xs); align-items: flex-start; font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
 .consent input { accent-color: var(--color-ink); width: var(--space-sm); height: var(--space-sm); margin-top: var(--space-3xs); flex: none; }
-.consent a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
 .inquiry-submit { width: 100%; }
 .inquiry-note { min-height: var(--space-md); font-size: var(--text-sm); color: var(--color-accent); }
 .inquiry-note.error { color: var(--color-ink); font-weight: 600; }
-.inquiry-cart-note { font-size: 14px; color: var(--muted); }
-
-/* Cart messages appear above the page. */
-.shop-note {
-  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
-  background: var(--ink); color: var(--bg); padding: 14px 22px; font-size: 14px;
-  max-width: calc(100vw - 36px);
-}
-
-/* ---------- Cart ---------- */
-.collection-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 400px; gap: 40px; align-items: start; }
-.cart-list { border: 1px solid var(--line-card); background: var(--bg-card); }
-.cart-row {
-  display: grid; grid-template-columns: 96px 1fr auto auto; gap: 20px;
-  align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--line-row);
-}
-.cart-row:last-child { border-bottom: none; }
-.cart-pic { display: block; width: 96px; height: 104px; background: var(--bg-muted); border: 1px solid var(--line-panel); }
-.cart-pic img { width: 100%; height: 100%; object-fit: cover; }
-.cart-name { font-size: 17px; font-weight: 500; }
-.cart-category { font-size: 13px; color: var(--muted); margin-top: 4px; }
-/* The same wish-field class is shared by product and collection views. */
-.wish-field { margin-top: 26px; }
-.wish-field textarea { resize: vertical; }
-.wish-hint { margin-top: 8px; font-size: 13px; color: var(--muted); }
-/* In a collection row, the wish belongs below that product name. */
-.cart-meta .wish-field { margin-top: 14px; max-width: 42ch; }
-.cart-price { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
-/* The explicit fourth column keeps remove links aligned when price is absent. */
-.cart-drop {
-  grid-column: 4;
-  background: none; border: none; padding: 6px 0; cursor: pointer;
-  font-family: inherit; font-size: 14px; color: var(--muted); text-decoration: underline;
-}
-.cart-drop:hover { color: var(--accent); }
-.collection-empty { margin-top: 40px; font-size: 17px; color: var(--body); }
+.inquiry-hint { font-size: var(--text-sm); color: var(--color-muted); }
 
 /* ---------- Footer (Ft1: Logo4 + tagline · mono contacts · legal line) ---------- */
 .foot { margin-top: var(--space-2xl); border-top: var(--rule-hair) solid var(--color-ink); }
@@ -465,8 +392,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   font-family: var(--font-outlier); font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--color-muted);
 }
 .foot__line { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); }
-.foot__line a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
-.foot__line a:hover { color: var(--color-accent); }
 
 /* ---------- Breadcrumbs ---------- */
 .crumbs { padding-top: var(--space-md); font-size: var(--text-xs); color: var(--color-muted); }
@@ -536,7 +461,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .fprice input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .filters__foot { display: grid; gap: var(--space-xs); padding-top: var(--space-sm); }
 .filters .apply { width: 100%; }
-.filters .reset-link { justify-self: start; font-size: var(--text-xs); color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset); }
+.filters .reset-link { justify-self: start; font-size: var(--text-xs); }
 
 .empty { display: grid; gap: var(--space-sm); justify-items: start; padding: var(--space-lg) 0; border-top: var(--rule-hair) solid var(--color-rule); }
 
@@ -611,75 +536,64 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .inquiry-panel > .muted { font-size: var(--text-sm); }
 .inquiry-items { list-style: none; border-top: var(--rule-hair) solid var(--color-rule); }
 .inquiry-items li { display: flex; align-items: start; justify-content: space-between; gap: var(--space-sm); }
-.inquiry-items span { display: grid; gap: var(--space-3xs); }
+.inquiry-items li > span { display: grid; gap: var(--space-3xs); }
 .inquiry-items small { font-family: var(--font-outlier); font-size: var(--text-xs); color: var(--color-muted); }
 .inquiry-remove {
   padding: 0; border: 0; background: none; cursor: pointer;
-  font: inherit; font-size: var(--text-sm); color: var(--color-muted);
-  text-decoration: underline var(--rule-hair); text-underline-offset: var(--underline-offset);
+  font-size: var(--text-xs); color: var(--color-muted);
 }
 .inquiry-remove:hover { color: var(--color-ink); }
 
-/* ---------- Static pages ---------- */
-.page { padding-top: 14px; }
-.page .overline { margin-bottom: 18px; }
-.page-lead { margin-top: 18px; font-size: 19px; line-height: 1.55; color: var(--body); max-width: 62ch; display: grid; gap: 14px; }
-.feature-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.feature { background: var(--bg-card); border: 1px solid var(--line-card); padding: 32px 30px; }
-.feature h3 { font-size: 21px; font-weight: 600; letter-spacing: -0.01em; }
-.feature p { margin-top: 12px; font-size: 15px; line-height: 1.55; color: var(--secondary); }
-.legal-note { margin-top: 40px; background: var(--bg-muted); border: 1px solid var(--line); padding: 36px 40px; }
-.legal-note h2, .page-note h2 { font-size: 21px; font-weight: 600; }
-.legal-note p, .page-note p { margin-top: 14px; color: var(--body); max-width: 70ch; }
-.page-note { margin-top: 40px; }
+/* ---------- Pages (lead in --measure, sections, no cards) ---------- */
+.page { display: grid; gap: var(--space-xl); padding-top: var(--space-lg); }
+.page__lead { display: grid; gap: var(--space-sm); max-width: var(--measure); font-size: var(--text-lg); line-height: 1.5; color: var(--color-ink-2); }
+.page__section { display: grid; gap: var(--space-xs); max-width: var(--measure); }
+.page__section p, .legal-note p, .legal-page li, .contacts__list dd { color: var(--color-ink-2); }
+.page__actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
+.legal-note { display: grid; gap: var(--space-xs); padding: var(--space-md); background: var(--color-paper-2); border-top: var(--rule-hair) solid var(--color-ink); }
+.legal-note p { max-width: var(--measure); }
 
-/* ---------- Error pages ---------- */
-/* Error pages share .page; the standalone 500 page carries its own styles. */
-.error-actions { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 14px; }
+/* The policy is the only page with long-form lists: a wider measure, sections as hairline rows. */
+.legal-page { --measure: var(--measure-legal); gap: 0; }
+.legal-page > .page__lead { padding-bottom: var(--space-lg); }
+.legal-page .page__section { max-width: none; padding: var(--space-md) 0; border-top: var(--rule-hair) solid var(--color-rule); }
+.legal-page p, .legal-page ul { max-width: var(--measure); }
+.legal-page ul { padding-left: var(--space-md); }
+.legal-page li { margin-top: var(--space-3xs); }
+.legal-page .seller-requisites, .legal-page .legal-contacts { padding-left: 0; }
 
-.contacts-grid { margin-top: 40px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px; align-items: start; }
-.contacts-info { display: grid; gap: 28px; }
-.contact-block h3 { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.contact-block p { margin-top: 10px; font-size: 17px; font-weight: 600; }
-.contact-block p.muted { font-size: 15px; font-weight: 400; }
-.contact-links { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
-.contact-links a { background: var(--ink); color: var(--bg); padding: 12px 22px; font-size: 14px; font-weight: 600; }
-.contact-links a:hover { background: var(--accent); color: var(--color-accent-ink); }
-.contacts-map { border: 1px solid var(--line-panel); background: var(--bg-muted); }
-.contacts-map iframe { display: block; width: 100%; height: 460px; border: 0; }
-.map-placeholder { height: 460px; display: grid; align-content: center; justify-items: center; gap: 18px; padding: 32px; text-align: center; }
-.map-placeholder p { color: var(--secondary); font-size: 15px; max-width: 40ch; }
-
-/* Grid preserves the owner-defined row order unlike CSS columns. */
-.works-grid { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.work { background: var(--bg-card); border: 1px solid var(--line-card); }
-/* Installation photos use a shared ratio to keep rows aligned. */
-.work .pic { position: relative; aspect-ratio: 4 / 3.2; background: var(--bg-muted); }
-.work img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.work figcaption { padding: 16px 20px 18px; font-size: 15px; font-weight: 500; }
-/* A work that names a mirror is a whole-tile link, like a catalogue card. */
-.work:has(.card-link):hover { border-color: var(--control); }
-.work .card-link { display: flex; flex-direction: column; height: 100%; }
-.work .card-link:focus-visible { outline-offset: calc(-1 * var(--rule-fine)); }
-.work-go { display: block; margin-top: 8px; font-size: 13px; font-weight: 400; color: var(--muted); }
-.work-note { display: block; margin-top: 8px; font-size: 14px; font-weight: 400; line-height: 1.5; color: var(--muted); }
-.work .card-link:hover .work-go { color: var(--control); }
-
-/* ---------- Legal sections ---------- */
-/* Seller details share the same presentation in the footer and contacts page. */
-.seller-requisites, .legal-contacts { list-style: none; display: grid; gap: 6px; margin-top: 14px; font-size: 14px; line-height: 1.5; }
-.seller-label { color: var(--muted); }
-.foot .seller-requisites { margin-top: 0; display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); font-size: inherit; line-height: inherit; }
-.foot .seller-label { color: inherit; }
+.seller-requisites, .legal-contacts { list-style: none; display: grid; gap: var(--space-3xs); font-family: var(--font-outlier); font-size: var(--text-sm); line-height: 1.5; }
+.seller-label { font-size: var(--text-xs); color: var(--color-muted); }
+.foot .seller-requisites { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); font-size: inherit; line-height: inherit; }
+.foot .seller-label { font-size: inherit; color: inherit; }
 
 .offer-note { margin-top: var(--space-lg); font-size: var(--text-xs); color: var(--color-muted); max-width: var(--measure); }
-.info .offer-note { margin-top: 0; }
+.info .offer-note, .page .offer-note { margin-top: 0; }
 
-/* The policy page is the only page with long-form lists. */
-.legal-page ul { margin-top: 14px; padding-left: 22px; color: var(--body); max-width: 70ch; }
-.legal-page li { margin-top: 6px; }
-.legal-page .legal-note a { border-bottom: 1px solid var(--control); }
-.legal-page .seller-requisites, .legal-page .legal-contacts { padding-left: 0; }
+/* ---------- Contacts (mono rows · map in a hairline frame) ---------- */
+.contacts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-xl); align-items: start; }
+.contacts__list { display: grid; border-top: var(--rule-hair) solid var(--color-ink); }
+.contacts__row { display: grid; gap: var(--space-2xs); padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+.contacts__list dt { font-size: var(--text-xs); color: var(--color-muted); }
+.contacts__list dd, .contacts__policy { font-family: var(--font-outlier); font-size: var(--text-sm); }
+.contacts__list .index { border-top: 0; }
+.contacts__list .index li:last-child { border-bottom: 0; }
+.contacts__policy { padding: var(--space-sm) 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
+.contacts__map { border: var(--rule-hair) solid var(--color-rule); background: var(--color-paper-2); }
+.contacts__map iframe { display: block; width: 100%; height: var(--map-height); border: 0; }
+.map-placeholder { height: var(--map-height); display: grid; align-content: center; justify-items: center; gap: var(--space-sm); padding: var(--space-lg); text-align: center; }
+.map-placeholder p { font-size: var(--text-sm); color: var(--color-ink-2); max-width: var(--measure-lede); }
+
+/* ---------- Works (3-up photographs, mono captions) ---------- */
+/* Grid, not columns: the owner's row order stays. */
+.works { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-lg) var(--space-sm); }
+.work .pic { position: relative; aspect-ratio: var(--photo-ratio); background: var(--color-paper-2); overflow: hidden; }
+.work img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.work figcaption { display: grid; gap: var(--space-3xs); padding-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-ink); }
+.work__note { font-family: var(--font-body); font-size: var(--text-sm); letter-spacing: 0; text-transform: none; color: var(--color-muted); }
+.work__go { color: var(--color-muted); }
+.work .card-link { display: block; color: var(--color-ink); }
+.work .card-link:hover .work__go { color: var(--color-ink); }
 
 /* The cookie banner overlays the page until the visitor answers: a dark block
    on the on-dark tokens, its edge in muted so it stays visible over ink too. */
@@ -704,10 +618,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .grid-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .layout { grid-template-columns: 240px minmax(0, 1fr); gap: var(--space-md); }
   .pdp { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
-  .collection-grid { grid-template-columns: 1fr; gap: 28px; }
   .gallery { position: static; }
-  .contacts-grid { grid-template-columns: 1fr; gap: 28px; }
-  .works-grid { grid-template-columns: 1fr 1fr; }
+  .contacts { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
+  .works { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* 900: five mono links with letter-spacing outgrow the row earlier than the
@@ -723,8 +636,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: var(--bento-row-narrow); }
   .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dark__grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); padding-top: var(--space-xl); padding-bottom: var(--space-xl); }
-  .steps li { grid-template-columns: 4ch minmax(0, 1fr); }
-  .steps p { grid-column: 2; }
+  .rows li { grid-template-columns: 4ch minmax(0, 1fr); }
+  .rows p { grid-column: 2; }
   .inquiry { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
   .layout { grid-template-columns: minmax(0, 1fr); }
   .only-mobile { display: flex; }
@@ -762,28 +675,20 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .price-now { font-size: var(--text-price-narrow); }
   .calc-fields { grid-template-columns: minmax(0, 1fr); }
 
-  .faq-item summary { font-size: 18px; padding: 18px 32px 18px 0; }
-  .faq-item summary::after { top: 16px; }
-  .faq-item p { padding-bottom: 20px; font-size: 15px; }
-
   .dark { margin-top: var(--space-xl); }
   .dark__grid { padding-top: var(--space-lg); padding-bottom: var(--space-lg); gap: var(--space-md); }
 
-  .cart-row { grid-template-columns: 72px 1fr; gap: 8px 16px; padding: 16px; }
-  .cart-pic { width: 72px; height: 80px; }
-  .cart-price, .cart-drop { grid-column: 2; justify-self: start; }
   .foot { margin-top: var(--space-lg); }
   .foot__inner { padding-top: var(--space-md); padding-bottom: var(--space-md); }
   .foot__brand img { height: 56px; }
   .foot__legal { flex-direction: column; }
 
-  .page-lead { font-size: 17px; }
-  .error-actions { display: grid; }
-  .feature-grid { grid-template-columns: 1fr; gap: 8px; }
-  .feature { padding: 24px 22px; }
-  .legal-note { padding: 26px 22px; }
-  .contacts-map iframe, .map-placeholder { height: 320px; }
-  .works-grid { grid-template-columns: 1fr; gap: 8px; }
+  .page { gap: var(--space-lg); padding-top: var(--space-md); }
+  .page__lead { font-size: var(--text-md); }
+  .page__actions { display: grid; }
+  .legal-note { padding: var(--space-sm); }
+  .contacts { --map-height: var(--map-height-narrow); }
+  .works { grid-template-columns: minmax(0, 1fr); gap: var(--space-md); }
   /* Section-era rule: page buttons stretch; the chrome's own buttons keep their size. */
   .btn { width: 100%; }
   .nav .btn, .head__row .btn { width: auto; }
