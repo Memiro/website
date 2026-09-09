@@ -1,11 +1,13 @@
 ---
 import CatalogCard from "../components/CatalogCard.astro";
 import CatalogTiles from "../components/CatalogTiles.astro";
+import IndexRow from "../components/IndexRow.astro";
 import OfferNote from "../components/OfferNote.astro";
 import InquiryForm from "../islands/InquiryForm.vue";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { internalCatalogApi, type Category, type ProductSummary } from "../lib/catalog-api.ts";
 import { businessJsonLd, organizationJsonLd } from "../lib/seo.ts";
+import { ordinal } from "../lib/ordinal.ts";
 import { readSite, socialLinks } from "../lib/site-api.ts";
 import { catalogTiles, type Tile } from "../lib/tiles.ts";
 
@@ -44,7 +46,7 @@ try {
 // Sections are numbered in render order, so the count stays continuous when
 // the catalogue blocks stay away.
 let sectionCount = 0;
-const sectionNumber = (): string => String(++sectionCount).padStart(2, "0");
+const sectionNumber = (): string => ordinal(++sectionCount);
 ---
 
 <BaseLayout
@@ -70,12 +72,12 @@ const sectionNumber = (): string => String(++sectionCount).padStart(2, "0");
     <div class="hero__media">
       <figure>
         <img src="/img/hero-1.jpg" alt="Арочное зеркало с контурной подсветкой в спальне" fetchpriority="high" />
-        <figcaption class="chip"><span class="n">Арка</span>с контурной подсветкой</figcaption>
+        <figcaption class="chip"><span class="chip__n">Арка</span>с контурной подсветкой</figcaption>
       </figure>
       {tiles.length > 0 && (
         <ul class="index" aria-label="Категории">
           {tiles.map((tile) => (
-            <li><a href={tile.href}><span>{tile.label}</span><span class="arrow" aria-hidden="true">→</span></a></li>
+            <IndexRow href={tile.href} label={tile.label} />
           ))}
         </ul>
       )}
@@ -141,7 +143,7 @@ const sectionNumber = (): string => String(++sectionCount).padStart(2, "0");
     <ol class="steps">
       {STEPS.map((step, index) => (
         <li>
-          <span class="steps__n">{String(index + 1).padStart(2, "0")}</span>
+          <span class="steps__n">{ordinal(index + 1)}</span>
           <h3>{step.title}</h3>
           <p>{step.text}</p>
         </li>
@@ -159,9 +161,9 @@ const sectionNumber = (): string => String(++sectionCount).padStart(2, "0");
         <p>Оставьте контакты — менеджер уточнит размеры, сроки и стоимость. Ответим в течение рабочего дня; оплаты и обязательств на сайте нет.</p>
         {(contacts !== null || social.length > 0) && (
           <ul class="index">
-            {contacts !== null && <li><a href={`tel:${contacts.phone}`}><span>{contacts.phone_display}</span><span class="arrow" aria-hidden="true">→</span></a></li>}
-            {contacts !== null && <li><a class="inquiry__mail" href={`mailto:${contacts.email}`}><span>{contacts.email}</span><span class="arrow" aria-hidden="true">→</span></a></li>}
-            {social.map((link) => <li><a href={link.value} target="_blank" rel="noopener"><span>{link.label}</span><span class="arrow" aria-hidden="true">→</span></a></li>)}
+            {contacts !== null && <IndexRow href={`tel:${contacts.phone}`} label={contacts.phone_display} />}
+            {contacts !== null && <IndexRow class="inquiry__mail" href={`mailto:${contacts.email}`} label={contacts.email} />}
+            {social.map((link) => <IndexRow href={link.value} label={link.label} external />)}
           </ul>
         )}
       </div>
