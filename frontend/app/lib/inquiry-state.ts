@@ -1,6 +1,7 @@
 import { pricePresentation } from "./calculator-state.ts";
 import type { CalculatorState, PricePresentation } from "./calculator-state.ts";
 import { asRecord } from "./http.ts";
+import { isVerdict } from "./catalog-api.ts";
 import type { AttributeSelection, PricingVerdict, ProductCard } from "./catalog-api.ts";
 
 export interface InquiryItem {
@@ -186,12 +187,17 @@ export function hasUnavailableItem(items: PreviewedItem[]): boolean {
 }
 
 // The words are the card's: a position that could not be priced there is
-// explained here in the same sentence, and the deltas stay on the card.
+// explained here in the same sentence, and the deltas stay on the card. The
+// one exception is the card's call to add the position — here it already is.
 export function previewedPricePresentation(item: PreviewedItem): PricePresentation | null {
   if (item.verdict === null) {
     return null;
   }
-  return pricePresentation({ verdict: item.verdict, total: item.price, selection_deltas: [] });
+  const presentation = pricePresentation({ verdict: item.verdict, total: item.price, selection_deltas: [] });
+  if (item.verdict === "SELECTION_NOT_PRICEABLE") {
+    return { ...presentation, message: "Цену такого сочетания назовёт менеджер." };
+  }
+  return presentation;
 }
 
 export function specificationLine(value: PreviewedValue): string {
@@ -217,7 +223,7 @@ export function isPreviewedItem(value: unknown): value is PreviewedItem {
     && typeof item.is_available === "boolean"
     && isNullableString(item.product_name)
     && isNullableString(item.price_from)
-    && isNullableString(item.verdict)
+    && (item.verdict === null || isVerdict(item.verdict))
     && isNullableString(item.price)
     && (item.configuration === null || isPreviewedConfiguration(item.configuration))
     && typeof item.wish === "string";

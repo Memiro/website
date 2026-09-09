@@ -121,9 +121,15 @@ async function loadPreview(): Promise<void> {
 
 function removeItem(index: number): void {
   items.value = removeInquiryItem(window.localStorage, items.value, index);
-  preview.value = preview.value?.filter((_, itemIndex) => itemIndex !== index) ?? null;
-  previewGeneration += 1;
   notifyInquiryChanged(window);
+  if (preview.value === null) {
+    // Nothing has landed yet: the request in flight would answer for the old
+    // rows, so it is dropped and a fresh one asks for the rows that remain.
+    void loadPreview();
+    return;
+  }
+  preview.value = preview.value.filter((_, itemIndex) => itemIndex !== index);
+  previewGeneration += 1;
 }
 
 function updateWish(index: number, event: Event): void {
