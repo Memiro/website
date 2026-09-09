@@ -22,7 +22,11 @@ def money_words(value: Money) -> str:
 def price_words(verdict: PricingVerdict, calculated_price: Money | None) -> str:
     """Say what the calculation did with the position, so the manager never reads a verdict code (rule 19)."""
     if calculated_price is None:
-        return _UNPRICED_WORDS[verdict]
+        words = _UNPRICED_WORDS.get(verdict)
+        if words is None:
+            msg = f"Verdict {verdict} priced the position, yet the snapshot holds no price"
+            raise RuntimeError(msg)
+        return words
     if verdict is PricingVerdict.HIDDEN:
         # Without the remark the manager would name a number the customer
         # has never seen as one already agreed on.
@@ -37,5 +41,8 @@ def size_words(dimensions: Dimensions) -> str:
 
 def specification_line(value: ConfigurationValue) -> str:
     """Spell one value of the specification as "attribute: value", a count standing in for a row."""
-    named = value.value_name if value.value_name is not None else format(value.quantity, "f")
-    return f"{value.attribute_name}: {named}"
+    if value.quantity is not None:
+        # The database keeps the count in its own scale ("2.5000"); the
+        # customer typed "2.5" and the manager reads it back the same way.
+        return f"{value.attribute_name}: {value.quantity.normalize():f}"
+    return f"{value.attribute_name}: {value.value_name}"
