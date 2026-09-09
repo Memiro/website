@@ -1,0 +1,55 @@
+/* Hallmark · tokens.css — source of truth for the Memiro storefront design system.
+ * Locked 2026-09-09 from studied DNA (see /design.md). Page CSS references these
+ * by name only; a colour or font that is not a token here does not exist. */
+
+:root {
+  /* Colour — modern-minimal register: white paper, near-black ink, one blue signal */
+  --color-paper:      oklch(100% 0 0);
+  --color-paper-2:    oklch(97%  0.002 250);
+  --color-paper-3:    oklch(94%  0.003 250);
+  --color-ink:        oklch(15%  0.005 250);
+  --color-ink-2:      oklch(32%  0.005 250);
+  --color-muted:      oklch(52%  0.006 250);
+  --color-neutral:    oklch(40%  0.005 250);
+  --color-rule:       oklch(88%  0.003 250);
+  --color-rule-2:     oklch(93%  0.002 250);
+  --color-accent:     oklch(38%  0.15  258);
+  --color-accent-ink: oklch(100% 0 0);
+  --color-focus:      oklch(48%  0.19  258);
+  --color-chip:       oklch(100% 0 0 / 0.96);
+  /* Dark blocks («О мастерской», cookie banner) invert ink and paper */
+  --color-on-dark:        oklch(96% 0.002 250);
+  --color-on-dark-2:      oklch(78% 0.004 250);
+  --color-on-dark-rule:   oklch(30% 0.005 250);
+
+  /* Type — two families plus a mono outlier for labels, prices and menu */
+  --font-display: "Golos Text", ui-sans-serif, system-ui, sans-serif;
+  --font-body:    "Golos Text", ui-sans-serif, system-ui, sans-serif;
+  --font-outlier: "JetBrains Mono", ui-monospace, monospace;
+
+  /* 4-pt spacing scale */
+  --space-3xs: 4px;   --space-2xs: 8px;   --space-xs: 12px;  --space-sm: 16px;
+  --space-md: 24px;   --space-lg: 40px;   --space-xl: 64px;  --space-2xl: 96px;
+  --space-3xl: 128px; --space-4xl: 192px;
+
+  /* Major-third (1.25) type scale — dense catalogue */
+  --text-xs: 12px;  --text-sm: 14px;  --text-md: 16px;  --text-lg: 20px;
+  --text-xl: 25px;  --text-2xl: 31px; --text-3xl: 39px;
+  --text-section: clamp(32px, 4.6vw, 64px);
+  --text-display: clamp(40px, 5.6vw, 84px);
+
+  /* Rules, radius, motion */
+  --rule-hair: 1px;
+  --rule-fine: 2px;
+  --radius-card: 0;  --radius-pill: 0;  --radius-input: 0;
+  --ease-out:    cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;  --dur-short: 240ms;  --dur-long: 400ms;
+
+  /* Layout */
+  --page-max: 1440px;
+  --page-gutter: clamp(16px, 3vw, 48px);
+  --nav-height: 64px;
+  --measure: 60ch;
+}
