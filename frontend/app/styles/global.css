@@ -160,13 +160,15 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .h-display { font-size: var(--text-display); line-height: 0.96; text-transform: uppercase; }
 .h-display .lead-word { color: var(--color-accent); }
 .h-section { font-size: var(--text-section); line-height: 1; text-transform: uppercase; }
-/* One mono-caps shape for every label, menu row and caption; size and colour differ per place. */
+/* Mono caps is the storefront's one voice for small type (design.md); every
+   label, menu row and caption inherits it here so no place drifts to its own
+   tracking or weight. Size and colour stay per place. */
 .label, .nav__link, .nav__count, .mobile-menu a, .foot__contacts {
   font-family: var(--font-outlier); font-weight: 500;
   letter-spacing: 0.06em; text-transform: uppercase;
 }
 .label { font-size: var(--text-xs); color: var(--color-muted); }
-.dark .label, .mobile-menu .label, .cookie-banner .label { color: var(--color-on-dark-2); }
+.dark .label { color: var(--color-on-dark-2); }
 .arrow { font-family: var(--font-outlier); font-weight: 500; }
 .overline {
   display: inline-flex; align-items: center; gap: 10px;
@@ -200,9 +202,12 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .btn--ghost:not(:disabled, [aria-disabled="true"]):hover { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
 .btn--ghost:not(:disabled, [aria-disabled="true"]):active { background: var(--color-ink-2); color: var(--color-paper); }
 .btn--sm { min-height: 36px; padding: 0 var(--space-sm); font-size: var(--text-xs); }
-/* Ghost on ink; .btn-on-dark is the home page's alias until ticket 03. */
-.dark .btn--ghost, .cookie-banner .btn--ghost, .btn-on-dark { background: transparent; color: var(--color-on-dark); border-color: var(--color-on-dark); }
-.dark .btn--ghost:not(:disabled, [aria-disabled="true"]):hover, .cookie-banner .btn--ghost:not(:disabled, [aria-disabled="true"]):hover, .btn-on-dark:not(:disabled, [aria-disabled="true"]):hover { background: var(--color-on-dark); color: var(--color-ink); border-color: var(--color-on-dark); }
+/* On ink the pair inverts: the primary rests paper-on-ink and hovers into the
+   base accent fill; the ghost draws its rule in paper. .btn-on-dark is the
+   home page's alias until ticket 03. */
+.btn--paper { background: var(--color-on-dark); border-color: var(--color-on-dark); color: var(--color-ink); }
+.btn--ghost-paper, .btn-on-dark { background: transparent; color: var(--color-on-dark); border-color: var(--color-on-dark); }
+.btn--ghost-paper:not(:disabled, [aria-disabled="true"]):hover, .btn-on-dark:not(:disabled, [aria-disabled="true"]):hover { background: var(--color-on-dark); color: var(--color-ink); border-color: var(--color-on-dark); }
 .link-underline { font-size: var(--text-sm); font-weight: 600; border-bottom: var(--rule-hair) solid var(--color-muted); padding-bottom: 4px; }
 
 /* ---------- Header (N1b: logo · mono links · phone + «Заявка») ---------- */
@@ -225,7 +230,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .nav__link:hover { color: var(--color-ink); }
 .nav__link[aria-current="page"] {
   color: var(--color-ink);
-  text-decoration: underline; text-decoration-thickness: var(--rule-hair); text-underline-offset: 6px;
+  text-decoration: underline var(--rule-hair); text-underline-offset: 6px;
 }
 .nav__link:active { color: var(--color-accent); }
 .nav__right { justify-self: end; display: flex; align-items: center; gap: var(--space-sm); }
@@ -255,7 +260,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .mobile-menu a:hover { color: var(--color-on-dark); }
 .mobile-menu a[aria-current="page"] {
   color: var(--color-on-dark);
-  text-decoration: underline; text-decoration-thickness: var(--rule-hair); text-underline-offset: 6px;
+  text-decoration: underline var(--rule-hair); text-underline-offset: 6px;
 }
 
 /* ---------- Hero ---------- */
@@ -446,7 +451,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   font-family: var(--font-outlier); font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--color-muted);
 }
 .foot__line { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); }
-.foot__line a { color: var(--color-ink); text-decoration: underline; text-decoration-thickness: var(--rule-hair); text-underline-offset: 3px; }
+.foot__line a { color: var(--color-ink); text-decoration: underline var(--rule-hair); text-underline-offset: 3px; }
 .foot__line a:hover { color: var(--color-accent); }
 
 /* ---------- Breadcrumbs ---------- */
@@ -644,13 +649,10 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   background: var(--color-ink); color: var(--color-on-dark);
   border: var(--rule-hair) solid var(--color-muted); padding: var(--space-md);
 }
-.cookie-text { flex: 1 1 320px; font-size: var(--text-sm); color: var(--color-on-dark-2); }
-.cookie-text a { color: var(--color-on-dark); border-bottom: var(--rule-hair) solid color-mix(in oklab, var(--color-on-dark) 45%, transparent); }
-.cookie-text a:hover { color: var(--color-on-dark-2); }
-.cookie-actions { display: flex; gap: var(--space-2xs); flex-wrap: wrap; }
-/* Paper ↔ ink inverted: the primary rests paper-on-ink and hovers into the base
-   accent fill; the ghost takes the shared on-dark rule above. */
-.cookie-banner .btn { background: var(--color-on-dark); border-color: var(--color-on-dark); color: var(--color-ink); }
+.cookie-banner__text { flex: 1 1 320px; font-size: var(--text-sm); color: var(--color-on-dark-2); }
+.cookie-banner__text a { color: var(--color-on-dark); border-bottom: var(--rule-hair) solid color-mix(in oklab, var(--color-on-dark) 45%, transparent); }
+.cookie-banner__text a:hover { color: var(--color-on-dark-2); }
+.cookie-banner__actions { display: flex; gap: var(--space-2xs); flex-wrap: wrap; }
 
 /* ---------- Tablet ---------- */
 @media (max-width: 1180px) {
@@ -677,7 +679,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .works-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* 900, not the pages' 960: five mono links with letter-spacing outgrow the row earlier than the old 15 px links did. */
+/* 900, not the pages' 960: five mono links with letter-spacing outgrow the row
+   earlier than the old 15 px links did. The footer folds at the same width so
+   the chrome switches to its mobile layout in one step. */
 @media (max-width: 900px) {
   .nav__inner { grid-template-columns: auto 1fr; }
   .nav__center { display: none; }
@@ -780,6 +784,6 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .btn { width: 100%; }
   .nav .btn { width: auto; }
   .cookie-banner { bottom: 0; left: 0; transform: none; width: 100%; padding: var(--space-sm) var(--pad); gap: var(--space-sm); }
-  .cookie-actions { width: 100%; }
+  .cookie-banner__actions { width: 100%; }
   .cookie-banner .btn { flex: 1; width: auto; }
 }

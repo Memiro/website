@@ -7,11 +7,12 @@ interface Props { site: Site; }
 const { site } = Astro.props;
 const contacts = site.contacts;
 const pathname = Astro.url.pathname;
-const links = HEADER_LINKS.map((link) => ({ ...link, isCurrent: isCurrentPath(pathname, link.href) }));
+type MenuLink = NavigationLink & { isCurrent?: boolean; external?: boolean };
+const links: MenuLink[] = HEADER_LINKS.map((link) => ({ ...link, isCurrent: isCurrentPath(pathname, link.href) }));
 // An unfilled contact draws no link: the storefront points nowhere.
-const phone: NavigationLink[] = contacts !== null && contacts.phone !== "" ? [{ href: `tel:${contacts.phone}`, label: contacts.phone_display }] : [];
-const messenger: NavigationLink[] = contacts !== null && contacts.max_link !== "" ? [{ href: contacts.max_link, label: "MAX" }] : [];
-const menuLinks = [...links, { ...INQUIRY_LINK, isCurrent: false }, ...phone.map((link) => ({ ...link, isCurrent: false })), ...messenger.map((link) => ({ ...link, isCurrent: false }))];
+const phone: MenuLink | null = contacts !== null && contacts.phone !== "" ? { href: `tel:${contacts.phone}`, label: contacts.phone_display } : null;
+const messenger: MenuLink | null = contacts !== null && contacts.max_link !== "" ? { href: contacts.max_link, label: "MAX", external: true } : null;
+const menuLinks = [...links, INQUIRY_LINK, phone, messenger].filter((link): link is MenuLink => link !== null);
 ---
 
 <header class="nav">
@@ -21,7 +22,7 @@ const menuLinks = [...links, { ...INQUIRY_LINK, isCurrent: false }, ...phone.map
       {links.map((link) => <a class="nav__link" href={link.href} aria-current={link.isCurrent ? "page" : undefined}>{link.label}</a>)}
     </nav>
     <div class="nav__right">
-      {phone.map((link) => <a class="nav__phone" href={link.href}>{link.label}</a>)}
+      {phone !== null && <a class="nav__phone" href={phone.href}>{phone.label}</a>}
       {/* Not a shopping cart: the site reserves nothing and takes no payment. */}
       <a class="btn btn--sm" href={INQUIRY_LINK.href}>
         {INQUIRY_LINK.label}
@@ -35,7 +36,7 @@ const menuLinks = [...links, { ...INQUIRY_LINK, isCurrent: false }, ...phone.map
   </div>
   <nav class="mobile-menu" id="mobile-menu" aria-label="Меню сайта" hidden>
     {menuLinks.map((link) => (
-      <a href={link.href} aria-current={link.isCurrent ? "page" : undefined} target={link.href.startsWith("http") ? "_blank" : undefined} rel={link.href.startsWith("http") ? "noopener" : undefined}>
+      <a href={link.href} aria-current={link.isCurrent ? "page" : undefined} target={link.external ? "_blank" : undefined} rel={link.external ? "noopener" : undefined}>
         {link.label}
         <span class="arrow" aria-hidden="true">→</span>
       </a>
