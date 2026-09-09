@@ -11,7 +11,6 @@ import { productPath } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { relatedProducts } from "../../../../lib/related.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
-import { productSpecs } from "../../../../lib/specs.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
@@ -25,7 +24,6 @@ const price = product === null || product.price_from === null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 const cover = product === null ? "" : coverImageUrl(product.image_keys);
 const thumbs = product === null ? [] : product.image_keys.map((key) => mediaUrl(key));
-const specs = product === null ? [] : productSpecs(product.attributes);
 const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
 const categoryName = category?.name ?? "Каталог";
 
@@ -103,12 +101,6 @@ const crumbs = product === null ? [] : [
         )}
         <Calculator client:visible product={product} />
         <OfferNote />
-        {specs.length > 0 && (
-          <div class="specs">
-            <h2>Характеристики</h2>
-            <dl>{specs.map((spec) => <div class="spec"><dt>{spec.name}</dt><dd>{spec.value}</dd></div>)}</dl>
-          </div>
-        )}
       </div>
     </div>
 
