@@ -45,3 +45,4 @@ node_modules/
 
 # Isolated local worktrees
 .worktrees/
+.hallmark/
