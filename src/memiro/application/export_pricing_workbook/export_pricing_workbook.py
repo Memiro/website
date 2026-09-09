@@ -29,7 +29,7 @@ from memiro_common.logger import Logger
 # surcharge. Together they show every bottom rule of the calculation at once.
 CHECKED_SIZES: tuple[tuple[int, int], ...] = ((400, 300), (800, 600), (1200, 700), (2300, 900))
 
-DEFAULT_NAME = "raschet.xlsx"
+DEFAULT_NAME = "calculator.xlsx"
 
 logger: Logger = structlog.get_logger(__name__)
 
@@ -89,7 +89,7 @@ class ExportPricingWorkbook:
         )
         return PricingWorkbookFile(
             content=self.renderer.render(source),
-            name=f"raschet-{product.slug}.xlsx" if product is not None else DEFAULT_NAME,
+            name=f"calculator-{product.slug}.xlsx" if product is not None else DEFAULT_NAME,
         )
 
     async def _product(self, product_id: ProductId | None) -> Product | None:
