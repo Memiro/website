@@ -1,6 +1,7 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import CatalogTiles from "../../components/CatalogTiles.astro";
+import EmptyState from "../../components/EmptyState.astro";
 import PageHead from "../../components/PageHead.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi } from "../../lib/catalog-api.ts";
@@ -21,6 +22,6 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/catalog/", lab
   <Breadcrumbs crumbs={crumbs} />
   <PageHead label={`${tiles.length} ${categoryPlural(tiles.length)}`} heading="Каталог зеркал" />
   <div class="wrap page-body">
-    {tiles.length > 0 ? <CatalogTiles tiles={tiles} /> : <p class="sub">Каталог наполняется — загляните позже.</p>}
+    {tiles.length > 0 ? <CatalogTiles tiles={tiles} /> : <EmptyState text="Каталог наполняется — загляните позже." href="/" action="На главную" />}
   </div>
 </BaseLayout>
