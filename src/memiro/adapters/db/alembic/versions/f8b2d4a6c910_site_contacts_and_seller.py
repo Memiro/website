@@ -32,11 +32,10 @@ _CONTACTS = {
     "max_link": "",
     "telegram": "https://t.me/memiro_shop",
     "vk": "https://vk.com/memirospb",
-    "map_embed": (
-        "https://yandex.ru/map-widget/v1/?um=constructor%3A"
-        "0d49dffecadc7ce7a218e08a0b62b35502b15e05faa72ecea01c3be9dea4a3f1"
-        "&source=constructor"
-    ),
+    # A plain widget pinned by coordinates, not a "constructor" map: a
+    # constructor pin lives in a Yandex account, nothing in the repository can
+    # move it, so the showroom coordinates sit in the URL itself.
+    "map_embed": "https://yandex.ru/map-widget/v1/?ll=30.328939%2C59.978593&z=17&pt=30.328939%2C59.978593%2Cpm2rdm",
 }
 
 
