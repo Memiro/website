@@ -192,7 +192,7 @@ def test_a_fractional_numeric_selection_is_charged_as_its_exact_quantity() -> No
 
     assert quotation == Quotation(
         verdict=PricingVerdict.PRICED,
-        total=Money(amount=Decimal(300)),
+        total=Money(amount=Decimal(250)),
         breakdown=(quotation_line(CUTOUTS, CUTOUT, "2.5", ("100", Unit.PIECE, "250")),),
     )
 

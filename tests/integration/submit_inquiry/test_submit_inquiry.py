@@ -134,12 +134,12 @@ async def test_a_customer_submits_multiple_configured_mirrors_in_one_inquiry(
     stored = _by_wish(inquiry.items)
     # Mirror of price_product in entities/pricing/pricing_service.py, by hand
     # from the owner's workbook: 0.48 m2 x 4500 + 2.8 lm x 2200 + 500 = 8 820
-    # -> 8 900, and 0.81 m2 x 7000 + 3.6 lm x 2200 + 500 = 14 090 -> 14 100.
+    # and 0.81 m2 x 7000 + 3.6 lm x 2200 + 500 = 14 090.
     assert stored == [
         _snapshot(
             stored[0].id,
             configuration=_configuration(800, 600),
-            calculated_price=Money(Decimal(8900)),
+            calculated_price=Money(Decimal(8820)),
             wish="",
         ),
         _snapshot(
@@ -149,7 +149,7 @@ async def test_a_customer_submits_multiple_configured_mirrors_in_one_inquiry(
                 900,
                 ConfigurationValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),
             ),
-            calculated_price=Money(Decimal(14100)),
+            calculated_price=Money(Decimal(14090)),
             wish="Warm light",
         ),
     ]
@@ -177,7 +177,7 @@ async def test_an_inquiry_keeps_the_configuration_and_price_it_was_shown(
 
     assert inquiry is not None
     # Mirror of price_product in entities/pricing/pricing_service.py, by hand:
-    # 0.48 m2 x 7000 + 2.8 lm x 2200 + 500 = 10 020 -> 10 100.
+    # 0.48 m2 x 7000 + 2.8 lm x 2200 + 500 = 10 020.
     assert inquiry.items[0] == _snapshot(
         inquiry.items[0].id,
         configuration=_configuration(
@@ -185,7 +185,7 @@ async def test_an_inquiry_keeps_the_configuration_and_price_it_was_shown(
             600,
             ConfigurationValue(attribute_name="Тип полотна", value_name="Графит", quantity=None),
         ),
-        calculated_price=Money(Decimal(10100)),
+        calculated_price=Money(Decimal(10020)),
         wish="Warm light",
     )
 
@@ -205,7 +205,7 @@ async def test_a_customer_orders_a_mirror_with_the_number_of_cut_outs_he_typed(
 
     assert inquiry is not None
     # Mirror of price_product in entities/pricing/pricing_service.py, by hand:
-    # 2.5 pieces x 100 = 250 -> 300, with the demo minimum order lifted.
+    # 2.5 pieces x 100 = 250, with the demo minimum order lifted.
     assert inquiry.items[0] == InquiryItem(
         id=inquiry.items[0].id,
         product_id=PRODUCT,
@@ -216,7 +216,7 @@ async def test_a_customer_orders_a_mirror_with_the_number_of_cut_outs_he_typed(
             600,
             ConfigurationValue(attribute_name="Вырезы", value_name=None, quantity=Decimal("2.5")),
         ),
-        calculated_price=Money(Decimal(300)),
+        calculated_price=Money(Decimal(250)),
         verdict=PricingVerdict.PRICED,
         wish="",
     )

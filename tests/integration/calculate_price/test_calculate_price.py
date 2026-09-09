@@ -64,12 +64,12 @@ def _form(**overrides: object) -> CalculatePriceForm:
 
 
 async def test_a_customer_sees_the_price_the_workbook_shows(api_client: ApiClient) -> None:
-    """The canonical case of the xlsx workbook answers 8 900 RUB with the verdict PRICED."""
+    """The canonical case of the xlsx workbook answers 8 820 RUB with the verdict PRICED."""
     response = await api_client.calculate(_form())
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(8900),
+        total=Decimal(8820),
         selection_deltas=[],
     )
 
@@ -88,12 +88,12 @@ async def test_a_mirror_costs_more_from_the_first_size_surcharge_threshold(
     at = at_response.assert_status(200).ensure_content()
     assert below == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(18800),
+        total=Decimal(18753),
         selection_deltas=[],
     )
     assert at == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(20300),
+        total=Decimal(20245),
         selection_deltas=[],
         size_surcharge_from_long_side_mm=2200,
     )
@@ -105,11 +105,11 @@ async def test_a_customer_sees_what_a_darker_blade_adds(api_client: ApiClient) -
 
     response = await api_client.calculate(_form(selections=[selection]))
 
-    # 0.48 m2 x 7000 + 2.8 lm x 2200 + 500 = 10 020 -> 10 100; the blade
+    # 0.48 m2 x 7000 + 2.8 lm x 2200 + 500 = 10 020; the blade
     # itself costs (7000 - 4500) x 0.48 m2 = 1 200 more than the default.
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(10100),
+        total=Decimal(10020),
         selection_deltas=[SelectionDelta(attribute_id=BLADE, value_id=GRAPHITE, delta=Decimal(1200))],
     )
 
@@ -118,7 +118,7 @@ async def test_a_curved_cut_is_paid_by_the_blade_alone(
     api_client: ApiClient,
     engine: AsyncEngine,
 ) -> None:
-    """A round mirror with a tape answers 15 000 RUB: the factor takes the blade, not the backlight."""
+    """A round mirror with a tape answers 14 968 RUB: the factor takes the blade, not the backlight."""
     await prime_complete_heating_declaration(engine)
     round_mirror = [
         Selection(attribute_id=SHAPE, value_id=ROUND),
@@ -128,12 +128,12 @@ async def test_a_curved_cut_is_paid_by_the_blade_alone(
 
     response = await api_client.calculate(_form(width_mm=900, height_mm=900, selections=round_mirror))
 
-    # 0.81 m2 x 4500 x 1.5 + 3.6 lm x 2500 + 500 = 14 967.50 -> 15 000. The
+    # 0.81 m2 x 4500 x 1.5 + 3.6 lm x 2500 + 500 = 14 967.50 -> 14 968. The
     # round shape costs the blade its own 0.81 x 4500 x 0.5 = 1 822.50; the
     # frame and the tape the mirror gained or lost are their own lines.
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(15000),
+        total=Decimal(14968),
         selection_deltas=[
             SelectionDelta(attribute_id=SHAPE, value_id=ROUND, delta=Decimal("1822.500")),
             SelectionDelta(attribute_id=FRAME, value_id=NO_FRAME, delta=Decimal("-11880.00")),
@@ -151,13 +151,13 @@ async def test_a_darker_blade_on_a_curved_cut_carries_the_factor(api_client: Api
 
     response = await api_client.calculate(_form(width_mm=900, height_mm=900, selections=round_and_dark))
 
-    # (0.81 m2 x 7000 + 3.6 lm x 2200) x 1.5 + 500 = 20 885 -> 20 900. The
+    # (0.81 m2 x 7000 + 3.6 lm x 2200) x 1.5 + 500 = 20 885. The
     # blade's own share is (7000 - 4500) x 0.81 m2 x 1.5 = 3 037.50: the choice
     # is priced inside the configuration the customer is looking at, curved cut
     # included. Dropping the round shape would leave 14 090, hence 6 795.
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(20900),
+        total=Decimal(20885),
         selection_deltas=[
             SelectionDelta(attribute_id=SHAPE, value_id=ROUND, delta=Decimal("6795.00")),
             SelectionDelta(attribute_id=BLADE, value_id=GRAPHITE, delta=Decimal("3037.50")),
@@ -198,7 +198,7 @@ async def test_an_absence_marked_parent_leaves_its_undeclared_child_out_of_prici
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(8900),
+        total=Decimal(8820),
         selection_deltas=[],
     )
 
@@ -231,7 +231,7 @@ async def test_a_customer_choice_that_makes_a_parent_absent_ignores_its_child(
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(8900),
+        total=Decimal(8820),
         selection_deltas=[
             SelectionDelta(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT, delta=Decimal(-7000)),
         ],
@@ -250,7 +250,7 @@ async def test_an_absent_selected_parent_removes_its_paid_child_from_the_price(
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(8900),
+        total=Decimal(8820),
         selection_deltas=[
             SelectionDelta(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT, delta=Decimal(-10500)),
         ],
@@ -272,7 +272,7 @@ async def test_an_inapplicable_selected_child_is_absent_from_public_deltas(
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(8900),
+        total=Decimal(8820),
         selection_deltas=[
             SelectionDelta(attribute_id=BACKLIGHT, value_id=NO_BACKLIGHT, delta=Decimal(-10500)),
         ],
@@ -294,7 +294,7 @@ async def test_rotated_dimensions_use_the_long_and_short_production_limits(
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(8900),
+        total=Decimal(8820),
         selection_deltas=[],
     )
 
@@ -331,7 +331,7 @@ async def test_a_fractional_numeric_quantity_is_priced_exactly(
 
     assert response.assert_status(200).ensure_content() == CalculatedPrice(
         verdict=PricingVerdict.PRICED,
-        total=Decimal(300),
+        total=Decimal(250),
         selection_deltas=[SelectionDelta(attribute_id=CUTOUTS, value_id=None, delta=Decimal(150))],
     )
 

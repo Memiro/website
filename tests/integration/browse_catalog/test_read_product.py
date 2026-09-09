@@ -49,10 +49,10 @@ OWNER_ORDERED_VARIANTS = [
     ProductVariant(
         width_mm=800,
         height_mm=600,
-        price=Decimal(2700),
+        price=Decimal(2660),
         overrides=[VariantOverride(attribute_id=FRAME, value_id=NO_FRAME, quantity=None)],
     ),
-    ProductVariant(width_mm=800, height_mm=600, price=Decimal(8900), overrides=[]),
+    ProductVariant(width_mm=800, height_mm=600, price=Decimal(8820), overrides=[]),
 ]
 
 
@@ -181,7 +181,7 @@ async def test_a_card_lists_the_variants_in_the_order_the_owner_gave_them(
     """The cheaper variant the owner put first arrives first, and the card's price starts at it."""
     assert (await api_client.read_product("zerkalo-v-rame")).assert_status(
         status.HTTP_200_OK
-    ).ensure_content() == _expected_card(price_from=Decimal(2700), variants=OWNER_ORDERED_VARIANTS)
+    ).ensure_content() == _expected_card(price_from=Decimal(2660), variants=OWNER_ORDERED_VARIANTS)
 
 
 async def test_a_hidden_calculated_price_keeps_the_precalculated_variants_visible(
@@ -194,7 +194,7 @@ async def test_a_hidden_calculated_price_keeps_the_precalculated_variants_visibl
 
     assert (await api_client.read_product("zerkalo-v-rame")).assert_status(
         status.HTTP_200_OK
-    ).ensure_content() == _expected_card(price_from=Decimal(2700), variants=OWNER_ORDERED_VARIANTS)
+    ).ensure_content() == _expected_card(price_from=Decimal(2660), variants=OWNER_ORDERED_VARIANTS)
 
 
 async def test_a_card_names_the_kind_of_an_attribute_the_customer_types_a_number_into(

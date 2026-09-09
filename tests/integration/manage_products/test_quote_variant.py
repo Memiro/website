@@ -36,7 +36,7 @@ async def test_the_owner_sees_the_price_of_a_variant_he_has_not_saved_yet(
         QuoteVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
     )
 
-    assert quoted == QuotedVariant(price=Decimal(8900))
+    assert quoted == QuotedVariant(price=Decimal(8820))
 
 
 async def test_the_quoted_price_is_the_price_the_variant_is_saved_with(

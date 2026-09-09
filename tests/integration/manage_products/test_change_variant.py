@@ -104,7 +104,7 @@ async def test_the_owner_changes_a_variant_and_its_derived_product_price(app: Fa
         product = await gateway.get(PRODUCT, eager_variants=True)
     assert product is not None
 
-    assert product.price_from == Money(amount=Decimal(13700))
+    assert product.price_from == Money(amount=Decimal(13620))
     assert product.variants == (
         Variant(
             original.id,
@@ -113,7 +113,7 @@ async def test_the_owner_changes_a_variant_and_its_derived_product_price(app: Fa
                 height=Millimeters(value=800),
             ),
             overrides=(),
-            price=Money(amount=Decimal(13700)),
+            price=Money(amount=Decimal(13620)),
             sort_order=5,
         ),
     )
@@ -142,37 +142,37 @@ async def test_concurrent_changes_preserve_variant_uniqueness(app: FastAPI) -> N
         first.id,
         dimensions=Dimensions(width=Millimeters(value=1600), height=Millimeters(value=900)),
         overrides=(),
-        price=Money(amount=Decimal(18000)),
+        price=Money(amount=Decimal(17980)),
         sort_order=0,
     )
     first_original = Variant(
         first.id,
         dimensions=Dimensions(width=Millimeters(value=800), height=Millimeters(value=600)),
         overrides=(),
-        price=Money(amount=Decimal(8900)),
+        price=Money(amount=Decimal(8820)),
         sort_order=0,
     )
     second_target = Variant(
         second.id,
         dimensions=Dimensions(width=Millimeters(value=1600), height=Millimeters(value=900)),
         overrides=(),
-        price=Money(amount=Decimal(18000)),
+        price=Money(amount=Decimal(17980)),
         sort_order=0,
     )
     second_original = Variant(
         second.id,
         dimensions=Dimensions(width=Millimeters(value=1200), height=Millimeters(value=800)),
         overrides=(),
-        price=Money(amount=Decimal(13700)),
+        price=Money(amount=Decimal(13620)),
         sort_order=0,
     )
     expected_product_states = {
         first.id: (
-            Money(amount=Decimal(13700)),
+            Money(amount=Decimal(13620)),
             ((first_target, second_original), (second_original, first_target)),
         ),
         second.id: (
-            Money(amount=Decimal(8900)),
+            Money(amount=Decimal(8820)),
             ((first_original, second_target), (second_target, first_original)),
         ),
     }

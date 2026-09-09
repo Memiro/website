@@ -44,7 +44,7 @@ from tests.common.factory.catalog import (
 # down, and a size beyond the production bounds arrives without a total.
 CHECK_ANSWERS: tuple[tuple[tuple[int, int], Decimal | None], ...] = (
     ((400, 300), Decimal(4200)),
-    ((800, 600), Decimal(8900)),
+    ((800, 600), Decimal(8820)),
     ((1200, 700), Decimal(13500)),
     ((2300, 900), None),
 )
@@ -208,7 +208,7 @@ def test_the_check_sheet_shows_exactly_what_the_engine_answered() -> None:
     sheet = _rendered(_source(product=demo_product(), checks=checks))[CHECK]
 
     written = [sheet.cell(row=row, column=3).value for row in range(DATA_START, DATA_START + len(checks))]
-    assert written == [Decimal(4200), Decimal(8900), Decimal(13500), "За производственными границами"]
+    assert written == [Decimal(4200), Decimal(8820), Decimal(13500), "За производственными границами"]
 
 
 def test_a_book_without_a_product_says_why_it_has_nothing_to_check() -> None:

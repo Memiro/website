@@ -61,7 +61,7 @@ async def test_a_committed_inquiry_uses_the_enabled_port_configured_smtp_channel
     assert "Графит" in received_emails[0]
     assert "Warm light" in received_emails[0]
     assert "PRICED" in received_emails[0]
-    assert "10 100" in received_emails[0]
+    assert "10 020" in received_emails[0]
 
 
 async def test_a_switched_off_channel_sends_nothing(

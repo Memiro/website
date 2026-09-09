@@ -42,7 +42,7 @@ APP = "memiro"
 CHANGELIST_URL = f"/admin/{APP}/product/"
 # The workbook price of the demo product at 800 × 600, as the owner reads it:
 # the thousands and the sign stand apart on narrow no-break spaces.
-WORKBOOK_PRICE = "8\u202f900\u202f₽"
+WORKBOOK_PRICE = "8\u202f820\u202f₽"
 PANEL_SCRIPT = Path(variant_builder.__file__).parent / "static" / "memiro" / "js" / "admin-variant-builder.js"
 # What is left of a price label once its typography is taken away.
 _ONLY_DIGITS = {ord(character): None for character in "\u202f₽ "}
@@ -168,7 +168,7 @@ async def test_the_storefront_price_stays_with_the_cheapest_of_the_added_variant
 
     await owner_client.post(_save_url(PRODUCT), _panel_post(width_mm=1200, height_mm=900, sort_order=1))
 
-    assert (await _products().aget(id=PRODUCT)).price_from == Decimal(8900)
+    assert (await _products().aget(id=PRODUCT)).price_from == Decimal(8820)
 
 
 async def test_the_storefront_price_follows_the_cheapest_variant_off_the_product(
@@ -291,7 +291,7 @@ async def test_the_panel_answers_nobody_who_is_not_signed_in() -> None:
 
 def test_a_whole_sum_is_written_without_kopecks() -> None:
     """Thousands stand apart and a whole sum carries no kopecks at all (§12.4)."""
-    written = variant_builder.money_label(Decimal("8900.00"))
+    written = variant_builder.money_label(Decimal("8820.00"))
 
     assert written == WORKBOOK_PRICE
 
