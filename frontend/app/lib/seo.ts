@@ -187,7 +187,8 @@ export function organizationJsonLd(site: URL | undefined): OrganizationDocument 
     "@type": "Organization",
     name: SITE_NAME,
     url: absoluteUrl(site, "/") ?? undefined,
-    logo: absoluteUrl(site, "/img/logo.png") ?? undefined,
+    // Logo4 (437×112) is the shortest kit lockup that meets the 112 px minimum for Organization.logo.
+    logo: absoluteUrl(site, "/img/logo/logo4-black.svg") ?? undefined,
   };
 }
 
