@@ -16,7 +16,12 @@ from memiro.application.browse_catalog import (
 )
 from memiro.application.calculate_price import CalculatedPrice, CalculatePriceForm
 from memiro.application.read_site import SiteModel
-from memiro.application.submit_inquiry import CreatedInquiry, SubmitInquiryForm
+from memiro.application.submit_inquiry import (
+    CreatedInquiry,
+    InquiryPreview,
+    PreviewInquiryForm,
+    SubmitInquiryForm,
+)
 from memiro.presentation.fast_api.error_handlers import ErrorResponse
 from memiro.presentation.fast_api.routers.health import HealthStatus
 
@@ -129,6 +134,11 @@ class ApiClient:
     async def read_product(self, slug: str) -> ApiResponse[ProductModel]:
         """Read one public product card by its slug."""
         return ApiResponse(await self._client.get(f"/catalog/products/{slug}"), TypeAdapter(ProductModel))
+
+    async def preview_inquiry(self, data: PreviewInquiryForm) -> ApiResponse[InquiryPreview]:
+        """Ask what a selection would be stored as, without storing it."""
+        response = await self._client.post("/inquiries/preview", json=data.model_dump(mode="json"))
+        return ApiResponse(response, TypeAdapter(InquiryPreview))
 
     async def submit_inquiry(self, data: SubmitInquiryForm) -> ApiResponse[CreatedInquiry]:
         """Submit one visitor inquiry."""

@@ -24,7 +24,7 @@ test("the inquiry island submits its selection through the public inquiry route"
     receivedPath = incoming.url ?? "";
     receivedBody = JSON.parse(await readBody(incoming));
     response.setHeader("content-type", "application/json");
-    response.end(JSON.stringify({ id: "24df5b9a-4d51-4f39-b4f2-5c94c2e3b8b2" }));
+    response.end(JSON.stringify({ id: "24df5b9a-4d51-4f39-b4f2-5c94c2e3b8b2", items: [] }));
   });
   await new Promise((resolve) => server.listen(0, () => resolve(undefined)));
   t.after(() => server.close());
@@ -41,6 +41,7 @@ test("the inquiry island submits its selection through the public inquiry route"
   assert.deepEqual(receivedBody, request);
   assert.deepEqual(response, {
     id: "24df5b9a-4d51-4f39-b4f2-5c94c2e3b8b2",
+    items: [],
   });
 });
 

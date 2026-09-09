@@ -33,6 +33,15 @@ def carries_total(verdict: PricingVerdict) -> bool:
     return verdict in _VERDICTS_WITH_TOTAL
 
 
+def customer_price(verdict: PricingVerdict, total: Money | None) -> Money | None:
+    """Give the sum the storefront may name: a hidden price and a refusal name none (ADR-0008).
+
+    The one gate for the calculator, the preview of an inquiry and the
+    summary after it: what the card did not name, no other page names.
+    """
+    return total if verdict is PricingVerdict.PRICED else None
+
+
 @dataclass(frozen=True, slots=True)
 class QuotationLine:
     """One line of the calculation: a dictionary value, its consumption, its tariff and the sum."""
@@ -78,6 +87,4 @@ class Quotation:
 
     def customer_total(self) -> Money | None:
         """Give the total the storefront may name: a hidden price and a refusal name none (ADR-0008)."""
-        if self.verdict is not PricingVerdict.PRICED:
-            return None
-        return self.settled_total()
+        return customer_price(self.verdict, self.total)
