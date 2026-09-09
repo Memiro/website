@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from tests.common.factory.catalog import LEGACY_INQUIRY, PRODUCT, SPECIFIED_INQUIRY
 from tests.integration.prime import prime_legacy_inquiry, prime_specified_inquiry
 
-pytestmark = pytest.mark.usefixtures("admin_site")
+pytestmark = pytest.mark.usefixtures("admin_site", "primed_inquiries")
 
 APP = "memiro"
 INQUIRY_CARD_URL = f"/admin/{APP}/inquiry/{SPECIFIED_INQUIRY}/change/"
@@ -33,7 +33,6 @@ async def primed_inquiries(admin_database_url: str, primed_catalog: None) -> Asy
 
 async def test_the_owner_opens_an_inquiry_card_with_the_positions_inlined(
     owner_client: AsyncClient,
-    primed_inquiries: None,  # noqa: ARG001
 ) -> None:
     """The card shows the contacts and every position with its specification, price and wish."""
     response = await owner_client.get(INQUIRY_CARD_URL)
@@ -53,7 +52,6 @@ async def test_the_owner_opens_an_inquiry_card_with_the_positions_inlined(
 
 async def test_a_hidden_price_and_a_refused_choice_read_in_the_words_of_the_email(
     owner_client: AsyncClient,
-    primed_inquiries: None,  # noqa: ARG001
 ) -> None:
     """A HIDDEN price is marked as unseen by the customer and a refusal is named in words, never by code."""
     response = await owner_client.get(INQUIRY_CARD_URL)
@@ -68,7 +66,6 @@ async def test_a_hidden_price_and_a_refused_choice_read_in_the_words_of_the_emai
 
 async def test_a_position_of_a_removed_product_reads_without_a_link_to_it(
     owner_client: AsyncClient,
-    primed_inquiries: None,  # noqa: ARG001
 ) -> None:
     """A position keeps its name after its product is gone; only positions of a living product link to its card."""
     response = await owner_client.get(INQUIRY_CARD_URL)
@@ -80,7 +77,6 @@ async def test_a_position_of_a_removed_product_reads_without_a_link_to_it(
 
 async def test_an_inquiry_stored_before_the_whole_specification_opens_as_it_was(
     owner_client: AsyncClient,
-    primed_inquiries: None,  # noqa: ARG001
 ) -> None:
     """An old inquiry with only the chosen value on its position opens and shows that value alone (rule 21)."""
     response = await owner_client.get(LEGACY_CARD_URL)
@@ -94,7 +90,6 @@ async def test_an_inquiry_stored_before_the_whole_specification_opens_as_it_was(
 
 async def test_the_owner_is_offered_no_form_to_edit_an_inquiry(
     owner_client: AsyncClient,
-    primed_inquiries: None,  # noqa: ARG001
 ) -> None:
     """The card is a reading: nothing on it is an input and nothing saves."""
     response = await owner_client.get(INQUIRY_CARD_URL)
@@ -106,12 +101,12 @@ async def test_the_owner_is_offered_no_form_to_edit_an_inquiry(
 
 async def test_the_inquiry_list_still_narrows_by_source_and_date(
     owner_client: AsyncClient,
-    primed_inquiries: None,  # noqa: ARG001
 ) -> None:
     """The changelist keeps its filters next to the card."""
-    response = await owner_client.get(f"/admin/{APP}/inquiry/?source=SELECTION")
+    response = await owner_client.get(f"/admin/{APP}/inquiry/?source__exact=SELECTION")
 
     page = response.content.decode()
     assert response.status_code == HTTPStatus.OK
     assert "Мария" in page
-    assert "created_at" in page
+    assert "?source__exact=FREE_FORM" in page
+    assert "created_at__gte=" in page

@@ -30,11 +30,10 @@ from django.urls import URLPattern, path, reverse
 from django.utils.html import format_html
 
 from memiro.adapters.common.inquiry_wording import price_words, size_words, specification_line
-from memiro.adapters.db.types import InquiryConfigurationPayload, inquiry_configuration_from_payload
 from memiro.application.common.input_limits import MAX_ATTRIBUTE_VALUES, MAX_SIZE_SURCHARGES
 from memiro.application.manage_products import PricingGapsModel
 from memiro.entities.common.identifiers import ProductId
-from memiro.entities.inquiry.entity import InquiryConfiguration, InquirySource
+from memiro.entities.inquiry.entity import InquirySource
 from memiro.entities.pricing.pricing_settings import PRICING_SETTINGS_ID
 from memiro.entities.pricing.quotation import PricingVerdict
 from memiro.presentation.django_admin.attribute_card import create_attribute, remove_attribute, restate_attribute
@@ -732,7 +731,7 @@ class PricingSettingsAdmin(GuardsItsForm, admin.ModelAdmin):
 
 
 class InquiryItemInline(ReadOnlyInline):
-    """Позиции заявки: спецификация, цена и пожелание — снимком, как в письме менеджеру."""
+    """The positions of an inquiry from their snapshots, in the words of the manager email."""
 
     model = InquiryItem
     fields = (
@@ -747,6 +746,7 @@ class InquiryItemInline(ReadOnlyInline):
         "size",
         "specification",
         "price",
+        "wish",
     )
     verbose_name = "позиция"
     verbose_name_plural = "Позиции"
@@ -765,13 +765,13 @@ class InquiryItemInline(ReadOnlyInline):
     @admin.display(description="Размер")
     def size(self, obj: Model) -> str:
         """Spell the size the customer typed, or nothing for a position without a configuration."""
-        configuration = _stored_configuration(cast("InquiryItem", obj))
+        configuration = cast("InquiryItem", obj).configuration_snapshot()
         return "" if configuration is None else size_words(configuration.dimensions)
 
     @admin.display(description="Спецификация")
     def specification(self, obj: Model) -> str:
         """Print the specification a line per value, the way the manager email prints it."""
-        configuration = _stored_configuration(cast("InquiryItem", obj))
+        configuration = cast("InquiryItem", obj).configuration_snapshot()
         if configuration is None:
             return ""
         return format_html(
@@ -783,12 +783,6 @@ class InquiryItemInline(ReadOnlyInline):
         """Say what the calculation did with the position in the words of the manager email."""
         item = cast("InquiryItem", obj)
         return price_words(PricingVerdict(item.verdict), item.calculated_price_money())
-
-
-def _stored_configuration(item: "InquiryItem") -> InquiryConfiguration | None:
-    """Rebuild the stored snapshot through the domain constructors, so a corrupted row never renders quietly."""
-    payload = cast("InquiryConfigurationPayload | None", item.configuration)
-    return None if payload is None else inquiry_configuration_from_payload(payload)
 
 
 @admin.register(Inquiry)
