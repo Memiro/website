@@ -132,7 +132,7 @@ onMounted(() => {
     </div>
     <div v-if="canShowInquiryEditor" class="inquiry-item-editor">
       <label v-if="settledPrice?.kind === 'wish'" class="field"><span>Ваше пожелание</span><textarea v-model="wish" required rows="3" placeholder="Расскажите, каким должен быть этот размер" /></label>
-      <button class="btn btn-primary inquiry-add" :disabled="!canAddToInquiry" type="button" @click="void addToInquiry()">Добавить в заявку</button>
+      <button class="btn inquiry-add" :disabled="!canAddToInquiry" type="button" @click="void addToInquiry()">Добавить в заявку <span class="arrow" aria-hidden="true">→</span></button>
     </div>
     <section v-if="items.length > 0 || submitResult !== null" class="inquiry-panel" aria-live="polite">
       <template v-if="items.length > 0">
@@ -149,7 +149,7 @@ onMounted(() => {
           <label class="field"><span>Телефон</span><input v-model="phone" required autocomplete="tel" inputmode="tel" /></label>
           <label class="field"><span>Email</span><input v-model="email" type="email" autocomplete="email" /></label>
           <label class="consent"><input v-model="consent" type="checkbox" required /><span>Согласен на <a href="/privacy/" target="_blank" rel="noopener">обработку персональных данных</a></span></label>
-          <button class="btn btn-primary inquiry-submit" :disabled="isSubmitting" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }}</button>
+          <button class="btn inquiry-submit" :disabled="isSubmitting" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }} <span class="arrow" aria-hidden="true">→</span></button>
         </form>
       </template>
       <p v-if="submitResult !== null" class="inquiry-note" :class="{ error: submitResult.isError }">{{ submitResult.text }}</p>

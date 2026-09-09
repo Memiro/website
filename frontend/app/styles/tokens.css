@@ -41,6 +41,9 @@
   /* Rules, radius, motion */
   --rule-hair: 1px;
   --rule-fine: 2px;
+  --photo-ratio: 1 / 1.08;
+  --opacity-disabled: 0.55;
+  --opacity-recount: 0.45;
   --radius-card: 0;  --radius-pill: 0;  --radius-input: 0;
   --ease-out:    cubic-bezier(0.165, 0.84, 0.44, 1);
   --ease-in:     cubic-bezier(0.7, 0, 0.84, 0);
@@ -58,4 +61,7 @@
   --tap-target: 48px;
   --bento-row: clamp(150px, 16vw, 240px);
   --bento-row-narrow: clamp(140px, 30vw, 220px);
+  --thumb-size: 72px;
+  /* The product price on a narrow screen (decision 9, ADR-0004) sits between the 2xl and 3xl steps. */
+  --text-price-narrow: 34px;
 }

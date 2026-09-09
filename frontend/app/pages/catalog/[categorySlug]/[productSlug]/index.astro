@@ -8,11 +8,17 @@ import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
 import { coverImageUrl, mediaUrl } from "../../../../lib/media.ts";
 import { productPath } from "../../../../lib/navigation.ts";
+import { ordinal } from "../../../../lib/ordinal.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
 import { productSpecs } from "../../../../lib/specs.ts";
 
 const RELATED_SIZE = 4;
+const PROMISES = [
+  "Своё производство — цена без посредников",
+  "Изготовление от 1 рабочего дня, срок зависит от сложности",
+  "Доставка и монтаж по Санкт-Петербургу и области",
+];
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
 const productSlug = Astro.params.productSlug ?? "";
@@ -27,6 +33,7 @@ const cover = product === null ? "" : coverImageUrl(product.image_keys);
 const thumbs = product === null ? [] : product.image_keys.map((key) => mediaUrl(key));
 const specs = product === null ? [] : productSpecs(product.attributes);
 const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
+const categoryName = category?.name ?? "Каталог";
 
 let related: ProductSummary[] = [];
 if (product !== null) {
@@ -37,7 +44,7 @@ if (product !== null) {
 const crumbs = product === null ? [] : [
   { href: "/", label: "Главная" },
   { href: "/catalog/", label: "Каталог" },
-  { href: `/catalog/${categorySlug}/`, label: category?.name ?? "Каталог" },
+  { href: `/catalog/${categorySlug}/`, label: categoryName },
   { href: productPath(categorySlug, product.slug), label: product.name },
 ];
 ---
@@ -65,7 +72,8 @@ const crumbs = product === null ? [] : [
   >
     <Breadcrumbs crumbs={crumbs} />
     <div class="pdp wrap">
-      <div class={thumbs.length > 1 ? "gallery" : "gallery solo"}>
+      <div class="gallery">
+        <div class="gallery__main"><img data-gallery-main src={cover} alt={product.name} /></div>
         {thumbs.length > 1 && (
           <div class="thumbs">
             {thumbs.map((source, index) => (
@@ -75,13 +83,15 @@ const crumbs = product === null ? [] : [
             ))}
           </div>
         )}
-        <div class="main"><img data-gallery-main src={cover} alt={product.name} /></div>
       </div>
       <div class="info">
-        <h1>{product.name}</h1>
-        <div class="desc"><p>{product.description}</p></div>
+        <header class="info__head">
+          <p class="label">{categoryName}</p>
+          <h1>{product.name}</h1>
+          <p class="info__desc">{product.description}</p>
+        </header>
         {price !== null && (
-          <div class="price-row"><span class="price-now">от {price} ₽</span><span class="price-note">цена минимальной конфигурации</span></div>
+          <div class="info__price"><span class="price-now">от {price} ₽</span><span class="price-note">цена минимальной конфигурации</span></div>
         )}
         {product.variants.length > 0 && (
           <div class="variants">
@@ -91,7 +101,7 @@ const crumbs = product === null ? [] : [
                 {product.variants.map((variant) => (
                   <tr>
                     <th scope="row">{variant.width_mm} × {variant.height_mm} мм</th>
-                    <td class="variant-price">{new Intl.NumberFormat("ru-RU").format(Number(variant.price))} ₽</td>
+                    <td>{new Intl.NumberFormat("ru-RU").format(Number(variant.price))} ₽</td>
                   </tr>
                 ))}
               </tbody>
@@ -106,20 +116,23 @@ const crumbs = product === null ? [] : [
             <dl>{specs.map((spec) => <div class="spec"><dt>{spec.name}</dt><dd>{spec.value}</dd></div>)}</dl>
           </div>
         )}
-        <div class="promises">
-          <div class="promise"><span class="n">01</span> Своё производство — цена без посредников</div>
-          <div class="promise"><span class="n">02</span> Изготовление от 1 рабочего дня, срок зависит от сложности</div>
-          <div class="promise"><span class="n">03</span> Доставка и монтаж по Санкт-Петербургу и области</div>
-        </div>
+        <ul class="promises">
+          {PROMISES.map((promise, index) => (
+            <li><span class="promises__n">{ordinal(index + 1)}</span>{promise}</li>
+          ))}
+        </ul>
       </div>
     </div>
 
     {related.length > 0 && (
-      <section class="wrap section">
-        <div class="section-head">
-          <h2 class="h-section">Похожие зеркала</h2>
-          <a class="link-underline" href={`/catalog/${categorySlug}/`}>Весь раздел →</a>
-        </div>
+      <section class="wrap" aria-labelledby="related-heading">
+        <header class="head">
+          <p class="label">Ещё в разделе</p>
+          <div class="head__row">
+            <h2 id="related-heading">Похожие зеркала</h2>
+            <a class="btn btn--ghost btn--sm" href={`/catalog/${categorySlug}/`}>Весь раздел</a>
+          </div>
+        </header>
         <div class="carousel grid-4">{related.map((item) => <CatalogCard categorySlug={categorySlug} product={item} />)}</div>
       </section>
     )}
