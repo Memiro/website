@@ -39,7 +39,7 @@ async def test_the_owner_takes_the_workbook_of_a_named_product(container: AsyncC
     exported = await _exported(container, ExportPricingWorkbookForm(product_id=PRODUCT))
 
     workbook = load_workbook(BytesIO(exported.content))
-    assert exported.name == "raschet-zerkalo-v-rame.xlsx"
+    assert exported.name == "calculator-zerkalo-v-rame.xlsx"
     assert CHECK in workbook.sheetnames
 
 
@@ -58,7 +58,7 @@ async def test_the_owner_takes_the_workbook_of_a_section_without_naming_a_produc
     """A section is enough for a book: it is the dictionary that is being tinkered with."""
     exported = await _exported(container, ExportPricingWorkbookForm(category_id=CATEGORY))
 
-    assert exported.name == "raschet.xlsx"
+    assert exported.name == "calculator.xlsx"
     assert exported.content[:2] == b"PK"
 
 
