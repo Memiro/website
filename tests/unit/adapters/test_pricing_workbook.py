@@ -13,17 +13,23 @@ from memiro.adapters.xlsx.pricing_workbook import (
     CHECK,
     DATA_START,
     DICTIONARY,
+    INPUT,
+    MONEY,
+    RATE_COLUMN,
     SETTINGS,
+    SURCHARGE,
     TABLE_START,
     OpenpyxlPricingWorkbookRenderer,
 )
-from memiro.application.common.gateway.workbook import CheckedSize, PricingWorkbookSource
+from memiro.application.common.pricing_workbook import CheckedSize, PricingWorkbookSource
 from memiro.entities.catalog.attribute.entity import Attribute
 from memiro.entities.catalog.attribute.rate import Unit
 from memiro.entities.catalog.product.entity import Product
 from memiro.entities.common.measure import Dimensions, Millimeters
-from memiro.entities.pricing.pricing_service import ROUNDING_STEP, price_product
+from memiro.entities.common.money import Money
+from memiro.entities.pricing.pricing_service import ROUNDING_STEP
 from memiro.entities.pricing.pricing_settings import PricingSettings
+from memiro.entities.pricing.quotation import PricingVerdict, Quotation
 from tests.common.factory.catalog import (
     demo_attributes,
     demo_cutouts,
@@ -33,7 +39,15 @@ from tests.common.factory.catalog import (
     demo_size_surcharge,
 )
 
-CHECKED = ((400, 300), (800, 600), (1200, 700), (2300, 900))
+# What the engine answered on the check sizes, spelled out rather than
+# recomputed (§14.6.7): the renderer's contract is to write those answers
+# down, and a size beyond the production bounds arrives without a total.
+CHECK_ANSWERS: tuple[tuple[tuple[int, int], Decimal | None], ...] = (
+    ((400, 300), Decimal(4200)),
+    ((800, 600), Decimal(8900)),
+    ((1200, 700), Decimal(13500)),
+    ((2300, 900), None),
+)
 
 # What the numeric product declares: two cut-outs, hardcoded the way an
 # expected value is (§14.6.7).
@@ -61,25 +75,16 @@ def _rendered(source: PricingWorkbookSource) -> Workbook:
     return load_workbook(BytesIO(OpenpyxlPricingWorkbookRenderer().render(source)))
 
 
-def _checked_by_the_engine(
-    product: Product, attributes: list[Attribute], settings: PricingSettings
-) -> tuple[CheckedSize, ...]:
-    """Price the check sizes with the single implementation of the calculation."""
-    sizes = tuple(
-        Dimensions(width=Millimeters(value=width), height=Millimeters(value=height)) for width, height in CHECKED
-    )
+def _checks() -> tuple[CheckedSize, ...]:
+    """Hand the renderer the engine's answers on the check sizes."""
     return tuple(
         CheckedSize(
-            dimensions=dimensions,
-            quotation=price_product(
-                product=product,
-                attributes=attributes,
-                settings=settings,
-                dimensions=dimensions,
-                selections={},
-            ),
+            dimensions=Dimensions(width=Millimeters(value=width), height=Millimeters(value=height)),
+            quotation=None
+            if total is None
+            else Quotation(verdict=PricingVerdict.PRICED, total=Money(amount=total), breakdown=()),
         )
-        for dimensions in sizes
+        for (width, height), total in CHECK_ANSWERS
     )
 
 
@@ -198,17 +203,12 @@ def test_a_numeric_row_is_charged_by_its_own_dictionary_row() -> None:
 
 def test_the_check_sheet_shows_exactly_what_the_engine_answered() -> None:
     """The check sheet is the engine's own totals: a book that disagrees with them is the defect."""
-    attributes = demo_attributes()
-    settings = demo_settings(size_surcharges=[demo_size_surcharge()])
-    product = demo_product()
-    checks = _checked_by_the_engine(product, attributes, settings)
+    checks = _checks()
 
-    sheet = _rendered(_source(attributes=attributes, product=product, settings=settings, checks=checks))[CHECK]
+    sheet = _rendered(_source(product=demo_product(), checks=checks))[CHECK]
 
     written = [sheet.cell(row=row, column=3).value for row in range(DATA_START, DATA_START + len(checks))]
-    assert written == [
-        checked.quotation.total.amount for checked in checks if checked.quotation and checked.quotation.total
-    ]
+    assert written == [Decimal(4200), Decimal(8900), Decimal(13500), "За производственными границами"]
 
 
 def test_a_book_without_a_product_says_why_it_has_nothing_to_check() -> None:
@@ -231,3 +231,36 @@ def test_the_book_holds_the_sheet(sheet_name: str) -> None:
     workbook = _rendered(_source(product=demo_product()))
 
     assert sheet_name in workbook.sheetnames
+
+
+def test_a_dependent_row_is_applicable_by_the_rule_the_engine_uses() -> None:
+    """The engine asks whether the parent's own value is present, never whether the parent itself applied."""
+    attributes = demo_attributes()
+
+    sheet = _rendered(_source(attributes=attributes, product=demo_product()))[CALCULATION]
+
+    rows = {sheet.cell(row=row, column=1).value: row for row in range(TABLE_START, TABLE_START + len(attributes))}
+    formula = str(sheet.cell(row=rows["Подогрев"], column=9).value)
+    assert f"$C{rows['Подсветка']}" in formula
+    assert f"$I{rows['Подсветка']}" not in formula
+
+
+def test_the_tariff_of_a_dictionary_row_is_written_as_money() -> None:
+    """A tariff the owner is meant to raise is a sum, and the column it sits in says so."""
+    sheet = _rendered(_source())[DICTIONARY]
+
+    assert sheet.cell(row=DATA_START, column=RATE_COLUMN).number_format == MONEY
+
+
+def test_the_numbers_the_owner_twiddles_are_marked_as_input() -> None:
+    """Raising a tariff and moving a surcharge threshold is the point of the book, so those cells look typeable."""
+    workbook = _rendered(_source())
+
+    twiddled = (
+        workbook[DICTIONARY].cell(row=DATA_START, column=RATE_COLUMN),
+        workbook[SETTINGS]["B4"],
+        workbook[SURCHARGE].cell(row=DATA_START, column=1),
+        workbook[SURCHARGE].cell(row=DATA_START, column=2),
+    )
+
+    assert [cell.fill for cell in twiddled] == [INPUT] * len(twiddled)

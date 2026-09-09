@@ -6,6 +6,7 @@ import structlog
 from dishka import AsyncContainer
 from django.contrib import messages
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from memiro.application.export_pricing_workbook import (
     ExportPricingWorkbook,
@@ -19,6 +20,7 @@ from memiro_common.logger import Logger
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 ONE_AT_A_TIME = "Книга собирается по одному разделу: отметьте один и повторите."
+ADMIN_INDEX = "/admin/"
 
 logger: Logger = structlog.get_logger(__name__)
 
@@ -49,6 +51,10 @@ async def _exported(scope: AsyncContainer, form: ExportPricingWorkbookForm) -> P
 
 
 def _back_to(request: HttpRequest) -> str:
-    """Send a refused download back to the screen it was asked from."""
-    referer = request.META.get("HTTP_REFERER")
-    return referer or "/admin/"
+    """Send a refused download back to the screen it was asked from, and never off this site."""
+    referer: str | None = request.META.get("HTTP_REFERER")
+    if referer is not None and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return referer
+    return ADMIN_INDEX

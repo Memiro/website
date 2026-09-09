@@ -10,7 +10,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
 
 from memiro.adapters.xlsx.labels import NO, UNIT_LABELS, YES, key_of
-from memiro.application.common.gateway.workbook import PricingWorkbookRenderer, PricingWorkbookSource
+from memiro.application.common.pricing_workbook import PricingWorkbookRenderer, PricingWorkbookSource
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
 from memiro.entities.catalog.attribute.entity import Attribute, AttributeKind, AttributeValue
 from memiro.entities.catalog.attribute.rate import Unit
@@ -87,6 +87,14 @@ class _Line:
     row: int
 
 
+@dataclass(frozen=True, slots=True)
+class _Ranges:
+    """Where the dictionary of the book lives, in the terms its formulas use."""
+
+    lookup: str
+    values: dict[AttributeId, str]
+
+
 class OpenpyxlPricingWorkbookRenderer(PricingWorkbookRenderer):
     """openpyxl-based implementation of ``PricingWorkbookRenderer``."""
 
@@ -108,14 +116,6 @@ class OpenpyxlPricingWorkbookRenderer(PricingWorkbookRenderer):
         stream = BytesIO()
         workbook.save(stream)
         return stream.getvalue()
-
-
-@dataclass(frozen=True, slots=True)
-class _Ranges:
-    """Where the dictionary of the book lives, in the terms its formulas use."""
-
-    lookup: str
-    values: dict[AttributeId, str]
 
 
 def _title(sheet: Worksheet, cell: str, text: str, size: int = 16) -> None:
@@ -161,7 +161,7 @@ def _input(sheet: Worksheet, row: int, value: str | int | Decimal, number_format
 
 
 def _derived(sheet: Worksheet, row: int, value: str | int | Decimal, number_format: str) -> None:
-    """Write a cell the book computes for itself, or a bound it was handed."""
+    """Write a cell the book computes for itself."""
     cell = sheet.cell(row=row, column=2, value=value)
     cell.number_format = number_format
     cell.font = Font(size=11, color=INK)
@@ -224,7 +224,9 @@ def _dictionary_row(sheet: Worksheet, row: int, attribute: Attribute, value: Att
         cell = sheet.cell(row=row, column=column, value=content)
         cell.border = BOX
         cell.font = Font(size=10, color=INK)
-    sheet.cell(row=row, column=RATE_COLUMN + 1).number_format = FACTOR if value.rate.unit is Unit.FACTOR else MONEY
+    rate = sheet.cell(row=row, column=RATE_COLUMN)
+    rate.number_format = FACTOR if value.rate.unit is Unit.FACTOR else MONEY
+    rate.fill = INPUT
 
 
 def _settings_sheet(sheet: Worksheet, settings: PricingSettings) -> None:
@@ -241,7 +243,7 @@ def _settings_sheet(sheet: Worksheet, settings: PricingSettings) -> None:
     )
     for row, (label, value, number_format) in enumerate(bounds, start=4):
         _label(sheet, row, label)
-        _derived(sheet, row, value, number_format)
+        _input(sheet, row, value, number_format)
 
 
 def _surcharge_sheet(sheet: Worksheet, settings: PricingSettings) -> str | None:
@@ -254,8 +256,10 @@ def _surcharge_sheet(sheet: Worksheet, settings: PricingSettings) -> str | None:
     for row, tier in enumerate(tiers, start=DATA_START):
         threshold = sheet.cell(row=row, column=1, value=tier.from_long_side_mm.value)
         threshold.border = BOX
+        threshold.fill = INPUT
         factor = sheet.cell(row=row, column=2, value=tier.factor)
         factor.border = BOX
+        factor.fill = INPUT
         factor.number_format = FACTOR
     if not tiers:
         _note(sheet, f"A{DATA_START}", "Ступеней нет: крупный размер стоит столько же, сколько обычный.")
@@ -371,12 +375,10 @@ def _default_of(
     *,
     named: bool,
 ) -> str | int | Decimal:
-    """Say what the row opens on: the product's declaration, or the first value when no product was named.
-
-    An attribute the named product never declared opens empty on purpose: the
-    engine prices no such attribute either, and a value invented here would
-    make the book dearer than the site.
-    """
+    """Say what the row opens on: the product's declaration, or the first value when no product was named."""
+    # An attribute the named product never declared opens empty on purpose:
+    # the engine prices no such attribute either, and a value invented here
+    # would make the book dearer than the site.
     if chosen is not None:
         if attribute.kind is AttributeKind.NUMBER:
             return chosen.quantity if chosen.quantity is not None else 0
@@ -443,7 +445,7 @@ def _applies_formula(line: _Line, lines: Sequence[_Line], ranges: _Ranges) -> st
     if not parents:
         return YES
     present = ",".join(
-        f'AND($I{parent}="{YES}",IFERROR(VLOOKUP($D{parent},{ranges.lookup},{ABSENCE_COLUMN},FALSE),"{NO}")<>"{YES}")'
+        f'AND($C{parent}<>"",IFERROR(VLOOKUP($D{parent},{ranges.lookup},{ABSENCE_COLUMN},FALSE),"{NO}")<>"{YES}")'
         for parent in parents
     )
     return f'=IF(OR({present}),"{YES}","{NO}")'
@@ -511,7 +513,10 @@ def _guide_sheet(sheet: Worksheet) -> None:
         ),
         (
             "Жёлтые ячейки",
-            "Всё, что вводится руками: размеры и выбор покупателя. Остальное — формулы, их лучше не трогать.",
+            (
+                "Всё, что правится руками: размеры и выбор покупателя на «Расчёте», тарифы «Справочника», границы "
+                "«Параметров расчёта» и ступени «Наценки за размер». Остальное — формулы, их лучше не трогать."
+            ),
         ),
         ("", ""),
         (
