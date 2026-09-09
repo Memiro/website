@@ -16,6 +16,7 @@ const isLoaded = ref(false);
 const name = ref("");
 const phone = ref("");
 const email = ref("");
+const comment = ref("");
 const consent = ref(false);
 const isSubmitting = ref(false);
 const result = ref<{ text: string; isError: boolean } | null>(null);
@@ -39,10 +40,11 @@ async function send(): Promise<void> {
       phone: phone.value,
       email: email.value,
       consent: consent.value,
-    }));
+    }, comment.value));
     items.value = [];
     saveInquiryItems(window.localStorage, items.value);
     notifyInquiryChanged(window);
+    comment.value = "";
     result.value = { text: "Спасибо! Заявка отправлена, менеджер свяжется с вами.", isError: false };
   } catch (error) {
     result.value = {
@@ -85,6 +87,7 @@ onMounted(() => {
         <label class="field"><span>Ваше имя *</span><input v-model="name" required minlength="2" maxlength="120" autocomplete="name" /></label>
         <label class="field"><span>Телефон *</span><input v-model="phone" required type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00" /></label>
         <label class="field"><span>E-mail</span><input v-model="email" type="email" maxlength="254" autocomplete="email" /></label>
+        <label class="field"><span>Комментарий</span><textarea v-model="comment" rows="3" maxlength="2000" /></label>
         <label class="consent"><input v-model="consent" type="checkbox" required /><span>Я даю <a href="/privacy/#consent" target="_blank" rel="noopener">согласие на обработку персональных данных</a> и принимаю <a href="/privacy/" target="_blank" rel="noopener">политику обработки персональных данных</a></span></label>
         <p v-if="items.length === 0" class="inquiry-hint">Добавьте зеркало из каталога — заявка уедет менеджеру вместе с ним.</p>
         <button class="btn inquiry-submit" :disabled="isSubmitting || items.length === 0" type="submit">{{ isSubmitting ? "Отправляем…" : "Отправить заявку" }} <span class="arrow" aria-hidden="true">→</span></button>

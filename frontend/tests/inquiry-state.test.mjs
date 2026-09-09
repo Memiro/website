@@ -144,6 +144,14 @@ class MapStorage {
   }
 }
 
+test("a selection inquiry carries the comment typed next to the contacts", () => {
+  const item = { productId: "mirror", productName: "Зеркало Loft", widthMm: 600, heightMm: 800, selections: [], wish: "", isWish: false };
+
+  const request = selectionInquiry([item], { name: "Анна", phone: "+79990000000", email: "", consent: true }, "Нужно к пятнице");
+
+  assert.equal(request.comment, "Нужно к пятнице");
+});
+
 test("a free-form inquiry carries a comment and no items", () => {
   const request = freeFormInquiry({ name: "Аня", phone: "+79990000000", email: "", consent: true }, "Нужна арка");
 
