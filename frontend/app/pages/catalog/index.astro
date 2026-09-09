@@ -1,8 +1,10 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import CatalogTiles from "../../components/CatalogTiles.astro";
+import PageHead from "../../components/PageHead.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi } from "../../lib/catalog-api.ts";
+import { categoryPlural } from "../../lib/plural.ts";
 import { itemListJsonLd } from "../../lib/seo.ts";
 import { catalogTiles } from "../../lib/tiles.ts";
 
@@ -17,10 +19,8 @@ const crumbs = [{ href: "/", label: "Главная" }, { href: "/catalog/", lab
   jsonLd={[itemListJsonLd(Astro.site, tiles)].filter((document) => document !== null)}
 >
   <Breadcrumbs crumbs={crumbs} />
-  <div class="wrap">
-    <div class="cat-head"><h1>Каталог зеркал</h1></div>
-  </div>
-  <div class="wrap section" style="padding-top: 40px;">
+  <PageHead label={`${tiles.length} ${categoryPlural(tiles.length)}`} heading="Каталог зеркал" />
+  <div class="wrap page-body">
     {tiles.length > 0 ? <CatalogTiles tiles={tiles} /> : <p class="sub">Каталог наполняется — загляните позже.</p>}
   </div>
 </BaseLayout>

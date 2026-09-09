@@ -1,0 +1,14 @@
+---
+interface Props { label: string; heading: string; count?: string; }
+const { label, heading, count } = Astro.props;
+---
+
+<div class="wrap">
+  <header class="head head--page">
+    <p class="label">{label}</p>
+    <div class="head__row">
+      <h1 class="h-section">{heading}</h1>
+      {count !== undefined && <span class="head__count">{count}</span>}
+    </div>
+  </header>
+</div>

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { productPlural } from "../app/lib/plural.ts";
+import { categoryPlural, productPlural } from "../app/lib/plural.ts";
 
 test("a single product is counted in the singular", () => {
   assert.equal(productPlural(1), "товар");
@@ -18,4 +18,17 @@ test("the teens are counted in the plural despite their last digit", () => {
 
 test("an empty category is counted in the plural", () => {
   assert.equal(productPlural(0), "товаров");
+});
+
+test("a single category is counted in the singular", () => {
+  assert.equal(categoryPlural(1), "категория");
+});
+
+test("two to four categories take the genitive singular", () => {
+  assert.equal(categoryPlural(4), "категории");
+});
+
+test("five categories and the teens are counted in the plural", () => {
+  assert.equal(categoryPlural(6), "категорий");
+  assert.equal(categoryPlural(11), "категорий");
 });
