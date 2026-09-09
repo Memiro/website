@@ -4,12 +4,24 @@ import CatalogTiles from "../components/CatalogTiles.astro";
 import OfferNote from "../components/OfferNote.astro";
 import InquiryForm from "../islands/InquiryForm.vue";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { internalCatalogApi, type ProductSummary } from "../lib/catalog-api.ts";
+import { internalCatalogApi, type Category, type ProductSummary } from "../lib/catalog-api.ts";
 import { businessJsonLd, organizationJsonLd } from "../lib/seo.ts";
 import { readSite, socialLinks } from "../lib/site-api.ts";
 import { catalogTiles, type Tile } from "../lib/tiles.ts";
 
 const SHOWCASE_SIZE = 4;
+const ADVANTAGES = [
+  "Своё производство — цена без посредников",
+  "Зеркало по вашему эскизу",
+  "Комплектующие проверенных производителей",
+  "Доставка и монтаж по городу",
+];
+const STEPS = [
+  { title: "Выбор", text: "Выбираете зеркало в каталоге или присылаете свой эскиз. Размер и опции обсуждаются под вашу задачу." },
+  { title: "Согласование", text: "Менеджер уточняет детали, подтверждает размеры, сроки и итоговую стоимость." },
+  { title: "Изготовление", text: "Делаем зеркало в собственной мастерской — от 1 рабочего дня. Срок зависит от сложности, точный называет менеджер." },
+  { title: "Доставка и монтаж", text: "Привозим и вешаем сами: аккуратно, с уровнем и крепежом под вашу стену." },
+];
 const api = internalCatalogApi();
 const site = await readSite();
 const contacts = site.contacts;
@@ -18,17 +30,21 @@ const social = contacts === null ? [] : socialLinks(contacts);
 // The storefront survives an API that is down: the home page is still the
 // studio's front door, and its content blocks simply stay away.
 let tiles: Tile[] = [];
-let showcase: { categorySlug: string; product: ProductSummary }[] = [];
+let showcase: { category: Category; products: ProductSummary[] } | null = null;
 try {
   tiles = await catalogTiles(api);
   const [first] = (await api.categories()).items;
   if (first !== undefined) {
-    const products = (await api.categoryProducts(first.slug)).items;
-    showcase = products.slice(0, SHOWCASE_SIZE).map((product) => ({ categorySlug: first.slug, product }));
+    showcase = { category: first, products: (await api.categoryProducts(first.slug)).items.slice(0, SHOWCASE_SIZE) };
   }
 } catch {
   tiles = [];
 }
+
+// Sections are numbered in render order, so the count stays continuous when
+// the catalogue blocks stay away.
+let sectionCount = 0;
+const sectionNumber = (): string => String(++sectionCount).padStart(2, "0");
 ---
 
 <BaseLayout
@@ -37,83 +53,117 @@ try {
   jsonLd={[businessJsonLd(Astro.site, contacts), organizationJsonLd(Astro.site)]}
 >
   <section class="wrap hero">
-    <div>
-      <span class="overline">Собственное производство · Санкт-Петербург</span>
-      <h1 class="h-display">Зеркала на заказ<br /><span class="lead-word">любой</span> сложности</h1>
-      <p class="sub">Быстро и качественно изготовим и установим зеркало любой сложности, даже если другие компании отказались.</p>
-      <div class="hero-cta"><a class="btn btn-primary" href="/catalog/">Смотреть каталог</a></div>
-      <div class="hero-stats"><div><div class="n">2021</div><div class="c">год основания</div></div><div><div class="n">1000+</div><div class="c">довольных клиентов</div></div><div><div class="n">под ключ</div><div class="c">от замера до монтажа</div></div></div>
+    <div class="hero__text">
+      <p class="label">Мастерская зеркал · Санкт-Петербург · с 2021</p>
+      <h1>Зеркала на заказ <span class="accent">любой</span> сложности</h1>
+      <p class="lede">Быстро и качественно изготовим и установим зеркало любой сложности, даже если другие компании отказались.</p>
+      <div class="hero__actions">
+        <a class="btn" href="/catalog/">В каталог <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn btn--ghost" href="#inquiry">По своему эскизу</a>
+      </div>
+      <div class="hero__facts">
+        <div><b>от 1 раб. дня</b><span class="label">изготовление</span></div>
+        <div><b>1 год</b><span class="label">гарантия</span></div>
+        <div><b>с 2021</b><span class="label">собственное производство</span></div>
+      </div>
     </div>
-    <div class="hero-pics"><img src="/img/hero-1.jpg" alt="Арочное зеркало с контурной подсветкой в спальне" fetchpriority="high" /><img src="/img/hero-2.jpg" alt="Зеркало-месяц с подсветкой" loading="lazy" /><img src="/img/hero-3.jpg" alt="Фигурное зеркало-капля с подсветкой" loading="lazy" /></div>
+    <div class="hero__media">
+      <figure>
+        <img src="/img/hero-1.jpg" alt="Арочное зеркало с контурной подсветкой в спальне" fetchpriority="high" />
+        <figcaption class="chip"><span class="n">Арка</span>с контурной подсветкой</figcaption>
+      </figure>
+      {tiles.length > 0 && (
+        <ul class="index" aria-label="Категории">
+          {tiles.map((tile) => (
+            <li><a href={tile.href}><span>{tile.label}</span><span class="arrow" aria-hidden="true">→</span></a></li>
+          ))}
+        </ul>
+      )}
+    </div>
   </section>
 
-  <section class="strip"><div class="wrap strip-row"><div class="strip-item"><span class="n">01</span> Своё производство — цена без посредников</div><div class="strip-item"><span class="n">02</span> Зеркало по вашему эскизу</div><div class="strip-item"><span class="n">03</span> Комплектующие проверенных производителей</div><div class="strip-item"><span class="n">04</span> Доставка и монтаж по городу</div></div></section>
+  <div class="ticker" aria-hidden="true">
+    <div class="ticker__track">
+      {[0, 1].map(() => (
+        <span>{ADVANTAGES.map((advantage) => <>{advantage} <i>✱</i> </>)}</span>
+      ))}
+    </div>
+  </div>
+  <p class="visually-hidden">{ADVANTAGES.join(". ")}.</p>
 
   {tiles.length > 0 && (
-    <section class="wrap section">
-      <div class="section-head">
-        <h2 class="h-section">Каталог</h2>
-        <a class="link-underline" href="/catalog/">Все зеркала →</a>
-      </div>
+    <section class="wrap" aria-labelledby="catalog-heading">
+      <header class="head">
+        <p class="label">{sectionNumber()} / Категории</p>
+        <div class="head__row">
+          <h2 id="catalog-heading">Каталог</h2>
+          <a class="btn btn--ghost btn--sm" href="/catalog/">Все зеркала</a>
+        </div>
+      </header>
       <CatalogTiles tiles={tiles} />
     </section>
   )}
 
-  {showcase.length > 0 && (
-    <>
-      <section class="wrap section">
-        <div class="section-head">
-          <h2 class="h-section">Зеркала из каталога</h2>
-          <a class="link-underline" href="/catalog/">Весь каталог →</a>
+  {showcase !== null && showcase.products.length > 0 && (
+    <section class="wrap" aria-labelledby="showcase-heading">
+      <header class="head">
+        <p class="label">{sectionNumber()} / {showcase.category.name}</p>
+        <div class="head__row">
+          <h2 id="showcase-heading">Из каталога</h2>
+          <a class="btn btn--ghost btn--sm" href="/catalog/">Весь каталог</a>
         </div>
-        <div class="carousel grid-4">
-          {showcase.map((entry) => <CatalogCard categorySlug={entry.categorySlug} product={entry.product} />)}
-        </div>
-      </section>
-      <div class="wrap"><OfferNote /></div>
-    </>
+      </header>
+      <div class="grid-4">
+        {showcase.products.map((product) => <CatalogCard categorySlug={showcase.category.slug} product={product} />)}
+      </div>
+      <OfferNote />
+    </section>
   )}
 
-  <section class="dark">
-    <div class="wrap dark-grid">
+  <section class="dark" aria-labelledby="about-heading">
+    <div class="wrap dark__grid">
       <img src="/img/about.jpg" alt="Зеркало Grand Arc в интерьере" loading="lazy" />
-      <div>
-        <span class="overline bare">О нас</span>
-        <h2 class="h-section">Выбирая нас,<br />вы выбираете качество</h2>
+      <div class="dark__text">
+        <p class="label">{sectionNumber()} / О мастерской</p>
+        <h2 id="about-heading">Выбирая нас, вы выбираете качество</h2>
         <p>Memiro — команда профессионалов, которые любят свою работу. Мы используем проверенные временем комплектующие от известных производителей.</p>
         <p>Благодаря собственному производству мы предлагаем лучшую цену независимо от размера и сложности зеркала.</p>
-        <div class="dark-facts">
-          <div><div class="n">с 2021 года</div><div class="c">Помогаем на всех этапах — от замера до монтажа «под ключ»</div></div>
-          <div><div class="n">более 1000</div><div class="c">довольных клиентов в Санкт-Петербурге и области</div></div>
-        </div>
-        <a class="btn btn-on-dark" href="/about/">Подробнее о компании</a>
+        <a class="btn btn--ghost-paper" href="/about/">Подробнее о компании</a>
       </div>
     </div>
   </section>
 
-  <section class="wrap section">
-    <h2 class="h-section">Как оформить заявку</h2>
-    <div class="steps-grid" style="margin-top: 48px;">
-      <div class="step"><span class="num">01</span><h3>Выбор</h3><p>Выбираете зеркало в каталоге или присылаете свой эскиз. Размер и опции обсуждаются под вашу задачу.</p></div>
-      <div class="step"><span class="num">02</span><h3>Согласование</h3><p>Менеджер уточняет детали, подтверждает размеры, сроки и итоговую стоимость.</p></div>
-      <div class="step"><span class="num">03</span><h3>Изготовление</h3><p>Делаем зеркало в собственной мастерской — от 1 рабочего дня. Срок зависит от сложности, точный называет менеджер.</p></div>
-      <div class="step"><span class="num">04</span><h3>Доставка и монтаж</h3><p>Привозим и вешаем сами: аккуратно, с уровнем и крепежом под вашу стену.</p></div>
-    </div>
+  <section class="wrap" aria-labelledby="steps-heading">
+    <header class="head">
+      <p class="label">{sectionNumber()} / Как это работает</p>
+      <div class="head__row"><h2 id="steps-heading">Как оформить заявку</h2></div>
+    </header>
+    <ol class="steps">
+      {STEPS.map((step, index) => (
+        <li>
+          <span class="steps__n">{String(index + 1).padStart(2, "0")}</span>
+          <h3>{step.title}</h3>
+          <p>{step.text}</p>
+        </li>
+      ))}
+    </ol>
   </section>
 
-  <section class="wrap section" id="inquiry">
-    <div class="inquiry-block">
-      <div>
-        <span class="overline bare">Заявка</span>
-        <h2 class="h-section">Не нашли подходящее?<br />Сделаем по вашему эскизу</h2>
+  <section class="wrap" id="inquiry" aria-labelledby="inquiry-heading">
+    <header class="head">
+      <p class="label">{sectionNumber()} / Заявка</p>
+      <div class="head__row"><h2 id="inquiry-heading">Не нашли подходящее? Сделаем по вашему эскизу</h2></div>
+    </header>
+    <div class="inquiry">
+      <div class="inquiry__text">
         <p>Оставьте контакты — менеджер уточнит размеры, сроки и стоимость. Ответим в течение рабочего дня; оплаты и обязательств на сайте нет.</p>
-        {contacts !== null && (
-          <div class="inquiry-contacts">
-            <a href={`tel:${contacts.phone}`}>{contacts.phone_display}</a>
-            <a href={`mailto:${contacts.email}`}>{contacts.email}</a>
-          </div>
+        {(contacts !== null || social.length > 0) && (
+          <ul class="index">
+            {contacts !== null && <li><a href={`tel:${contacts.phone}`}><span>{contacts.phone_display}</span><span class="arrow" aria-hidden="true">→</span></a></li>}
+            {contacts !== null && <li><a class="inquiry__mail" href={`mailto:${contacts.email}`}><span>{contacts.email}</span><span class="arrow" aria-hidden="true">→</span></a></li>}
+            {social.map((link) => <li><a href={link.value} target="_blank" rel="noopener"><span>{link.label}</span><span class="arrow" aria-hidden="true">→</span></a></li>)}
+          </ul>
         )}
-        <div class="contact-links">{social.map((link) => <a href={link.value} target="_blank" rel="noopener">{link.label}</a>)}</div>
       </div>
       <InquiryForm client:visible />
     </div>
