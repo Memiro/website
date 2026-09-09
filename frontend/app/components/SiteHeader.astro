@@ -1,5 +1,5 @@
 ---
-import { HEADER_LINKS, INQUIRY_LINK, isCurrentPath, type NavigationLink } from "../lib/navigation.ts";
+import { HEADER_LINKS, INQUIRY_LINK, externalLinkAttrs, isCurrentPath, type NavigationLink } from "../lib/navigation.ts";
 import { SITE_NAME } from "../lib/site.ts";
 import type { Site } from "../lib/site-api.ts";
 
@@ -36,7 +36,7 @@ const menuLinks = [...links, INQUIRY_LINK, phone, messenger].filter((link): link
   </div>
   <nav class="mobile-menu" id="mobile-menu" aria-label="Меню сайта" hidden>
     {menuLinks.map((link) => (
-      <a href={link.href} aria-current={link.isCurrent ? "page" : undefined} target={link.external ? "_blank" : undefined} rel={link.external ? "noopener" : undefined}>
+      <a href={link.href} aria-current={link.isCurrent ? "page" : undefined} {...externalLinkAttrs(link.external ?? false)}>
         {link.label}
         <span class="arrow" aria-hidden="true">→</span>
       </a>

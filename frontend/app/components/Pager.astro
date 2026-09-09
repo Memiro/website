@@ -1,0 +1,15 @@
+---
+import { pageNumbers } from "../lib/catalog-query.ts";
+
+interface Props { pages: number; page: number; label: string; hrefFor: (number: number) => string; }
+const { pages, page, label, hrefFor } = Astro.props;
+---
+
+{pages > 1 && (
+  <nav class="pager" aria-label={label}>
+    {pageNumbers(pages).map((number) => (
+      <a class={number === page ? "here" : undefined} href={hrefFor(number)} aria-current={number === page ? "page" : undefined}>{number}</a>
+    ))}
+    {page < pages && <a class="btn btn--ghost btn--sm" href={hrefFor(page + 1)}>Ещё<span class="arrow" aria-hidden="true">→</span></a>}
+  </nav>
+)}
