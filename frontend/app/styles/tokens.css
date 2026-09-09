@@ -42,6 +42,7 @@
   --rule-hair: 1px;
   --rule-fine: 2px;
   --photo-ratio: 1 / 1.08;
+  --photo-ratio-wide: 4 / 3;
   --opacity-disabled: 0.55;
   --opacity-recount: 0.45;
   --radius-card: 0;  --radius-pill: 0;  --radius-input: 0;
@@ -51,6 +52,16 @@
   --dur-micro: 120ms;  --dur-short: 240ms;  --dur-long: 400ms;
   --dur-ticker: 48s;
   --underline-offset: 3px;
+  /* Tracking: display headings sit tight, mono caps and uppercase names open up */
+  --tracking-display: -0.02em;
+  --tracking-mono: 0.06em;
+  --tracking-caps: 0.02em;
+  --tracking-btn: 0.01em;
+  /* Layers: the drawer and its backdrop sit above the sticky nav and the cookie banner */
+  --z-nav: 50;
+  --z-banner: 70;
+  --z-backdrop: 71;
+  --z-drawer: 72;
 
   /* Layout */
   --page-max: 1440px;
@@ -61,6 +72,20 @@
   --measure-legal: 70ch;
   --measure-row: 52ch;
   --tap-target: 48px;
+  --btn-h: 44px;
+  --btn-h-sm: 36px;
+  --row-min: 32px;
+  --nav-count-size: 18px;
+  --filters-width: 268px;
+  --filters-width-narrow: 240px;
+  --drawer-width: min(320px, 88vw);
+  --banner-max: 760px;
+  --banner-text-min: 320px;
+  --carousel-column: 208px;
+  --logo-nav: 26px;
+  --logo-nav-narrow: 24px;
+  --logo-foot: 72px;
+  --logo-foot-narrow: 56px;
   --bento-row: clamp(150px, 16vw, 240px);
   --bento-row-narrow: clamp(140px, 30vw, 220px);
   --thumb-size: 72px;

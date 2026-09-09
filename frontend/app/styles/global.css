@@ -93,7 +93,7 @@ a {
 a:hover { color: var(--color-accent); }
 ::selection { background: var(--color-rule); }
 [hidden] { display: none !important; }
-:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+:focus-visible { outline: var(--rule-fine) solid var(--color-focus); outline-offset: var(--rule-fine); }
 /* The accent sinks into ink. */
 .dark :focus-visible,
 .mobile-menu :focus-visible,
@@ -121,7 +121,7 @@ p, .name { text-wrap: pretty; }
 }
 
 /* ---------- Typography ---------- */
-h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; line-height: 1.04; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: var(--tracking-display); line-height: 1.04; }
 .h-section { font-size: var(--text-section); line-height: 1; text-transform: uppercase; }
 /* Mono caps is the storefront's one voice for small type (design.md); every
    label, menu row and caption inherits it here so no place drifts to its own
@@ -131,7 +131,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .fgroup legend, .fgroup .n, .reset-link, .pager a:not(.btn), .info h2, .inquiry-panel h2, .promises__n,
 .inquiry-remove, .work figcaption, .contacts__list dt, .seller-label {
   font-family: var(--font-outlier); font-weight: 500;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  letter-spacing: var(--tracking-mono); text-transform: uppercase;
 }
 .label { font-size: var(--text-xs); color: var(--color-muted); }
 .dark .label { color: var(--color-on-dark-2); }
@@ -148,9 +148,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2xs);
-  min-height: 44px; padding: 0 var(--space-md);
+  min-height: var(--btn-h); padding: 0 var(--space-md);
   font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600;
-  line-height: 1; letter-spacing: 0.01em; white-space: nowrap;
+  line-height: 1; letter-spacing: var(--tracking-btn); white-space: nowrap;
   text-decoration: none; cursor: pointer;
   border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-pill);
   background: var(--color-ink); color: var(--color-paper);
@@ -166,17 +166,16 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .btn--ghost { background: transparent; color: var(--color-ink); border-color: var(--color-ink); }
 .btn--ghost:not(:disabled, [aria-disabled="true"]):hover { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
 .btn--ghost:not(:disabled, [aria-disabled="true"]):active { background: var(--color-ink-2); color: var(--color-paper); }
-.btn--sm { min-height: 36px; padding: 0 var(--space-sm); font-size: var(--text-xs); }
+.btn--sm { min-height: var(--btn-h-sm); padding: 0 var(--space-sm); font-size: var(--text-xs); }
 /* On ink the pair inverts: the primary rests paper-on-ink and hovers into the
    base accent fill; the ghost draws its rule in paper. */
 .btn--paper { background: var(--color-on-dark); border-color: var(--color-on-dark); color: var(--color-ink); }
 .btn--ghost-paper { background: transparent; color: var(--color-on-dark); border-color: var(--color-on-dark); }
 .btn--ghost-paper:not(:disabled, [aria-disabled="true"]):hover { background: var(--color-on-dark); color: var(--color-ink); border-color: var(--color-on-dark); }
-.link-underline { font-size: var(--text-sm); font-weight: 600; border-bottom: var(--rule-hair) solid var(--color-muted); padding-bottom: 4px; }
 
 /* ---------- Header (N1b: logo · mono links · phone + «Заявка») ---------- */
 .nav {
-  position: sticky; top: 0; z-index: 50;
+  position: sticky; top: 0; z-index: var(--z-nav);
   background: var(--color-paper);
   border-bottom: var(--rule-hair) solid var(--color-rule);
 }
@@ -185,10 +184,10 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-md);
 }
 .nav__brand { justify-self: start; display: block; }
-.nav__brand img { height: 26px; width: auto; }
+.nav__brand img { height: var(--logo-nav); width: auto; }
 .nav__center { justify-self: center; display: flex; gap: var(--space-md); }
 .nav__link {
-  display: inline-flex; align-items: center; min-height: 44px;
+  display: inline-flex; align-items: center; min-height: var(--btn-h);
   font-size: var(--text-xs); white-space: nowrap; color: var(--color-ink-2);
 }
 .nav__link:hover { color: var(--color-ink); }
@@ -201,12 +200,12 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .nav__phone { font-family: var(--font-outlier); font-size: var(--text-sm); white-space: nowrap; }
 /* The counter is a paper chip on the ink button so it survives the accent hover. */
 .nav__count {
-  min-width: 18px; height: 18px; padding: 0 var(--space-3xs);
+  min-width: var(--nav-count-size); height: var(--nav-count-size); padding: 0 var(--space-3xs);
   display: grid; place-items: center;
   background: var(--color-paper); color: var(--color-ink); font-size: var(--text-xs);
 }
 .nav__burger {
-  display: none; width: 44px; height: 44px; margin-right: calc(-1 * var(--space-xs));
+  display: none; width: var(--tap-target); height: var(--tap-target); margin-right: calc(-1 * var(--space-xs));
   place-items: center; border: 0; background: none; color: var(--color-ink); cursor: pointer;
 }
 .nav__burger:hover { color: var(--color-accent); }
@@ -246,7 +245,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .hero__facts b { font-family: var(--font-outlier); font-weight: 500; }
 .hero__media { display: grid; }
 .hero__media figure { position: relative; }
-.hero__media img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--color-paper-2); }
+.hero__media img { width: 100%; aspect-ratio: var(--photo-ratio-wide); object-fit: cover; background: var(--color-paper-2); }
 .chip {
   display: inline-flex; align-items: baseline; gap: var(--space-2xs);
   max-width: calc(100% - 2 * var(--space-sm)); padding: var(--space-2xs) var(--space-xs); line-height: 1.2;
@@ -307,7 +306,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .product-card .meta { display: grid; gap: var(--space-3xs); }
 .product-card .name {
   font-family: var(--font-body); font-size: var(--text-sm); font-weight: 600;
-  letter-spacing: 0.02em; line-height: 1.3; text-transform: uppercase; overflow-wrap: anywhere;
+  letter-spacing: var(--tracking-caps); line-height: 1.3; text-transform: uppercase; overflow-wrap: anywhere;
 }
 .product-card .card-link:hover .name { color: var(--color-accent); }
 .product-card .price { font-family: var(--font-outlier); font-size: var(--text-sm); color: var(--color-ink-2); white-space: nowrap; }
@@ -323,7 +322,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-xl); align-items: center;
   padding-top: var(--space-2xl); padding-bottom: var(--space-2xl);
 }
-.dark__grid > img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--color-on-dark-rule); }
+.dark__grid > img { width: 100%; aspect-ratio: var(--photo-ratio-wide); object-fit: cover; background: var(--color-on-dark-rule); }
 .dark__text { display: grid; gap: var(--space-md); justify-items: start; }
 .dark__text h2 { max-width: 16ch; }
 .dark__text p { color: var(--color-on-dark-2); max-width: var(--measure-lede); }
@@ -376,20 +375,20 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   align-items: end; padding-top: var(--space-lg); padding-bottom: var(--space-lg);
 }
 .foot__brand { display: inline-block; }
-.foot__brand img { height: 72px; width: auto; }
-.foot__tag { margin-top: var(--space-xs); color: var(--color-ink-2); max-width: 44ch; }
+.foot__brand img { height: var(--logo-foot); width: auto; }
+.foot__tag { margin-top: var(--space-xs); color: var(--color-ink-2); max-width: var(--measure-lede); }
 .foot__contacts {
   display: grid; gap: var(--space-3xs); justify-items: end; text-align: right;
   font-style: normal; font-size: var(--text-xs); color: var(--color-muted);
 }
-.foot__contacts a { display: inline-flex; align-items: center; min-height: 32px; white-space: nowrap; color: var(--color-ink); }
+.foot__contacts a { display: inline-flex; align-items: center; min-height: var(--row-min); white-space: nowrap; color: var(--color-ink); }
 .foot__contacts a:hover { color: var(--color-accent); }
 .foot__mail { text-transform: none; }
 .foot__legal {
   display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md);
   padding-top: var(--space-sm); padding-bottom: var(--space-md);
   border-top: var(--rule-hair) solid var(--color-rule);
-  font-family: var(--font-outlier); font-size: var(--text-xs); letter-spacing: 0.02em; color: var(--color-muted);
+  font-family: var(--font-outlier); font-size: var(--text-xs); letter-spacing: var(--tracking-caps); color: var(--color-muted);
 }
 .foot__line { display: flex; flex-wrap: wrap; gap: var(--space-3xs) var(--space-sm); }
 
@@ -416,12 +415,12 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 .chip-f.only-mobile:hover, .chip-f.reset:hover { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-paper); }
 .sort { display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-xs); color: var(--color-muted); }
 .sort select {
-  min-height: 36px; padding: 0 var(--space-xs);
+  min-height: var(--btn-h-sm); padding: 0 var(--space-xs);
   font: inherit; color: var(--color-ink);
   background: var(--color-paper); border: var(--rule-hair) solid var(--color-ink); border-radius: var(--radius-input); cursor: pointer;
 }
 
-.layout { display: grid; grid-template-columns: 268px minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
+.layout { display: grid; grid-template-columns: var(--filters-width) minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
 .filters { position: sticky; top: calc(var(--nav-height) + var(--space-md)); border-top: var(--rule-hair) solid var(--color-ink); }
 .drawer-head {
   align-items: center; justify-content: space-between;
@@ -433,14 +432,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   border: 0; background: none; font: inherit; font-size: var(--text-lg); color: var(--color-ink); cursor: pointer;
 }
 .drawer-close:hover { color: var(--color-accent); }
-/* The drawer and its backdrop sit above the sticky nav (50) and the cookie
-   banner (70): the nav would cover the close button in the drawer's head, the
-   banner would cover «Показать» at its foot. */
-.drawer-backdrop { position: fixed; inset: 0; z-index: 71; background: color-mix(in oklab, var(--color-ink) 40%, transparent); }
+/* Above the nav and the cookie banner: the nav would cover the close button in
+   the drawer's head, the banner would cover «Показать» at its foot. */
+.drawer-backdrop { position: fixed; inset: 0; z-index: var(--z-backdrop); background: color-mix(in oklab, var(--color-ink) 40%, transparent); }
 /* A floated legend stops being the fieldset's rendered legend and joins the grid like any row. */
 .fgroup { display: grid; gap: var(--space-3xs); min-inline-size: 0; margin: 0; padding: var(--space-sm) 0; border: 0; border-bottom: var(--rule-hair) solid var(--color-rule); }
 .fgroup legend { float: left; padding: 0; margin-bottom: var(--space-2xs); font-size: var(--text-xs); color: var(--color-muted); }
-.fgroup label { display: flex; align-items: center; gap: var(--space-xs); min-height: 32px; font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
+.fgroup label { display: flex; align-items: center; gap: var(--space-xs); min-height: var(--row-min); font-size: var(--text-sm); color: var(--color-ink-2); cursor: pointer; }
 .fgroup label:hover { color: var(--color-ink); }
 .fgroup label.off { color: var(--color-muted); cursor: default; }
 .fgroup input[type="checkbox"] {
@@ -467,12 +465,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
 .pager { display: flex; justify-content: center; align-items: center; gap: var(--space-2xs); flex-wrap: wrap; padding-top: var(--space-lg); }
 .pager a:not(.btn) {
-  display: grid; place-items: center; min-width: var(--tap-target); height: var(--tap-target); padding: 0 var(--space-xs);
+  display: grid; place-items: center; min-width: var(--btn-h); height: var(--btn-h); padding: 0 var(--space-xs);
   font-size: var(--text-sm); color: var(--color-ink); border: var(--rule-hair) solid var(--color-rule);
 }
 .pager a.here { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
 .pager a:hover:not(.here, .btn) { border-color: var(--color-ink); }
-.pager .btn { min-height: var(--tap-target); margin-left: var(--space-2xs); }
+/* The «Ещё» button stands as tall as the page squares beside it. */
+.pager .btn { min-height: var(--btn-h); margin-left: var(--space-2xs); }
 
 /* ---------- Landing pages ---------- */
 .landing-text { display: grid; gap: var(--space-sm); padding-top: var(--space-md); }
@@ -598,13 +597,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 /* The cookie banner overlays the page until the visitor answers: a dark block
    on the on-dark tokens, its edge in muted so it stays visible over ink too. */
 .cookie-banner {
-  position: fixed; left: 50%; bottom: var(--space-md); transform: translateX(-50%); z-index: 70;
-  width: min(760px, calc(100vw - 2 * var(--space-sm)));
+  position: fixed; left: 50%; bottom: var(--space-md); transform: translateX(-50%); z-index: var(--z-banner);
+  width: min(var(--banner-max), calc(100vw - 2 * var(--space-sm)));
   display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;
   background: var(--color-ink); color: var(--color-on-dark);
   border: var(--rule-hair) solid var(--color-muted); padding: var(--space-md);
 }
-.cookie-banner__text { flex: 1 1 320px; font-size: var(--text-sm); color: var(--color-on-dark-2); }
+.cookie-banner__text { flex: 1 1 var(--banner-text-min); font-size: var(--text-sm); color: var(--color-on-dark-2); }
 .cookie-banner__text a { color: var(--color-on-dark); border-bottom: var(--rule-hair) solid color-mix(in oklab, var(--color-on-dark) 45%, transparent); }
 .cookie-banner__text a:hover { color: var(--color-on-dark-2); }
 .cookie-banner__actions { display: flex; gap: var(--space-2xs); flex-wrap: wrap; }
@@ -616,7 +615,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .nav__center { gap: var(--space-sm); }
   .nav__phone { display: none; }
   .grid-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .layout { grid-template-columns: 240px minmax(0, 1fr); gap: var(--space-md); }
+  .layout { grid-template-columns: var(--filters-width-narrow) minmax(0, 1fr); gap: var(--space-md); }
   .pdp { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
   .gallery { position: static; }
   .contacts { grid-template-columns: minmax(0, 1fr); gap: var(--space-lg); }
@@ -642,7 +641,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   .layout { grid-template-columns: minmax(0, 1fr); }
   .only-mobile { display: flex; }
   .filters {
-    position: fixed; inset: 0 auto 0 0; z-index: 72; width: min(320px, 88vw);
+    position: fixed; inset: 0 auto 0 0; z-index: var(--z-drawer); width: var(--drawer-width);
     overflow-y: auto; background: var(--color-paper); border-top: 0; border-right: var(--rule-hair) solid var(--color-ink);
     transform: translateX(-102%);
     /* Visibility removes the off-canvas drawer from tab order after transition. */
@@ -655,7 +654,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
-  .nav__brand img { height: 24px; }
+  .nav__brand img { height: var(--logo-nav-narrow); }
   .nav__right { gap: var(--space-2xs); }
 
   .hero { padding-top: var(--space-md); gap: var(--space-md); }
@@ -666,9 +665,9 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
   /* Only explicit carousels scroll horizontally; catalogue grids remain lists. */
   .carousel {
     display: grid; grid-template-columns: none;
-    grid-auto-flow: column; grid-auto-columns: 208px;
-    gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory;
-    margin: 0 calc(-1 * var(--page-gutter)); padding: 0 var(--page-gutter) 6px;
+    grid-auto-flow: column; grid-auto-columns: var(--carousel-column);
+    gap: var(--space-2xs); overflow-x: auto; scroll-snap-type: x mandatory;
+    margin: 0 calc(-1 * var(--page-gutter)); padding: 0 var(--page-gutter) var(--space-2xs);
   }
   .carousel > * { scroll-snap-align: start; }
 
@@ -680,7 +679,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing:
 
   .foot { margin-top: var(--space-lg); }
   .foot__inner { padding-top: var(--space-md); padding-bottom: var(--space-md); }
-  .foot__brand img { height: 56px; }
+  .foot__brand img { height: var(--logo-foot-narrow); }
   .foot__legal { flex-direction: column; }
 
   .page { gap: var(--space-lg); padding-top: var(--space-md); }

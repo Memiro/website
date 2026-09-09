@@ -23,6 +23,11 @@ export const SITE_LINKS: readonly NavigationLink[] = [
   INQUIRY_LINK,
 ];
 
+/** Anchor attributes that open an outside address in a new tab without handing it the opener. */
+export function externalLinkAttrs(external: boolean): { target?: "_blank"; rel?: "noopener" } {
+  return external ? { target: "_blank", rel: "noopener" } : {};
+}
+
 /** The public address of a product card, spelled in one place for every page that links to one. */
 export function productPath(categorySlug: string, productSlug: string): string {
   return `/catalog/${categorySlug}/${productSlug}/`;

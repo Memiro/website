@@ -44,7 +44,6 @@ const site = await readSite();
     {image && <meta property="og:image" content={image} />}
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="mask-icon" href="/img/logo/logo7-black.svg" color="#0a0b0d" />
     {documents.map((document) => <script is:inline type="application/ld+json" set:html={JSON.stringify(document)} />)}
   </head>
   <body>

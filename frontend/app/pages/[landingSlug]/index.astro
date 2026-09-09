@@ -5,9 +5,10 @@ import EmptyState from "../../components/EmptyState.astro";
 import NotFound from "../../components/NotFound.astro";
 import OfferNote from "../../components/OfferNote.astro";
 import PageHead from "../../components/PageHead.astro";
+import Pager from "../../components/Pager.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/catalog-api.ts";
-import { catalogSearch, isNarrowed, pageNumbers, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
+import { catalogSearch, isNarrowed, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
 import { foundOrNull } from "../../lib/not-found.ts";
 import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../lib/seo.ts";
 
@@ -54,7 +55,7 @@ const crumbs = landing === null ? [] : [
     jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
-    <PageHead label={landing.category_name} heading={landing.heading} count={page.total} />
+    <PageHead label={landing.category_name} heading={landing.heading} productCount={page.total} />
 
     {paragraphs.length > 0 && (
       <div class="wrap landing-text">{paragraphs.map((paragraph) => <p>{paragraph}</p>)}</div>
@@ -68,17 +69,10 @@ const crumbs = landing === null ? [] : [
           <EmptyState text="Под эту подборку сейчас ничего не подошло — посмотрите весь раздел." href={`/catalog/${landing.category_slug}/`} action="Весь раздел" />
         )}
 
-        {page.pages > 1 && (
-          <nav class="pager" aria-label="Страницы подборки">
-            {pageNumbers(page.pages).map((number) => (
-              <a class={number === page.page ? "here" : undefined} href={withPage(path, asked, number)} aria-current={number === page.page ? "page" : undefined}>{number}</a>
-            ))}
-            {page.page < page.pages && <a class="btn btn--ghost btn--sm" href={withPage(path, asked, page.page + 1)}>Ещё<span class="arrow">→</span></a>}
-          </nav>
-        )}
+        <Pager pages={page.pages} page={page.page} label="Страницы подборки" hrefFor={(number) => withPage(path, asked, number)} />
 
         <p class="landing-all">
-          <a class="link-underline" href={`/catalog/${landing.category_slug}/`}>Весь раздел «{landing.category_name}» →</a>
+          <a class="btn btn--ghost btn--sm" href={`/catalog/${landing.category_slug}/`}>Весь раздел «{landing.category_name}»<span class="arrow" aria-hidden="true">→</span></a>
         </p>
 
         <OfferNote />

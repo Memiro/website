@@ -10,7 +10,7 @@ to it. Amend intentionally — the file is the rule.
 - Macrostructure · Catalogue (home) · every page is an index of things, not a narrative
 - Theme · studied-DNA — white paper, near-black ink, one cool-blue signal, uppercase grotesk display, mono labels
 - Axes · light / geometric-sans-uppercase / cool-blue
-- Logo · `Memiro Logotype` kit (SVG, outlined). Nav = Logo3 (mark + word, 26 px), footer = Logo4 (with rule + tagline), favicon/mask-icon = Logo7 (mark). White versions on dark blocks. ® is registered — show it once in the footer legal line, never in the nav.
+- Logo · `Memiro Logotype` kit (SVG, outlined). Nav = Logo3 (mark + word, 26 px), footer = Logo4 (with rule + tagline), favicon = Logo7 (mark). Dark blocks carry no logo — the mark lives only in the nav and the footer. ® is registered — show it once in the footer legal line, never in the nav.
 
 ## Provenance
 Extracted 2026-09-09 as public references for the owner's own brand from
@@ -57,7 +57,7 @@ rhythm judged visually.
 - Category block · F1 bento, 4 columns, spans 2×2 / 1×1 / 2×1, 8 px gap, white label chips `01 ФИГУРНЫЕ` top-left.
 - Product block · F6 grid 4-up (3 / 2 / 1 on narrower widths), photo 1:1.08 on paper-2, uppercase name, mono «от 12 900 ₽» tabular-nums, small filled button.
 - Footer · Ft1 mast-headed: Logo4, one-sentence tagline, mono contact column right, legal line with ®.
-- Dark block («О мастерской», cookie banner) · paper ↔ ink inverted, white logo, same type.
+- Dark block («О мастерской», cookie banner) · paper ↔ ink inverted, no logo, same type.
 
 ## CTA voice
 - Primary · ink fill · radius 0 · 44 px / 36 px small · label + mono `→` trailing · hover = accent fill

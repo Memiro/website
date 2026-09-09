@@ -5,12 +5,12 @@ import EmptyState from "../../../components/EmptyState.astro";
 import NotFound from "../../../components/NotFound.astro";
 import OfferNote from "../../../components/OfferNote.astro";
 import PageHead from "../../../components/PageHead.astro";
+import Pager from "../../../components/Pager.astro";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage } from "../../../lib/catalog-api.ts";
 import {
   catalogSearch,
   isNarrowed,
-  pageNumbers,
   parseCatalogQuery,
   SORT_OPTIONS,
   VALUE_PARAM,
@@ -69,7 +69,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
     jsonLd={listing === null ? [] : [listing]}
   >
     <Breadcrumbs crumbs={crumbs} />
-    <PageHead label="Каталог" heading={name} count={page.total} />
+    <PageHead label="Каталог" heading={name} productCount={page.total} />
 
     <div class="toolbar wrap">
       <div class="chips">
@@ -116,7 +116,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
             </fieldset>
           )}
           <div class="filters__foot">
-            <button class="btn apply" type="submit"><span data-apply>Показать {page.total} {productPlural(page.total)}</span><span class="arrow">→</span></button>
+            <button class="btn apply" type="submit"><span data-apply>Показать {page.total} {productPlural(page.total)}</span><span class="arrow" aria-hidden="true">→</span></button>
             {narrowed && <a class="reset-link" href={path}>Сбросить фильтры</a>}
           </div>
         </form>
@@ -132,14 +132,7 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
           <EmptyState text="В этой категории пока нет опубликованных зеркал — загляните позже." href="/catalog/" action="Все категории" />
         )}
 
-        {page.pages > 1 && (
-          <nav class="pager" aria-label="Страницы каталога">
-            {pageNumbers(page.pages).map((number) => (
-              <a class={number === page.page ? "here" : undefined} href={withPage(path, query, number)} aria-current={number === page.page ? "page" : undefined}>{number}</a>
-            ))}
-            {page.page < page.pages && <a class="btn btn--ghost btn--sm" href={withPage(path, query, page.page + 1)}>Ещё<span class="arrow">→</span></a>}
-          </nav>
-        )}
+        <Pager pages={page.pages} page={page.page} label="Страницы каталога" hrefFor={(number) => withPage(path, query, number)} />
 
         <OfferNote />
       </main>
