@@ -10,10 +10,10 @@ import { coverImageUrl, mediaUrl } from "../../../../lib/media.ts";
 import { productPath } from "../../../../lib/navigation.ts";
 import { ordinal } from "../../../../lib/ordinal.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
+import { relatedProducts } from "../../../../lib/related.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
 import { productSpecs } from "../../../../lib/specs.ts";
 
-const RELATED_SIZE = 4;
 const PROMISES = [
   "Своё производство — цена без посредников",
   "Изготовление от 1 рабочего дня, срок зависит от сложности",
@@ -37,8 +37,7 @@ const categoryName = category?.name ?? "Каталог";
 
 let related: ProductSummary[] = [];
 if (product !== null) {
-  const neighbours = await foundOrNull(categorySlug, (slug) => api.categoryProducts(slug));
-  related = (neighbours?.items ?? []).filter((item) => item.slug !== product.slug).slice(0, RELATED_SIZE);
+  related = (await foundOrNull(categorySlug, (slug) => relatedProducts(api, slug, product))) ?? [];
 }
 
 const crumbs = product === null ? [] : [
