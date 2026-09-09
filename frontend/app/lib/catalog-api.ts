@@ -372,7 +372,7 @@ function isSelectionDelta(value: unknown): value is SelectionDelta {
     && typeof delta.delta === "string";
 }
 
-function isVerdict(value: unknown): value is PricingVerdict {
+export function isVerdict(value: unknown): value is PricingVerdict {
   return value === "PRICED" || value === "BEYOND_LIMITS" || value === "NOT_PRICEABLE"
     || value === "SELECTION_NOT_PRICEABLE" || value === "HIDDEN";
 }

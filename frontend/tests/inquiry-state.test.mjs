@@ -236,6 +236,7 @@ test("a preview answer is read only when every position matches the contract", (
 
   assert.equal(isInquiryPreview({ items: [priced, gone] }), true);
   assert.equal(isInquiryPreview({ items: [{ ...priced, configuration: { width_mm: "800" } }] }), false);
+  assert.equal(isInquiryPreview({ items: [{ ...priced, verdict: "FREE" }] }), false);
   assert.equal(isInquiryPreview({ items: "none" }), false);
   assert.equal(isInquiryPreview(null), false);
 });
@@ -261,6 +262,7 @@ test("a previewed position is explained in the words of the product card, withou
   });
   assert.equal(previewedPricePresentation({ ...base, verdict: "HIDDEN", price: null })?.message, "Стоимость этой конфигурации уточнит менеджер.");
   assert.equal(previewedPricePresentation({ ...base, verdict: "BEYOND_LIMITS", price: null })?.kind, "wish");
+  assert.equal(previewedPricePresentation({ ...base, verdict: "SELECTION_NOT_PRICEABLE", price: null })?.message, "Цену такого сочетания назовёт менеджер.");
   assert.equal(previewedPricePresentation({ ...base, is_available: false, verdict: null, price: null }), null);
 });
 
