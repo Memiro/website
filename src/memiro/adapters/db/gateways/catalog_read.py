@@ -278,7 +278,13 @@ class SACatalogReadGateway(CatalogReadGateway):
         row = (
             (
                 await self._session.execute(
-                    select(products_table).where((products_table.c.slug == slug) & products_table.c.is_published)
+                    select(
+                        products_table,
+                        categories_table.c.slug.label("category_slug"),
+                        categories_table.c.name.label("category_name"),
+                    )
+                    .join(categories_table, products_table.c.category_id == categories_table.c.id)
+                    .where((products_table.c.slug == slug) & products_table.c.is_published)
                 )
             )
             .mappings()
@@ -359,6 +365,8 @@ class SACatalogReadGateway(CatalogReadGateway):
             id=row["id"],
             name=row["name"],
             slug=row["slug"],
+            category_slug=row["category_slug"],
+            category_name=row["category_name"],
             description=row["description"],
             price_from=row["price_from"].amount if row["price_from"] else None,
             image_keys=list(images),

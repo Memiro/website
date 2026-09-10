@@ -115,6 +115,9 @@ export interface ProductVariant {
 
 export interface ProductCard extends ProductSummary {
   id: string;
+  /** The category the card really lives under; a page opened under another one moves there. */
+  category_slug: string;
+  category_name: string;
   description: string;
   attributes: ProductAttribute[];
   variants: ProductVariant[];
@@ -309,6 +312,8 @@ function isProductCard(value: unknown): value is ProductCard {
     return false;
   }
   return typeof product.id === "string"
+    && typeof product.category_slug === "string"
+    && typeof product.category_name === "string"
     && typeof product.description === "string"
     && isArrayOf(product.attributes, isProductAttribute)
     && isArrayOf(product.variants, isProductVariant);

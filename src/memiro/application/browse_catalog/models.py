@@ -133,6 +133,10 @@ class ProductModel(ProductSummary):
     """The full public product card projection."""
 
     id: UUID
+    # The storefront checks the address it was opened at against these and
+    # moves a card opened under a foreign category to its real one.
+    category_slug: str
+    category_name: str
     description: str
     attributes: list["ProductAttribute"]
     variants: list["ProductVariant"]

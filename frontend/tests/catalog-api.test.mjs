@@ -8,6 +8,8 @@ const product = {
   id: "0a3e0fc0-793d-498f-b1cc-02111ea385d2",
   name: "Лира",
   slug: "lira",
+  category_slug: "mirrors",
+  category_name: "Зеркала",
   price_from: "18900",
   image_keys: [],
   description: "Зеркало для ванной.",
@@ -19,6 +21,8 @@ const product = {
 };
 
 const cardWithoutAttributeKind = { ...product, attributes: [{ id: "frame", name: "Рама", values: [] }] };
+
+const { category_slug: _categorySlug, category_name: _categoryName, ...cardWithoutCategory } = product;
 
 const works = {
   items: [
@@ -84,6 +88,12 @@ test("the SSR client requests a product from its internal API base URL", async (
 
 test("the SSR client refuses a product card whose attribute does not say how it is configured", async (t) => {
   const api = await withApi(t, (_, response) => response.end(JSON.stringify(cardWithoutAttributeKind)));
+
+  await assert.rejects(api.product("lira"));
+});
+
+test("the SSR client refuses a product card that does not name its category", async (t) => {
+  const api = await withApi(t, (_, response) => response.end(JSON.stringify(cardWithoutCategory)));
 
   await assert.rejects(api.product("lira"));
 });

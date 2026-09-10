@@ -8,6 +8,8 @@ const MIRROR = {
   id: "mirror",
   name: "Зеркало Loft",
   slug: "loft",
+  category_slug: "zerkala",
+  category_name: "Зеркала",
   description: "",
   price_from: null,
   image_keys: [],
