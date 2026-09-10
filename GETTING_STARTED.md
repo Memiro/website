@@ -74,12 +74,14 @@ push в `dev` — под тегом `dev`, на релизный тег `v*` —
   `APP_CONFIG_PATH`.
 - `.config/smtp_password` — см. «Письмо менеджеру».
 
-Файлы с секретами — `chmod 600`. Выкатка релиза: поправить
-`MEMIRO_IMAGE_TAG` в `.env` и выполнить
+Файлы с секретами — `chmod 600`. Compose сам ищет `.env` рядом с первым
+compose-файлом, а не в корне, поэтому `--env-file .env` в командах обязателен
+(локально это делает `just`). Выкатка релиза: поправить `MEMIRO_IMAGE_TAG`
+в `.env` и выполнить
 
 ```sh
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml pull
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --wait
+docker compose --env-file .env -f docker/docker-compose.yml -f docker/docker-compose.prod.yml pull
+docker compose --env-file .env -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --wait
 ```
 
 `PUBLIC_SITE_URL` и `PUBLIC_METRIKA_ID` запекаются в образ витрины в CI из
@@ -117,7 +119,7 @@ variables репозитория; после смены счётчика нуж�
 4. Перезапустить контур командой выше и проверить вход без отправки письма:
 
 ```sh
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml exec api memiro email check
+docker compose --env-file .env -f docker/docker-compose.yml -f docker/docker-compose.prod.yml exec api memiro email check
 ```
 
 Ответ `OK` значит, что пароль подходит; иначе печатается ответ сервера
