@@ -12,7 +12,7 @@ const LEGACY = fs.readFileSync(new URL("./legacy-urls.txt", import.meta.url), "u
 // The list is the specification: an address nobody thought about must be red
 // here, not a silent 404 on the day the domain switches.
 test("every address the old site published is answered deliberately", () => {
-  assert.equal(LEGACY.length, 97);
+  assert.equal(LEGACY.length, 98);
   for (const path of LEGACY) {
     const answer = legacyResponse(path);
     const handled = answer !== null || ["/", "/catalog/", "/contacts/"].includes(path);
