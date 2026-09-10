@@ -149,7 +149,7 @@ async def test_a_card_names_the_category_the_product_lives_under(api_client: Api
     """The card carries the slug and the name of its category, so the storefront can check its own address."""
     card = (await api_client.read_product("zerkalo-v-rame")).assert_status(status.HTTP_200_OK).ensure_content()
 
-    assert (card.category_slug, card.category_name) == ("mirrors", "Mirrors")
+    assert card == _expected_card()
 
 
 async def test_a_card_names_the_value_the_owner_declared_on_each_attribute(api_client: ApiClient) -> None:
