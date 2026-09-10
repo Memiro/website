@@ -52,6 +52,24 @@ db-up:
 db-down:
     docker compose -f docker/docker-compose.yml stop db
 
+# Syntax-check both edge configs inside the nginx image, without a contour
+nginx-check:
+    #!/usr/bin/env sh
+    set -eu
+    certs="$(mktemp -d)"
+    trap 'rm -rf "$certs"' EXIT
+    # nginx -t opens the certificate files and resolves every upstream name,
+    # so the check gets a throwaway certificate and loopback upstreams.
+    openssl req -x509 -newkey rsa:2048 -nodes -subj /CN=memiro.ru -days 1 \
+        -keyout "$certs/privkey.pem" -out "$certs/fullchain.pem" 2>/dev/null
+    for conf in nginx.conf nginx.prod.conf; do
+        docker run --rm \
+            --add-host api:127.0.0.1 --add-host admin:127.0.0.1 --add-host frontend:127.0.0.1 \
+            -v "$PWD/.config/$conf:/etc/nginx/conf.d/default.conf:ro" \
+            -v "$certs:/etc/letsencrypt/live/memiro.ru:ro" \
+            nginx:1.29-alpine nginx -t
+    done
+
 # Build the production image; CI calls this on release tags
 image tag:
     docker build -f docker/Dockerfile -t "memiro:{{tag}}" .
