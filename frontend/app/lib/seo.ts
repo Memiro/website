@@ -153,15 +153,18 @@ export function productJsonLd(product: ProductJsonLdInput): ProductDocument {
     url: product.url ?? undefined,
     image: product.image ?? undefined,
     brand: { "@type": "Brand", name: SITE_NAME },
-    // Made to order: the card names the cheapest precalculated configuration,
-    // never a price the visitor can pay on the site.
+    // The card names the cheapest precalculated configuration, never a price
+    // the visitor can pay on the site. Google does not support MadeToOrder on
+    // a Product and would drop the price from the snippet; InStock to it
+    // means "can be ordered now", and a production lead time does not change
+    // that. PreOrder would say the mirror is not yet released.
     offers: product.priceFrom === null
       ? undefined
       : {
         "@type": "Offer",
         priceCurrency: "RUB",
         price: product.priceFrom,
-        availability: "https://schema.org/MadeToOrder",
+        availability: "https://schema.org/InStock",
         url: product.url ?? undefined,
       },
   };
