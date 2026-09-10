@@ -45,9 +45,32 @@ _CAPTURED_CHANNEL = EmailConfig(
     manager_address="manager@example.test",
 )
 
+# The plain-text half word for word: the HTML half is new, this one must not move.
+_ONE_ITEM_TEXT = """Заявка
+Имя: Anna
+Телефон: +79990000000
+Email: не указан
+
+Зеркало 1: Зеркало в раме
+Размер: 800 × 600 мм
+Тип полотна: Серебро
+Форма: Прямоугольное
+Рама: Алюминий
+Подсветка: Без подсветки
+Крепление: С креплением
+Цена: 8 820 ₽
+"""
+
 _CANONICAL_PRICE_LINE = "Цена: 8 820 ₽"
 _GRAPHITE_PRICE_LINE = "Цена: 14 090 ₽"
 _SUM_OF_THE_TWO = "22 910"
+
+
+def _text_half(message: EmailMessage) -> str:
+    """Read the plain-text part the manager's client falls back to."""
+    text = message.get_body(preferencelist=("plain",))
+    assert text is not None
+    return str(text.get_content())
 
 
 def _form(*items: InquiryItemForm) -> SubmitInquiryForm:
@@ -220,7 +243,7 @@ async def test_a_snapshot_stored_before_the_whole_specification_is_printed_as_it
 
     await bus.notify(LEGACY_INQUIRY)
 
-    body = sent[0].get_content()
+    body = _text_half(sent[0])
     assert "Зеркало 1: Зеркало в раме" in body
     assert "Размер: 800 × 600 мм" in body
     assert "Тип полотна: Графит" in body
@@ -298,6 +321,55 @@ async def test_an_account_without_a_password_keeps_the_saved_inquiry_and_stays_o
     assert "Manager email notification skipped because no password is configured" in logs
     assert "Anna" not in logs
     assert "+79990000000" not in logs
+
+
+async def test_the_manager_email_carries_the_text_and_an_html_reading_of_the_same_snapshot(
+    request_container: AsyncContainer,
+) -> None:
+    """The email has a plain-text half, unchanged, and an HTML half the manager's client prefers."""
+    sent: list[EmailMessage] = []
+    submit: SubmitInquiry = await request_container.get(SubmitInquiry)
+    created = await submit.execute(_ONE_ITEM_FORM)
+    bus = SMTPInquiryNotificationBus(
+        _CAPTURED_CHANNEL,
+        await request_container.get(InquiryGateway),
+        await request_container.get(AsyncSession),
+        lambda _config, message: sent.append(message),
+    )
+
+    await bus.notify(created.id)
+
+    message = sent[0]
+    html = message.get_body(preferencelist=("html",))
+    assert message.get_content_type() == "multipart/alternative"
+    assert _text_half(message) == _ONE_ITEM_TEXT
+    assert html is not None
+    assert html.get_content_type() == "text/html"
+
+
+async def test_the_html_half_links_the_phone_and_the_email_from_the_snapshot(
+    request_container: AsyncContainer,
+) -> None:
+    """The manager dials and writes back from the letter: tel and mailto links carry the saved contacts."""
+    sent: list[EmailMessage] = []
+    submit: SubmitInquiry = await request_container.get(SubmitInquiry)
+    created = await submit.execute(
+        _form(InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[], wish=""))
+    )
+    bus = SMTPInquiryNotificationBus(
+        _CAPTURED_CHANNEL,
+        await request_container.get(InquiryGateway),
+        await request_container.get(AsyncSession),
+        lambda _config, message: sent.append(message),
+    )
+
+    await bus.notify(created.id)
+
+    html = sent[0].get_body(preferencelist=("html",))
+    assert html is not None
+    assert 'href="tel:+79990000000"' in html.get_content()
+    assert 'href="mailto:anna@example.test"' in html.get_content()
+    assert sent[0]["Subject"] == "Заявка от Anna, +7 999 000-00-00 · 1 зеркало"
 
 
 async def test_the_manager_email_is_sent_without_holding_the_request_transaction(

@@ -94,6 +94,8 @@ ignore = [
 # The manager-facing mail is Russian by product decision; its words and the
 # multiplication sign are intentionally not Latin lookalikes.
 "src/memiro/adapters/smtp/inquiry_notification.py" = ["RUF001"]
+"src/memiro/adapters/smtp/inquiry_letter.py" = ["RUF001"]
+"tests/unit/adapters/smtp/test_inquiry_letter.py" = ["RUF001"]
 # The admin speaks to the owner in Russian: verbose names and screen labels
 # are UI text, and Django's `class Meta` is framework boilerplate with nothing
 # to document.
