@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 
-import { GONE_PATHS, legacyResponse, redirectTarget } from "../app/lib/legacy-redirects.ts";
+import { GONE_PATHS, legacyResponse } from "../app/lib/legacy-redirects.ts";
+import { redirectTarget } from "../app/lib/navigation.ts";
 
 /** Every address the WordPress sitemap index published on 2026-09-08. */
 const LEGACY = fs.readFileSync(new URL("./legacy-urls.txt", import.meta.url), "utf8")

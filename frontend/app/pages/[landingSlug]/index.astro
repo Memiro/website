@@ -1,6 +1,7 @@
 ---
 import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import CatalogCard from "../../components/CatalogCard.astro";
+import CatalogPageNotFound from "../../components/CatalogPageNotFound.astro";
 import EmptyState from "../../components/EmptyState.astro";
 import NotFound from "../../components/NotFound.astro";
 import OfferNote from "../../components/OfferNote.astro";
@@ -51,14 +52,7 @@ const crumbs = landing === null ? [] : [
     description="Такой страницы нет на сайте Memiro."
   />
 ) : beyond ? (
-  <NotFound
-    heading="Такой страницы каталога нет"
-    lead="Страниц в этой подборке меньше, чем просит адрес."
-    description="Такой страницы каталога нет на сайте Memiro."
-  >
-    <a class="btn" href={path}>К началу подборки <span class="arrow" aria-hidden="true">→</span></a>
-    <a class="btn btn--ghost" href="/catalog/">Все категории</a>
-  </NotFound>
+  <CatalogPageNotFound path={path} lead="Страниц в этой подборке меньше, чем просит адрес." action="К началу подборки" />
 ) : (
   <BaseLayout
     title={pagedTitle(landing.title, asked.page)}

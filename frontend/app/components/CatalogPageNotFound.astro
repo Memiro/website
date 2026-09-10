@@ -1,0 +1,16 @@
+---
+import NotFound from "./NotFound.astro";
+
+interface Props {
+  path: string;
+  lead: string;
+  action: string;
+}
+
+const { path, lead, action } = Astro.props;
+---
+
+<NotFound heading="Такой страницы каталога нет" lead={lead} description="Такой страницы каталога нет на сайте Memiro.">
+  <a class="btn" href={path}>{action} <span class="arrow" aria-hidden="true">→</span></a>
+  <a class="btn btn--ghost" href="/catalog/">Все категории</a>
+</NotFound>

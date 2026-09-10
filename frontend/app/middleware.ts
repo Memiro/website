@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 
-import { legacyResponse, redirectTarget } from "./lib/legacy-redirects.ts";
+import { legacyResponse } from "./lib/legacy-redirects.ts";
+import { redirectTarget } from "./lib/navigation.ts";
 import { slashRedirect } from "./lib/trailing-slash.ts";
 
 // The old site's addresses are answered before routing: the new storefront has
