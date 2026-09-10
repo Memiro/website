@@ -35,7 +35,9 @@ consent_version = "2026-08-31"
 # Ключ подписи сессий админки: в деплое владелец заполняет файл вне git.
 secret_key = ""  # python3 -c 'import secrets; print(secrets.token_urlsafe(64))'
 # Публичный вход — nginx, он и передаёт Host; список правится при деплое.
-allowed_hosts = ["memiro.ru"]
+# The service names stay: the compose healthcheck knocks on localhost and
+# nginx reaches the admin by its service name.
+allowed_hosts = ["memiro.ru", "localhost", "127.0.0.1", "admin"]
 static_root = "/app/staticfiles"
 
 [media]
