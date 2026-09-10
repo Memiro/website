@@ -5,7 +5,7 @@ import { escapeXml, xmlLink } from "./xml.ts";
 
 /** The format allows ten pictures per offer; the rest of a gallery stays on the card. */
 export const MAX_PICTURES = 10;
-/** In YML `available="false"` already means "to order"; the note says what the price is. */
+/** Yandex shows only offers that are available; the note is where "to order" and "from" are said. */
 export const SALES_NOTES = "Цена от, изготовление под заказ";
 const CURRENCY = "RUB";
 // Cards are read a few at a time: one by one is slow for a hundred, all at
@@ -43,12 +43,14 @@ export interface YmlContent {
   offers: YmlOffer[];
 }
 
-interface PricedProduct extends WalkedProduct {
+interface FeedableProduct extends WalkedProduct {
   price_from: string;
 }
 
-function isPriced(product: WalkedProduct): product is PricedProduct {
-  return product.price_from !== null;
+// Price and picture are mandatory in an offer: a product missing either has
+// nothing to show in a snippet and is left out rather than fed invalid.
+function isFeedable(product: WalkedProduct): product is FeedableProduct {
+  return product.price_from !== null && product.image_keys.length > 0;
 }
 
 async function inBatches<Item, Result>(items: Item[], size: number, work: (item: Item) => Promise<Result>): Promise<Result[]> {
@@ -59,13 +61,13 @@ async function inBatches<Item, Result>(items: Item[], size: number, work: (item:
   return results;
 }
 
-/** Every priced published product as an offer, in the owner's order; a product without a price has nothing to feed. */
+/** Every published product with a price and a photo as an offer, in the owner's order. */
 export async function ymlContent(api: YmlCatalog): Promise<YmlContent> {
   const walked = await walkCatalog(api);
   const categories = walked.map(({ category }, index) => ({ id: index + 1, name: category.name }));
-  const priced = walked.flatMap(({ category, products }, index) =>
-    products.filter(isPriced).map((product) => ({ categorySlug: category.slug, categoryId: categories[index].id, product })));
-  const offers = await inBatches(priced, CARDS_AT_ONCE, async ({ categorySlug, categoryId, product }) => ({
+  const feedable = walked.flatMap(({ category, products }, index) =>
+    products.filter(isFeedable).map((product) => ({ categorySlug: category.slug, categoryId: categories[index].id, product })));
+  const offers = await inBatches(feedable, CARDS_AT_ONCE, async ({ categorySlug, categoryId, product }) => ({
     id: product.slug,
     path: productPath(categorySlug, product.slug),
     price: product.price_from,
@@ -83,7 +85,7 @@ function element(name: string, text: string): string {
 
 function offerXml(site: URL, offer: YmlOffer): string {
   return [
-    `    <offer id="${escapeXml(offer.id)}" available="false">`,
+    `    <offer id="${escapeXml(offer.id)}" available="true">`,
     `      <url>${xmlLink(site, offer.path)}</url>`,
     `      <price>${Number(offer.price)}</price>`,
     `      <currencyId>${CURRENCY}</currencyId>`,
@@ -96,9 +98,10 @@ function offerXml(site: URL, offer: YmlOffer): string {
   ].join("\n");
 }
 
-// The "Товары и цены" feed of Yandex.Webmaster, which puts a price and a
-// picture into the search snippet. Honest about the shop: the price is the
-// "from" price of the cheapest configuration, and nothing is in stock.
+// The feed of Яндекс Товары, which puts a price and a picture into the search
+// snippet. An offer is shown there only when available; "to order" and the
+// "from" price of the cheapest configuration are said in sales_notes. The id
+// is the slug: up to 80 letters, digits and hyphens is what the format takes.
 export function ymlText(site: URL | undefined, shop: YmlShop, offers: YmlOffer[], now: Date): string | null {
   if (site === undefined) {
     return null;
