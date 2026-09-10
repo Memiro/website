@@ -57,27 +57,52 @@ Django-миграции трогают только `auth_*` и `django_*`.
 
 ## Прод
 
-Прод — тот же compose с override-файлом: nginx выходит на 80 и 443 хоста,
-`www` и `http` отвечают одним 301 на `https://memiro.ru`, HSTS и кеш
-статики — в `.config/nginx.prod.conf`.
+Прод — VPS с docker. Образы собирает CI и кладёт в GitHub Container Registry
+(`ghcr.io/memiro/website-backend`, `ghcr.io/memiro/website-frontend`): на
+push в `dev` — под тегом `dev`, на релизный тег `v*` — под версией и `latest`.
+Сервер ничего не собирает. Контур — тот же compose с override-файлом: nginx
+выходит на 80 и 443 хоста, `www` и `http` отвечают одним 301 на
+`https://memiro.ru`, HSTS и кеш статики — в `.config/nginx.prod.conf`.
+
+В клоне репозитория на сервере (`/srv/memiro`) вне git лежат три файла:
+
+- `.env` — `MEMIRO_IMAGE_TAG` (версия релиза), `MEMIRO_ADMIN_USERNAME` и
+  `MEMIRO_ADMIN_PASSWORD`, `MEMIRO_DB_PASSWORD`; образец — `.env.example`.
+- `.config/config.prod.toml` — конфигурация приложения с настоящим
+  `secret_key`, `allowed_hosts = ["memiro.ru"]` и паролем базы из `.env`;
+  образец — `.config/config.prod.example.toml`, override подставляет копию в
+  `APP_CONFIG_PATH`.
+- `.config/smtp_password` — см. «Письмо менеджеру».
+
+Файлы с секретами — `chmod 600`. Выкатка релиза: поправить
+`MEMIRO_IMAGE_TAG` в `.env` и выполнить
 
 ```sh
-docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --build --wait
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml pull
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --wait
 ```
 
-Сертификат живёт на хосте: certbot держит его в `/etc/letsencrypt`, а
-webroot для продления — `/var/www/certbot`; оба каталога nginx монтирует
-только на чтение. Первый выпуск — до первого запуска контура, пока 80 порт
-свободен (`certbot certonly --standalone -d memiro.ru -d www.memiro.ru`);
-продление идёт через webroot
-(`certbot renew --webroot -w /var/www/certbot`) с deploy-хуком, который
-делает `nginx -s reload` в контейнере. Без сертификата nginx не поднимется:
-конфиг ссылается на файлы `live/memiro.ru/`.
+`PUBLIC_SITE_URL` и `PUBLIC_METRIKA_ID` запекаются в образ витрины в CI из
+variables репозитория; после смены счётчика нужен новый образ, а не рестарт.
 
-В `.env` на проде задаются `PUBLIC_SITE_URL=https://memiro.ru` и
-`PUBLIC_METRIKA_ID` — они запекаются в сборку витрины, после смены нужен
-`--build`. Синтаксис обоих edge-конфигов проверяется без прода:
-`just nginx-check`.
+Сертификат живёт на хосте: certbot держит его в `/etc/letsencrypt`, webroot
+для продления — `/var/www/certbot`; оба каталога nginx монтирует только на
+чтение. Без сертификата nginx не поднимется: конфиг ссылается на файлы
+`live/memiro.ru/`. Порядок при переезде, пока домен смотрит на старый хостинг:
+
+1. Первый выпуск — по DNS-проверке, A-запись не трогается:
+   `certbot certonly --manual --preferred-challenges dns -d memiro.ru -d www.memiro.ru`;
+   TXT-записи `_acme-challenge` кладутся в DNS домена.
+2. Контур поднимается командами выше и проверяется по IP:
+   `curl --resolve memiro.ru:443:<IP> https://memiro.ru/`.
+3. A-записи `memiro.ru` и `www` переводятся на сервер.
+4. Сертификат перевыпускается через webroot, чтобы продление шло без рук:
+   `certbot certonly --webroot -w /var/www/certbot -d memiro.ru -d www.memiro.ru --force-renewal`.
+   Deploy-хук в `/etc/letsencrypt/renewal-hooks/deploy/` делает
+   `docker compose … exec nginx nginx -s reload`; `certbot renew --dry-run`
+   проверяет цепочку.
+
+Синтаксис обоих edge-конфигов проверяется без прода: `just nginx-check`.
 
 ### Письмо менеджеру
 

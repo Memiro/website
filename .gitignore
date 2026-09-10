@@ -10,6 +10,7 @@ build/
 .env
 # The Yandex app password of the manager email channel: a file outside git
 .config/smtp_password
+.config/config.prod.toml
 
 # Django
 db.sqlite3
