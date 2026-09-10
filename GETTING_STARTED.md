@@ -87,22 +87,33 @@ docker compose --env-file .env -f docker/docker-compose.yml -f docker/docker-com
 `PUBLIC_SITE_URL` и `PUBLIC_METRIKA_ID` запекаются в образ витрины в CI из
 variables репозитория; после смены счётчика нужен новый образ, а не рестарт.
 
-Сертификат живёт на хосте: certbot держит его в `/etc/letsencrypt`, webroot
-для продления — `/var/www/certbot`; оба каталога nginx монтирует только на
-чтение. Без сертификата nginx не поднимется: конфиг ссылается на файлы
-`live/memiro.ru/`. Порядок при переезде, пока домен смотрит на старый хостинг:
+Пакеты в GHCR приватные (настройки организации), поэтому один раз на
+сервере: `docker login ghcr.io -u <логин GitHub>` с классическим PAT, у
+которого единственный скоуп `read:packages`.
 
-1. Первый выпуск — по DNS-проверке, A-запись не трогается:
-   `certbot certonly --manual --preferred-challenges dns -d memiro.ru -d www.memiro.ru`;
-   TXT-записи `_acme-challenge` кладутся в DNS домена.
-2. Контур поднимается командами выше и проверяется по IP:
-   `curl --resolve memiro.ru:443:<IP> https://memiro.ru/`.
-3. A-записи `memiro.ru` и `www` переводятся на сервер.
-4. Сертификат перевыпускается через webroot, чтобы продление шло без рук:
-   `certbot certonly --webroot -w /var/www/certbot -d memiro.ru -d www.memiro.ru --force-renewal`.
-   Deploy-хук в `/etc/letsencrypt/renewal-hooks/deploy/` делает
+Сертификат живёт на хосте: certbot держит его в `/etc/letsencrypt`, nginx
+монтирует каталог только на чтение. Без сертификата nginx не поднимется:
+конфиг ссылается на файлы `live/memiro.ru/`. Выпуск и продление идут по
+DNS-проверке через API Beget, значит домен может смотреть куда угодно, в
+том числе на старый хостинг во время переезда:
+
+1. В панели Beget включить «Доступ по API», на сервере положить
+   `/root/.beget-api` (`chmod 600`) с двумя строками: `BEGET_LOGIN=…` и
+   `BEGET_PASSWORD=…` (пароль API, не панели).
+2. Скопировать `docker/certbot/beget-acme-auth.sh` и
+   `beget-acme-cleanup.sh` в `/root/` (`chmod 700`); хук ставит TXT-запись
+   `_acme-challenge`, ждёт её на всех четырёх NS Beget и убирает после.
+   Нужен `dig` (`apt install dnsutils`).
+3. Первый выпуск:
+   `certbot certonly --manual --preferred-challenges dns --manual-auth-hook /root/beget-acme-auth.sh --manual-cleanup-hook /root/beget-acme-cleanup.sh -d memiro.ru -d www.memiro.ru -m memiro.ru@yandex.ru --agree-tos --no-eff-email`.
+   Хуки сохраняются в renewal-конфиге, `certbot renew` (системный таймер)
+   идёт тем же путём. Deploy-хук
+   `/etc/letsencrypt/renewal-hooks/deploy/memiro-nginx-reload.sh` делает
    `docker compose … exec nginx nginx -s reload`; `certbot renew --dry-run`
    проверяет цепочку.
+4. Контур проверяется до переключения DNS с самого сервера:
+   `curl --resolve memiro.ru:443:127.0.0.1 https://memiro.ru/` — и с ноутбука
+   через строку `<IP> memiro.ru www.memiro.ru` в hosts.
 
 Синтаксис обоих edge-конфигов проверяется без прода: `just nginx-check`.
 
