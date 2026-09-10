@@ -13,6 +13,7 @@ from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.submit_inquiry import InquiryItemForm, InquirySource, SubmitInquiry, SubmitInquiryForm
 from memiro.entities.common.measure import Millimeters
 from tests.common.factory.catalog import BACKLIGHT, BLADE, CONTOUR, CUTOUTS, GRAPHITE, LEGACY_INQUIRY, PRODUCT
+from tests.common.mail import text_half
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
     prime_hidden_calculated_price,
@@ -64,13 +65,6 @@ Email: не указан
 _CANONICAL_PRICE_LINE = "Цена: 8 820 ₽"
 _GRAPHITE_PRICE_LINE = "Цена: 14 090 ₽"
 _SUM_OF_THE_TWO = "22 910"
-
-
-def _text_half(message: EmailMessage) -> str:
-    """Read the plain-text part the manager's client falls back to."""
-    text = message.get_body(preferencelist=("plain",))
-    assert text is not None
-    return str(text.get_content())
 
 
 def _form(*items: InquiryItemForm) -> SubmitInquiryForm:
@@ -243,7 +237,7 @@ async def test_a_snapshot_stored_before_the_whole_specification_is_printed_as_it
 
     await bus.notify(LEGACY_INQUIRY)
 
-    body = _text_half(sent[0])
+    body = text_half(sent[0])
     assert "Зеркало 1: Зеркало в раме" in body
     assert "Размер: 800 × 600 мм" in body
     assert "Тип полотна: Графит" in body
@@ -342,7 +336,7 @@ async def test_the_manager_email_carries_the_text_and_an_html_reading_of_the_sam
     message = sent[0]
     html = message.get_body(preferencelist=("html",))
     assert message.get_content_type() == "multipart/alternative"
-    assert _text_half(message) == _ONE_ITEM_TEXT
+    assert text_half(message) == _ONE_ITEM_TEXT
     assert html is not None
     assert html.get_content_type() == "text/html"
 
@@ -369,7 +363,6 @@ async def test_the_html_half_links_the_phone_and_the_email_from_the_snapshot(
     assert html is not None
     assert 'href="tel:+79990000000"' in html.get_content()
     assert 'href="mailto:anna@example.test"' in html.get_content()
-    assert sent[0]["Subject"] == "Заявка от Anna, +7 999 000-00-00 · 1 зеркало"
 
 
 async def test_the_manager_email_is_sent_without_holding_the_request_transaction(

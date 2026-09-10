@@ -21,4 +21,6 @@ def check_login(config: EmailConfig, login: Login = smtp_login) -> str:
         reply = error.smtp_error
         words = reply.decode(errors="replace") if isinstance(reply, bytes) else reply
         return f"{error.smtp_code} {words}"
+    except (smtplib.SMTPException, OSError) as error:
+        return str(error)
     return "OK"

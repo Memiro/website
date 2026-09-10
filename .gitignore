@@ -8,7 +8,7 @@ build/
 # Environment
 .venv/
 .env
-# Пароль приложения Яндекса для письма менеджеру: файл вне git
+# The Yandex app password of the manager email channel: a file outside git
 .config/smtp_password
 
 # Django
