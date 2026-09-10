@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import replace
+from email.message import EmailMessage
 from email.parser import BytesParser
 from email.policy import default
 
@@ -23,6 +24,13 @@ async def request_container(app: FastAPI) -> AsyncIterator[AsyncContainer]:
         yield request
 
 
+def _text_half(message: EmailMessage) -> str:
+    """Read the plain-text part the manager's client falls back to."""
+    text = message.get_body(preferencelist=("plain",))
+    assert text is not None
+    return str(text.get_content())
+
+
 @pytest.fixture
 async def smtp_server() -> AsyncIterator[tuple[int, list[str]]]:
     """Run a minimal SMTP peer that records the delivered message bodies."""
@@ -36,7 +44,7 @@ async def smtp_server() -> AsyncIterator[tuple[int, list[str]]]:
         while line := await reader.readline():
             if in_data:
                 if line == b".\r\n":
-                    received.append(BytesParser(policy=default).parsebytes(b"".join(lines)).get_content())
+                    received.append(_text_half(BytesParser(policy=default).parsebytes(b"".join(lines))))
                     lines = []
                     in_data = False
                     writer.write(b"250 queued\r\n")

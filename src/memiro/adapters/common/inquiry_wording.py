@@ -3,7 +3,11 @@
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import ConfigurationValue
+from memiro.entities.inquiry.phone import Phone
 from memiro.entities.pricing.quotation import PricingVerdict
+
+# A Russian number in E.164: the country code and ten national digits.
+RUSSIAN_NUMBER_DIGITS = 11
 
 _UNPRICED_WORDS = {
     PricingVerdict.BEYOND_LIMITS: "Цена не рассчитана: размер за пределом производства",
@@ -39,10 +43,24 @@ def size_words(dimensions: Dimensions) -> str:
     return f"{dimensions.width.value} × {dimensions.height.value} мм"  # noqa: RUF001  # the multiplication sign is the typographic one
 
 
-def specification_line(value: ConfigurationValue) -> str:
-    """Spell one value of the specification as "attribute: value", a count standing in for a row."""
+def phone_words(phone: Phone) -> str:
+    """Spell a Russian number the way it is dialled, "+7 921 123-45-67"; any other keeps its digits behind a plus."""
+    digits = phone.value.removeprefix("+")
+    if len(digits) == RUSSIAN_NUMBER_DIGITS and digits.startswith("7"):
+        return f"+7 {digits[1:4]} {digits[4:7]}-{digits[7:9]}-{digits[9:]}"
+    return f"+{digits}"
+
+
+def specification_words(value: ConfigurationValue) -> tuple[str, str]:
+    """Spell one value of the specification as the attribute and its value, a count standing in for a row."""
     if value.quantity is not None:
         # The database keeps the count in its own scale ("2.5000"); the
         # customer typed "2.5" and the manager reads it back the same way.
-        return f"{value.attribute_name}: {value.quantity.normalize():f}"
-    return f"{value.attribute_name}: {value.value_name}"
+        return value.attribute_name, f"{value.quantity.normalize():f}"
+    return value.attribute_name, str(value.value_name)
+
+
+def specification_line(value: ConfigurationValue) -> str:
+    """Spell one value of the specification as "attribute: value"."""
+    attribute, words = specification_words(value)
+    return f"{attribute}: {words}"

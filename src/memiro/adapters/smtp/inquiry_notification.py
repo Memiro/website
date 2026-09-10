@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from memiro.adapters.common.inquiry_wording import price_words, size_words, specification_line
 from memiro.adapters.smtp.client import smtp_client
 from memiro.adapters.smtp.config import EmailConfig
+from memiro.adapters.smtp.inquiry_letter import letter_html, letter_subject
 from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.common.notification import InquiryNotificationBus
 from memiro.entities.common.identifiers import InquiryId
@@ -29,12 +30,13 @@ def smtp_transport(config: EmailConfig, message: EmailMessage) -> None:
 
 
 def _message(inquiry: Inquiry, config: EmailConfig) -> EmailMessage:
-    """Build the manager email from immutable aggregate data only."""
+    """Build the manager email from immutable aggregate data only: text first, HTML as the preferred reading."""
     message = EmailMessage()
     message["From"] = config.from_address
     message["To"] = config.manager_address
-    message["Subject"] = f"Заявка {inquiry.id}"
+    message["Subject"] = letter_subject(inquiry)
     message.set_content(_body(inquiry))
+    message.add_alternative(letter_html(inquiry), subtype="html")
     return message
 
 
