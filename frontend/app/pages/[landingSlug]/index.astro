@@ -8,7 +8,7 @@ import PageHead from "../../components/PageHead.astro";
 import Pager from "../../components/Pager.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/catalog-api.ts";
-import { catalogSearch, isNarrowed, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
+import { catalogSearch, isBeyondLastPage, isNarrowed, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
 import { foundOrNull } from "../../lib/not-found.ts";
 import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../lib/seo.ts";
 
@@ -27,6 +27,10 @@ const query = landing === null ? asked : { ...asked, values: landing.values };
 const page: CategoryPage | null = landing === null
   ? null
   : await foundOrNull(landing.category_slug, (slug) => api.categoryProducts(slug, catalogSearch(query)));
+const beyond = page !== null && isBeyondLastPage(asked, page.pages);
+if (beyond) {
+  Astro.response.status = 404;
+}
 const listing = page === null || landing === null || isNarrowed(asked)
   ? null
   : productListJsonLd(Astro.site, landing.category_slug, page.items);
@@ -45,6 +49,15 @@ const crumbs = landing === null ? [] : [
     lead="Возможно, в адресе опечатка или страница больше не публикуется."
     description="Такой страницы нет на сайте Memiro."
   />
+) : beyond ? (
+  <NotFound
+    heading="Такой страницы каталога нет"
+    lead="Страниц в этой подборке меньше, чем просит адрес."
+    description="Такой страницы каталога нет на сайте Memiro."
+  >
+    <a class="btn" href={path}>К началу подборки <span class="arrow" aria-hidden="true">→</span></a>
+    <a class="btn btn--ghost" href="/catalog/">Все категории</a>
+  </NotFound>
 ) : (
   <BaseLayout
     title={landing.title}

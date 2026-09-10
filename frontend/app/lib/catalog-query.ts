@@ -25,6 +25,14 @@ function asSort(value: string | null): CatalogSort {
   return CATALOG_SORTS.find((sort) => sort === value) ?? "name";
 }
 
+// Shape only, no version check: the API refuses anything that is not a UUID
+// with a 422, and a stray letter in an old link must not take the page down.
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function asValues(values: string[]): string[] {
+  return values.filter((value) => UUID_SHAPE.test(value));
+}
+
 function asPage(value: string | null): number {
   const page = Number(value);
   return Number.isInteger(page) && page >= FIRST_PAGE ? page : FIRST_PAGE;
@@ -40,7 +48,7 @@ function asAmount(value: string | null): string {
 
 export function parseCatalogQuery(params: URLSearchParams): CatalogQuery {
   return {
-    values: params.getAll(VALUE_PARAM),
+    values: asValues(params.getAll(VALUE_PARAM)),
     priceMin: asAmount(params.get("price_min")),
     priceMax: asAmount(params.get("price_max")),
     sort: asSort(params.get("sort")),
@@ -94,6 +102,11 @@ export function withPage(path: string, query: CatalogQuery, page: number): strin
 /** Every page of the listing, in order: the pager of a category prints them all. */
 export function pageNumbers(pages: number): number[] {
   return Array.from({ length: pages }, (_, index) => index + 1);
+}
+
+/** Whether the visitor asked for a page past the last one; an empty listing still has its first page. */
+export function isBeyondLastPage(query: CatalogQuery, pages: number): boolean {
+  return query.page > Math.max(pages, FIRST_PAGE);
 }
 
 export function isNarrowed(query: CatalogQuery): boolean {

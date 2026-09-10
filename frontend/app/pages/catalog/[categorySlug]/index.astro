@@ -10,6 +10,7 @@ import BaseLayout from "../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type CategoryPage } from "../../../lib/catalog-api.ts";
 import {
   catalogSearch,
+  isBeyondLastPage,
   isNarrowed,
   parseCatalogQuery,
   SORT_OPTIONS,
@@ -29,7 +30,8 @@ const query = parseCatalogQuery(Astro.url.searchParams);
 const page: CategoryPage | null = await foundOrNull(categorySlug, (slug) =>
   api.categoryProducts(slug, catalogSearch(query)),
 );
-if (page === null) {
+const beyond = page !== null && isBeyondLastPage(query, page.pages);
+if (page === null || beyond) {
   Astro.response.status = 404;
 }
 const category = page === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
@@ -59,6 +61,15 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
     lead="Возможно, в адресе опечатка или категория больше не производится."
     description="Такой категории зеркал нет в каталоге Memiro."
   />
+) : beyond ? (
+  <NotFound
+    heading="Такой страницы каталога нет"
+    lead="Страниц в этой категории меньше, чем просит адрес."
+    description="Такой страницы каталога нет на сайте Memiro."
+  >
+    <a class="btn" href={path}>К началу категории <span class="arrow" aria-hidden="true">→</span></a>
+    <a class="btn btn--ghost" href="/catalog/">Все категории</a>
+  </NotFound>
 ) : (
   <BaseLayout
     title={`${name} — Memiro`}
