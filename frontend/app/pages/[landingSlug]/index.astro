@@ -11,6 +11,7 @@ import { internalCatalogApi, type CategoryPage, type Landing } from "../../lib/c
 import { catalogSearch, isBeyondLastPage, isNarrowed, parseCatalogQuery, withPage } from "../../lib/catalog-query.ts";
 import { foundOrNull } from "../../lib/not-found.ts";
 import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../lib/seo.ts";
+import { pagedTitle } from "../../lib/titles.ts";
 
 const api = internalCatalogApi();
 const landingSlug = Astro.params.landingSlug ?? "";
@@ -60,7 +61,7 @@ const crumbs = landing === null ? [] : [
   </NotFound>
 ) : (
   <BaseLayout
-    title={landing.title}
+    title={pagedTitle(landing.title, asked.page)}
     description={landing.description}
     robots={listingRobots(asked)}
     canonicalPath={listingCanonicalPath(path, asked)}

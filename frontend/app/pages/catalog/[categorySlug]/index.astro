@@ -22,6 +22,7 @@ import {
 import { foundOrNull } from "../../../lib/not-found.ts";
 import { productPlural } from "../../../lib/plural.ts";
 import { listingCanonicalPath, listingRobots, productListJsonLd } from "../../../lib/seo.ts";
+import { listingDescription, listingTitle } from "../../../lib/titles.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
@@ -72,8 +73,8 @@ const roubles = (amount: string | null): string => (amount === null ? "" : Strin
   </NotFound>
 ) : (
   <BaseLayout
-    title={`${name} — Memiro`}
-    description={`Зеркала мастерской Memiro в категории «${name}»: размеры, опции и цена от минимальной конфигурации.`}
+    title={listingTitle(name, query.page)}
+    description={listingDescription(name, page.total, page.price?.lowest ?? null)}
     robots={listingRobots(query)}
     canonicalPath={listingCanonicalPath(path, query)}
     crumbs={crumbs}
