@@ -22,7 +22,7 @@ export interface SitemapCatalog extends WalkableCatalog {
   landings: () => Promise<{ items: { slug: string }[] }>;
 }
 
-function page(path: string): SitemapEntry {
+function pageWithoutImages(path: string): SitemapEntry {
   return { path, images: [] };
 }
 
@@ -37,36 +37,38 @@ export function productImages(product: WalkedProduct): SitemapImage[] {
 /** Every address a crawler may index, in reading order, each with the photographs it shows. */
 export async function sitemapEntries(api: SitemapCatalog): Promise<SitemapEntry[]> {
   const [catalog, landings] = await Promise.all([walkCatalog(api), api.landings()]);
-  const entries: SitemapEntry[] = STATIC_PATHS.map(page);
+  const entries: SitemapEntry[] = STATIC_PATHS.map(pageWithoutImages);
   for (const { category, products } of catalog) {
-    entries.push(page(categoryPath(category.slug)));
+    entries.push(pageWithoutImages(categoryPath(category.slug)));
     entries.push(...products.map((product) => ({
       path: productPath(category.slug, product.slug),
       images: productImages(product),
     })));
   }
-  return [...entries, ...landings.items.map((landing) => page(landingPath(landing.slug)))];
+  return [...entries, ...landings.items.map((landing) => pageWithoutImages(landingPath(landing.slug)))];
 }
 
-function imageXml(origin: string, image: SitemapImage): string {
-  const location = new URL(image.path, origin).href;
-  return `<image:image><image:loc>${location}</image:loc><image:title>${escapeXml(image.title)}</image:title></image:image>`;
+function link(site: URL, path: string): string {
+  return escapeXml(absoluteUrl(site, path) ?? "");
+}
+
+function imageXml(site: URL, image: SitemapImage): string {
+  return `<image:image><image:loc>${link(site, image.path)}</image:loc><image:title>${escapeXml(image.title)}</image:title></image:image>`;
 }
 
 // No lastmod: the API carries no updated_at for any of these. No changefreq and
 // no priority: Google ignores both. Photographs carry loc and title only —
 // caption and geo_location are read by neither Google nor Yandex.
 export function sitemapXml(site: URL | undefined, entries: SitemapEntry[]): string | null {
-  const origin = site?.origin;
-  if (origin === undefined) {
+  if (site === undefined) {
     return null;
   }
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
     ...entries.map((entry) => {
-      const images = entry.images.map((image) => imageXml(origin, image)).join("");
-      return `  <url><loc>${absoluteUrl(site, entry.path)}</loc>${images}</url>`;
+      const images = entry.images.map((image) => imageXml(site, image)).join("");
+      return `  <url><loc>${link(site, entry.path)}</loc>${images}</url>`;
     }),
     "</urlset>",
     "",

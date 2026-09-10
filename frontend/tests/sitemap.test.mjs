@@ -98,6 +98,11 @@ test("a product without photographs carries no image element", async () => {
   assert.ok(xml.includes("<url><loc>https://memiro.ru/catalog/mirrors/echo/</loc></url>"));
 });
 
+test("an address with an ampersand is escaped in the document", () => {
+  const xml = sitemapXml(SITE, [{ path: "/catalog/a/", images: [{ path: "/media/a&b.jpg", title: "A" }] }]);
+  assert.ok(xml?.includes("<image:loc>https://memiro.ru/media/a&amp;b.jpg</image:loc>"));
+});
+
 test("a contour without an origin has no sitemap to give", () => {
   assert.equal(sitemapXml(undefined, [{ path: "/", images: [] }]), null);
 });

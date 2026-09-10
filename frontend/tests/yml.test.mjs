@@ -88,6 +88,13 @@ test("special characters in a name and a description are escaped", async () => {
   assert.ok(xml.includes("<description>Полотно &lt;4 мм&gt; в раме &quot;Loft&quot;.</description>"));
 });
 
+test("an address with a query character is escaped like any other text", () => {
+  const offer = { id: "kolo", path: "/catalog/mirrors/kolo/?a=1&b=2", price: "1", categoryId: 1, pictures: ["/media/a&b.jpg"], name: "K", description: "" };
+  const xml = ymlText(SITE, { name: "Memiro", company: "Memiro", categories: [] }, [offer], NOW);
+  assert.ok(xml?.includes("<url>https://memiro.ru/catalog/mirrors/kolo/?a=1&amp;b=2</url>"));
+  assert.ok(xml?.includes("<picture>https://memiro.ru/media/a&amp;b.jpg</picture>"));
+});
+
 test("a contour without an origin has no feed to give", () => {
   assert.equal(ymlText(undefined, { name: "Memiro", company: "Memiro", categories: [] }, [], NOW), null);
 });

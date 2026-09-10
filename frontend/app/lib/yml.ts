@@ -82,14 +82,18 @@ function element(name: string, text: string): string {
   return `<${name}>${escapeXml(text)}</${name}>`;
 }
 
+function link(site: URL, path: string): string {
+  return escapeXml(absoluteUrl(site, path) ?? "");
+}
+
 function offerXml(site: URL, offer: YmlOffer): string {
   return [
     `    <offer id="${escapeXml(offer.id)}" available="false">`,
-    `      <url>${absoluteUrl(site, offer.path)}</url>`,
+    `      <url>${link(site, offer.path)}</url>`,
     `      <price>${Number(offer.price)}</price>`,
     `      <currencyId>${CURRENCY}</currencyId>`,
     `      <categoryId>${offer.categoryId}</categoryId>`,
-    ...offer.pictures.map((picture) => `      <picture>${absoluteUrl(site, picture)}</picture>`),
+    ...offer.pictures.map((picture) => `      <picture>${link(site, picture)}</picture>`),
     `      ${element("name", offer.name)}`,
     `      ${element("description", offer.description)}`,
     `      ${element("sales_notes", SALES_NOTES)}`,
@@ -111,7 +115,7 @@ export function ymlText(site: URL | undefined, shop: YmlShop, offers: YmlOffer[]
     "  <shop>",
     `    ${element("name", shop.name)}`,
     `    ${element("company", shop.company)}`,
-    `    <url>${absoluteUrl(site, "/")}</url>`,
+    `    <url>${link(site, "/")}</url>`,
     `    <currencies><currency id="${CURRENCY}" rate="1"/></currencies>`,
     "    <categories>",
     ...shop.categories.map((category) => `      <category id="${category.id}">${escapeXml(category.name)}</category>`),
