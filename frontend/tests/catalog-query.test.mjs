@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   catalogSearch,
+  isBeyondLastPage,
   isNarrowed,
   parseCatalogQuery,
   withPage,
@@ -65,6 +66,16 @@ test("choosing an order starts the listing again from its first page", () => {
 
 test("a page link keeps every narrowing the visitor made", () => {
   assert.equal(withPage("/catalog/mirrors/", query(`value=${ROUND}`), 2), `/catalog/mirrors/?value=${ROUND}&page=2`);
+});
+
+test("the last page is still a page, and the one after it is not", () => {
+  assert.equal(isBeyondLastPage(query("page=4"), 4), false);
+  assert.equal(isBeyondLastPage(query("page=5"), 4), true);
+});
+
+test("an empty listing keeps its first page and nothing past it", () => {
+  assert.equal(isBeyondLastPage(query(""), 0), false);
+  assert.equal(isBeyondLastPage(query("page=2"), 0), true);
 });
 
 test("a listing nobody narrowed is not a filtered page", () => {

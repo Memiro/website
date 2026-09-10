@@ -42,6 +42,25 @@ test("a decimal inside the copy does not end its first sentence", () => {
   );
 });
 
+test("a copy the owner has not written yet leaves only the closing sentence", () => {
+  assert.equal(productDescription("Aura", null, ""), "Изготовление, доставка и монтаж в Санкт-Петербурге.");
+  assert.equal(
+    productDescription("Aura", "18900.00", "   "),
+    `Зеркало Aura на заказ от 18${NBSP}900 ₽. Изготовление, доставка и монтаж в Санкт-Петербурге.`,
+  );
+});
+
+test("an exclamation or a question ends the first sentence as a period does", () => {
+  assert.equal(
+    productDescription("Aura", null, "Хит сезона! Круглое зеркало. Рама."),
+    "Хит сезона! Изготовление, доставка и монтаж в Санкт-Петербурге.",
+  );
+  assert.equal(
+    productDescription("Aura", null, "Зеркало в спальню? Конечно."),
+    "Зеркало в спальню? Изготовление, доставка и монтаж в Санкт-Петербурге.",
+  );
+});
+
 test("a listing is titled by its category and the city", () => {
   assert.equal(listingTitle("Зеркала", 1), "Зеркала на заказ в Санкт-Петербурге — Memiro");
 });
