@@ -55,6 +55,30 @@ just down
 и `MEMIRO_ADMIN_PASSWORD` (см. `.env.example`). Домен принадлежит alembic:
 Django-миграции трогают только `auth_*` и `django_*`.
 
+## Прод
+
+Прод — тот же compose с override-файлом: nginx выходит на 80 и 443 хоста,
+`www` и `http` отвечают одним 301 на `https://memiro.ru`, HSTS и кеш
+статики — в `.config/nginx.prod.conf`.
+
+```sh
+docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --build --wait
+```
+
+Сертификат живёт на хосте: certbot держит его в `/etc/letsencrypt`, а
+webroot для продления — `/var/www/certbot`; оба каталога nginx монтирует
+только на чтение. Первый выпуск — до первого запуска контура, пока 80 порт
+свободен (`certbot certonly --standalone -d memiro.ru -d www.memiro.ru`);
+продление идёт через webroot
+(`certbot renew --webroot -w /var/www/certbot`) с deploy-хуком, который
+делает `nginx -s reload` в контейнере. Без сертификата nginx не поднимется:
+конфиг ссылается на файлы `live/memiro.ru/`.
+
+В `.env` на проде задаются `PUBLIC_SITE_URL=https://memiro.ru` и
+`PUBLIC_METRIKA_ID` — они запекаются в сборку витрины, после смены нужен
+`--build`. Синтаксис обоих edge-конфигов проверяется без прода:
+`just nginx-check`.
+
 ## Конфигурация
 
 Приложение читает **одну** переменную окружения — `APP_CONFIG_PATH`, путь к

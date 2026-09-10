@@ -1,0 +1,22 @@
+# Production override on top of docker-compose.yml:
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --build --wait
+# The edge takes 80 and 443 on the host and expects the certificate certbot
+# keeps on the host under /etc/letsencrypt (GETTING_STARTED.md, «Прод»).
+services:
+  frontend:
+    build:
+      # Both are baked into the SSR bundle at build time (import.meta.env.PUBLIC_*).
+      args:
+        PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://memiro.ru}
+        PUBLIC_METRIKA_ID: ${PUBLIC_METRIKA_ID:-}
+
+  nginx:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../.config/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - adminstatic:/usr/share/nginx/admin-static:ro
+      - productmedia:/usr/share/nginx/media:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
