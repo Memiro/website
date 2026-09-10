@@ -1,6 +1,4 @@
 import asyncio
-import smtplib
-import ssl
 from collections.abc import Callable
 from email.message import EmailMessage
 from typing import override
@@ -9,7 +7,8 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from memiro.adapters.common.inquiry_wording import price_words, size_words, specification_line
-from memiro.adapters.smtp.config import EmailConfig, SMTPEncryption
+from memiro.adapters.smtp.client import smtp_client
+from memiro.adapters.smtp.config import EmailConfig
 from memiro.application.common.gateway.inquiry import InquiryGateway
 from memiro.application.common.notification import InquiryNotificationBus
 from memiro.entities.common.identifiers import InquiryId
@@ -21,21 +20,9 @@ logger: Logger = structlog.get_logger(__name__)
 type Transport = Callable[[EmailConfig, EmailMessage], None]
 
 
-def _smtp_client(config: EmailConfig) -> smtplib.SMTP | smtplib.SMTP_SSL:
-    """Open SMTP using the encryption mode selected by configuration."""
-    if config.encryption is SMTPEncryption.SSL:
-        return smtplib.SMTP_SSL(
-            config.host, config.port, timeout=config.timeout_seconds, context=ssl.create_default_context()
-        )
-    client = smtplib.SMTP(config.host, config.port, timeout=config.timeout_seconds)
-    if config.encryption is SMTPEncryption.STARTTLS:
-        client.starttls(context=ssl.create_default_context())
-    return client
-
-
 def smtp_transport(config: EmailConfig, message: EmailMessage) -> None:
     """Deliver one ready email through the configured encrypted SMTP transport."""
-    with _smtp_client(config) as client:
+    with smtp_client(config) as client:
         if config.username:
             client.login(config.username, config.password)
         client.send_message(message)
@@ -102,6 +89,9 @@ class SMTPInquiryNotificationBus(InquiryNotificationBus):
             return
         if not self._config.manager_address:
             logger.warning("Manager email notification skipped because no recipient is configured")
+            return
+        if self._config.username and not self._config.password:
+            logger.warning("Manager email notification skipped because no password is configured")
             return
         inquiry = await self._inquiry_gateway.get(inquiry_id)
         if inquiry is None:

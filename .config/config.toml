@@ -12,15 +12,15 @@ database = "memiro"
 enabled = false
 
 [email]
-# Delivery is off locally until the owner supplies the manager address and an
-# app password at deployment time. The Yandex sender mailbox is already known.
-enabled = false
+# The manager channel: the app password lives in ``smtp_password`` next to
+# this file, outside git; without that file the channel stays silent locally.
+enabled = true
 host = "smtp.yandex.ru"
 port = 465
 username = "memiro.ru@yandex.ru"
-password = ""
+password_file = "smtp_password"
 from_address = "memiro.ru@yandex.ru"
-manager_address = ""
+manager_address = "memiro.ru@yandex.ru"
 timeout_seconds = 10.0
 
 [legal]

@@ -8,6 +8,8 @@ build/
 # Environment
 .venv/
 .env
+# Пароль приложения Яндекса для письма менеджеру: файл вне git
+.config/smtp_password
 
 # Django
 db.sqlite3

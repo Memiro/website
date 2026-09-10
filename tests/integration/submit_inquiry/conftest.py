@@ -152,3 +152,20 @@ async def empty_address_api_client(empty_address_app: FastAPI) -> AsyncIterator[
     """Send requests through the app that must skip an unaddressed SMTP channel."""
     async with ApiClient(empty_address_app) as client:
         yield client
+
+
+@pytest.fixture
+async def passwordless_app(config: Config, smtp_server: tuple[int, list[str]]) -> AsyncIterator[FastAPI]:
+    """Use the production app with its SMTP account named but left without a password."""
+    port, _ = smtp_server
+    wired = _aimed_at_the_wire_fake(config, port, enabled=True)
+    app = create_app(replace(wired, email=replace(wired.email, username="site@example.test")))
+    async with LifespanManager(app):
+        yield app
+
+
+@pytest.fixture
+async def passwordless_api_client(passwordless_app: FastAPI) -> AsyncIterator[ApiClient]:
+    """Send requests through the app that must skip an SMTP channel it cannot log in to."""
+    async with ApiClient(passwordless_app) as client:
+        yield client
