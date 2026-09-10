@@ -1,53 +1,73 @@
+import { walkCatalog, type WalkableCatalog, type WalkedProduct } from "./catalog-walk.ts";
+import { mediaUrl } from "./media.ts";
 import { categoryPath, landingPath, productPath } from "./navigation.ts";
 import { absoluteUrl } from "./seo.ts";
+import { escapeXml } from "./xml.ts";
 
 /** The pages that exist without the catalogue. `/cart/`, 404 and 500 are closed and absent. */
 export const STATIC_PATHS = ["/", "/catalog/", "/works/", "/about/", "/delivery/", "/contacts/", "/privacy/"];
 
-interface Slugs {
-  items: { slug: string }[];
+export interface SitemapImage {
+  path: string;
+  title: string;
+}
+
+export interface SitemapEntry {
+  path: string;
+  images: SitemapImage[];
 }
 
 /** What the sitemap needs of the catalogue — the slice `CatalogApi` already offers. */
-export interface SitemapCatalog {
-  categories: () => Promise<Slugs>;
-  landings: () => Promise<Slugs>;
-  categoryProducts: (slug: string, search?: string) => Promise<Slugs & { pages: number }>;
+export interface SitemapCatalog extends WalkableCatalog {
+  landings: () => Promise<{ items: { slug: string }[] }>;
 }
 
-async function categoryPaths(api: SitemapCatalog, slug: string): Promise<string[]> {
-  const paths = [categoryPath(slug)];
-  const first = await api.categoryProducts(slug, "");
-  for (let page = 1; page <= first.pages; page += 1) {
-    const listing = page === 1 ? first : await api.categoryProducts(slug, `page=${page}`);
-    paths.push(...listing.items.map((product) => productPath(slug, product.slug)));
-  }
-  return paths;
+function page(path: string): SitemapEntry {
+  return { path, images: [] };
 }
 
-// Every address a crawler may index, in reading order. The listing is walked
-// page by page: a catalogue that outgrows one page would otherwise lose its
-// tail without anything failing.
-export async function sitemapPaths(api: SitemapCatalog): Promise<string[]> {
-  const [categories, landings] = await Promise.all([api.categories(), api.landings()]);
-  const catalog: string[] = [];
-  for (const category of categories.items) {
-    catalog.push(...await categoryPaths(api, category.slug));
+/** Captioned the way the gallery captions its thumbnails: the name, then the name with a number. */
+export function productImages(product: WalkedProduct): SitemapImage[] {
+  return product.image_keys.map((key, index) => ({
+    path: mediaUrl(key),
+    title: index === 0 ? product.name : `${product.name} — фото ${index + 1}`,
+  }));
+}
+
+/** Every address a crawler may index, in reading order, each with the photographs it shows. */
+export async function sitemapEntries(api: SitemapCatalog): Promise<SitemapEntry[]> {
+  const [catalog, landings] = await Promise.all([walkCatalog(api), api.landings()]);
+  const entries: SitemapEntry[] = STATIC_PATHS.map(page);
+  for (const { category, products } of catalog) {
+    entries.push(page(categoryPath(category.slug)));
+    entries.push(...products.map((product) => ({
+      path: productPath(category.slug, product.slug),
+      images: productImages(product),
+    })));
   }
-  return [...STATIC_PATHS, ...catalog, ...landings.items.map((landing) => landingPath(landing.slug))];
+  return [...entries, ...landings.items.map((landing) => page(landingPath(landing.slug)))];
+}
+
+function imageXml(origin: string, image: SitemapImage): string {
+  const location = new URL(image.path, origin).href;
+  return `<image:image><image:loc>${location}</image:loc><image:title>${escapeXml(image.title)}</image:title></image:image>`;
 }
 
 // No lastmod: the API carries no updated_at for any of these. No changefreq and
-// no priority: Google ignores both.
-export function sitemapXml(site: URL | undefined, paths: string[]): string | null {
-  const locations = paths.map((path) => absoluteUrl(site, path));
-  if (locations.some((location) => location === null)) {
+// no priority: Google ignores both. Photographs carry loc and title only —
+// caption and geo_location are read by neither Google nor Yandex.
+export function sitemapXml(site: URL | undefined, entries: SitemapEntry[]): string | null {
+  const origin = site?.origin;
+  if (origin === undefined) {
     return null;
   }
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...locations.map((location) => `  <url><loc>${location}</loc></url>`),
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
+    ...entries.map((entry) => {
+      const images = entry.images.map((image) => imageXml(origin, image)).join("");
+      return `  <url><loc>${absoluteUrl(site, entry.path)}</loc>${images}</url>`;
+    }),
     "</urlset>",
     "",
   ].join("\n");
