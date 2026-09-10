@@ -2,6 +2,7 @@ type Forms = readonly [one: string, few: string, many: string];
 
 const PRODUCT: Forms = ["товар", "товара", "товаров"];
 const CATEGORY: Forms = ["категория", "категории", "категорий"];
+const MODEL: Forms = ["модель", "модели", "моделей"];
 
 /** Russian plural of "товар" for a counter the storefront prints beside a heading. */
 export function productPlural(count: number): string {
@@ -11,6 +12,11 @@ export function productPlural(count: number): string {
 /** Russian plural of "категория" for the label above the catalogue heading. */
 export function categoryPlural(count: number): string {
   return declension(count, CATEGORY);
+}
+
+/** Russian plural of "модель" for the count a listing's meta description opens with. */
+export function modelPlural(count: number): string {
+  return declension(count, MODEL);
 }
 
 function declension(count: number, [one, few, many]: Forms): string {

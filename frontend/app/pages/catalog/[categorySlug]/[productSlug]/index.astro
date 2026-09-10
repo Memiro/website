@@ -12,6 +12,7 @@ import { productPath } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { relatedProducts } from "../../../../lib/related.ts";
 import { absoluteUrl, productJsonLd } from "../../../../lib/seo.ts";
+import { productDescription, productTitle } from "../../../../lib/titles.ts";
 
 const api = internalCatalogApi();
 const categorySlug = Astro.params.categorySlug ?? "";
@@ -52,8 +53,8 @@ const crumbs = product === null ? [] : [
   />
 ) : (
   <BaseLayout
-    title={`${product.name} — Memiro`}
-    description={product.description}
+    title={productTitle(product.name)}
+    description={productDescription(product.name, product.price_from, product.description)}
     ogType="product"
     ogImage={cover}
     crumbs={crumbs}
