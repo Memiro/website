@@ -147,13 +147,17 @@ def _client_block(inquiry: Inquiry) -> list[str]:
 def _cards(inquiry: Inquiry) -> list[str]:
     """Render one card per mirror, or the comment card of a contact-form inquiry."""
     if not inquiry.items:
-        return _card(0, _comment_card(inquiry.comment))
-    return [line for index, item in enumerate(inquiry.items, start=1) for line in _card(index, _item_card(index, item))]
+        return _card(_comment_card(inquiry.comment), first=True)
+    return [
+        line
+        for index, item in enumerate(inquiry.items, start=1)
+        for line in _card(_item_card(index, item), first=index == 1)
+    ]
 
 
-def _card(index: int, body: list[str]) -> list[str]:
+def _card(body: list[str], *, first: bool) -> list[str]:
     """Frame a card; the first one stands clear of the client block, the rest of each other."""
-    top = 20 if index <= 1 else 12
+    top = 20 if first else 12
     return [
         f'<tr><td style="padding:{top}px 32px 0;">',
         f'<table {_TABLE} width="100%" style="border:1px solid {_RULE};">',

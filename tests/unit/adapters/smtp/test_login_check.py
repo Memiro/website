@@ -15,6 +15,12 @@ def _refusing_login(_config: EmailConfig) -> None:
     raise smtplib.SMTPAuthenticationError(535, b"5.7.8 Error: authentication failed")
 
 
+def _unreachable_login(_config: EmailConfig) -> None:
+    """Stand in for a host the server cannot reach at all."""
+    msg = "[Errno 111] Connection refused"
+    raise ConnectionRefusedError(msg)
+
+
 def test_accepted_credentials_report_ok() -> None:
     """A login the host accepts is reported as the single word OK."""
     verdict = check_login(_CONFIG, login=_accepting_login)
@@ -27,3 +33,10 @@ def test_refused_credentials_report_the_server_reply() -> None:
     verdict = check_login(_CONFIG, login=_refusing_login)
 
     assert verdict == "535 5.7.8 Error: authentication failed"
+
+
+def test_an_unreachable_host_is_reported_in_words() -> None:
+    """A host that cannot be reached is reported by the failure's own words, not by a traceback."""
+    verdict = check_login(_CONFIG, login=_unreachable_login)
+
+    assert verdict == "[Errno 111] Connection refused"
