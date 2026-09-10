@@ -122,6 +122,7 @@ def test_the_date_is_spelled_in_moscow_time() -> None:
 
     html = letter_html(inquiry)
 
+    # NOW in tests/clock.py, three hours ahead: change both together.
     assert "31 августа 2026, 15:34" in html
 
 

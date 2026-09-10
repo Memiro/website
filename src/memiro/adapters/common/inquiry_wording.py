@@ -3,11 +3,7 @@
 from memiro.entities.common.measure import Dimensions
 from memiro.entities.common.money import Money
 from memiro.entities.inquiry.entity import ConfigurationValue
-from memiro.entities.inquiry.phone import Phone
 from memiro.entities.pricing.quotation import PricingVerdict
-
-# A Russian number in E.164: the country code and ten national digits.
-_RUSSIAN_NUMBER_DIGITS = 11
 
 _UNPRICED_WORDS = {
     PricingVerdict.BEYOND_LIMITS: "Цена не рассчитана: размер за пределом производства",
@@ -41,14 +37,6 @@ def price_words(verdict: PricingVerdict, calculated_price: Money | None) -> str:
 def size_words(dimensions: Dimensions) -> str:
     """Spell the size in the millimetres the customer typed."""
     return f"{dimensions.width.value} × {dimensions.height.value} мм"  # noqa: RUF001  # the multiplication sign is the typographic one
-
-
-def phone_words(phone: Phone) -> str:
-    """Spell a Russian number the way it is dialled, "+7 921 123-45-67"; any other keeps its digits behind a plus."""
-    digits = phone.value.removeprefix("+")
-    if len(digits) == _RUSSIAN_NUMBER_DIGITS and digits.startswith("7"):
-        return f"+7 {digits[1:4]} {digits[4:7]}-{digits[7:9]}-{digits[9:]}"
-    return f"+{digits}"
 
 
 def specification_words(value: ConfigurationValue) -> tuple[str, str]:

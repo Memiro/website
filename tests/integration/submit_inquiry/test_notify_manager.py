@@ -35,10 +35,6 @@ _ONE_ITEM_FORM = SubmitInquiryForm(
     items=[InquiryItemForm(product_id=PRODUCT, width_mm=800, height_mm=600, selections=[], wish="")],
 )
 
-# Mirror of price_product in entities/pricing/pricing_service.py, by hand:
-# 0.48 m2 x 4500 + 2.8 lm x 2200 + 500 = 8 820 for the canonical mirror and
-# 0.81 m2 x 7000 + 3.6 lm x 2200 + 500 = 14 090 for the graphite one; their
-# sum, 22 910, is exactly what the manager must not read (rule 18).
 _CAPTURED_CHANNEL = EmailConfig(
     enabled=True,
     password="app-password",
@@ -62,6 +58,10 @@ Email: не указан
 Цена: 8 820 ₽
 """
 
+# Mirror of price_product in entities/pricing/pricing_service.py, by hand:
+# 0.48 m2 x 4500 + 2.8 lm x 2200 + 500 = 8 820 for the canonical mirror and
+# 0.81 m2 x 7000 + 3.6 lm x 2200 + 500 = 14 090 for the graphite one; their
+# sum, 22 910, is exactly what the manager must not read (rule 18).
 _CANONICAL_PRICE_LINE = "Цена: 8 820 ₽"
 _GRAPHITE_PRICE_LINE = "Цена: 14 090 ₽"
 _SUM_OF_THE_TWO = "22 910"
