@@ -23,6 +23,8 @@ test("a beyond-limits calculator configuration becomes a selection wish without 
       id: "mirror",
       name: "Зеркало Loft",
       slug: "loft",
+      category_slug: "zerkala",
+      category_name: "Зеркала",
       attributes: [],
       variants: [],
       description: "",

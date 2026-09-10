@@ -7,6 +7,7 @@ import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
 import { coverImageUrl, mediaUrl } from "../../../../lib/media.ts";
+import { redirectTarget } from "../../../../lib/legacy-redirects.ts";
 import { productPath } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { relatedProducts } from "../../../../lib/related.ts";
@@ -18,14 +19,17 @@ const productSlug = Astro.params.productSlug ?? "";
 const product: ProductCard | null = await foundOrNull(productSlug, (slug) => api.product(slug));
 if (product === null) {
   Astro.response.status = 404;
+} else if (product.category_slug !== categorySlug) {
+  // A card opened under a foreign category is one page with two addresses;
+  // the real one is the only address to index (ADR-0013).
+  return Astro.redirect(redirectTarget(productPath(product.category_slug, product.slug), Astro.url.search), 301);
 }
 const price = product === null || product.price_from === null
   ? null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 const cover = product === null ? "" : coverImageUrl(product.image_keys);
 const thumbs = product === null ? [] : product.image_keys.map((key) => mediaUrl(key));
-const category = product === null ? undefined : (await api.categories()).items.find((item) => item.slug === categorySlug);
-const categoryName = category?.name ?? "Каталог";
+const categoryName = product === null ? "" : product.category_name;
 
 let related: ProductSummary[] = [];
 if (product !== null) {
