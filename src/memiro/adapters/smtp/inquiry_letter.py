@@ -28,7 +28,6 @@ _MONTHS = (
 _SELECTION_WORDS = "подборка"
 _CONTACT_FORM_WORDS = "форма контактов"
 _NO_EMAIL_WORDS = "не указан"
-_SITE_URL = "https://memiro.ru"
 # A Russian number in E.164: the country code and ten national digits.
 _RUSSIAN_NUMBER_DIGITS = 11
 # Russian plural forms go by the last digit, except the teens, which take the
@@ -38,12 +37,7 @@ _TEENS = range(11, 15)
 
 # The storefront's tokens.css in hex: a mail client reads neither CSS
 # variables nor oklch, and every style is inlined for the same reason. The
-# web fonts are a link the capable clients honour; the rest fall back to the
-# system grotesk and monospace.
-_FONTS_URL = (
-    "https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;800&family=JetBrains+Mono:wght@400;600"
-    "&display=swap"
-)
+# fonts are the system stacks: mail clients drop web fonts.
 _PAPER = "#ffffff"
 _PAPER_2 = "#f4f5f6"
 _INK = "#0a0b0d"
@@ -52,21 +46,15 @@ _MUTED = "#66696c"
 _RULE = "#d6d8d9"
 _RULE_2 = "#e7e8e9"
 _ACCENT = "#003c90"
-_BODY_FONT = "'Golos Text',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif"
-_MONO_FONT = "'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,'Courier New',monospace"
+_BODY_FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+_MONO_FONT = "ui-monospace,Menlo,Consolas,'Roboto Mono','Courier New',monospace"
 _TABLE_ATTRIBUTES = 'role="presentation" cellpadding="0" cellspacing="0" border="0"'
-_MONO = f"font-family:{_MONO_FONT};letter-spacing:0.06em;text-transform:uppercase;"
-_LABEL = f"{_MONO}font-size:11px;line-height:16px;color:{_MUTED};"
-_DISPLAY = f"font-family:{_BODY_FONT};font-weight:800;letter-spacing:-0.02em;text-transform:uppercase;color:{_INK};"
+_MONO_PLAIN = f"font-family:{_MONO_FONT};font-variant-numeric:tabular-nums;"
+_MONO_CAPS = f"{_MONO_PLAIN}letter-spacing:0.06em;text-transform:uppercase;"
+_LABEL = f"{_MONO_CAPS}font-size:11px;line-height:16px;color:{_MUTED};"
+_DISPLAY = f"font-weight:800;letter-spacing:-0.02em;text-transform:uppercase;color:{_INK};"
 _CELL = f"padding:8px 0;border-top:1px solid {_RULE_2};font-size:14px;line-height:20px;"
-_BUTTON = (
-    f"display:inline-block;padding:11px 16px;background:{_INK};color:{_PAPER};{_MONO}font-size:12px;"
-    f"line-height:16px;font-weight:600;text-decoration:none;"
-)
-_GHOST_BUTTON = (
-    f"display:inline-block;padding:10px 15px;border:1px solid {_INK};color:{_INK};{_MONO}font-size:12px;"
-    f"line-height:16px;font-weight:600;text-decoration:none;"
-)
+_BUTTON_LABEL = f"{_MONO_CAPS}font-size:12px;line-height:16px;font-weight:500;text-decoration:none;display:block;"
 
 
 def _phone_words(phone: Phone) -> str:
@@ -102,57 +90,53 @@ def _section_label(number: str, words: str) -> str:
     return f'<div style="{_LABEL}"><span style="color:{_ACCENT};">{number} /</span> {html.escape(words)}</div>'
 
 
-def _masthead(inquiry: Inquiry) -> list[str]:
-    """Render the wordmark and the source of the inquiry over the fine rule of the storefront's nav."""
+def _masthead() -> list[str]:
+    """Render the wordmark over the hair rule of the storefront's nav."""
     return [
-        f'<tr><td style="padding:22px 32px 18px;border-bottom:2px solid {_INK};">',
+        f'<tr><td style="padding:22px 32px 18px;border-bottom:1px solid {_RULE};">',
         f'<table {_TABLE_ATTRIBUTES} width="100%"><tr>',
         f'<td style="{_DISPLAY}font-size:15px;line-height:20px;letter-spacing:0.14em;">Memiro</td>',
-        (
-            f'<td align="right" style="{_LABEL}">Заявка <span style="color:{_ACCENT};">&#10033;</span> '
-            f"{_source_words(inquiry.source)}</td>"
-        ),
+        f'<td align="right" style="{_LABEL}">Заявка</td>',
         "</tr></table>",
         "</td></tr>",
     ]
 
 
-def _contact_buttons(inquiry: Inquiry) -> str:
-    """Render the call button and, when the customer left an email, the write-back button beside it."""
-    phone = html.escape(inquiry.phone.value)
-    cells = [f'<td><a href="tel:{phone}" style="{_BUTTON}">Позвонить &rarr;</a></td>']
-    if inquiry.email:
-        cells.append(
-            f'<td style="padding-left:8px;"><a href="mailto:{html.escape(inquiry.email)}" style="{_GHOST_BUTTON}">'
-            "Написать &rarr;</a></td>"
-        )
-    return f"<table {_TABLE_ATTRIBUTES}><tr>{''.join(cells)}</tr></table>"
+def _button(href: str, words: str, *, filled: bool) -> str:
+    """Render a small storefront button as a padded cell: the ink-filled primary or the ghost one."""
+    box = f"background:{_INK};" if filled else f"border:1px solid {_INK};"
+    color = _PAPER if filled else _INK
+    return (
+        f'<td style="{box}padding:11px 16px;"><a href="{href}" style="{_BUTTON_LABEL}color:{color};">'
+        f"{words} &rarr;</a></td>"
+    )
 
 
 def _client_block(inquiry: Inquiry) -> list[str]:
     """Render the client: the name as a display heading, the contacts in mono, the buttons to reach them."""
+    tel = f"tel:{html.escape(inquiry.phone.value)}"
+    mailto = f"mailto:{html.escape(inquiry.email)}" if inquiry.email else ""
+    link = f"color:{_INK};text-decoration:none;"
     email = (
-        f'<a href="mailto:{html.escape(inquiry.email)}" style="color:{_INK};text-decoration:none;">'
-        f"{html.escape(inquiry.email)}</a>"
+        f'<a href="{mailto}" style="{link}">{html.escape(inquiry.email)}</a>'
         if inquiry.email
         else f'<span style="color:{_MUTED};">{_NO_EMAIL_WORDS}</span>'
     )
-    contact = f"{_MONO}font-size:14px;line-height:22px;color:{_INK};text-transform:none;"
+    buttons = [_button(tel, "Позвонить", filled=True)]
+    if mailto:
+        buttons.append(f'<td style="width:8px;"></td>{_button(mailto, "Написать", filled=False)}')
     return [
         '<tr><td style="padding:28px 32px 24px;">',
         _section_label("01", "Клиент"),
         f'<div style="padding-top:8px;{_DISPLAY}font-size:30px;line-height:34px;">{html.escape(inquiry.name)}</div>',
-        f'<div style="padding-top:14px;{contact}">',
-        (
-            f'<a href="tel:{html.escape(inquiry.phone.value)}" style="color:{_INK};text-decoration:none;">'
-            f"{html.escape(_phone_words(inquiry.phone))}</a><br>{email}"
-        ),
+        f'<div style="padding-top:14px;{_MONO_PLAIN}font-size:14px;line-height:22px;color:{_INK};">',
+        f'<a href="{tel}" style="{link}">{html.escape(_phone_words(inquiry.phone))}</a><br>{email}',
         "</div>",
-        f'<div style="padding-top:6px;{_LABEL}text-transform:none;font-size:12px;">',
+        f'<div style="padding-top:6px;{_MONO_PLAIN}font-size:12px;line-height:16px;color:{_MUTED};">',
         f"{_date_words(inquiry.created_at)} &middot; {_source_words(inquiry.source)}",
         "</div>",
         '<div style="padding-top:18px;">',
-        _contact_buttons(inquiry),
+        f"<table {_TABLE_ATTRIBUTES}><tr>{''.join(buttons)}</tr></table>",
         "</div>",
         "</td></tr>",
     ]
@@ -179,47 +163,40 @@ def _comment_card(comment: str) -> list[str]:
 
 
 def _specification(configuration: InquiryConfiguration) -> list[str]:
-    """Render the "attribute — value" rows of one mirror."""
-    return [
+    """Render the size in mono and the "attribute — value" rows of one mirror."""
+    rows = [
         f'<tr><td style="{_CELL}color:{_MUTED};">{html.escape(attribute)}</td>'
         f'<td align="right" style="{_CELL}color:{_INK};font-weight:600;">{html.escape(words)}</td></tr>'
         for attribute, words in map(specification_words, configuration.values)
     ]
+    return [
+        (
+            f'<div style="padding-top:6px;{_MONO_PLAIN}font-size:13px;line-height:20px;color:{_INK};">'
+            f"{html.escape(size_words(configuration.dimensions))}</div>"
+        ),
+        f'<table {_TABLE_ATTRIBUTES} width="100%" style="margin-top:12px;">',
+        *rows,
+        "</table>",
+    ]
 
 
 def _item_card(index: int, item: InquiryItem) -> list[str]:
-    """Render one mirror: its number and name, the size in mono, the rows, the price strip, the wish."""
-    size = (
-        f'<td align="right" valign="top" style="{_MONO}text-transform:none;font-size:13px;line-height:20px;'
-        f'color:{_INK};white-space:nowrap;padding-left:16px;">{html.escape(size_words(item.configuration.dimensions))}'
-        "</td>"
-        if item.configuration is not None
-        else ""
-    )
+    """Render one mirror: its number and name, the size and rows, the price strip, the wish."""
+    specification = _specification(item.configuration) if item.configuration is not None else []
     lines = [
         '<tr><td style="padding:16px 20px 14px;">',
-        f'<table {_TABLE_ATTRIBUTES} width="100%"><tr>',
-        f'<td valign="top"><div style="{_LABEL}">Зеркало {index}</div>',
+        f'<div style="{_LABEL}">Зеркало {index}</div>',
         (
             f'<div style="padding-top:4px;{_DISPLAY}font-weight:700;letter-spacing:0.02em;font-size:16px;'
-            f'line-height:22px;">{html.escape(item.product_name)}</div></td>'
+            f'line-height:22px;">{html.escape(item.product_name)}</div>'
         ),
-        size,
-        "</tr></table>",
+        *specification,
+        "</td></tr>",
+        (
+            f'<tr><td style="padding:12px 20px;background:{_PAPER_2};{_MONO_PLAIN}font-size:15px;line-height:22px;'
+            f'font-weight:500;color:{_INK};">{html.escape(price_words(item.verdict, item.calculated_price))}</td></tr>'
+        ),
     ]
-    if item.configuration is not None:
-        lines.extend(
-            [
-                f'<table {_TABLE_ATTRIBUTES} width="100%" style="margin-top:12px;">',
-                *_specification(item.configuration),
-                "</table>",
-            ]
-        )
-    lines.append("</td></tr>")
-    lines.append(
-        f'<tr><td style="padding:12px 20px;background:{_PAPER_2};{_MONO}font-size:15px;line-height:22px;'
-        f'font-weight:600;color:{_INK};">{html.escape(price_words(item.verdict, item.calculated_price))}</td></tr>'
-    )
     if item.wish:
         lines.append(
             f'<tr><td style="padding:14px 20px 16px;border-top:1px solid {_RULE_2};">'
@@ -230,13 +207,13 @@ def _item_card(index: int, item: InquiryItem) -> list[str]:
     return lines
 
 
-def _cards(inquiry: Inquiry) -> list[str]:
+def _mirrors_section(inquiry: Inquiry) -> list[str]:
     """Render the section of mirrors, one card each, or the comment card of a contact-form inquiry."""
     if not inquiry.items:
         head = _section_label("02", "Комментарий")
         cards = _card(_comment_card(inquiry.comment))
     else:
-        head = _section_label("02", f"Зеркала · {len(inquiry.items)}")
+        head = _section_label("02", _mirror_count_words(len(inquiry.items)))
         cards = [line for index, item in enumerate(inquiry.items, start=1) for line in _card(_item_card(index, item))]
     return [
         f'<tr><td style="padding:18px 32px 12px;border-top:1px solid {_RULE};">{head}</td></tr>',
@@ -244,21 +221,12 @@ def _cards(inquiry: Inquiry) -> list[str]:
     ]
 
 
-def _footer(inquiry: Inquiry) -> list[str]:
-    """Render the legal-line footer of the storefront: the inquiry number left, the site right."""
-    mono = f"font-family:{_MONO_FONT};font-size:11px;line-height:16px;color:{_MUTED};"
-    return [
-        f'<tr><td style="padding:16px 32px 22px;border-top:1px solid {_RULE};">',
-        f'<table {_TABLE_ATTRIBUTES} width="100%"><tr>',
-        f'<td style="{mono}">Заявка {inquiry.id}</td>',
-        (
-            f'<td align="right" style="{mono}letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;'
-            f'padding-left:16px;">'
-            f'<a href="{_SITE_URL}" style="color:{_MUTED};text-decoration:none;">memiro.ru &rarr;</a></td>'
-        ),
-        "</tr></table>",
-        "</td></tr>",
-    ]
+def _footer(inquiry: Inquiry) -> str:
+    """Render the legal-line footer of the storefront: the inquiry number, small and muted."""
+    return (
+        f'<tr><td style="padding:16px 32px 22px;border-top:1px solid {_RULE};{_MONO_PLAIN}font-size:11px;'
+        f'line-height:16px;color:{_MUTED};">Заявка {inquiry.id}</td></tr>'
+    )
 
 
 def letter_subject(inquiry: Inquiry) -> str:
@@ -276,7 +244,6 @@ def letter_html(inquiry: Inquiry) -> str:
             "<!DOCTYPE html>",
             '<html lang="ru">',
             '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
-            f'<link rel="stylesheet" href="{_FONTS_URL}">',
             f"<title>{html.escape(letter_subject(inquiry))}</title></head>",
             f'<body style="margin:0;padding:0;background:{_PAPER_2};">',
             f'<table {_TABLE_ATTRIBUTES} width="100%" style="background:{_PAPER_2};">',
@@ -285,11 +252,11 @@ def letter_html(inquiry: Inquiry) -> str:
                 f'<table {_TABLE_ATTRIBUTES} width="100%" style="max-width:600px;background:{_PAPER};'
                 f'font-family:{_BODY_FONT};color:{_INK};">'
             ),
-            *_masthead(inquiry),
+            *_masthead(),
             *_client_block(inquiry),
-            *_cards(inquiry),
+            *_mirrors_section(inquiry),
             '<tr><td style="height:16px;font-size:0;line-height:0;">&nbsp;</td></tr>',
-            *_footer(inquiry),
+            _footer(inquiry),
             "</table>",
             "</td></tr>",
             "</table>",
