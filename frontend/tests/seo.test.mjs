@@ -47,11 +47,11 @@ test("a product without a precalculated price carries no offer", () => {
   assert.equal(product.offers, undefined);
 });
 
-test("a priced product is offered as made to order", () => {
+test("a priced product is offered as in stock, the way Google reads a product one can order now", () => {
   const offers = productJsonLd({ name: "Lira", description: "", url: null, image: null, priceFrom: "8900.00" }).offers;
 
   assert.equal(offers?.price, "8900.00");
-  assert.equal(offers?.availability, "https://schema.org/MadeToOrder");
+  assert.equal(offers?.availability, "https://schema.org/InStock");
 });
 
 test("breadcrumbs are numbered from the home page down", () => {
