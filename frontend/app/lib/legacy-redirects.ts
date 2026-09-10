@@ -107,10 +107,15 @@ const MOVED_PAGES: Record<string, string> = {
 };
 
 // What the old site published and the new one does not: a WordPress sample page,
-// its sample post and its default rubric. They are answered 410 rather than
-// redirected to a listing — a redirect there reads as a soft 404, saves no
-// weight and costs trust (ADR-0015).
-export const GONE_PATHS = ["/testovaya-stranicza/", "/privet-mir/", "/category/bez-rubriki/"];
+// its sample post, its default rubric and the archive of its only author. They
+// are answered 410 rather than redirected to a listing — a redirect there reads
+// as a soft 404, saves no weight and costs trust (ADR-0015).
+export const GONE_PATHS = [
+  "/testovaya-stranicza/",
+  "/privet-mir/",
+  "/category/bez-rubriki/",
+  "/author/memiroadmin/",
+];
 
 // A union and not one shape with a nullable field: 301 always carries a target
 // and 410 never does, and saying so lets the caller stop re-checking.
