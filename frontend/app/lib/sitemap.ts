@@ -1,8 +1,7 @@
 import { walkCatalog, type WalkableCatalog, type WalkedProduct } from "./catalog-walk.ts";
 import { mediaUrl } from "./media.ts";
 import { categoryPath, landingPath, productPath } from "./navigation.ts";
-import { absoluteUrl } from "./seo.ts";
-import { escapeXml } from "./xml.ts";
+import { escapeXml, xmlLink } from "./xml.ts";
 
 /** The pages that exist without the catalogue. `/cart/`, 404 and 500 are closed and absent. */
 export const STATIC_PATHS = ["/", "/catalog/", "/works/", "/about/", "/delivery/", "/contacts/", "/privacy/"];
@@ -48,12 +47,8 @@ export async function sitemapEntries(api: SitemapCatalog): Promise<SitemapEntry[
   return [...entries, ...landings.items.map((landing) => pageWithoutImages(landingPath(landing.slug)))];
 }
 
-function link(site: URL, path: string): string {
-  return escapeXml(absoluteUrl(site, path) ?? "");
-}
-
 function imageXml(site: URL, image: SitemapImage): string {
-  return `<image:image><image:loc>${link(site, image.path)}</image:loc><image:title>${escapeXml(image.title)}</image:title></image:image>`;
+  return `<image:image><image:loc>${xmlLink(site, image.path)}</image:loc><image:title>${escapeXml(image.title)}</image:title></image:image>`;
 }
 
 // No lastmod: the API carries no updated_at for any of these. No changefreq and
@@ -68,7 +63,7 @@ export function sitemapXml(site: URL | undefined, entries: SitemapEntry[]): stri
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">',
     ...entries.map((entry) => {
       const images = entry.images.map((image) => imageXml(site, image)).join("");
-      return `  <url><loc>${link(site, entry.path)}</loc>${images}</url>`;
+      return `  <url><loc>${xmlLink(site, entry.path)}</loc>${images}</url>`;
     }),
     "</urlset>",
     "",

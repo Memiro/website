@@ -1,8 +1,7 @@
 import { walkCatalog, type WalkableCatalog, type WalkedProduct } from "./catalog-walk.ts";
 import { mediaUrl } from "./media.ts";
 import { productPath } from "./navigation.ts";
-import { absoluteUrl } from "./seo.ts";
-import { escapeXml } from "./xml.ts";
+import { escapeXml, xmlLink } from "./xml.ts";
 
 /** The format allows ten pictures per offer; the rest of a gallery stays on the card. */
 export const MAX_PICTURES = 10;
@@ -65,7 +64,7 @@ export async function ymlContent(api: YmlCatalog): Promise<YmlContent> {
   const walked = await walkCatalog(api);
   const categories = walked.map(({ category }, index) => ({ id: index + 1, name: category.name }));
   const priced = walked.flatMap(({ category, products }, index) =>
-    products.filter(isPriced).map((product) => ({ categorySlug: category.slug, categoryId: index + 1, product })));
+    products.filter(isPriced).map((product) => ({ categorySlug: category.slug, categoryId: categories[index].id, product })));
   const offers = await inBatches(priced, CARDS_AT_ONCE, async ({ categorySlug, categoryId, product }) => ({
     id: product.slug,
     path: productPath(categorySlug, product.slug),
@@ -82,18 +81,14 @@ function element(name: string, text: string): string {
   return `<${name}>${escapeXml(text)}</${name}>`;
 }
 
-function link(site: URL, path: string): string {
-  return escapeXml(absoluteUrl(site, path) ?? "");
-}
-
 function offerXml(site: URL, offer: YmlOffer): string {
   return [
     `    <offer id="${escapeXml(offer.id)}" available="false">`,
-    `      <url>${link(site, offer.path)}</url>`,
+    `      <url>${xmlLink(site, offer.path)}</url>`,
     `      <price>${Number(offer.price)}</price>`,
     `      <currencyId>${CURRENCY}</currencyId>`,
     `      <categoryId>${offer.categoryId}</categoryId>`,
-    ...offer.pictures.map((picture) => `      <picture>${link(site, picture)}</picture>`),
+    ...offer.pictures.map((picture) => `      <picture>${xmlLink(site, picture)}</picture>`),
     `      ${element("name", offer.name)}`,
     `      ${element("description", offer.description)}`,
     `      ${element("sales_notes", SALES_NOTES)}`,
@@ -115,7 +110,7 @@ export function ymlText(site: URL | undefined, shop: YmlShop, offers: YmlOffer[]
     "  <shop>",
     `    ${element("name", shop.name)}`,
     `    ${element("company", shop.company)}`,
-    `    <url>${link(site, "/")}</url>`,
+    `    <url>${xmlLink(site, "/")}</url>`,
     `    <currencies><currency id="${CURRENCY}" rate="1"/></currencies>`,
     "    <categories>",
     ...shop.categories.map((category) => `      <category id="${category.id}">${escapeXml(category.name)}</category>`),
