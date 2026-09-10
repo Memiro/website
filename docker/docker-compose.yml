@@ -1,7 +1,10 @@
 name: memiro
 
 # Shared shape of the Python services; only command/depends_on/healthcheck differ.
+# `image` names what CI publishes; `build` keeps `just up` self-contained.
+# Production pulls, never builds (GETTING_STARTED.md, «Прод»).
 x-app: &app
+  image: ghcr.io/memiro/website-backend:${MEMIRO_IMAGE_TAG:-dev}
   build:
     context: ..
     dockerfile: docker/Dockerfile
@@ -15,7 +18,7 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: memiro
-      POSTGRES_PASSWORD: memiro
+      POSTGRES_PASSWORD: ${MEMIRO_DB_PASSWORD:-memiro}
       POSTGRES_DB: memiro
     ports:
       # Loopback only — for host-side tools (`just migrate`, `just run`).
@@ -77,6 +80,7 @@ services:
       retries: 15
 
   frontend:
+    image: ghcr.io/memiro/website-frontend:${MEMIRO_IMAGE_TAG:-dev}
     build:
       context: ../frontend
       dockerfile: Dockerfile
