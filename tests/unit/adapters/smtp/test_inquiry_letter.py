@@ -146,6 +146,26 @@ def test_a_missing_email_is_said_without_a_link() -> None:
     assert "mailto:" not in html
 
 
+def test_the_buttons_offer_a_call_and_a_reply_when_the_email_is_known() -> None:
+    """A client who left an email gets both buttons: the call and the written reply."""
+    inquiry = _selection(_item())
+
+    html = letter_html(inquiry)
+
+    assert "Позвонить" in html
+    assert "Написать" in html
+
+
+def test_a_missing_email_leaves_only_the_call_button() -> None:
+    """Without an email there is nobody to write to, so the letter offers the call button alone."""
+    inquiry = _free_form("Нужно зеркало в прихожую")
+
+    html = letter_html(inquiry)
+
+    assert "Позвонить" in html
+    assert "Написать" not in html
+
+
 def test_a_selection_is_named_as_its_source() -> None:
     """A selection inquiry names its source in words, never by the enum member."""
     inquiry = _selection(_item())
