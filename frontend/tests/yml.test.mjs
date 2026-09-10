@@ -7,7 +7,7 @@ const SITE = new URL("https://memiro.ru");
 const NOW = new Date("2026-09-10T09:30:00.000Z");
 const MANY_PHOTOS = Array.from({ length: MAX_PICTURES + 2 }, (_, index) => `kolo-${index + 1}.jpg`);
 
-/** Two categories; one priced product with too many photos, one without a price, one with characters XML minds. */
+/** Two categories; a product with too many photos, one without a price, one without a photo, one with characters XML minds. */
 function fakeApi() {
   const products = {
     mirrors: [
@@ -15,9 +15,12 @@ function fakeApi() {
         { slug: "kolo", name: "Кольцо", price_from: "8900.00", image_keys: MANY_PHOTOS },
         { slug: "echo", name: "Эхо", price_from: null, image_keys: ["echo.jpg"] },
       ],
-      [{ slug: "nave", name: "Неф & Co", price_from: "12000.50", image_keys: [] }],
+      [{ slug: "nave", name: "Неф & Co", price_from: "12000.50", image_keys: ["nave.jpg"] }],
     ],
-    lights: [[{ slug: "halo", name: "Гало", price_from: "5000.00", image_keys: ["halo.jpg"] }]],
+    lights: [[
+      { slug: "halo", name: "Гало", price_from: "5000.00", image_keys: ["halo.jpg"] },
+      { slug: "mute", name: "Мьют", price_from: "700.00", image_keys: [] },
+    ]],
   };
   const descriptions = { kolo: "Круглое зеркало.", nave: "Полотно <4 мм> в раме \"Loft\".", halo: "Свет." };
   return {
@@ -44,7 +47,7 @@ async function feed() {
   return xml;
 }
 
-test("every priced product is an offer to order, and a product without a price feeds nothing", async () => {
+test("every product with a price and a photo is an offer, and one missing either feeds nothing", async () => {
   const { offers } = await ymlContent(fakeApi());
   assert.deepEqual(offers.map((offer) => offer.id), ["kolo", "nave", "halo"]);
   assert.deepEqual(offers.map((offer) => offer.categoryId), [1, 1, 2]);
@@ -69,9 +72,9 @@ test("the shop is named with its company, its currency and its numbered categori
   assert.ok(xml.includes('<category id="2">Свет</category>'));
 });
 
-test("an offer is honest: available false, the from price, the note about ordering", async () => {
+test("an offer is available, the way Yandex shows one, with the from price and the note about ordering", async () => {
   const xml = await feed();
-  assert.ok(xml.includes('<offer id="kolo" available="false">'));
+  assert.ok(xml.includes('<offer id="kolo" available="true">'));
   assert.ok(xml.includes("<url>https://memiro.ru/catalog/mirrors/kolo/</url>"));
   assert.ok(xml.includes("<price>8900</price>"));
   assert.ok(xml.includes("<price>12000.5</price>"));
@@ -80,6 +83,7 @@ test("an offer is honest: available false, the from price, the note about orderi
   assert.ok(xml.includes("<picture>https://memiro.ru/media/halo.jpg</picture>"));
   assert.ok(xml.includes(`<sales_notes>${SALES_NOTES}</sales_notes>`));
   assert.ok(!xml.includes("echo"));
+  assert.ok(!xml.includes("mute"));
 });
 
 test("special characters in a name and a description are escaped", async () => {
