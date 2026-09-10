@@ -21,6 +21,8 @@ export interface CategoryProducts {
   products: WalkedProduct[];
 }
 
+// The listing is walked page by page: a catalogue that outgrows one page
+// would otherwise lose its tail without anything failing.
 async function everyProductOf(api: WalkableCatalog, category: WalkedCategory): Promise<CategoryProducts> {
   const first = await api.categoryProducts(category.slug, "");
   const products = [...first.items];
@@ -30,8 +32,6 @@ async function everyProductOf(api: WalkableCatalog, category: WalkedCategory): P
   return { category, products };
 }
 
-// The listing is walked page by page: a catalogue that outgrows one page
-// would otherwise lose its tail without anything failing.
 /** Every published product of every category, in the owner's order. */
 export async function walkCatalog(api: WalkableCatalog): Promise<CategoryProducts[]> {
   const categories = await api.categories();
