@@ -38,6 +38,13 @@ _ONE_ITEM_FORM = SubmitInquiryForm(
 # 0.48 m2 x 4500 + 2.8 lm x 2200 + 500 = 8 820 for the canonical mirror and
 # 0.81 m2 x 7000 + 3.6 lm x 2200 + 500 = 14 090 for the graphite one; their
 # sum, 22 910, is exactly what the manager must not read (rule 18).
+_CAPTURED_CHANNEL = EmailConfig(
+    enabled=True,
+    password="app-password",
+    from_address="site@example.test",
+    manager_address="manager@example.test",
+)
+
 _CANONICAL_PRICE_LINE = "Цена: 8 820 ₽"
 _GRAPHITE_PRICE_LINE = "Цена: 14 090 ₽"
 _SUM_OF_THE_TWO = "22 910"
@@ -205,7 +212,7 @@ async def test_a_snapshot_stored_before_the_whole_specification_is_printed_as_it
     await prime_legacy_inquiry(engine)
     sent: list[EmailMessage] = []
     bus = SMTPInquiryNotificationBus(
-        EmailConfig(enabled=True, from_address="site@example.test", manager_address="manager@example.test"),
+        _CAPTURED_CHANNEL,
         await request_container.get(InquiryGateway),
         await request_container.get(AsyncSession),
         lambda _config, message: sent.append(message),
@@ -270,6 +277,29 @@ async def test_an_empty_manager_address_keeps_the_saved_inquiry(
     assert "+79990000000" not in logs
 
 
+async def test_an_account_without_a_password_keeps_the_saved_inquiry_and_stays_off_the_wire(
+    capfd: pytest.CaptureFixture[str],
+    passwordless_api_client: ApiClient,
+    passwordless_app: FastAPI,
+    smtp_server: tuple[int, list[str]],
+) -> None:
+    """An SMTP account without a password skips mail before touching the network, the inquiry saved."""
+    created = (await passwordless_api_client.submit_inquiry(_ONE_ITEM_FORM)).assert_status(200).ensure_content()
+    container: AsyncContainer = passwordless_app.state.dishka_container
+    async with container() as request:
+        gateway: InquiryGateway = await request.get(InquiryGateway)
+        inquiry = await gateway.get(created.id)
+
+    _, received_emails = smtp_server
+    logs = capfd.readouterr().err
+
+    assert inquiry is not None
+    assert received_emails == []
+    assert "Manager email notification skipped because no password is configured" in logs
+    assert "Anna" not in logs
+    assert "+79990000000" not in logs
+
+
 async def test_the_manager_email_is_sent_without_holding_the_request_transaction(
     request_container: AsyncContainer,
 ) -> None:
@@ -279,7 +309,7 @@ async def test_the_manager_email_is_sent_without_holding_the_request_transaction
     submit: SubmitInquiry = await request_container.get(SubmitInquiry)
     created = await submit.execute(_ONE_ITEM_FORM)
     bus = SMTPInquiryNotificationBus(
-        EmailConfig(enabled=True, from_address="site@example.test", manager_address="manager@example.test"),
+        _CAPTURED_CHANNEL,
         await request_container.get(InquiryGateway),
         session,
         lambda _config, _message: held_transaction.append(session.in_transaction()),

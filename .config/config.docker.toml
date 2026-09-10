@@ -11,14 +11,16 @@ database = "memiro"
 enabled = false
 
 [email]
-# The deployment owner fills the manager address and app password outside git.
-enabled = false
+# The manager channel: the deployment owner puts the Yandex app password into
+# ``smtp_password`` next to this file (mounted read-only, outside git); without
+# the file the channel stays silent.
+enabled = true
 host = "smtp.yandex.ru"
 port = 465
 username = "memiro.ru@yandex.ru"
-password = ""
+password_file = "smtp_password"
 from_address = "memiro.ru@yandex.ru"
-manager_address = ""
+manager_address = "memiro.ru@yandex.ru"
 timeout_seconds = 10.0
 
 [legal]

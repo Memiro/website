@@ -94,7 +94,6 @@ ignore = [
 # The manager-facing mail is Russian by product decision; its words and the
 # multiplication sign are intentionally not Latin lookalikes.
 "src/memiro/adapters/smtp/inquiry_notification.py" = ["RUF001"]
-"tests/integration/submit_inquiry/test_notify_manager.py" = ["RUF001"]
 # The admin speaks to the owner in Russian: verbose names and screen labels
 # are UI text, and Django's `class Meta` is framework boilerplate with nothing
 # to document.
@@ -123,6 +122,11 @@ ignore = [
 # Tests speak in asserts (S101); test databases are named with f-strings over
 # values the suite itself generates, not user input (S608).
 "tests/**" = ["S101", "S608"]
+# The SMTP password these tests hand the adapter is a fixture, not a secret:
+# the test is about where the password comes from, not about its value.
+"tests/unit/bootstrap/test_config_loader.py" = ["S105"]
+"tests/unit/adapters/smtp/test_login_check.py" = ["S106"]
+"tests/integration/submit_inquiry/test_notify_manager.py" = ["RUF001", "S106"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "unittest.mock" = { msg = "fakes behind ports instead of mocks" }

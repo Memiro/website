@@ -1,6 +1,7 @@
 import argparse
 
 from memiro.adapters.db.migrations import apply_migrations
+from memiro.adapters.smtp.login_check import check_login
 from memiro.bootstrap.config_loader import Config
 from memiro.bootstrap.django_admin.setup import run_django_command
 from memiro.bootstrap.fast_api import run_api
@@ -34,6 +35,9 @@ def main() -> None:
     django_parser.add_argument("action", choices=ADMIN_COMMANDS)
     django_parser.add_argument("options", nargs=argparse.REMAINDER)
 
+    email_parser = subparsers.add_parser("email", help="check the manager email channel")
+    email_parser.add_argument("action", choices=["check"])
+
     args = parser.parse_args()
     if args.command == "run":
         run_api()
@@ -41,3 +45,5 @@ def main() -> None:
         _apply_migrations()
     elif args.command == "django":
         run_django_command([args.action, *args.options])
+    elif args.command == "email":
+        print(check_login(Config.load().email))  # noqa: T201  # the verdict is the command's output, not a log line

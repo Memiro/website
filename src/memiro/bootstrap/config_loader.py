@@ -31,12 +31,16 @@ class Config:
     @classmethod
     def load(cls) -> Self:
         """Read the TOML file pointed to by ``APP_CONFIG_PATH``."""
-        path = Path(os.environ[CONFIG_PATH_ENV])
+        return cls.from_file(Path(os.environ[CONFIG_PATH_ENV]))
+
+    @classmethod
+    def from_file(cls, path: Path) -> Self:
+        """Read one TOML file; the secrets its sections name by file are looked up next to it."""
         data = tomllib.loads(path.read_text(encoding="utf-8"))
         return cls(
             db=DbConfig(**data["db"]),
             observability=ObservabilityConfig(**data["observability"]),
-            email=EmailConfig(**data.get("email", {})),
+            email=EmailConfig.from_section(data.get("email", {}), path.parent),
             legal=LegalConfig(**data["legal"]),
             media=MediaConfig(root=Path(data["media"]["root"])),
             admin=AdminConfig.from_section(data.get("admin", {})),
