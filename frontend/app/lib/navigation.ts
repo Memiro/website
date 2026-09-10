@@ -49,3 +49,10 @@ export function isCurrentPath(pathname: string, href: string): boolean {
   const normalized = pathname.endsWith("/") ? pathname : `${pathname}/`;
   return href === "/" ? normalized === "/" : normalized.startsWith(href);
 }
+
+// A campaign tag on a link is the reason that visit is attributable; a move
+// to another address — an old page, a missing slash, a foreign category —
+// must not eat it.
+export function redirectTarget(location: string, search: string): string {
+  return `${location}${search}`;
+}

@@ -37,6 +37,7 @@ export function pagedTitle(title: string, page: number): string {
   if (page <= 1) {
     return title;
   }
+  // The owner's landing titles spell the brand in lowercase until he fixes them.
   const brand = /\s—\s[Mm]emiro$/.exec(title);
   return brand === null
     ? `${title} — страница ${page}`

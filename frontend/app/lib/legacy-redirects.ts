@@ -132,9 +132,3 @@ export function legacyResponse(pathname: string): LegacyAnswer | null {
   const category = LEGACY_PRODUCT_CATEGORY[slug];
   return category === undefined ? null : { status: 301, location: productPath(category, slug) };
 }
-
-// A campaign tag on an old link is the reason that visit is attributable; the
-// move to a new address must not eat it.
-export function redirectTarget(location: string, search: string): string {
-  return `${location}${search}`;
-}
