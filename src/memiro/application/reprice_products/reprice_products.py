@@ -7,10 +7,9 @@ from pydantic import BaseModel
 from memiro.application.common.gateway.attribute import AttributeGateway
 from memiro.application.common.gateway.pricing import PricingSettingsGateway
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.variant_pricing import variant_price
+from memiro.application.common.variant_pricing import repriced_variants
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.catalog.attribute.entity import Attribute
-from memiro.entities.catalog.product.entity import Variant, VariantData
 from memiro.entities.common.identifiers import ProductId
 from memiro.entities.pricing.pricing_settings import PricingSettings
 from memiro_common.clock import Clock
@@ -72,30 +71,4 @@ class RepriceProducts:
         if product is None:
             logger.warning("A product left the catalogue while it was being repriced", product_id=product_id)
             return False
-        moved = False
-        for variant in product.variants:
-            if variant.price_is_manual:
-                continue
-            configuration = _same_configuration(variant)
-            price = variant_price(configuration, product=product, attributes=attributes, settings=settings)
-            if price is None:
-                logger.warning(
-                    "A variant is no longer priceable and keeps the price it had",
-                    product_id=product.id,
-                    variant_id=variant.id,
-                )
-                continue
-            product.change_variant(variant, configuration, price=price, clock=self.clock)
-            moved = True
-        return moved
-
-
-def _same_configuration(variant: Variant) -> VariantData:
-    """Restate one variant as the command data of the aggregate, changing nothing but its price."""
-    # Only variants the calculation prices reach here, so the restated data
-    # carries no price of the owner's own (ADR-0017).
-    return VariantData(
-        dimensions=variant.dimensions,
-        overrides=variant.overrides,
-        sort_order=variant.sort_order,
-    )
+        return repriced_variants(product, attributes=attributes, settings=settings, clock=self.clock)

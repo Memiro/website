@@ -4,7 +4,10 @@ Sections are the exception the ticket names: content without rules is written
 straight to the mirror, one screen away from the products that use it.
 """
 
+import re
+from html import unescape
 from http import HTTPStatus
+from types import ModuleType
 from typing import Any, cast
 from uuid import uuid4
 
@@ -22,8 +25,14 @@ from memiro.entities.common.identifiers import AttributeId, AttributeValueId, Ca
 from memiro.entities.errors.product import InvalidProductSlugError, ProductSectionNotEmptyError
 from memiro.presentation.django_admin.refusals import REFUSAL_MESSAGES
 from memiro.presentation.django_admin.section_card import stamped_now
-from tests.common.factory.catalog import ALUMINIUM, BLADE, FRAME, PRODUCT, SILVER
-from tests.integration.admin.arrange import arranged_product, category_post, product_post
+from tests.common.factory.catalog import ALUMINIUM, BACKLIGHT, BLADE, CONTOUR, FRAME, PRODUCT, SILVER
+from tests.integration.admin.arrange import (
+    arranged_attribute,
+    arranged_product,
+    category_post,
+    product_post,
+    value_form,
+)
 
 pytestmark = pytest.mark.usefixtures("admin_site", "primed_catalog")
 
@@ -44,6 +53,26 @@ PRODUCT_REFUSALS = (
     ProductSectionNotEmptyError,
     AttributeValueNotFoundError,
 )
+
+
+def _wording() -> ModuleType:
+    """Reach the screen's own sentences: the module of the card may not be imported before ``django.setup()``."""
+    from memiro.presentation.django_admin import admin  # noqa: PLC0415
+
+    return admin
+
+
+def _warning(page: str) -> str:
+    """Read what the screen warned about after the save, the markup of the message list stripped."""
+    said = re.search(r'<li class="warning">(.*?)</li>', page, flags=re.DOTALL)
+    return unescape(said.group(1)).strip() if said else ""
+
+
+async def _value_of(attribute_id: AttributeId) -> AttributeValueId:
+    """Read back the single dictionary row of an attribute a test arranged."""
+    values = cast("Manager[Any]", apps.get_model(APP, "AttributeValue").objects)
+    value = await values.aget(attribute_id=attribute_id)
+    return cast("AttributeValueId", value.id)
 
 
 def _products() -> Manager[Any]:
@@ -278,3 +307,46 @@ async def test_a_card_of_a_product_nobody_issued_is_not_found(owner_client: Asyn
 
     assert response.status_code == HTTPStatus.FOUND
     assert response.headers["Location"] == "/admin/"
+
+
+async def test_the_card_says_that_the_storefront_will_not_price_the_product(owner_client: AsyncClient) -> None:
+    """Switching the backlight on made a dependent attribute applicable, and the card says so where it happened."""
+    declared = await _declared_by(PRODUCT)
+    declared[BACKLIGHT] = CONTOUR
+
+    response = await owner_client.post(
+        _card_url(PRODUCT),
+        product_post(
+            name="Зеркало в раме",
+            slug="zerkalo-v-rame",
+            photos=DEMO_PHOTOS,
+            declared=[(attribute_id, str(value_id)) for attribute_id, value_id in declared.items()],
+        ),
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    warning = _warning(response.content.decode())
+    assert warning.startswith(f"{_wording().WILL_NOT_PRICE} {_wording().UNDECLARED}")
+    assert "Подогрев" in warning
+
+
+async def test_a_card_the_calculator_is_happy_with_says_nothing(owner_client: AsyncClient) -> None:
+    """The warning is a warning, not a summary of every save: a product that prices keeps the screen quiet."""
+    section = await _arranged_section(name="Зеркала на заказ", slug="zerkala-na-zakaz")
+    attribute = arranged_attribute(name="Полотно", values=[value_form(name="Серебряное")], category=section)
+    value = await _value_of(attribute)
+    # Entered first and declared after: a card of a product that does not
+    # exist yet carries no fields of its section (``_card_form``). Followed,
+    # so that what the screen said about it is read and gone.
+    await owner_client.post(ADD_URL, product_post(name="Зеркало без рамы", category=section), follow=True)
+    product_id = (await _products().aget(name="Зеркало без рамы")).id
+
+    response = await owner_client.post(
+        _card_url(product_id),
+        product_post(name="Зеркало без рамы", category=section, declared=[(attribute, str(value))]),
+        follow=True,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert _warning(response.content.decode()) == ""

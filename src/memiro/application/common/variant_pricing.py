@@ -8,12 +8,18 @@ the owner typed answers before the question is asked at all (ADR-0017).
 
 from collections.abc import Sequence
 
+import structlog
+
 from memiro.entities.catalog.attribute.entity import Attribute
-from memiro.entities.catalog.product.entity import Product, VariantData
+from memiro.entities.catalog.product.entity import Product, Variant, VariantData
 from memiro.entities.common.money import Money
 from memiro.entities.errors.product import InvalidVariantConfigurationError
 from memiro.entities.pricing.pricing_service import is_product_priceable, price_product
 from memiro.entities.pricing.pricing_settings import PricingSettings
+from memiro_common.clock import Clock
+from memiro_common.logger import Logger
+
+logger: Logger = structlog.get_logger(__name__)
 
 
 def variant_price(
@@ -53,3 +59,40 @@ def settled_variant_price(
             message="A variant configuration must contain every applicable paid value or a price of its own",
         )
     return price
+
+
+def repriced_variants(
+    product: Product,
+    *,
+    attributes: Sequence[Attribute],
+    settings: PricingSettings,
+    clock: Clock,
+) -> bool:
+    """Reprice every calculated variant of one product, and say whether any of them took a new price."""
+    moved = False
+    for variant in product.variants:
+        if variant.price_is_manual:
+            continue
+        configuration = _same_configuration(variant)
+        price = variant_price(configuration, product=product, attributes=attributes, settings=settings)
+        if price is None:
+            logger.warning(
+                "A variant is no longer priceable and keeps the price it had",
+                product_id=product.id,
+                variant_id=variant.id,
+            )
+            continue
+        product.change_variant(variant, configuration, price=price, clock=clock)
+        moved = True
+    return moved
+
+
+def _same_configuration(variant: Variant) -> VariantData:
+    """Restate one variant as the command data of the aggregate, changing nothing but its price."""
+    # Only variants the calculation prices reach here, so the restated data
+    # carries no price of the owner's own (ADR-0017).
+    return VariantData(
+        dimensions=variant.dimensions,
+        overrides=variant.overrides,
+        sort_order=variant.sort_order,
+    )
