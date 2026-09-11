@@ -51,6 +51,12 @@ services:
   api:
     <<: *app
     command: ["memiro", "run", "api"]
+    # The public catalogue answers with the copies a photo really has, so the
+    # read path looks at the same volume the admin writes to — read-only: the
+    # api never puts a file there.
+    volumes:
+      - ../.config:/app/.config:ro
+      - productmedia:/app/media:ro
     depends_on:
       migrations:
         condition: service_completed_successfully
