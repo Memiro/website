@@ -1,5 +1,5 @@
 ---
-import { analyticsGate, CONSENT_COOKIE, counterId } from "../lib/analytics-consent.ts";
+import { analyticsGate, CONSENT_COOKIE, validCounterId } from "../lib/analytics-consent.ts";
 
 // The server decides: a visitor who has not accepted gets neither the counter
 // nor its number in the answer, and that is provable with a plain curl
@@ -7,7 +7,7 @@ import { analyticsGate, CONSENT_COOKIE, counterId } from "../lib/analytics-conse
 // `import.meta.env` is replaced at build time, so the number has to come
 // from the process the container runs: reading it here is what makes
 // switching analytics on a restart instead of a rebuild.
-const counter = counterId(process.env.METRIKA_ID);
+const counter = validCounterId(process.env.METRIKA_ID);
 const gate = analyticsGate(counter, Astro.cookies.get(CONSENT_COOKIE)?.value);
 ---
 

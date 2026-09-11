@@ -86,6 +86,10 @@ services:
       dockerfile: Dockerfile
     environment:
       API_INTERNAL_URL: http://api:8000
+      # The counter number is read at render time, so switching analytics on is a
+      # variable and a restart, not a rebuild (ADR-0006). Empty means no
+      # analytics and no cookie banner at all.
+      METRIKA_ID: ${METRIKA_ID:-}
     healthcheck:
       test:
         ["CMD", "node", "-e", "fetch('http://localhost:4321').then((response) => { if (!response.ok) process.exit(1) }).catch(() => process.exit(1))"]

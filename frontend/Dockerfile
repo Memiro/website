@@ -6,8 +6,8 @@ COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 COPY . ./
-# Public origin and Metrika counter are inlined into the bundle at build time;
-# the production compose override passes them as build args.
+# The public origin is inlined into the bundle at build time; the Metrika
+# counter is not — it is read from the environment on every render (ADR-0006).
 ARG PUBLIC_SITE_URL=https://memiro.ru
 RUN npm run build && npm prune --omit=dev
 
