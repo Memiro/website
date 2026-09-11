@@ -19,8 +19,8 @@ from django import forms
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.forms import BaseInlineFormSet
-from PIL import Image, UnidentifiedImageError
 
+from memiro.adapters.storage.photo_files import reads_as_a_photograph
 from memiro.application.common.input_limits import (
     IMAGE_EXTENSIONS,
     MAX_AREA_M2,
@@ -423,12 +423,11 @@ def _photo_opens_as_a_photograph(photo: UploadedFile) -> None:
     """Refuse here what the storage would refuse when it makes the copies of the card."""
     # The storage answers a file it cannot read with IMAGE_NOT_PROCESSABLE,
     # and that is a 500 page on a form the owner is standing in front of: the
-    # card says it where it already says a file is too heavy.
+    # card says it where it already says a file is too heavy. What counts as a
+    # photograph is asked of the storage itself, so the two cannot disagree.
     try:
-        with Image.open(photo) as opened:
-            opened.verify()
-    except (UnidentifiedImageError, OSError, ValueError) as failure:
-        raise forms.ValidationError(PHOTO_NOT_PROCESSABLE) from failure
+        if not reads_as_a_photograph(photo.read()):
+            raise forms.ValidationError(PHOTO_NOT_PROCESSABLE)
     finally:
         photo.seek(0)
 

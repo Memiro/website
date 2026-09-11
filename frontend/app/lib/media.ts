@@ -9,31 +9,19 @@ export function mediaUrl(key: string): string {
   return `${MEDIA_PREFIX}${key}`;
 }
 
-/** The picture a card shows: the first photograph, or the studio's placeholder. */
-export function coverImageUrl(imageKeys: readonly string[]): string {
-  const [cover] = imageKeys;
-  return cover === undefined ? PLACEHOLDER : mediaUrl(cover);
-}
-
 export function hasPhotographs(imageKeys: readonly string[]): boolean {
   return imageKeys.length > 0;
 }
 
 /** The candidates the browser picks from: every copy the storage holds, by its width. */
-export function imageSrcSet(image: ProductImage | undefined): string | undefined {
-  if (image === undefined || image.variants.length === 0) {
+export function imageSrcSet(image: ProductImage | undefined | null): string | undefined {
+  if (image === undefined || image === null || image.variants.length === 0) {
     return undefined;
   }
   return image.variants.map((variant) => `${mediaUrl(variant.key)} ${variant.width}w`).join(", ");
 }
 
-/** The photograph a card stands on: the first of the gallery, copies and all. */
-export function coverImage(images: readonly ProductImage[]): ProductImage | undefined {
-  const [cover] = images;
-  return cover;
-}
-
-/** The picture of a tile: the mirror it leads to, or the studio's placeholder. */
-export function tileImageUrl(image: ProductImage | null): string {
-  return image === null ? PLACEHOLDER : mediaUrl(image.key);
+/** The address of one photograph, or the studio's placeholder where there is none. */
+export function photographUrl(image: ProductImage | undefined | null): string {
+  return image === undefined || image === null ? PLACEHOLDER : mediaUrl(image.key);
 }

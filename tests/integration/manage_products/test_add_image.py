@@ -8,13 +8,13 @@ from dishka import AsyncContainer
 from pydantic import ValidationError
 from sqlalchemy.exc import DBAPIError
 
+from memiro.adapters.storage.errors import ImageNotProcessableError
 from memiro.adapters.storage.photo_files import DERIVATIVE_WIDTHS
 from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.gateway.product_image import ProductImageStorage, StoredVariant
 from memiro.application.common.input_limits import MAX_IMAGE_BYTES, MAX_NAME_LENGTH
 from memiro.application.errors.catalog import ProductNotFoundError
-from memiro.application.errors.media import ImageNotProcessableError
 from memiro.application.manage_products import AddImage, AddImageForm, CreatedProductImage
 from memiro.bootstrap.config_loader import Config
 from memiro.entities.common.identifiers import ProductId
@@ -26,8 +26,8 @@ from tests.integration.manage_products.arrange import load_product
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
-# The smallest file that is still a file: what these tests upload is a photo
-# only by its name, and nothing in the slice looks inside it.
+# A real photograph: the storage opens the file to make the copies of the
+# card, so a handful of bytes with the right name is no longer an upload.
 PHOTO = photograph()
 
 # A file with an extension the form accepts and bytes no decoder reads.

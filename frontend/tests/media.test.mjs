@@ -1,18 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { coverImage, coverImageUrl, hasPhotographs, imageSrcSet, mediaUrl } from "../app/lib/media.ts";
+import { hasPhotographs, imageSrcSet, mediaUrl, photographUrl } from "../app/lib/media.ts";
 
 test("a stored key becomes a media address the edge serves", () => {
   assert.equal(mediaUrl("products/small/lira.webp"), "/media/products/small/lira.webp");
 });
 
-test("a card shows the first photograph of the product", () => {
-  assert.equal(coverImageUrl(["products/small/a.webp", "products/small/b.webp"]), "/media/products/small/a.webp");
-});
-
-test("a product without photographs falls back to the studio placeholder", () => {
-  assert.equal(coverImageUrl([]), "/img/placeholder.svg");
+test("a product without photographs is known to have none", () => {
   assert.equal(hasPhotographs([]), false);
 });
 
@@ -27,8 +22,8 @@ test("a photograph without copies offers no candidates at all", () => {
   assert.equal(imageSrcSet(undefined), undefined);
 });
 
-test("a card stands on the first photograph of the gallery", () => {
-  const first = { key: "a.jpg", variants: [] };
-
-  assert.equal(coverImage([first, { key: "b.jpg", variants: [] }]), first);
+test("a photograph is addressed by its key, and its absence by the placeholder", () => {
+  assert.equal(photographUrl({ key: "a.jpg", variants: [] }), "/media/a.jpg");
+  assert.equal(photographUrl(null), "/img/placeholder.svg");
+  assert.equal(photographUrl(undefined), "/img/placeholder.svg");
 });

@@ -6,11 +6,11 @@ import pytest
 from PIL import Image
 
 from memiro.adapters.storage.config import MediaConfig
+from memiro.adapters.storage.errors import ImageNotProcessableError
 from memiro.adapters.storage.local_product_image import LocalProductImageStorage
-from memiro.adapters.storage.photo_files import DERIVATIVE_WIDTHS
+from memiro.adapters.storage.photo_files import DERIVATIVE_WIDTHS, is_derivative
 from memiro.application.common.gateway.image_upload import ImageUpload
-from memiro.application.errors.media import ImageNotProcessableError
-from tests.common.photograph import PHOTOGRAPH_WIDTH, photograph
+from tests.common.photograph import photograph
 
 PHOTO = photograph()
 
@@ -42,11 +42,11 @@ def _read(root: Path, name: str) -> bytes:
 def _widths(root: Path, key: str) -> list[int]:
     """Read the width every copy of the photo was really encoded at."""
     widths: list[int] = []
-    for width in DERIVATIVE_WIDTHS:
-        with Image.open(root / f"{Path(key).stem}-{width}w.webp") as copy:
+    for path in sorted(root.glob(f"{Path(key).stem}-*w.webp")):
+        with Image.open(path) as copy:
             assert copy.format == "WEBP"
             widths.append(copy.width)
-    return widths
+    return sorted(widths)
 
 
 async def test_a_stored_photograph_is_kept_beside_a_copy_for_every_width(tmp_path: Path) -> None:
@@ -65,7 +65,7 @@ async def test_every_copy_is_a_webp_no_wider_than_the_photograph(tmp_path: Path)
 
     key = await storage.put(ImageUpload(filename="mirror.jpg", content=PHOTO))
 
-    assert _widths(tmp_path, key) == [min(width, PHOTOGRAPH_WIDTH) for width in DERIVATIVE_WIDTHS]
+    assert _widths(tmp_path, key) == sorted(DERIVATIVE_WIDTHS)
 
 
 async def test_the_storage_answers_with_the_copies_it_holds(tmp_path: Path) -> None:
@@ -86,6 +86,28 @@ async def test_a_photograph_without_copies_is_answered_with_an_empty_list(tmp_pa
     variants = await storage.variants(["legacy.jpg"])
 
     assert variants["legacy.jpg"] == []
+
+
+async def test_a_photograph_narrower_than_the_widest_copy_is_never_advertised_wider_than_it_is(
+    tmp_path: Path,
+) -> None:
+    """A name is a promise about pixels: a browser told 1440w must not be handed 900."""
+    storage = _storage(tmp_path)
+    narrow = photograph(width=900, height=1200)
+
+    key = await storage.put(ImageUpload(filename="mirror.jpg", content=narrow))
+
+    variants = await storage.variants([key])
+    assert [variant.width for variant in variants[key]] == [480, 900]
+    assert _widths(tmp_path, key) == [480, 900]
+
+
+def test_a_copy_is_told_apart_from_a_photograph_by_its_name() -> None:
+    """Whoever walks the volume has to know which files this module made itself."""
+    assert is_derivative("2f0c-480w.webp")
+
+    assert not is_derivative("2f0c.webp")
+    assert not is_derivative("2f0c.jpg")
 
 
 async def test_dropping_a_photograph_takes_everything_made_from_it(tmp_path: Path) -> None:

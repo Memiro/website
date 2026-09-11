@@ -59,18 +59,19 @@ class SACatalogReadGateway(CatalogReadGateway):
         )
         rows = (
             await self._session.execute(
-                select(categories_table.c.name, categories_table.c.slug, categories_table.c.updated_at)
+                select(
+                    categories_table.c.id,
+                    categories_table.c.name,
+                    categories_table.c.slug,
+                    categories_table.c.updated_at,
+                )
                 .where(published)
                 .order_by(categories_table.c.sort_order, categories_table.c.id)
             )
         ).all()
+        covers = await self._category_covers()
         categories = [
-            CategoryModel(
-                name=row.name,
-                slug=row.slug,
-                updated_at=row.updated_at,
-                image=await self._tile_photograph(row.slug, values=()),
-            )
+            CategoryModel(name=row.name, slug=row.slug, updated_at=row.updated_at, image=covers.get(row.id))
             for row in rows
         ]
         return categories, len(categories)
@@ -218,6 +219,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                 .order_by(landings_table.c.sort_order, landings_table.c.id)
             )
         ).all()
+        narrowings = await self._narrowings([row.id for row in rows])
         landings = [
             LandingSummary(
                 slug=row.slug,
@@ -226,7 +228,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                 # A landing stands for a narrowing of its category, so its
                 # tile shows a mirror that narrowing really leaves: two
                 # landings of one category do not show the same photograph.
-                image=await self._tile_photograph(row.category_slug, values=await self._narrowing(row.id)),
+                image=await self._tile_photograph(row.category_slug, values=narrowings.get(row.id, [])),
             )
             for row in rows
         ]
@@ -427,11 +429,36 @@ class SACatalogReadGateway(CatalogReadGateway):
             ],
         )
 
-    async def _tile_photograph(self, category_slug: str, *, values: Sequence[UUID]) -> ImageModel | None:
-        """Read the first photograph of the cheapest published product the narrowing leaves.
+    async def _category_covers(self) -> dict[UUID, ImageModel]:
+        """Read the photograph standing for every category at once: cheapest published product first.
 
         Nothing is ordered by how the owner arranged the products, so the home
         page looks the same from one day to the next.
+        """
+        rows = (
+            await self._session.execute(
+                select(products_table.c.category_id, product_images_table.c.key)
+                .select_from(
+                    products_table.join(product_images_table, product_images_table.c.product_id == products_table.c.id)
+                )
+                .where(products_table.c.is_published)
+                # One row per category, and the ordering decides which: the
+                # first photograph of the cheapest published product it holds.
+                .distinct(products_table.c.category_id)
+                .order_by(
+                    products_table.c.category_id,
+                    *self._ordering(CatalogSort.CHEAPEST),
+                    product_images_table.c.sort_order,
+                )
+            )
+        ).all()
+        return {row.category_id: ImageModel(key=row.key, variants=[]) for row in rows}
+
+    async def _tile_photograph(self, category_slug: str, *, values: Sequence[UUID]) -> ImageModel | None:
+        """Read the photograph of one narrowing: the first of its cheapest published product.
+
+        The narrowing is read by the rule of the sidebar and not by a second
+        one of its own, so the tile shows what its own page opens on.
         """
         query = CatalogQuery(value=list(values), sort=CatalogSort.CHEAPEST)
         conditions = self._conditions(
@@ -450,19 +477,19 @@ class SACatalogReadGateway(CatalogReadGateway):
         ).scalar_one_or_none()
         return None if key is None else ImageModel(key=key, variants=[])
 
-    async def _narrowing(self, landing_id: UUID) -> list[UUID]:
-        """Read the values one landing narrows its category by."""
-        return list(
-            (
-                await self._session.execute(
-                    select(landing_conditions_table.c.value_id).where(
-                        landing_conditions_table.c.landing_id == landing_id
-                    )
+    async def _narrowings(self, landing_ids: Sequence[UUID]) -> dict[UUID, list[UUID]]:
+        """Read what every landing of the page narrows its category by, in one hop."""
+        rows = (
+            await self._session.execute(
+                select(landing_conditions_table.c.landing_id, landing_conditions_table.c.value_id).where(
+                    landing_conditions_table.c.landing_id.in_(landing_ids)
                 )
             )
-            .scalars()
-            .all()
-        )
+        ).all()
+        narrowings: dict[UUID, list[UUID]] = {}
+        for row in rows:
+            narrowings.setdefault(row.landing_id, []).append(row.value_id)
+        return narrowings
 
     async def _filterable_rows(self, category_slug: str) -> Sequence[Row[Any]]:
         """Read the rows of the attributes a visitor may narrow this category by, in the owner's order."""

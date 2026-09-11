@@ -19,6 +19,10 @@ const QUARTER_OF_THE_PAGE = "(max-width: 900px) 50vw, 25vw";
 // 1180px, where it is the width of the page.
 export const GALLERY_SIZES = "(max-width: 1180px) 100vw, 55vw";
 
+// .thumbs: a strip of small squares under the gallery, never more than a
+// tenth of the page wide.
+export const THUMB_SIZES = "12vw";
+
 /** The width of one bento tile, which follows the span it was given. */
 export function tileSizes(span: TileSpan): string {
   return span === "1x1" ? QUARTER_OF_THE_PAGE : HALF_OF_THE_PAGE;
