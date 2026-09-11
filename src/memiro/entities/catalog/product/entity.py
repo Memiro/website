@@ -87,6 +87,9 @@ class VariantData:
     dimensions: Dimensions
     overrides: tuple[DeclaredValue, ...]
     sort_order: int
+    # The price the owner typed instead of the one the calculation gives: a
+    # mirror the studio buys framed is priced, not computed (ADR-0017).
+    manual_price: Money | None = None
 
     def __post_init__(self) -> None:
         """Validate the complete owner-controlled child shape."""
@@ -101,10 +104,11 @@ class Variant(Entity):
     _dimensions: Dimensions
     _overrides: VariantOverrides
     _price: Money
+    _price_is_manual: bool
     _sort_order: int
     _fingerprint: UUID = field(init=False)
 
-    def __init__(
+    def __init__(  # noqa: PLR0913  # one keyword per stored field of the child the aggregate and the ORM build
         self,
         id: VariantId,  # noqa: A002 - the domain field is named id by §6.1.
         *,
@@ -112,12 +116,14 @@ class Variant(Entity):
         overrides: tuple[DeclaredValue, ...],
         price: Money,
         sort_order: int,
+        price_is_manual: bool = False,
     ) -> None:
         """Keep child state writable only to the aggregate and the ORM."""
         self.id = id
         self._dimensions = dimensions
         self._overrides = VariantOverrides(overrides)
         self._price = price
+        self._price_is_manual = price_is_manual
         self._sort_order = sort_order
         self.__post_init__()
 
@@ -133,8 +139,13 @@ class Variant(Entity):
 
     @property
     def price(self) -> Money:
-        """Return the system-calculated price."""
+        """Return the price the variant is sold at, whoever settled it."""
         return self._price
+
+    @property
+    def price_is_manual(self) -> bool:
+        """Tell whether the price was typed by the owner rather than calculated (ADR-0017)."""
+        return self._price_is_manual
 
     @property
     def sort_order(self) -> int:
@@ -302,8 +313,9 @@ class Product(Entity):
             variant.id,
             dimensions=canonical.dimensions,
             overrides=canonical.overrides,
-            price=price,
+            price=_settled(canonical, price),
             sort_order=canonical.sort_order,
+            price_is_manual=canonical.manual_price is not None,
         )
         self._ensure_unique_variant(replacement, excluding=variant.id)
         index = self._variant_index(variant)
@@ -349,6 +361,7 @@ class Product(Entity):
             dimensions=data.dimensions,
             overrides=tuple(overrides),
             sort_order=data.sort_order,
+            manual_price=data.manual_price,
         )
 
     def _ensure_unique_variant(self, candidate: Variant, *, excluding: VariantId | None = None) -> None:
@@ -388,6 +401,12 @@ def variant_factory(data: VariantData, *, price: Money) -> Variant:
         uuid4(),
         dimensions=data.dimensions,
         overrides=data.overrides,
-        price=price,
+        price=_settled(data, price),
         sort_order=data.sort_order,
+        price_is_manual=data.manual_price is not None,
     )
+
+
+def _settled(data: VariantData, price: Money) -> Money:
+    """Give the price the variant keeps: the owner's own number outranks the calculated one (ADR-0017)."""
+    return data.manual_price if data.manual_price is not None else price

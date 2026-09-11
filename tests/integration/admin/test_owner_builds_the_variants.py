@@ -264,6 +264,31 @@ async def test_a_product_that_declared_nothing_yet_is_refused_a_variant_in_words
     assert not await _variants().filter(product_id=empty).aexists()
 
 
+async def test_the_owner_types_the_price_of_a_variant_nothing_prices(owner_client: AsyncClient) -> None:
+    """A mirror the studio buys framed is priced by hand, and the panel says whose price it shows (ADR-0017)."""
+    empty = arranged_product(name="Зеркало в багете")
+
+    saved = _answer(await owner_client.post(_save_url(empty), _panel_post(manual_price="24000")))
+
+    assert [variant["price_label"] for variant in saved["variants"]] == ["24\u202f000\u202f₽"]
+    assert [variant["price_is_manual"] for variant in saved["variants"]] == [True]
+
+
+async def test_a_variant_the_panel_priced_itself_is_not_marked_as_the_owners(owner_client: AsyncClient) -> None:
+    """The mark separates the typed price from the calculated one; without it the list tells them apart by nothing."""
+    saved = _answer(await owner_client.post(_save_url(PRODUCT), _panel_post()))
+
+    assert [variant["price_is_manual"] for variant in saved["variants"]] == [False]
+
+
+async def test_the_panel_refuses_a_price_that_is_not_a_number(owner_client: AsyncClient) -> None:
+    """A price the panel could never have composed is refused in the owner's words."""
+    response = await owner_client.post(_save_url(PRODUCT), _panel_post(manual_price="дорого"))
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert (_answer(response))["error"] == variant_builder.NOT_A_PRICE
+
+
 async def test_the_panel_refuses_a_variant_of_a_product_nobody_entered(owner_client: AsyncClient) -> None:
     """A panel address carrying an identifier nobody issued: PRODUCT_NOT_FOUND."""
     response = await owner_client.post(_save_url(uuid4()), _panel_post())

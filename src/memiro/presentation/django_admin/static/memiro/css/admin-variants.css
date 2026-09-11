@@ -70,3 +70,10 @@
   font-weight: 400;
   color: var(--body-quiet-color, #666);
 }
+
+/* Тем же тихим тоном, что и пометка «от»: рядом с ценой стоит, откуда
+   она взялась, — пересчёт каталога двигает только посчитанную */
+.variant-manual {
+  font-weight: 400;
+  color: var(--body-quiet-color, #666);
+}

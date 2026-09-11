@@ -232,6 +232,7 @@ class ProductVariant(Mirror):
     height_mm = models.IntegerField()
     overrides = models.JSONField()
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    price_is_manual = models.BooleanField()
     sort_order = models.IntegerField()
     fingerprint = models.UUIDField()
 

@@ -65,6 +65,9 @@ class DuplicateVariantWithSize:
             ),
             overrides=variant.overrides,
             sort_order=variant.sort_order,
+            # A copy of a variant priced by hand is priced by hand too: there
+            # is nothing to recalculate it from (ADR-0017).
+            manual_price=variant.price if variant.price_is_manual else None,
         )
         price = settled_variant_price(
             duplicate_data,

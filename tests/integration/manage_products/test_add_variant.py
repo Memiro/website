@@ -349,6 +349,52 @@ async def test_adding_fails_if_the_resulting_configuration_is_incomplete(
         )
 
 
+async def test_the_owner_types_a_price_for_a_variant_the_calculation_cannot_price(
+    engine: AsyncEngine,
+    app: FastAPI,
+) -> None:
+    """A variant nothing prices is saved at the sum the owner typed, marked as his (ADR-0017)."""
+    await prime_incomplete_declaration(engine)
+    container: AsyncContainer = app.state.dishka_container
+
+    async with container() as request:
+        interactor = await request.get(AddVariant)
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(
+                width_mm=800,
+                height_mm=600,
+                overrides=[],
+                sort_order=0,
+                manual_price=Decimal(24000),
+            ),
+        )
+
+    product = await _load_product(container)
+    assert product is not None
+    assert product.price_from == Money(amount=Decimal(24000))
+    assert product.variants[0].price_is_manual is True
+
+
+async def test_a_calculated_variant_is_not_marked_as_priced_by_hand(
+    app: FastAPI,
+) -> None:
+    """A variant saved without a price of its own keeps the calculated one (ADR-0017)."""
+    container: AsyncContainer = app.state.dishka_container
+
+    async with container() as request:
+        interactor = await request.get(AddVariant)
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0),
+        )
+
+    product = await _load_product(container)
+    assert product is not None
+    assert product.variants[0].price == Money(amount=Decimal(8820))
+    assert product.variants[0].price_is_manual is False
+
+
 async def test_adding_fails_if_the_owner_order_is_negative(
     request_container: AsyncContainer,
 ) -> None:

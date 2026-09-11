@@ -56,10 +56,12 @@ VALUE = "value"
 QUANTITY = "quantity"
 VARIANT = "variant"
 DUPLICATE = "duplicate"
+MANUAL_PRICE = "manual_price"
 
 # What the panel says in the owner's language: the machine code is not a
 # message (§12.4), and a number is not a price until it is written as one.
 NOT_A_NUMBER = "Размер и порядок вводятся числами."
+NOT_A_PRICE = "Цена вводится числом — рублями, можно с копейками."
 NOT_A_PAIR = "Панель прислала значение, которое не разбирается: обновите страницу."
 LIKE_THE_PRODUCT = "как у товара"
 # What an override is called when the attribute behind it is gone: the panel
@@ -68,6 +70,8 @@ UNNAMED = "—"
 ROUBLE = "₽"
 # A non-breaking thin space between the thousands, so a price never wraps.
 THOUSANDS = " "
+# The scale the panel opens a saved manual price in.
+KOPECKS = Decimal("0.01")
 OUTSIDE_THE_LIMITS = f"Значение не принято: размер — от 1 до {MAX_SIDE_MM} мм, количество — от 0 до {MAX_QUANTITY}."
 NOT_YOURS = "У вас нет прав менять товары."
 
@@ -181,6 +185,8 @@ def _rows(listed: VariantsList) -> list[dict[str, Any]]:
             "size_label": size_label(variant),
             "values_label": values_label(variant),
             "price_label": money_label(variant.price),
+            "price_is_manual": variant.price_is_manual,
+            "manual_price": str(variant.price.quantize(KOPECKS)) if variant.price_is_manual else "",
             "sets_product_price": variant.sets_product_price,
             "overrides": {
                 str(override.attribute_id): str(override.value_id)
@@ -225,6 +231,7 @@ def _assembled(sent: QueryDict) -> dict[str, Any]:
         WIDTH: _whole(sent.get(WIDTH)),
         HEIGHT: _whole(sent.get(HEIGHT)),
         ORDER: _whole(sent.get(ORDER) or "0"),
+        MANUAL_PRICE: _price(sent.get(MANUAL_PRICE)),
         "overrides": _overrides(sent),
     }
 
@@ -272,6 +279,17 @@ def _whole(sent: object) -> int:
         return int(str(sent))
     except (TypeError, ValueError) as broken:
         raise PanelInputError(NOT_A_NUMBER) from broken
+
+
+def _price(sent: object) -> Decimal | None:
+    """Read the price the owner typed, if he typed one at all: an empty field means "calculate it"."""
+    typed = str(sent or "").strip().replace(",", ".").replace(THOUSANDS, "").replace(" ", "")
+    if not typed:
+        return None
+    try:
+        return Decimal(typed)
+    except InvalidOperation as broken:
+        raise PanelInputError(NOT_A_PRICE) from broken
 
 
 def _amount(sent: str) -> Decimal:

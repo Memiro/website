@@ -67,6 +67,35 @@ async def test_the_price_from_follows_the_cheapest_variant_of_a_repriced_product
     assert product.price_from == SMALL_AFTER
 
 
+async def test_a_reprice_leaves_a_price_the_owner_typed_alone(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """A price the owner typed is not one the reprice derived, so it keeps it (ADR-0017)."""
+    await arranged_variant(container, width_mm=800, height_mm=600, manual_price=Decimal(24000))
+    await update_attribute_value_rate_directly(engine, WITH_MOUNT, MOUNT_AFTER)
+
+    repriced = await reprice(container)
+
+    assert repriced == 0
+    assert await prices_after(container) == (Money(amount=Decimal(24000)),)
+
+
+async def test_a_reprice_moves_the_calculated_variant_beside_a_hand_priced_one(
+    container: AsyncContainer,
+    engine: AsyncEngine,
+) -> None:
+    """One product holds both kinds of price, and only the calculated one moves (ADR-0017)."""
+    await arranged_variant(container, width_mm=800, height_mm=600, sort_order=1)
+    await arranged_variant(container, width_mm=1000, height_mm=800, sort_order=2, manual_price=Decimal(24000))
+    await update_attribute_value_rate_directly(engine, WITH_MOUNT, MOUNT_AFTER)
+
+    repriced = await reprice(container)
+
+    assert repriced == 1
+    assert await prices_after(container) == (SMALL_AFTER, Money(amount=Decimal(24000)))
+
+
 async def test_a_catalogue_without_variants_reprices_nothing(container: AsyncContainer) -> None:
     """A product with no precalculated variant has no price to derive, and is not counted."""
     repriced = await reprice(container)

@@ -4,7 +4,8 @@
 // отличается одним размером.
 //
 // Цену не считает: за ней ходит к серверу, тем же расчётом, что запишет её
-// варианту. Ставок, коэффициентов и разбора изделия на статьи сюда не
+// варианту. В режиме «вписать руками» не ходит вовсе — считать нечего, и
+// записано будет ровно набранное число (ADR-0017). Ставок, коэффициентов и разбора изделия на статьи сюда не
 // приезжает — как и на витрину (ADR-0007). Разбивку тысяч тоже присылает
 // сервер: типографика цены у сайта одна.
 //
@@ -28,6 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const order = document.getElementById("variant-order");
   const edited = document.getElementById("variant-edited");
   const mode = document.getElementById("variant-mode");
+  const priceSource = document.getElementById("variant-price-source");
+  const manual = document.getElementById("variant-manual-price");
   const token = document.querySelector('input[name="csrfmiddlewaretoken"]');
 
   const NOTES = {
@@ -38,6 +41,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // на неё редиректом, и разбор JSON спотыкается об HTML. Без этой строки
     // владелец прочитал бы английское сообщение разборщика браузера
     expired: "Сессия админки истекла — войдите заново и повторите.",
+    price: "Впишите цену варианта в рублях.",
+    manual: "Цена вписана руками — пересчёт каталога её не тронет.",
   };
   const LABELS = { add: "Добавить", edit: "Сохранить", clone: "Размножить" };
 
@@ -69,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     data.set("width_mm", width.value);
     data.set("height_mm", height.value);
     data.set("sort_order", order.value || "0");
+    if (handwritten()) data.set("manual_price", manual.value);
     controls().forEach((control) => {
       if (!control.value) return;
       const named = control.hasAttribute("data-variant-quantity")
@@ -78,6 +84,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     return data;
   };
+
+  // Вписанная цена — это режим, а не заполненность поля: правя посчитанный
+  // вариант, владелец не должен нечаянно зафиксировать его цену руками
+  const handwritten = () => priceSource.value === "manual";
 
   const send = async (url, data) => {
     const response = await fetch(url, {
@@ -115,6 +125,12 @@ document.addEventListener("DOMContentLoaded", () => {
       settled(false);
       return;
     }
+    if (handwritten()) {
+      const written = manual.value !== "" && Number(manual.value) >= 0;
+      say(written ? NOTES.manual : NOTES.price, !written);
+      settled(written);
+      return;
+    }
     let quote = null;
     try {
       const response = await fetch(`${panel.dataset.priceUrl}?${data}`, {
@@ -150,6 +166,12 @@ document.addEventListener("DOMContentLoaded", () => {
     cell(variant.size_label);
     cell(variant.values_label);
     const money = cell(variant.price_label);
+    if (variant.price_is_manual) {
+      const mark = document.createElement("span");
+      mark.className = "variant-manual";
+      mark.textContent = " — вписана руками";
+      money.append(mark);
+    }
     if (variant.sets_product_price) {
       const mark = document.createElement("span");
       mark.className = "variant-cheapest";
@@ -187,6 +209,9 @@ document.addEventListener("DOMContentLoaded", () => {
     width.value = variant.width_mm;
     height.value = variant.height_mm;
     order.value = variant.sort_order;
+    priceSource.value = variant.price_is_manual ? "manual" : "calculated";
+    manual.value = variant.manual_price;
+    priced();
     controls().forEach((control) => {
       control.value = variant.overrides[control.dataset.variantAttribute] || "";
     });
@@ -207,9 +232,17 @@ document.addEventListener("DOMContentLoaded", () => {
     cancel.hidden = !variant;
     const inherited = mode.value === "clone";
     order.disabled = inherited;
+    priceSource.disabled = inherited;
+    manual.disabled = inherited || !handwritten();
     controls().forEach((control) => {
       control.disabled = inherited;
     });
+  };
+
+  // Поле цены живёт ровно в своём режиме: открытое в режиме расчёта, оно
+  // обещало бы владельцу число, которого никто не запишет
+  const priced = () => {
+    manual.disabled = !handwritten();
   };
 
   const found = (id) =>
@@ -299,7 +332,13 @@ document.addEventListener("DOMContentLoaded", () => {
   panel.addEventListener("change", (event) => {
     if (event.target.matches("[data-variant-attribute]")) recalculate();
   });
+  priceSource.addEventListener("change", () => {
+    priced();
+    recalculate();
+  });
+  manual.addEventListener("input", recalculate);
 
   redraw(JSON.parse(document.getElementById("variant-rows-data").textContent));
+  priced();
   recalculate();
 });

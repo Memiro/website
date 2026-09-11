@@ -33,6 +33,7 @@ class VariantModel(BaseModel):
     width_mm: int
     height_mm: int
     price: Decimal
+    price_is_manual: bool
     sort_order: int
     overrides: list[VariantOverrideModel]
     sets_product_price: bool
@@ -68,6 +69,7 @@ def _listed(variant: Variant, product: Product, attributes: dict[AttributeId, At
         width_mm=variant.dimensions.width.value,
         height_mm=variant.dimensions.height.value,
         price=variant.price.amount,
+        price_is_manual=variant.price_is_manual,
         sort_order=variant.sort_order,
         overrides=[_named(override, attributes) for override in variant.overrides],
         sets_product_price=variant.price == product.price_from,
