@@ -41,6 +41,7 @@ from memiro.presentation.django_admin.forms import (
     AttributeCardForm,
     AttributeValueRowForm,
     CategoryCardForm,
+    DisplayOnlyFormSet,
     LandingCardForm,
     MaterialPriceRowForm,
     PricingSettingsForm,
@@ -167,6 +168,7 @@ class ReadOnlyInline(RefusesWrites, admin.TabularInline):
     extra = 0
     can_delete = False
     show_change_link = False
+    formset = DisplayOnlyFormSet
 
     @override
     def has_add_permission(self, request: HttpRequest, obj: Model | None = None) -> bool:

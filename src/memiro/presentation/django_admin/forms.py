@@ -257,6 +257,23 @@ class SizeSurchargeFormSet(BaseInlineFormSet):
         form.fields[TIER_KEY_FIELD] = forms.Field(required=False, disabled=True, widget=forms.HiddenInput)
 
 
+class DisplayOnlyFormSet(BaseInlineFormSet):
+    """Rows a card shows and never takes back: the card's own fields write them.
+
+    Django reads the key of every stored row out of the POST body and parses it
+    (``ModelFormSet._construct_form``). A composite key is parsed as JSON, and a
+    row rendered read-only carries no field to hold one, so the browser posts an
+    empty value and the parse dies before the card is validated at all — the
+    same trap ``SizeSurchargeFormSet`` steps around. A bound set holds no stored
+    row: a submit has nothing to read back from rows it cannot edit.
+    """
+
+    @override
+    def initial_form_count(self) -> int:
+        """Hold no stored row while bound, and every one of them while showing the card."""
+        return 0 if self.is_bound else super().initial_form_count()
+
+
 class ProductCardForm(forms.ModelForm):
     """Карточка товара: корень, а под ним по полю на каждый атрибут раздела."""
 
