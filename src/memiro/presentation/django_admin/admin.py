@@ -98,6 +98,10 @@ from memiro.presentation.django_admin.writes import guarded_write
 NOTHING_TO_SAY = "—"
 UNDECLARED = "Не заполнено:"
 NOTHING_IS_PAID = "Ни одно значение не стоит денег."
+# What the saved card says when the same answer is not empty: the owner edits
+# a product on its card and stays there, and the column of the list he does
+# not see would be the only place his broken calculator is named.
+WILL_NOT_PRICE = "Витрина не посчитает этот товар."
 
 # The three addresses of the panel, under the card of the product they belong
 # to: a variant of nobody's product does not exist.
@@ -116,6 +120,27 @@ type PanelView = Callable[[HttpRequest, ProductId], HttpResponse]
 # once by the list, read by every row of it, and dropped with the request.
 _NO_GAPS: dict[ProductId, PricingGapsModel] = {}
 _page_gaps: ContextVar[dict[ProductId, PricingGapsModel]] = ContextVar("memiro_admin_pricing_gaps", default=_NO_GAPS)
+
+
+def _no_inline_rows_were_written(formsets: list[BaseInlineFormSet]) -> None:
+    """Say of every inline that Django wrote nothing through it: the gallery goes to the domain as commands.
+
+    Django reads these three lists off the formset when it builds the history
+    entry of the card, and ``save_formset`` — the hook that fills them — is
+    the one a card writing through interactors never calls. Without them the
+    entry is lost and a save that went through answers the owner as a failure.
+    """
+    for formset in formsets:
+        formset.new_objects = []
+        formset.changed_objects = []
+        formset.deleted_objects = []
+
+
+def _gap_sentence(gaps: PricingGapsModel) -> str:
+    """Say why a product shows no calculated price, in the owner's words (``product.md``, правило 10)."""
+    if gaps.undeclared_attributes:
+        return f"{UNDECLARED} {', '.join(gaps.undeclared_attributes)}."
+    return NOTHING_IS_PAID if gaps.nothing_is_paid else NOTHING_TO_SAY
 
 
 def _submitted_rows(formsets: list[BaseInlineFormSet]) -> list[dict[str, Any]]:
@@ -608,10 +633,20 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
         if change:
             restate_product(form.instance.pk, form.cleaned_data)
             restate_gallery(form.instance.pk, form.cleaned_data)
+        else:
+            # The mirror row is never inserted by Django, so the identifier the
+            # command issued is what the history and the redirect are given.
+            form.instance.pk = create_product(form.cleaned_data)
+        _no_inline_rows_were_written(formsets)
+        self._warn_about_the_calculator(request, cast("ProductId", form.instance.pk))
+
+    def _warn_about_the_calculator(self, request: HttpRequest, product_id: ProductId) -> None:
+        """Tell the owner on the card itself that the storefront will not price what he just saved."""
+        gaps = pricing_gaps_of([product_id]).get(product_id)
+        sentence = NOTHING_TO_SAY if gaps is None else _gap_sentence(gaps)
+        if sentence == NOTHING_TO_SAY:
             return
-        # The mirror row is never inserted by Django, so the identifier the
-        # command issued is what the history and the redirect are given.
-        form.instance.pk = create_product(form.cleaned_data)
+        messages.warning(request, f"{WILL_NOT_PRICE} {sentence}")
 
     @override
     def delete_model(self, request: HttpRequest, obj: Model) -> None:
@@ -622,11 +657,7 @@ class ProductAdmin(GuardsItsForm, admin.ModelAdmin):
     def missing_for_the_calculator(self, obj: Model) -> str:
         """Say why the product shows no calculated price, in the owner's words (``product.md``, правило 10)."""
         gaps = _page_gaps.get().get(cast("Product", obj).id)
-        if gaps is None:
-            return NOTHING_TO_SAY
-        if gaps.undeclared_attributes:
-            return f"{UNDECLARED} {', '.join(gaps.undeclared_attributes)}."
-        return NOTHING_IS_PAID if gaps.nothing_is_paid else NOTHING_TO_SAY
+        return NOTHING_TO_SAY if gaps is None else _gap_sentence(gaps)
 
     @admin.action(description="Пересчитать цены")
     def reprice_products(self, request: HttpRequest, queryset: QuerySet[Model]) -> None:  # noqa: ARG002  # Django's action signature

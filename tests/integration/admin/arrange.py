@@ -99,10 +99,15 @@ def card_fields(*, name: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     return root, rows
 
 
-def arranged_attribute(*, name: str, values: Sequence[AttributeValueForm]) -> AttributeId:
-    """Put one attribute of the demo category into the database through its own command."""
+def arranged_attribute(
+    *,
+    name: str,
+    values: Sequence[AttributeValueForm],
+    category: CategoryId = CATEGORY,
+) -> AttributeId:
+    """Put one attribute of a section into the database through its own command."""
     form = CreateAttributeForm(
-        category_id=CATEGORY,
+        category_id=category,
         name=name,
         kind=AttributeKind.SELECT,
         values=list(values),

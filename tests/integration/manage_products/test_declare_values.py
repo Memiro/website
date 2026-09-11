@@ -6,20 +6,35 @@ from dishka import AsyncContainer
 from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import MAX_QUANTITY, MAX_SELECTIONS
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
-from memiro.application.manage_products import DeclarationForm, DeclareValues, DeclareValuesForm
+from memiro.application.manage_products import (
+    AddVariant,
+    AddVariantForm,
+    DeclarationForm,
+    DeclareValues,
+    DeclareValuesForm,
+)
 from memiro.entities.catalog.attribute.chosen_value import ChosenValue
-from memiro.entities.catalog.product.entity import DeclaredValue
+from memiro.entities.catalog.product.entity import DeclaredValue, Product
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, ProductId
+from memiro.entities.common.money import Money
 from tests.common.factory.catalog import (
+    ALUMINIUM,
+    BACKLIGHT,
     BLADE,
     CUTOUTS,
     FRAME,
     GRAPHITE,
+    MOUNT,
+    NO_BACKLIGHT,
     NO_FRAME,
     PRODUCT,
+    RECTANGULAR,
+    SHAPE,
     SILVER,
+    WITH_MOUNT,
 )
 from tests.integration.manage_products.arrange import declared_index, load_product
 from tests.integration.prime import (
@@ -36,6 +51,13 @@ async def second_section(engine: AsyncEngine) -> None:
 
 
 pytestmark = pytest.mark.usefixtures("catalog")
+
+# What the workbook says the demo mirror costs at 800 by 600 on each blade,
+# and what a price of the owner's own reads as (§14.6.7 — hardcoded, never
+# re-derived).
+SILVER_MIRROR = Money(amount=Decimal(8820))
+GRAPHITE_MIRROR = Money(amount=Decimal(10020))
+TYPED_BY_HAND = Money(amount=Decimal(24000))
 
 
 def _form(*declarations: DeclarationForm) -> DeclareValuesForm:
@@ -57,6 +79,42 @@ async def _declare(container: AsyncContainer, form: DeclareValuesForm, product_i
     async with container() as request:
         interactor = await request.get(DeclareValues)
         await interactor.execute(product_id, form)
+
+
+def _canonical(*, blade: AttributeValueId = SILVER) -> DeclareValuesForm:
+    """Build the whole card of the canonical mirror, its blade the owner's to choose."""
+    return _form(
+        _row(BLADE, blade),
+        _row(SHAPE, RECTANGULAR),
+        _row(FRAME, ALUMINIUM),
+        _row(BACKLIGHT, NO_BACKLIGHT),
+        _row(MOUNT, WITH_MOUNT),
+    )
+
+
+async def _variant(
+    container: AsyncContainer,
+    *,
+    width_mm: int,
+    height_mm: int,
+    manual_price: Decimal | None = None,
+) -> None:
+    """Put one precalculated variant on the canonical product through its own command."""
+    async with container() as request:
+        interactor = await request.get(AddVariant)
+        await interactor.execute(
+            PRODUCT,
+            AddVariantForm(width_mm=width_mm, height_mm=height_mm, manual_price=manual_price),
+        )
+
+
+async def _load_with_variants(container: AsyncContainer) -> Product:
+    """Read the canonical product and its variants back in a fresh transaction."""
+    async with container() as request:
+        gateway: ProductGateway = await request.get(ProductGateway)
+        product = await gateway.get(PRODUCT, eager_variants=True)
+    assert product is not None
+    return product
 
 
 async def test_the_owner_declares_what_the_product_is_made_of(container: AsyncContainer) -> None:
@@ -162,3 +220,36 @@ async def test_a_refused_declaration_leaves_the_set_as_it_was(container: AsyncCo
     product = await load_product(container, PRODUCT)
     assert product is not None
     assert declared_index(product) == declared_index(before)
+
+
+async def test_declaring_values_reprices_the_variants_of_the_product(container: AsyncContainer) -> None:
+    """A blade the owner replaced is half the price of every variant, and they take the new one at once."""
+    await _variant(container, width_mm=800, height_mm=600)
+
+    await _declare(container, _canonical(blade=GRAPHITE))
+
+    product = await _load_with_variants(container)
+    assert tuple(variant.price for variant in product.variants) == (GRAPHITE_MIRROR,)
+    assert product.price_from == GRAPHITE_MIRROR
+
+
+async def test_declaring_values_leaves_a_price_the_owner_typed_alone(container: AsyncContainer) -> None:
+    """A price the owner typed is not one the calculation derived, so a new declaration does not move it (ADR-0017)."""
+    await _variant(container, width_mm=800, height_mm=600, manual_price=TYPED_BY_HAND.amount)
+
+    await _declare(container, _canonical(blade=GRAPHITE))
+
+    product = await _load_with_variants(container)
+    assert tuple(variant.price for variant in product.variants) == (TYPED_BY_HAND,)
+
+
+async def test_a_variant_the_new_declarations_cannot_price_keeps_the_price_it_had(
+    container: AsyncContainer,
+) -> None:
+    """A card cleared of every paid value leaves the variants as they were, not free of charge."""
+    await _variant(container, width_mm=800, height_mm=600)
+
+    await _declare(container, _form())
+
+    product = await _load_with_variants(container)
+    assert tuple(variant.price for variant in product.variants) == (SILVER_MIRROR,)
