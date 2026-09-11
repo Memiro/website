@@ -12,7 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.adapters.db.tables import product_variants_table
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.input_limits import MAX_SELECTIONS, MAX_SIDE_MM, MIN_SIDE_MM
+from memiro.application.common.input_limits import (
+    MAX_ORDER_TOTAL,
+    MAX_SELECTIONS,
+    MAX_SIDE_MM,
+    MIN_SIDE_MM,
+)
 from memiro.application.errors.catalog import AttributeValueNotFoundError, ProductNotFoundError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.application.manage_products import AddVariant, AddVariantForm, CreatedVariant
@@ -228,6 +233,30 @@ def test_adding_rejects_a_side_above_the_input_limit() -> None:
             height_mm=600,
             overrides=[],
             sort_order=0,
+        )
+
+
+def test_adding_rejects_a_typed_price_above_the_input_limit() -> None:
+    """A price at MAX_ORDER_TOTAL + 1 is rejected with VALIDATION_ERROR."""
+    with pytest.raises(ValidationError):
+        AddVariantForm(
+            width_mm=800,
+            height_mm=600,
+            overrides=[],
+            sort_order=0,
+            manual_price=MAX_ORDER_TOTAL + 1,
+        )
+
+
+def test_adding_rejects_a_negative_typed_price() -> None:
+    """A price below zero is rejected with VALIDATION_ERROR: Money is an amount."""
+    with pytest.raises(ValidationError):
+        AddVariantForm(
+            width_mm=800,
+            height_mm=600,
+            overrides=[],
+            sort_order=0,
+            manual_price=Decimal(-1),
         )
 
 

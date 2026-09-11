@@ -281,6 +281,13 @@ async def test_a_variant_the_panel_priced_itself_is_not_marked_as_the_owners(own
     assert [variant["price_is_manual"] for variant in saved["variants"]] == [False]
 
 
+async def test_a_typed_price_is_taken_down_to_the_kopeck_the_column_keeps(owner_client: AsyncClient) -> None:
+    """The list must redraw the number the owner typed, not one the column rounded behind him."""
+    saved = _answer(await owner_client.post(_save_url(PRODUCT), _panel_post(manual_price="24000.999")))
+
+    assert [variant["price_label"] for variant in saved["variants"]] == ["24\u202f001\u202f₽"]
+
+
 async def test_the_panel_refuses_a_price_that_is_not_a_number(owner_client: AsyncClient) -> None:
     """A price the panel could never have composed is refused in the owner's words."""
     response = await owner_client.post(_save_url(PRODUCT), _panel_post(manual_price="дорого"))

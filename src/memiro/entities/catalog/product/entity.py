@@ -87,8 +87,7 @@ class VariantData:
     dimensions: Dimensions
     overrides: tuple[DeclaredValue, ...]
     sort_order: int
-    # The price the owner typed instead of the one the calculation gives: a
-    # mirror the studio buys framed is priced, not computed (ADR-0017).
+    # A mirror the studio buys framed is priced, not computed (ADR-0017).
     manual_price: Money | None = None
 
     def __post_init__(self) -> None:
@@ -309,13 +308,14 @@ class Product(Entity):
     def change_variant(self, variant: Variant, data: VariantData, *, price: Money, clock: Clock) -> Variant:
         """Replace one loaded child and derive the product price again."""
         canonical = self._canonical_variant_data(data)
+        settled, is_manual = _settled(canonical, price)
         replacement = Variant(
             variant.id,
             dimensions=canonical.dimensions,
             overrides=canonical.overrides,
-            price=_settled(canonical, price),
+            price=settled,
             sort_order=canonical.sort_order,
-            price_is_manual=canonical.manual_price is not None,
+            price_is_manual=is_manual,
         )
         self._ensure_unique_variant(replacement, excluding=variant.id)
         index = self._variant_index(variant)
@@ -397,16 +397,17 @@ def product_factory(data: CreateProductData, *, clock: Clock) -> Product:
 
 def variant_factory(data: VariantData, *, price: Money) -> Variant:
     """Create a priced child with an unforgeable identifier."""
+    settled, is_manual = _settled(data, price)
     return Variant(
         uuid4(),
         dimensions=data.dimensions,
         overrides=data.overrides,
-        price=_settled(data, price),
+        price=settled,
         sort_order=data.sort_order,
-        price_is_manual=data.manual_price is not None,
+        price_is_manual=is_manual,
     )
 
 
-def _settled(data: VariantData, price: Money) -> Money:
-    """Give the price the variant keeps: the owner's own number outranks the calculated one (ADR-0017)."""
-    return data.manual_price if data.manual_price is not None else price
+def _settled(data: VariantData, price: Money) -> tuple[Money, bool]:
+    """Give the price the variant keeps and whose it is: the owner's own outranks the calculated one (ADR-0017)."""
+    return (data.manual_price, True) if data.manual_price is not None else (price, False)

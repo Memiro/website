@@ -58,7 +58,7 @@ async def test_the_cheapest_variant_is_the_one_the_storefront_price_comes_from(
 async def test_the_panel_is_told_which_price_the_owner_typed_himself(
     container: AsyncContainer,
 ) -> None:
-    """Посчитанную цену от вписанной в списке не отличить иначе (ADR-0017)."""
+    """Nothing else in the list tells a typed price from a calculated one (ADR-0017)."""
     await _add(container, AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0))
     await _add(
         container,
