@@ -1,6 +1,7 @@
 export interface WalkedCategory {
   slug: string;
   name: string;
+  updated_at: string;
 }
 
 export interface WalkedProduct {
@@ -8,6 +9,7 @@ export interface WalkedProduct {
   name: string;
   price_from: string | null;
   image_keys: string[];
+  updated_at: string;
 }
 
 /** What a walk needs of the catalogue — the slice `CatalogApi` already offers. */

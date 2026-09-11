@@ -12,6 +12,7 @@ const product = {
   category_name: "Зеркала",
   price_from: "18900",
   image_keys: [],
+  updated_at: "2026-09-01T10:00:00Z",
   description: "Зеркало для ванной.",
   attributes: [
     { id: "frame", name: "Рама", kind: "select", declared_value_id: "black", is_customer_changeable: true, values: [{ id: "black", name: "Чёрная", quantity: null }] },
@@ -35,10 +36,10 @@ const works = {
 
 const workWithoutTitle = { items: [{ photo_key: "works/hallway.jpg", description: "", product: null }], total: 1, page: 1 };
 
-const categories = { items: [{ name: "Зеркала", slug: "mirrors" }], total: 1, page: 1 };
+const categories = { items: [{ name: "Зеркала", slug: "mirrors", updated_at: "2026-09-01T10:00:00Z" }], total: 1, page: 1 };
 
 const categoryProducts = {
-  items: [{ name: "Лира", slug: "lira", price_from: "18900", image_keys: [] }],
+  items: [{ name: "Лира", slug: "lira", price_from: "18900", image_keys: [], updated_at: "2026-09-01T10:00:00Z" }],
   total: 1,
   page: 1,
   pages: 1,

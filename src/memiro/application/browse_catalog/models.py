@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Final
@@ -72,6 +73,9 @@ class CategoryModel(BaseModel):
 
     name: str
     slug: str
+    # The storefront dates the page by it in the sitemap, so a crawler knows
+    # what to come back for.
+    updated_at: datetime
 
 
 class CategoriesList(BaseModel):
@@ -87,6 +91,7 @@ class LandingSummary(BaseModel):
 
     slug: str
     heading: str
+    updated_at: datetime
 
 
 class LandingsList(BaseModel):
@@ -115,6 +120,7 @@ class ProductSummary(BaseModel):
     slug: str
     price_from: Decimal | None
     image_keys: list[str]
+    updated_at: datetime
 
 
 class ProductsList(BaseModel):

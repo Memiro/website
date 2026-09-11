@@ -21,6 +21,7 @@ test("a beyond-limits calculator configuration becomes a selection wish without 
   const item = inquiryItemFromCalculator(
     {
       id: "mirror",
+      updated_at: "2026-09-01T10:00:00Z",
       name: "Зеркало Loft",
       slug: "loft",
       category_slug: "zerkala",

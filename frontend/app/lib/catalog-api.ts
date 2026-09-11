@@ -43,6 +43,7 @@ export interface CategoryPage extends ListEnvelope<ProductSummary> {
 export interface LandingSummary {
   slug: string;
   heading: string;
+  updated_at: string;
 }
 
 export interface Landing extends LandingSummary {
@@ -70,6 +71,7 @@ export interface Work {
 export interface Category {
   name: string;
   slug: string;
+  updated_at: string;
 }
 
 export interface ProductSummary {
@@ -77,6 +79,7 @@ export interface ProductSummary {
   slug: string;
   price_from: string | null;
   image_keys: string[];
+  updated_at: string;
 }
 
 export interface ProductAttributeValue {
@@ -198,7 +201,10 @@ export function isCalculatedPrice(value: unknown): value is CalculatedPrice {
 
 function isLandingSummary(value: unknown): value is LandingSummary {
   const landing = asRecord(value);
-  return landing !== null && typeof landing.slug === "string" && typeof landing.heading === "string";
+  return landing !== null
+    && typeof landing.slug === "string"
+    && typeof landing.heading === "string"
+    && typeof landing.updated_at === "string";
 }
 
 function isLanding(value: unknown): value is Landing {
@@ -291,7 +297,10 @@ function isWorkProduct(value: unknown): value is WorkProduct {
 
 function isCategory(value: unknown): value is Category {
   const category = asRecord(value);
-  return category !== null && typeof category.name === "string" && typeof category.slug === "string";
+  return category !== null
+    && typeof category.name === "string"
+    && typeof category.slug === "string"
+    && typeof category.updated_at === "string";
 }
 
 function isProductSummary(value: unknown): value is ProductSummary {
@@ -302,6 +311,7 @@ function isProductSummary(value: unknown): value is ProductSummary {
   return typeof product.name === "string"
     && typeof product.slug === "string"
     && isNullableString(product.price_from)
+    && typeof product.updated_at === "string"
     && isArrayOf(product.image_keys, isString);
 }
 

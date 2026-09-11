@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.browse_catalog import LandingsList, LandingSummary
 from tests.integration.api_client import ApiClient
-from tests.integration.prime import prime_landing
+from tests.integration.prime import CATALOG_STAMP, prime_landing
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -23,7 +23,19 @@ async def test_the_storefront_lists_its_landings_as_tiles(api_client: ApiClient,
     await prime_landing(engine)
 
     assert (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content() == LandingsList(
-        items=[LandingSummary(slug="kruglye-zerkala", heading="Круглые зеркала")],
+        items=[LandingSummary(slug="kruglye-zerkala", heading="Круглые зеркала", updated_at=CATALOG_STAMP)],
         total=1,
         page=1,
     )
+
+
+async def test_a_listed_landing_carries_the_day_it_was_last_edited(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """The sitemap dates a landing by this stamp, so the tiles have to carry it."""
+    await prime_landing(engine)
+
+    listing = (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].updated_at == CATALOG_STAMP
