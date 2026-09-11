@@ -74,6 +74,8 @@ class RepriceProducts:
             return False
         moved = False
         for variant in product.variants:
+            if variant.price_is_manual:
+                continue
             configuration = _same_configuration(variant)
             price = variant_price(configuration, product=product, attributes=attributes, settings=settings)
             if price is None:
@@ -89,7 +91,11 @@ class RepriceProducts:
 
 
 def _same_configuration(variant: Variant) -> VariantData:
-    """Restate one variant as the command data of the aggregate, changing nothing but its price."""
+    """Restate one variant as the command data of the aggregate, changing nothing but its price.
+
+    Only variants the calculation prices reach here, so the restated data
+    carries no price of the owner's own (ADR-0017).
+    """
     return VariantData(
         dimensions=variant.dimensions,
         overrides=variant.overrides,

@@ -23,6 +23,7 @@ def _variant_data(
     height_mm: int,
     overrides: tuple[DeclaredValue, ...] = (),
     sort_order: int = 0,
+    manual_price: Money | None = None,
 ) -> VariantData:
     """Build a variant with no overrides where their values do not matter."""
     return VariantData(
@@ -32,6 +33,7 @@ def _variant_data(
         ),
         overrides=overrides,
         sort_order=sort_order,
+        manual_price=manual_price,
     )
 
 
@@ -387,3 +389,52 @@ def test_a_variant_rejects_an_unfinished_override() -> None:
 
     assert product.variants == ()
     assert product.price_from is None
+
+
+def test_a_variant_keeps_the_price_the_owner_typed_instead_of_the_calculated_one() -> None:
+    """A price of the owner's own outranks the calculation and is marked as his (ADR-0017)."""
+    product = demo_product()
+
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400, manual_price=Money(amount=Decimal(12000))),
+        price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
+    )
+
+    assert variant.price == Money(amount=Decimal(12000))
+    assert variant.price_is_manual is True
+    assert product.price_from == Money(amount=Decimal(12000))
+
+
+def test_a_calculated_variant_is_not_marked_as_priced_by_hand() -> None:
+    """A variant nobody typed a price for carries the calculated one (ADR-0017)."""
+    product = demo_product()
+
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
+    )
+
+    assert variant.price == Money(amount=Decimal(2000))
+    assert variant.price_is_manual is False
+
+
+def test_a_variant_returned_to_the_calculation_loses_its_typed_price() -> None:
+    """Changing a hand-priced variant without a price of its own puts it back on the calculation."""
+    product = demo_product()
+    variant = product.add_variant(
+        _variant_data(width_mm=600, height_mm=400, manual_price=Money(amount=Decimal(12000))),
+        price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
+    )
+
+    replacement = product.change_variant(
+        variant,
+        _variant_data(width_mm=600, height_mm=400),
+        price=Money(amount=Decimal(2000)),
+        clock=CLOCK,
+    )
+
+    assert replacement.price == Money(amount=Decimal(2000))
+    assert replacement.price_is_manual is False

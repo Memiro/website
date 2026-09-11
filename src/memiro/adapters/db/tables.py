@@ -222,6 +222,7 @@ product_variants_table = Table(
     Column("height_mm", MillimetersType(), nullable=False),
     Column("overrides", VariantOverridesType(), nullable=False),
     Column("price", MoneyType(), nullable=False),
+    Column("price_is_manual", Boolean(), nullable=False),
     Column("sort_order", Integer(), nullable=False),
     Column("fingerprint", Uuid(), nullable=False),
     CheckConstraint("sort_order >= 0", name="ck_product_variants_sort_order_non_negative"),
@@ -357,6 +358,7 @@ mapper_registry.map_imperatively(
         "_fingerprint": product_variants_table.c.fingerprint,
         "_overrides": product_variants_table.c.overrides,
         "_price": product_variants_table.c.price,
+        "_price_is_manual": product_variants_table.c.price_is_manual,
         "_sort_order": product_variants_table.c.sort_order,
     },
 )

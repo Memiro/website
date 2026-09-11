@@ -111,6 +111,34 @@ async def test_the_owner_duplicates_a_variant_with_a_new_size_and_price(app: Fas
     assert len(product.variants) == TWO_VARIANTS
 
 
+async def test_a_duplicated_variant_keeps_the_price_its_source_was_given_by_hand(app: FastAPI) -> None:
+    """A copy of a hand-priced variant is hand-priced too: there is nothing to recalculate it from (ADR-0017)."""
+    container: AsyncContainer = app.state.dishka_container
+    async with container() as request:
+        interactor = await request.get(AddVariant)
+        source = await interactor.execute(
+            PRODUCT,
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=7, manual_price=Decimal(24000)),
+        )
+
+    async with container() as request:
+        duplicate = await request.get(DuplicateVariantWithSize)
+        result = await duplicate.execute(
+            PRODUCT,
+            source.id,
+            DuplicateVariantWithSizeForm(width_mm=2200, height_mm=600),
+        )
+
+    async with container() as request:
+        gateway: ProductGateway = await request.get(ProductGateway)
+        product = await gateway.get(PRODUCT, eager_variants=True)
+    assert product is not None
+    duplicated = product.variant(result.id)
+    assert duplicated is not None
+    assert duplicated.price == Money(amount=Decimal(24000))
+    assert duplicated.price_is_manual is True
+
+
 async def test_a_duplicated_variant_keeps_the_overrides_of_its_source(app: FastAPI) -> None:
     """A copy of an overridden child keeps the override and is priced by it."""
     container: AsyncContainer = app.state.dishka_container

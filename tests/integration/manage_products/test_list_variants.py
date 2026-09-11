@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -52,6 +53,23 @@ async def test_the_cheapest_variant_is_the_one_the_storefront_price_comes_from(
         listed = await interactor.execute(PRODUCT)
 
     assert [variant.sets_product_price for variant in listed.items] == [True, False]
+
+
+async def test_the_panel_is_told_which_price_the_owner_typed_himself(
+    container: AsyncContainer,
+) -> None:
+    """Посчитанную цену от вписанной в списке не отличить иначе (ADR-0017)."""
+    await _add(container, AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0))
+    await _add(
+        container,
+        AddVariantForm(width_mm=1200, height_mm=900, overrides=[], sort_order=1, manual_price=Decimal(24000)),
+    )
+
+    async with container() as request:
+        interactor = await request.get(ListVariants)
+        listed = await interactor.execute(PRODUCT)
+
+    assert [variant.price_is_manual for variant in listed.items] == [False, True]
 
 
 async def test_a_variant_names_in_words_what_it_changes_about_the_product(

@@ -1,5 +1,7 @@
 """What the repricing tests arrange: priced variants, and the reading taken after the handler."""
 
+from decimal import Decimal
+
 from dishka import AsyncContainer
 
 from memiro.application.common.gateway.product import ProductGateway
@@ -17,13 +19,20 @@ async def arranged_variant(
     width_mm: int,
     height_mm: int,
     sort_order: int = 0,
+    manual_price: Decimal | None = None,
 ) -> VariantId:
     """Put one precalculated variant on the canonical product through its own command."""
     async with container() as request:
         interactor = await request.get(AddVariant)
         created = await interactor.execute(
             PRODUCT,
-            AddVariantForm(width_mm=width_mm, height_mm=height_mm, overrides=[], sort_order=sort_order),
+            AddVariantForm(
+                width_mm=width_mm,
+                height_mm=height_mm,
+                overrides=[],
+                sort_order=sort_order,
+                manual_price=manual_price,
+            ),
         )
     return created.id
 

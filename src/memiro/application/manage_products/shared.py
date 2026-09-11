@@ -10,6 +10,7 @@ from memiro.application.common.gateway.product import ProductGateway
 from memiro.application.common.input_limits import (
     MAX_DESCRIPTION_LENGTH,
     MAX_NAME_LENGTH,
+    MAX_ORDER_TOTAL,
     MAX_QUANTITY,
     MAX_SELECTIONS,
     MAX_SIDE_MM,
@@ -31,6 +32,7 @@ from memiro.entities.catalog.product.entity import (
 )
 from memiro.entities.common.identifiers import AttributeId, AttributeValueId, CategoryId, ProductId, VariantId
 from memiro.entities.common.measure import Dimensions, Millimeters
+from memiro.entities.common.money import Money
 from memiro.entities.common.slug import MAX_SLUG_LENGTH
 from memiro_common.logger import Logger
 
@@ -89,6 +91,9 @@ class VariantForm(BaseModel):
         max_length=MAX_SELECTIONS,
     )
     sort_order: int = 0
+    # Nothing typed means "calculate it": the price of a variant is the
+    # calculation's until the owner says otherwise (ADR-0017).
+    manual_price: Decimal | None = Field(default=None, ge=0, le=MAX_ORDER_TOTAL)
 
     @model_validator(mode="after")
     def _one_override_per_attribute(self) -> VariantForm:
@@ -120,6 +125,7 @@ def variant_data(
         ),
         overrides=_overrides(product, attributes, form.overrides),
         sort_order=form.sort_order,
+        manual_price=Money(amount=form.manual_price) if form.manual_price is not None else None,
     )
 
 

@@ -2,7 +2,8 @@
 
 Both ask the same question and must get the same number; they differ only in
 what an uncalculable configuration means — the owner's own refusal while he is
-saving, a variant to leave alone while the catalogue is being repriced.
+saving, a variant to leave alone while the catalogue is being repriced. A price
+the owner typed answers before the question is asked at all (ADR-0017).
 """
 
 from collections.abc import Sequence
@@ -43,10 +44,12 @@ def settled_variant_price(
     attributes: Sequence[Attribute],
     settings: PricingSettings,
 ) -> Money:
-    """Price a variant the owner is saving: one that cannot be priced is his own refusal."""
+    """Take the price the owner typed, or price the variant he is saving; neither is his own refusal."""
+    if data.manual_price is not None:
+        return data.manual_price
     price = variant_price(data, product=product, attributes=attributes, settings=settings)
     if price is None:
         raise InvalidVariantConfigurationError(
-            message="A variant configuration must contain every applicable paid value",
+            message="A variant configuration must contain every applicable paid value or a price of its own",
         )
     return price
