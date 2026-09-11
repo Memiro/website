@@ -6,8 +6,8 @@ import OfferNote from "../../../../components/OfferNote.astro";
 import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
-import { coverImageUrl, imageSrcSet, mediaUrl } from "../../../../lib/media.ts";
-import { GALLERY_SIZES } from "../../../../lib/image-sizes.ts";
+import { imageSrcSet, mediaUrl, photographUrl } from "../../../../lib/media.ts";
+import { GALLERY_SIZES, THUMB_SIZES } from "../../../../lib/image-sizes.ts";
 import { productPath, redirectTarget } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { relatedProducts } from "../../../../lib/related.ts";
@@ -28,7 +28,7 @@ if (product === null) {
 const price = product === null || product.price_from === null
   ? null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
-const cover = product === null ? "" : coverImageUrl(product.image_keys);
+const cover = product === null ? "" : photographUrl(product.images[0]);
 // The gallery draws one photograph at a time, so a thumbnail carries the
 // candidates of its own photo: the island swaps both, and the browser keeps
 // choosing a width instead of falling back to the original.
@@ -90,7 +90,7 @@ const crumbs = product === null ? [] : [
                 data-src={photograph.src}
                 data-srcset={photograph.srcset}
               >
-                <img src={photograph.src} srcset={photograph.srcset} sizes="12vw" alt={photograph.alt} loading="lazy" />
+                <img src={photograph.src} srcset={photograph.srcset} sizes={THUMB_SIZES} alt={photograph.alt} loading="lazy" />
               </button>
             ))}
           </div>

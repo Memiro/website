@@ -1,14 +1,14 @@
 ---
 import type { ProductSummary } from "../lib/catalog-api.ts";
 import { productPath } from "../lib/navigation.ts";
-import { coverImage, coverImageUrl, imageSrcSet } from "../lib/media.ts";
+import { imageSrcSet, photographUrl } from "../lib/media.ts";
 import { CARD_SIZES } from "../lib/image-sizes.ts";
 
 interface Props { categorySlug: string; product: ProductSummary; }
 const { categorySlug, product } = Astro.props;
 // A product without precalculated variants shows no price at all (ADR-0007):
 // a placeholder in its place would be a lie.
-const cover = coverImage(product.images);
+const [cover] = product.images;
 const price = product.price_from === null ? null : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 ---
 
@@ -16,7 +16,7 @@ const price = product.price_from === null ? null : new Intl.NumberFormat("ru-RU"
   <a class="card-link" href={productPath(categorySlug, product.slug)}>
     <div class="pic">
       <img
-        src={coverImageUrl(product.image_keys)}
+        src={photographUrl(cover)}
         srcset={imageSrcSet(cover)}
         sizes={CARD_SIZES}
         alt={product.name}

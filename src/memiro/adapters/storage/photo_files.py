@@ -5,8 +5,8 @@ from typing import Final
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from memiro.adapters.storage.errors import ImageNotProcessableError
 from memiro.application.common.gateway.product_image import StoredVariant
-from memiro.application.errors.media import ImageNotProcessableError
 
 # The widths the storefront picks from: a quarter-width card on an ordinary
 # phone, a card on a desktop grid, and a half-screen tile on a doubled
@@ -14,10 +14,11 @@ from memiro.application.errors.media import ImageNotProcessableError
 # and never enters a srcset of its own.
 DERIVATIVE_WIDTHS: Final = (480, 960, 1440)
 
-# Chosen against the studio's own photographs: the step to 90 doubles the
-# file without a visible difference on a mirror, the step to 75 shows on the
-# frames.
+# The usual trade-off point for photographs: visually lossless on a mirror
+# at a fraction of the bytes. Raise it only against a real comparison.
 WEBP_QUALITY: Final = 82
+
+_DERIVATIVE_SUFFIX: Final = "w.webp"
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,21 +41,42 @@ class PhotoFiles:
 
     def unlink(self, key: str) -> None:
         """Drop the photo and everything that was made from it, each tolerant of being gone."""
-        for name in (key, *(_derivative_key(key, width) for width in DERIVATIVE_WIDTHS)):
-            Path(self.root / name).unlink(missing_ok=True)
+        for path in [self.root / key, *self._copies(key)]:
+            Path(path).unlink(missing_ok=True)
 
     def variants(self, key: str) -> list[StoredVariant]:
-        """Answer with the copies this volume really holds for the photo, widest last."""
-        return [
-            StoredVariant(key=_derivative_key(key, width), width=width)
-            for width in DERIVATIVE_WIDTHS
-            if Path(self.root / _derivative_key(key, width)).is_file()
-        ]
+        """Answer with the copies this volume really holds for the photo, widest last.
+
+        The width is read from the name the copy was written under, and a copy
+        is only ever written under the width it was really encoded at: a
+        storefront told "1440w" would otherwise pick a narrower picture than
+        the place it is filling.
+        """
+        return sorted(
+            (StoredVariant(key=path.name, width=_width_of(path.name)) for path in self._copies(key)),
+            key=lambda variant: variant.width,
+        )
+
+    def _copies(self, key: str) -> list[Path]:
+        """Find every copy this volume holds of the photo, whatever widths they were made at."""
+        return list(self.root.glob(f"{PurePosixPath(key).stem}-*{_DERIVATIVE_SUFFIX}"))
 
 
 def _derivative_key(key: str, width: int) -> str:
     """Name the copy of that width the way this module always names it."""
-    return f"{PurePosixPath(key).stem}-{width}w.webp"
+    return f"{PurePosixPath(key).stem}-{width}{_DERIVATIVE_SUFFIX}"
+
+
+def is_derivative(name: str) -> bool:
+    """Answer whether this file is a copy this module made, and not a photo somebody uploaded."""
+    if not name.endswith(_DERIVATIVE_SUFFIX):
+        return False
+    return name.removesuffix(_DERIVATIVE_SUFFIX).rsplit("-", maxsplit=1)[-1].isdigit()
+
+
+def _width_of(name: str) -> int:
+    """Read back the width a copy was written under."""
+    return int(name.removesuffix(_DERIVATIVE_SUFFIX).rsplit("-", maxsplit=1)[1])
 
 
 def _derivatives(content: bytes) -> dict[int, bytes]:
@@ -65,15 +87,27 @@ def _derivatives(content: bytes) -> dict[int, bytes]:
             # alone; a copy carries no EXIF, so the rotation is applied here
             # or the storefront shows the mirror on its side.
             frame = ImageOps.exif_transpose(opened).convert("RGB")
-            return {width: _encoded(frame, width) for width in DERIVATIVE_WIDTHS}
+            # A photo narrower than a width of the set gets one copy at its own
+            # width instead: an upscale is bytes for nothing, and a name is a
+            # promise about pixels.
+            return {width: _encoded(frame, width) for width in {min(width, frame.width) for width in DERIVATIVE_WIDTHS}}
     except (UnidentifiedImageError, OSError, ValueError) as failure:
         raise ImageNotProcessableError from failure
 
 
+def reads_as_a_photograph(content: bytes) -> bool:
+    """Answer whether the storage would be able to make copies of this file."""
+    try:
+        _derivatives(content)
+    except ImageNotProcessableError:
+        return False
+    return True
+
+
 def _encoded(frame: Image.Image, width: int) -> bytes:
-    """Encode one copy no wider than the photograph itself: an upscale is bytes for nothing."""
+    """Encode one copy of exactly that width."""
     copy = frame.copy()
-    copy.thumbnail((min(width, frame.width), frame.height), Image.Resampling.LANCZOS)
+    copy.thumbnail((width, frame.height), Image.Resampling.LANCZOS)
     buffer = BytesIO()
     copy.save(buffer, format="WEBP", quality=WEBP_QUALITY, method=6)
     return buffer.getvalue()

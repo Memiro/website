@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from memiro.adapters.db.errors import LOCK_NOT_AVAILABLE, RETRYABLE_VIOLATIONS, LockTimeoutError, sqlstate_of
+from memiro.adapters.storage.errors import ImageNotProcessableError
 from memiro.application.errors.catalog import (
     AttributeInUseError,
     AttributeNotFoundError,
@@ -22,7 +23,6 @@ from memiro.application.errors.catalog import (
     VariantNotFoundError,
     WorkNotFoundError,
 )
-from memiro.application.errors.media import ImageNotProcessableError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
     InvalidAttributeParentError,
