@@ -3,6 +3,9 @@
 # The edge takes 80 and 443 on the host and expects the certificate certbot
 # keeps on the host under /etc/letsencrypt (GETTING_STARTED.md, «Прод»).
 services:
+  db:
+    restart: unless-stopped
+
   # The application reads the production config — real signing key, real
   # hosts, real database password — which lives outside git next to the
   # tracked ones (.config/config.prod.example.toml is the template).
@@ -10,13 +13,16 @@ services:
     environment:
       APP_CONFIG_PATH: /app/.config/config.prod.toml
   api:
+    restart: unless-stopped
     environment:
       APP_CONFIG_PATH: /app/.config/config.prod.toml
   admin:
+    restart: unless-stopped
     environment:
       APP_CONFIG_PATH: /app/.config/config.prod.toml
 
   frontend:
+    restart: unless-stopped
     build:
       # Both are baked into the SSR bundle at build time (import.meta.env.PUBLIC_*).
       args:
@@ -24,6 +30,7 @@ services:
         PUBLIC_METRIKA_ID: ${PUBLIC_METRIKA_ID:-}
 
   nginx:
+    restart: unless-stopped
     ports: !override
       - "80:80"
       - "443:443"
