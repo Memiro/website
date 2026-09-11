@@ -68,6 +68,25 @@ class PriceBounds(BaseModel):
     selected_max: Decimal | None
 
 
+class ImageVariant(BaseModel):
+    """One narrower copy of a photograph: the key naming it and the width it was made at."""
+
+    key: str
+    width: int
+
+
+class ImageModel(BaseModel):
+    """One photograph as the storefront draws it: the original, and the copies it may pick instead.
+
+    How many copies there are is a fact about delivering bytes: the storefront
+    is told what exists instead of spelling the names itself, so it cannot
+    disagree with what really lies on the volume.
+    """
+
+    key: str
+    variants: list[ImageVariant]
+
+
 class CategoryModel(BaseModel):
     """One category visible on the storefront."""
 
@@ -120,6 +139,9 @@ class ProductSummary(BaseModel):
     slug: str
     price_from: Decimal | None
     image_keys: list[str]
+    # The same gallery as ``image_keys``, each photograph with the copies the
+    # storage holds for it. The keys stay for what only needs one address.
+    images: list[ImageModel] = Field(default_factory=list["ImageModel"])
     updated_at: datetime
 
 

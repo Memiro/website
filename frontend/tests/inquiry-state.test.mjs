@@ -31,6 +31,7 @@ test("a beyond-limits calculator configuration becomes a selection wish without 
       description: "",
       price_from: null,
       image_keys: [],
+      images: [],
     },
     {
       widthMm: 3200,

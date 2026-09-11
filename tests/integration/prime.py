@@ -434,6 +434,12 @@ async def prime_product_images(engine: AsyncEngine) -> None:
         )
 
 
+async def prime_photograph_of_the_product(engine: AsyncEngine, key: str) -> None:
+    """Name one stored photograph in the gallery of the canonical product."""
+    async with engine.begin() as connection:
+        await connection.execute(insert(product_images_table), [{"product_id": PRODUCT, "key": key, "sort_order": 1}])
+
+
 async def update_attribute_value_rate_directly(engine: AsyncEngine, value_id: AttributeValueId, rate: Money) -> None:
     """Change a tariff directly to prove a stored inquiry snapshot does not recalculate."""
     async with engine.begin() as connection:

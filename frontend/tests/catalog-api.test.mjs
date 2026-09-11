@@ -11,7 +11,8 @@ const product = {
   category_slug: "mirrors",
   category_name: "Зеркала",
   price_from: "18900",
-  image_keys: [],
+  image_keys: ["lira.jpg"],
+  images: [{ key: "lira.jpg", variants: [{ key: "cover-480w.webp", width: 480 }] }],
   updated_at: "2026-09-01T10:00:00Z",
   description: "Зеркало для ванной.",
   attributes: [
@@ -39,7 +40,7 @@ const workWithoutTitle = { items: [{ photo_key: "works/hallway.jpg", description
 const categories = { items: [{ name: "Зеркала", slug: "mirrors", updated_at: "2026-09-01T10:00:00Z" }], total: 1, page: 1 };
 
 const categoryProducts = {
-  items: [{ name: "Лира", slug: "lira", price_from: "18900", image_keys: [], updated_at: "2026-09-01T10:00:00Z" }],
+  items: [{ name: "Лира", slug: "lira", price_from: "18900", image_keys: [], images: [], updated_at: "2026-09-01T10:00:00Z" }],
   total: 1,
   page: 1,
   pages: 1,

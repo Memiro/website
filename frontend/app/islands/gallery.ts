@@ -12,6 +12,9 @@ export function mountGallery(root: Document): void {
         return;
       }
       main.src = source;
+      // The candidates travel with the photograph: a swap that left the old
+      // srcset in place would show the browser's pick of the previous photo.
+      main.srcset = thumb.dataset.srcset ?? "";
       for (const other of thumbs) {
         other.classList.toggle("on", other === thumb);
         other.setAttribute("aria-pressed", String(other === thumb));
