@@ -1,6 +1,5 @@
 import { API_TIMEOUT_MS, asRecord, requestJson } from "./http.ts";
-
-const DEFAULT_INTERNAL_API_BASE_URL = "http://api:8000";
+import { internalApiBaseUrl } from "./internal-api.ts";
 
 export interface Contacts {
   city: string;
@@ -71,7 +70,7 @@ export function socialLinks(contacts: Contacts): SiteLink[] {
  * without the contact block rather than answering with an error page.
  */
 export async function readSite(): Promise<Site> {
-  const baseUrl = import.meta.env.API_INTERNAL_URL ?? DEFAULT_INTERNAL_API_BASE_URL;
+  const baseUrl = internalApiBaseUrl();
   try {
     return await requestJson({ url: new URL("/site", baseUrl), isBody: isSite, timeoutMs: API_TIMEOUT_MS });
   } catch {

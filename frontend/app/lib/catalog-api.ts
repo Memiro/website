@@ -1,8 +1,7 @@
 import { API_TIMEOUT_MS, asRecord, requestJson } from "./http.ts";
+import { internalApiBaseUrl } from "./internal-api.ts";
 
 export type PricingVerdict = "PRICED" | "BEYOND_LIMITS" | "NOT_PRICEABLE" | "SELECTION_NOT_PRICEABLE" | "HIDDEN";
-
-const DEFAULT_INTERNAL_API_BASE_URL = "http://api:8000";
 
 export interface ListEnvelope<Item> {
   items: Item[];
@@ -184,7 +183,7 @@ export class CatalogApi {
 
 /** The catalogue as the server-rendered pages reach it — over the contour's internal address. */
 export function internalCatalogApi(): CatalogApi {
-  return new CatalogApi(import.meta.env.API_INTERNAL_URL ?? DEFAULT_INTERNAL_API_BASE_URL);
+  return new CatalogApi(internalApiBaseUrl());
 }
 
 export function isCalculatedPrice(value: unknown): value is CalculatedPrice {
