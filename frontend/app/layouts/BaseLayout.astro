@@ -34,6 +34,11 @@ const site = await readSite();
     <title>{title}</title>
     <meta name="description" content={description} />
     {robots && <meta name="robots" content={robots} />}
+    {/* The ownership proof Яндекс.Вебмастер re-checks. It lived in the
+        WordPress head this storefront replaced, and the cabinet keeps its
+        confirmation — and the crawl history behind it — only while the same
+        code answers from memiro.ru. */}
+    <meta name="yandex-verification" content="92a282dfc6c00c3f" />
     {canonical && <link rel="canonical" href={canonical} />}
     <meta property="og:site_name" content={SITE_NAME} />
     <meta property="og:locale" content="ru_RU" />
