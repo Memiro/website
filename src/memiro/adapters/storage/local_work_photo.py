@@ -1,11 +1,12 @@
 import asyncio
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 from typing import override
 from uuid import uuid4
 
 import structlog
 
 from memiro.adapters.storage.config import MediaConfig
+from memiro.adapters.storage.photo_files import PhotoFiles
 from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.work import WorkPhotoStorage
 from memiro.application.common.input_limits import IMAGE_EXTENSIONS
@@ -19,29 +20,24 @@ class LocalWorkPhotoStorage(WorkPhotoStorage):
 
     def __init__(self, config: MediaConfig) -> None:
         """Keep the directory this process writes photos into."""
-        self._root = config.root
+        self._files = PhotoFiles(root=config.root)
 
     @override
     async def put(self, upload: ImageUpload) -> str:
-        """Write the photo under a key of the storage's own making, off the event loop."""
+        """Write the photo and the copies made from it, off the event loop."""
         key = f"{uuid4().hex}.{_extension(upload.filename)}"
-        await asyncio.to_thread(self._write, key, upload.content)
+        await asyncio.to_thread(self._files.write, key, upload.content)
         return key
 
     @override
     async def remove(self, key: str) -> None:
-        """Unlink the file the key names, off the event loop, warning instead of raising."""
+        """Unlink the photo and everything made from it, off the event loop, warning instead of raising."""
         await asyncio.to_thread(self._unlink, key)
 
-    def _write(self, key: str, content: bytes) -> None:
-        """Put one file into the directory, creating it on the first photo of a fresh volume."""
-        self._root.mkdir(parents=True, exist_ok=True)
-        Path(self._root / key).write_bytes(content)
-
     def _unlink(self, key: str) -> None:
-        """Drop one file; a file this process cannot drop is litter, not an answer to the owner."""
+        """Drop the files; a file this process cannot drop is litter, not an answer to the owner."""
         try:
-            Path(self._root / key).unlink(missing_ok=True)
+            self._files.unlink(key)
         except OSError as failure:
             logger.warning("A work photo stayed on the storage", key=key, error=type(failure).__name__)
 

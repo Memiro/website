@@ -16,11 +16,12 @@ from memiro.application.manage_works import (
 )
 from memiro.entities.common.identifiers import WorkId
 from tests.common.factory.catalog import PRODUCT
+from tests.common.photograph import photograph
 
 # The smallest file that is still a file: what these tests upload is a photo
 # only by its name, and nothing in the slice looks inside it.
-PHOTO = b"\xff\xd8\xff\xd9"
-SECOND_PHOTO = b"\xff\xd8\x00\xd9"
+PHOTO = photograph()
+SECOND_PHOTO = photograph(shade=200)
 
 WORK_TITLE = "Круглое зеркало в прихожей"
 

@@ -8,11 +8,12 @@ from memiro.application.manage_products import AddImage, AddImageForm, CreatedPr
 from memiro.bootstrap.config_loader import Config
 from memiro.entities.common.identifiers import ProductId
 from tests.common.factory.catalog import PRODUCT
+from tests.common.photograph import photograph
 from tests.integration.manage_products.arrange import load_product
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
-PHOTO = b"\xff\xd8\xff\xd9"
+PHOTO = photograph()
 
 
 async def _add(container: AsyncContainer) -> CreatedProductImage:

@@ -19,6 +19,7 @@ from django import forms
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import FileExtensionValidator, RegexValidator
 from django.forms import BaseInlineFormSet
+from PIL import Image, UnidentifiedImageError
 
 from memiro.application.common.input_limits import (
     IMAGE_EXTENSIONS,
@@ -82,6 +83,7 @@ REMOVE_PHOTOS_FIELD = "remove_photos"
 PHOTO_FIELD = "photo"
 
 PHOTO_TOO_LARGE = "Фотография не должна быть тяжелее %(limit)s МБ."
+PHOTO_NOT_PROCESSABLE = "Файл не читается как фотография: выберите другой."
 BYTES_IN_A_MEGABYTE = 1024 * 1024
 
 SLUG_MESSAGE = "Адрес — латинские слова через дефис."
@@ -417,6 +419,20 @@ def _photo_is_not_too_large(photo: UploadedFile) -> None:
         raise forms.ValidationError(PHOTO_TOO_LARGE, params={"limit": MAX_IMAGE_BYTES // BYTES_IN_A_MEGABYTE})
 
 
+def _photo_opens_as_a_photograph(photo: UploadedFile) -> None:
+    """Refuse here what the storage would refuse when it makes the copies of the card."""
+    # The storage answers a file it cannot read with IMAGE_NOT_PROCESSABLE,
+    # and that is a 500 page on a form the owner is standing in front of: the
+    # card says it where it already says a file is too heavy.
+    try:
+        with Image.open(photo) as opened:
+            opened.verify()
+    except (UnidentifiedImageError, OSError, ValueError) as failure:
+        raise forms.ValidationError(PHOTO_NOT_PROCESSABLE) from failure
+    finally:
+        photo.seek(0)
+
+
 def photo_fields(product_id: UUID) -> dict[str, forms.Field]:
     """Build the gallery half of the card: what the owner uploads, and what he takes off."""
     stored = ProductImage.objects.filter(product_id=product_id).order_by("sort_order", "key")
@@ -429,7 +445,11 @@ def photo_fields(product_id: UUID) -> dict[str, forms.Field]:
             # past it there is a pydantic error no refusal table can say:
             # the card holds the same bound so the owner reads it on the form.
             max_length=MAX_NAME_LENGTH,
-            validators=[FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)), _photo_is_not_too_large],
+            validators=[
+                FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)),
+                _photo_is_not_too_large,
+                _photo_opens_as_a_photograph,
+            ],
         ),
         REMOVE_PHOTOS_FIELD: forms.MultipleChoiceField(
             required=False,
@@ -520,7 +540,11 @@ class WorkCardForm(forms.ModelForm):
         # there is a pydantic error no refusal table can say: the card holds
         # the same bound so the owner reads it on the form.
         max_length=MAX_NAME_LENGTH,
-        validators=[FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)), _photo_is_not_too_large],
+        validators=[
+            FileExtensionValidator(allowed_extensions=list(IMAGE_EXTENSIONS)),
+            _photo_is_not_too_large,
+            _photo_opens_as_a_photograph,
+        ],
     )
     title = forms.CharField(min_length=MIN_NAME_LENGTH, max_length=MAX_NAME_LENGTH, label="Подпись")
     description = forms.CharField(

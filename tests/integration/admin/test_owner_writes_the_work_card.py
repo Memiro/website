@@ -16,13 +16,14 @@ from memiro.application.errors.catalog import ProductNotFoundError, WorkNotFound
 from memiro.entities.common.identifiers import WorkId
 from memiro.presentation.django_admin.refusals import REFUSAL_MESSAGES
 from tests.common.factory.catalog import PRODUCT
+from tests.common.photograph import photograph
 from tests.integration.admin.arrange import arranged_work, work_post
 
 pytestmark = pytest.mark.usefixtures("admin_site", "primed_catalog")
 
 APP = "memiro"
-PHOTO = b"\xff\xd8\xff\xd9"
-SECOND_PHOTO = b"\xff\xd8\x00\xd9"
+PHOTO = photograph()
+SECOND_PHOTO = photograph(shade=200)
 # Every refusal the work card can meet, spelled out rather than collected from
 # the modules: a code missing from the table is silent.
 WORK_REFUSALS = (WorkNotFoundError, ProductNotFoundError)
