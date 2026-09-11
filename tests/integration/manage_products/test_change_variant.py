@@ -119,6 +119,40 @@ async def test_the_owner_changes_a_variant_and_its_derived_product_price(app: Fa
     )
 
 
+async def test_a_variant_re_saved_with_its_typed_price_stays_priced_by_hand(app: FastAPI) -> None:
+    """A variant re-saved with a price of its own keeps it, and keeps being the owner's (ADR-0017)."""
+    container: AsyncContainer = app.state.dishka_container
+    async with container() as request:
+        add = await request.get(AddVariant)
+        created = await add.execute(
+            PRODUCT,
+            AddVariantForm(width_mm=800, height_mm=600, overrides=[], sort_order=0, manual_price=Decimal(24000)),
+        )
+
+    async with container() as request:
+        change = await request.get(ChangeVariant)
+        await change.execute(
+            PRODUCT,
+            created.id,
+            ChangeVariantForm(
+                width_mm=1200,
+                height_mm=800,
+                overrides=[],
+                sort_order=0,
+                manual_price=Decimal(26000),
+            ),
+        )
+
+    async with container() as request:
+        gateway: ProductGateway = await request.get(ProductGateway)
+        product = await gateway.get(PRODUCT, eager_variants=True)
+    assert product is not None
+    changed = product.variant(created.id)
+    assert changed is not None
+    assert changed.price == Money(amount=Decimal(26000))
+    assert changed.price_is_manual is True
+
+
 async def test_concurrent_changes_preserve_variant_uniqueness(app: FastAPI) -> None:
     """Two competitors converging on one configuration produce one DUPLICATE_VARIANT."""
     container: AsyncContainer = app.state.dishka_container

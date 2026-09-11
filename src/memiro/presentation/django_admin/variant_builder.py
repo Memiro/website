@@ -12,7 +12,7 @@ come back to.
 """
 
 from collections.abc import Callable, Mapping, Sequence
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 from uuid import UUID
 
@@ -21,7 +21,7 @@ from dishka import AsyncContainer
 from django.http import HttpRequest, JsonResponse, QueryDict
 from pydantic import ValidationError
 
-from memiro.application.common.input_limits import MAX_QUANTITY, MAX_SIDE_MM
+from memiro.application.common.input_limits import MAX_ORDER_TOTAL, MAX_QUANTITY, MAX_SIDE_MM
 from memiro.application.manage_products import (
     AddVariant,
     AddVariantForm,
@@ -70,9 +70,13 @@ UNNAMED = "—"
 ROUBLE = "₽"
 # A non-breaking thin space between the thousands, so a price never wraps.
 THOUSANDS = " "
-# The scale the panel opens a saved manual price in.
+# The owner types roubles and kopecks, and the field he reopens must show him
+# back what he typed, not the scale the column keeps.
 KOPECKS = Decimal("0.01")
-OUTSIDE_THE_LIMITS = f"Значение не принято: размер — от 1 до {MAX_SIDE_MM} мм, количество — от 0 до {MAX_QUANTITY}."
+OUTSIDE_THE_LIMITS = (
+    f"Значение не принято: размер — от 1 до {MAX_SIDE_MM} мм, "
+    f"количество — от 0 до {MAX_QUANTITY}, цена — от 0 до {MAX_ORDER_TOTAL}."
+)
 NOT_YOURS = "У вас нет прав менять товары."
 
 logger: Logger = structlog.get_logger(__name__)
@@ -283,11 +287,12 @@ def _whole(sent: object) -> int:
 
 def _price(sent: object) -> Decimal | None:
     """Read the price the owner typed, if he typed one at all: an empty field means "calculate it"."""
-    typed = str(sent or "").strip().replace(",", ".").replace(THOUSANDS, "").replace(" ", "")
-    if not typed:
+    if not sent:
         return None
     try:
-        return Decimal(typed)
+        # Quantized here and not by the column: rounded on the way in, the list
+        # redraws the number the owner typed instead of one he never saw.
+        return Decimal(str(sent)).quantize(KOPECKS, rounding=ROUND_HALF_UP)
     except InvalidOperation as broken:
         raise PanelInputError(NOT_A_PRICE) from broken
 

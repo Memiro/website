@@ -91,11 +91,9 @@ class RepriceProducts:
 
 
 def _same_configuration(variant: Variant) -> VariantData:
-    """Restate one variant as the command data of the aggregate, changing nothing but its price.
-
-    Only variants the calculation prices reach here, so the restated data
-    carries no price of the owner's own (ADR-0017).
-    """
+    """Restate one variant as the command data of the aggregate, changing nothing but its price."""
+    # Only variants the calculation prices reach here, so the restated data
+    # carries no price of the owner's own (ADR-0017).
     return VariantData(
         dimensions=variant.dimensions,
         overrides=variant.overrides,
