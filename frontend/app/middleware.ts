@@ -4,11 +4,21 @@ import { legacyResponse } from "./lib/legacy-redirects.ts";
 import { redirectTarget } from "./lib/navigation.ts";
 import { slashRedirect } from "./lib/trailing-slash.ts";
 
+// Whether the page carries the Metrika counter depends on the consent cookie
+// (ADR-0006), so any caching layer has to tell those answers apart. Static
+// assets are answered by nginx and never depend on it.
+function consentAware(response: Response): Response {
+  if (response.headers.get("content-type")?.startsWith("text/html") === true) {
+    response.headers.append("Vary", "Cookie");
+  }
+  return response;
+}
+
 // The old site's addresses are answered before routing: the new storefront has
 // no page under them, and without this they would all become 404 on the day the
 // domain switches (ADR-0015). They go first because their answer already ends
 // with a slash; the slash rule after them would otherwise make a chain of two.
-export const onRequest = defineMiddleware((context, next) => {
+export const onRequest = defineMiddleware(async (context, next) => {
   const answer = legacyResponse(context.url.pathname);
   if (answer !== null) {
     return answer.status === 410
@@ -16,5 +26,8 @@ export const onRequest = defineMiddleware((context, next) => {
       : context.redirect(redirectTarget(answer.location, context.url.search), answer.status);
   }
   const slashed = slashRedirect(context.url.pathname);
-  return slashed === null ? next() : context.redirect(redirectTarget(slashed, context.url.search), 301);
+  if (slashed !== null) {
+    return context.redirect(redirectTarget(slashed, context.url.search), 301);
+  }
+  return consentAware(await next());
 });

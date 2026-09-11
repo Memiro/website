@@ -84,8 +84,13 @@ docker compose --env-file .env -f docker/docker-compose.yml -f docker/docker-com
 docker compose --env-file .env -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d --wait
 ```
 
-`PUBLIC_SITE_URL` и `PUBLIC_METRIKA_ID` запекаются в образ витрины в CI из
-variables репозитория; после смены счётчика нужен новый образ, а не рестарт.
+`PUBLIC_SITE_URL` запекается в образ витрины в CI. Номер Яндекс.Метрики —
+переменная окружения `METRIKA_ID` в `.env` рядом с compose: витрина читает её
+на каждый рендер, поэтому включение аналитики — это переменная и
+`docker compose up -d`, а не пересборка. Пустое значение означает, что
+счётчика нет и cookie-баннер не показывается. Прежде чем заполнять её,
+прочитайте `docs/legal/rkn-notification.md`: счётчик без поданного
+уведомления в РКН — нарушение, а не настройка.
 
 Пакеты в GHCR приватные (настройки организации), поэтому один раз на
 сервере: `docker login ghcr.io -u <логин GitHub>` с классическим PAT, у
