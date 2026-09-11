@@ -66,6 +66,7 @@ nginx-check:
         docker run --rm \
             --add-host api:127.0.0.1 --add-host admin:127.0.0.1 --add-host frontend:127.0.0.1 \
             -v "$PWD/.config/$conf:/etc/nginx/conf.d/default.conf:ro" \
+            -v "$PWD/.config/nginx.security.conf:/etc/nginx/security-headers.conf:ro" \
             -v "$certs:/etc/letsencrypt/live/memiro.ru:ro" \
             nginx:1.29-alpine nginx -t
     done
