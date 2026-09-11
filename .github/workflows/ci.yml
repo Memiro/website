@@ -119,9 +119,9 @@ jobs:
           push: true
           tags: ${{ steps.frontend.outputs.tags }}
           labels: ${{ steps.frontend.outputs.labels }}
-          # Both are inlined into the storefront bundle (frontend/Dockerfile).
+          # Inlined into the storefront bundle (frontend/Dockerfile); the
+          # Metrika counter is read at render time instead, from METRIKA_ID.
           build-args: |
             PUBLIC_SITE_URL=https://memiro.ru
-            PUBLIC_METRIKA_ID=${{ vars.PUBLIC_METRIKA_ID }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max

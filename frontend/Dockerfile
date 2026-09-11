@@ -9,7 +9,6 @@ COPY . ./
 # Public origin and Metrika counter are inlined into the bundle at build time;
 # the production compose override passes them as build args.
 ARG PUBLIC_SITE_URL=https://memiro.ru
-ARG PUBLIC_METRIKA_ID=
 RUN npm run build && npm prune --omit=dev
 
 FROM node:24-bookworm-slim

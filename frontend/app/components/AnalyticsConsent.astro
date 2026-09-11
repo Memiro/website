@@ -1,0 +1,41 @@
+---
+import { analyticsGate, CONSENT_COOKIE, counterId } from "../lib/analytics-consent.ts";
+
+// The server decides: a visitor who has not accepted gets neither the counter
+// nor its number in the answer, and that is provable with a plain curl
+// (ADR-0006). With no counter configured there is nothing to ask about.
+// `import.meta.env` is replaced at build time, so the number has to come
+// from the process the container runs: reading it here is what makes
+// switching analytics on a restart instead of a rebuild.
+const counter = counterId(process.env.METRIKA_ID);
+const gate = analyticsGate(counter, Astro.cookies.get(CONSENT_COOKIE)?.value);
+---
+
+{gate === "counter" && (
+  <script is:inline define:vars={{ counter }}>
+    (function (m, e, t, r, i, k, a) {
+      m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
+      m[i].l = 1 * new Date();
+      k = e.createElement(t); a = e.getElementsByTagName(t)[0];
+      k.async = 1; k.src = r; a.parentNode.insertBefore(k, a);
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+    ym(counter, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true });
+  </script>
+  <noscript><div><img src={`https://mc.yandex.ru/watch/${counter}`} style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+)}
+
+{gate === "banner" && (
+  <div class="cookie-banner" data-cookie-banner role="dialog" aria-label="Файлы cookie и аналитика">
+    <p class="cookie-banner__text">Мы хотим подключить Яндекс.Метрику, чтобы видеть, как посетители пользуются сайтом. Она сохраняет файлы cookie и передаёт обезличенную статистику. Без вашего согласия аналитика не загружается — подробности в <a href="/privacy/#cookie">политике обработки персональных данных</a>.</p>
+    <div class="cookie-banner__actions">
+      <button class="btn btn--sm btn--paper" type="button" data-cookie-accept>Принять <span class="arrow" aria-hidden="true">→</span></button>
+      <button class="btn btn--sm btn--ghost-paper" type="button" data-cookie-decline>Отклонить</button>
+    </div>
+  </div>
+  <script>
+    import { mountCookieBanner } from "../islands/cookies.ts";
+
+    mountCookieBanner(document);
+  </script>
+)}

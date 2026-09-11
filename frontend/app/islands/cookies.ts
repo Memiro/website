@@ -1,62 +1,23 @@
-const CHOICE_STORAGE_KEY = "memiro.analytics-consent";
-const ACCEPTED = "accepted";
-const DECLINED = "declined";
+import { ACCEPTED, CONSENT_COOKIE, CONSENT_MAX_AGE_SECONDS, DECLINED } from "../lib/analytics-consent.ts";
 
-function readChoice(): string | null {
-  try {
-    return window.localStorage.getItem(CHOICE_STORAGE_KEY);
-  } catch {
-    return null;
-  }
+// A Secure cookie is dropped on plain http, and the dev contour runs there.
+function rememberAnswer(answer: string): void {
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${CONSENT_COOKIE}=${answer}; Max-Age=${CONSENT_MAX_AGE_SECONDS}; Path=/; SameSite=Lax${secure}`;
 }
 
-function rememberChoice(choice: string): void {
-  try {
-    window.localStorage.setItem(CHOICE_STORAGE_KEY, choice);
-  } catch {
-    return;
-  }
-}
-
-function loadMetrika(counterId: string): void {
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = "https://mc.yandex.ru/metrika/tag.js";
-  script.addEventListener("load", () => {
-    const metrika = (window as unknown as Record<string, unknown>).ym;
-    if (typeof metrika === "function") {
-      (metrika as (id: string, action: string, options: Record<string, boolean>) => void)(counterId, "init", {
-        clickmap: true,
-        trackLinks: true,
-        accurateTrackBounce: true,
-      });
-    }
-  });
-  document.head.append(script);
-}
-
+/** Wire the banner's two buttons; the counter itself arrives from the server on the next answer. */
 export function mountCookieBanner(root: Document): void {
   const banner = root.querySelector<HTMLElement>("[data-cookie-banner]");
-  const counterId = banner?.dataset.metrikaId ?? "";
-  if (banner === null || counterId === "") {
+  if (banner === null) {
     return;
   }
-  const choice = readChoice();
-  if (choice === ACCEPTED) {
-    loadMetrika(counterId);
-    return;
-  }
-  if (choice === DECLINED) {
-    return;
-  }
-  banner.hidden = false;
   banner.querySelector("[data-cookie-accept]")?.addEventListener("click", () => {
-    rememberChoice(ACCEPTED);
-    banner.hidden = true;
-    loadMetrika(counterId);
+    rememberAnswer(ACCEPTED);
+    window.location.reload();
   });
   banner.querySelector("[data-cookie-decline]")?.addEventListener("click", () => {
-    rememberChoice(DECLINED);
-    banner.hidden = true;
+    rememberAnswer(DECLINED);
+    banner.remove();
   });
 }
