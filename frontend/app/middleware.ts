@@ -7,8 +7,10 @@ import { slashRedirect } from "./lib/trailing-slash.ts";
 // Whether the page carries the Metrika counter depends on the consent cookie
 // (ADR-0006), so any caching layer has to tell those answers apart. Static
 // assets are answered by nginx and never depend on it.
-function consentAware(response: Response): Response {
-  if (response.headers.get("content-type")?.startsWith("text/html") === true) {
+function varyOnCookie(response: Response): Response {
+  const isHtml = response.headers.get("content-type")?.startsWith("text/html") === true;
+  const alreadyVaries = /(^|,)\s*cookie\s*(,|$)/i.test(response.headers.get("Vary") ?? "");
+  if (isHtml && !alreadyVaries) {
     response.headers.append("Vary", "Cookie");
   }
   return response;
@@ -29,5 +31,5 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (slashed !== null) {
     return context.redirect(redirectTarget(slashed, context.url.search), 301);
   }
-  return consentAware(await next());
+  return varyOnCookie(await next());
 });

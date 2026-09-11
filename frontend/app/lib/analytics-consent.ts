@@ -22,8 +22,8 @@ export function analyticsGate(counterId: string, answer: string | undefined): An
   return answer === DECLINED ? "silence" : "banner";
 }
 
-/** The counter's number, or an empty string when the contour runs without analytics. */
-export function counterId(configured: string | undefined): string {
+/** The counter's number as configured, or an empty string when the contour runs without analytics. */
+export function validCounterId(configured: string | undefined): string {
   const trimmed = (configured ?? "").trim();
   return /^\d+$/.test(trimmed) ? trimmed : "";
 }

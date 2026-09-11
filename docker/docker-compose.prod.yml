@@ -27,10 +27,6 @@ services:
       # The public origin is baked into the SSR bundle (import.meta.env.PUBLIC_*).
       args:
         PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-https://memiro.ru}
-    # The counter number is read at render time, so switching analytics on is a
-    # variable and a restart, not a rebuild (ADR-0006).
-    environment:
-      METRIKA_ID: ${METRIKA_ID:-}
 
   nginx:
     restart: unless-stopped
