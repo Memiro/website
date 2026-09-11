@@ -17,12 +17,16 @@ from memiro.application.errors.catalog import ProductImageNotFoundError
 from memiro.entities.common.identifiers import ProductId
 from memiro.entities.errors.product import DuplicateProductImageError
 from memiro.presentation.django_admin.refusals import REFUSAL_MESSAGES
+from tests.common.photograph import photograph
 from tests.integration.admin.arrange import arranged_photo, arranged_product, product_post
 
 pytestmark = pytest.mark.usefixtures("admin_site", "primed_catalog")
 
 APP = "memiro"
-PHOTO = b"\xff\xd8\xff\xd9"
+PHOTO = photograph()
+
+# A file with an extension the card accepts and bytes no decoder reads.
+NOT_A_PHOTOGRAPH = b"a receipt, saved as .jpg"
 # Every refusal the gallery half of the card can meet, spelled out rather
 # than collected from the modules: a code missing from the table is silent.
 GALLERY_REFUSALS = (ProductImageNotFoundError, DuplicateProductImageError)
@@ -111,6 +115,20 @@ async def test_a_file_that_is_not_a_photo_never_reaches_the_storage(
     response = await owner_client.post(
         _card_url(photographed.id),
         _card(photographed, photos=[SimpleUploadedFile("prices.pdf", PHOTO, content_type="application/pdf")]),
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert await _keys(photographed.id) == set()
+
+
+async def test_a_file_the_storage_cannot_read_is_refused_by_the_card(
+    owner_client: AsyncClient,
+    photographed: Photographed,
+) -> None:
+    """A photo the storage could not make copies of is a refusal on the form, not a 500 page."""
+    response = await owner_client.post(
+        _card_url(photographed.id),
+        _card(photographed, photos=[SimpleUploadedFile("mirror.jpg", NOT_A_PHOTOGRAPH, content_type="image/jpeg")]),
     )
 
     assert response.status_code == HTTPStatus.OK

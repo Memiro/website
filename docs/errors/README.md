@@ -28,6 +28,7 @@
 | `INVALID_VARIANT_CONFIGURATION` | 400 | `InvalidVariantConfigurationError` | Конфигурация варианта не описывает полностью считаемый товар |
 | `INVALID_VARIANT_SORT_ORDER` | 400 | `InvalidVariantSortOrderError` | Порядок варианта отрицательный |
 | `INVALID_QUANTITY` | 400 | `InvalidQuantityError` | Числовой расход настроенного значения отрицательный |
+| `IMAGE_NOT_PROCESSABLE` | 400 | `ImageNotProcessableError` | Загруженный файл не читается как фотография: производные из него не сделать |
 | `INVALID_PRODUCT_SLUG` | 400 | `InvalidProductSlugError` | Из названия товара не выводится ни одного символа адреса |
 | `INVALID_LANDING_SLUG` | 400 | `InvalidLandingSlugError` | Из заголовка посадочной не выводится ни одного символа адреса |
 | `INVALID_LANDING_NARROWING` | 400 | `InvalidLandingNarrowingError` | Сужение посадочной пустое, шире двух атрибутов, чужое или равно всей категории |

@@ -22,6 +22,7 @@ from memiro.application.errors.catalog import (
     VariantNotFoundError,
     WorkNotFoundError,
 )
+from memiro.application.errors.media import ImageNotProcessableError
 from memiro.application.errors.pricing import PricingSettingsNotFoundError
 from memiro.entities.errors.attribute import (
     InvalidAttributeParentError,
@@ -67,6 +68,7 @@ ERROR_STATUSES: dict[type[AppError], int] = {
     AttributeNotFoundError: status.HTTP_404_NOT_FOUND,
     PricingSettingsNotFoundError: status.HTTP_404_NOT_FOUND,
     InvalidFactorRateError: status.HTTP_400_BAD_REQUEST,
+    ImageNotProcessableError: status.HTTP_400_BAD_REQUEST,
     InvalidAttributeParentError: status.HTTP_400_BAD_REQUEST,
     InvalidAttributeValueSetError: status.HTTP_400_BAD_REQUEST,
     NegativeMeasureError: status.HTTP_400_BAD_REQUEST,

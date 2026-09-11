@@ -1,3 +1,4 @@
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import override
 from uuid import uuid4
@@ -7,24 +8,30 @@ from dishka import AsyncContainer
 from pydantic import ValidationError
 from sqlalchemy.exc import DBAPIError
 
+from memiro.adapters.storage.photo_files import DERIVATIVE_WIDTHS
 from memiro.application.common.gateway.image_upload import ImageUpload
 from memiro.application.common.gateway.product import ProductGateway
-from memiro.application.common.gateway.product_image import ProductImageStorage
+from memiro.application.common.gateway.product_image import ProductImageStorage, StoredVariant
 from memiro.application.common.input_limits import MAX_IMAGE_BYTES, MAX_NAME_LENGTH
 from memiro.application.errors.catalog import ProductNotFoundError
+from memiro.application.errors.media import ImageNotProcessableError
 from memiro.application.manage_products import AddImage, AddImageForm, CreatedProductImage
 from memiro.bootstrap.config_loader import Config
 from memiro.entities.common.identifiers import ProductId
 from memiro_common.clock import Clock
 from memiro_common.uow import UoW
 from tests.common.factory.catalog import PRODUCT
+from tests.common.photograph import photograph
 from tests.integration.manage_products.arrange import load_product
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
 # The smallest file that is still a file: what these tests upload is a photo
 # only by its name, and nothing in the slice looks inside it.
-PHOTO = b"\xff\xd8\xff\xd9"
+PHOTO = photograph()
+
+# A file with an extension the form accepts and bytes no decoder reads.
+NOT_A_PHOTOGRAPH = b"a receipt, saved as .jpg"
 
 # The owner uploads one photo; the second one of the same gallery follows it.
 SECOND_PLACE = 1
@@ -51,6 +58,16 @@ class FakeProductImageStorage(ProductImageStorage):
     async def remove(self, key: str) -> None:
         """Remember which key the caller dropped."""
         self.removed.append(key)
+
+    @override
+    async def variants(self, keys: Sequence[str]) -> Mapping[str, list[StoredVariant]]:
+        """Answer that this storage made no copies: the command never asks, the port does."""
+        return {key: [] for key in keys}
+
+
+def _stored(config: Config) -> set[str]:
+    """Read what the media volume holds, by name."""
+    return {path.name for path in config.media.root.iterdir()} if config.media.root.exists() else set()
 
 
 def _form(**overrides: object) -> AddImageForm:
@@ -84,6 +101,30 @@ async def test_the_owner_puts_a_photo_on_the_product_card(container: AsyncContai
     assert product is not None
     assert [image.key for image in product.images] == [added.key]
     assert (config.media.root / added.key).read_bytes() == PHOTO
+
+
+async def test_a_stored_photo_is_kept_beside_a_copy_for_every_width(container: AsyncContainer, config: Config) -> None:
+    """After one save the card is ready whole: the storefront gets a width to choose from."""
+    added = await _add(container, PRODUCT, _form())
+
+    stem = Path(added.key).stem
+    assert all((config.media.root / f"{stem}-{width}w.webp").is_file() for width in DERIVATIVE_WIDTHS)
+
+
+async def test_a_file_that_is_no_photograph_is_refused_and_leaves_nothing_behind(
+    container: AsyncContainer,
+    config: Config,
+) -> None:
+    """A file the storage cannot read never becomes a photo of a second sort: IMAGE_NOT_PROCESSABLE."""
+    before = _stored(config)
+
+    with pytest.raises(ImageNotProcessableError):
+        await _add(container, PRODUCT, _form(content=NOT_A_PHOTOGRAPH))
+
+    assert _stored(config) == before
+    product = await load_product(container, PRODUCT)
+    assert product is not None
+    assert list(product.images) == []
 
 
 async def test_a_stored_photo_is_named_by_a_key_the_storage_issued(container: AsyncContainer) -> None:
