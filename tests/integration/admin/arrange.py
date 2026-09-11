@@ -307,6 +307,17 @@ async def _cleared(scope: AsyncContainer) -> None:
         await removing.execute(PRODUCT, variant.id)
 
 
+def _blank_inline_keys(prefix: str, rows: int) -> dict[str, str]:
+    """Spell the key field of a display-only row the way a browser posts it.
+
+    The row renders read-only, so the hidden field Django reads its identity
+    back from arrives empty rather than absent. An absent key is a ``KeyError``
+    Django forgives; an empty one it parses, and a composite key is parsed as
+    JSON. A body without these entries never reaches the line that breaks.
+    """
+    return {f"{prefix}-{number}-pk": "" for number in range(rows)}
+
+
 # Photos are an inline of the product card: Django reads their management form
 # on every save, whether or not the owner touched a row.
 PHOTO_PREFIX = "images"
@@ -337,6 +348,7 @@ def product_post(  # noqa: PLR0913  # one keyword per field of the card the owne
         f"{PHOTO_PREFIX}-MIN_NUM_FORMS": "0",
         f"{PHOTO_PREFIX}-MAX_NUM_FORMS": str(photos),
     }
+    posted |= _blank_inline_keys(PHOTO_PREFIX, photos)
     posted |= {"is_published": "on"} if is_published else {}
     posted |= {declared_field_name(attribute_id): value for attribute_id, value in declared}
     return posted
@@ -403,6 +415,7 @@ def landing_post(  # noqa: PLR0913  # one keyword per field of the card the owne
         f"{CONDITION_PREFIX}-MIN_NUM_FORMS": "0",
         f"{CONDITION_PREFIX}-MAX_NUM_FORMS": str(stored_conditions),
     }
+    posted |= _blank_inline_keys(CONDITION_PREFIX, stored_conditions)
     posted |= {"is_published": "on"} if is_published else {}
     return posted
 
