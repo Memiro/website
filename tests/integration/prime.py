@@ -378,6 +378,7 @@ async def prime_work(
     product_id: ProductId | None = PRODUCT,
     is_published: bool = True,
     sort_order: int = 1,
+    photo_key: str = "works/hallway.jpg",
 ) -> None:
     """Add the photographed installation of the canonical mirror to the gallery."""
     async with engine.begin() as connection:
@@ -386,7 +387,7 @@ async def prime_work(
             [
                 {
                     "id": WORK,
-                    "photo_key": "works/hallway.jpg",
+                    "photo_key": photo_key,
                     "product_id": product_id,
                     "title": "Круглое зеркало в прихожей",
                     "description": "Поставили в прихожей квартиры на Ленина.",

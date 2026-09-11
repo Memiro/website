@@ -1,15 +1,24 @@
 import pytest
-from fastapi import status
+from dishka import AsyncContainer
+from fastapi import FastAPI, status
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.adapters.storage.photo_files import DERIVATIVE_WIDTHS
 from memiro.application.browse_catalog import WorkModel, WorkProduct, WorksList
+from memiro.application.browse_catalog.models import ImageModel
+from memiro.application.common.gateway.image_upload import ImageUpload
+from memiro.application.common.gateway.work import WorkPhotoStorage
+from tests.common.photograph import photograph
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import prime_product_publication, prime_second_work, prime_work
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
+# The fixture writes rows, not files, so the storage holds no copies of these
+# photographs — the gallery draws them at the one size there is.
 HALLWAY = WorkModel(
     photo_key="works/hallway.jpg",
+    photo=ImageModel(key="works/hallway.jpg", variants=[]),
     title="Круглое зеркало в прихожей",
     description="Поставили в прихожей квартиры на Ленина.",
     product=WorkProduct(category_slug="mirrors", slug="zerkalo-v-rame"),
@@ -18,6 +27,7 @@ HALLWAY = WorkModel(
 
 HALLWAY_WITHOUT_PRODUCT = WorkModel(
     photo_key="works/hallway.jpg",
+    photo=ImageModel(key="works/hallway.jpg", variants=[]),
     title="Круглое зеркало в прихожей",
     description="Поставили в прихожей квартиры на Ленина.",
     product=None,
@@ -26,6 +36,7 @@ HALLWAY_WITHOUT_PRODUCT = WorkModel(
 
 BATHROOM = WorkModel(
     photo_key="works/bathroom.jpg",
+    photo=ImageModel(key="works/bathroom.jpg", variants=[]),
     title="Зеркало-капля в ванной",
     description="",
     product=None,
@@ -99,3 +110,21 @@ async def test_a_work_does_not_point_at_a_mirror_the_catalogue_stopped_selling(
     assert (await api_client.list_works()).assert_status(status.HTTP_200_OK).ensure_content() == WorksList(
         items=[HALLWAY_WITHOUT_PRODUCT], total=1, page=1
     )
+
+
+async def test_a_photograph_of_the_gallery_carries_the_widths_it_was_made_at(
+    api_client: ApiClient,
+    app: FastAPI,
+    engine: AsyncEngine,
+) -> None:
+    """The gallery is told which copies exist instead of spelling their addresses itself."""
+    container: AsyncContainer = app.state.dishka_container
+    storage = await container.get(WorkPhotoStorage)
+    key = await storage.put(ImageUpload(filename="hallway.jpg", content=photograph()))
+    await prime_work(engine, photo_key=key)
+
+    gallery = (await api_client.list_works()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    photograph_of_the_work = gallery.items[0].photo
+    assert photograph_of_the_work is not None
+    assert [variant.width for variant in photograph_of_the_work.variants] == list(DERIVATIVE_WIDTHS)

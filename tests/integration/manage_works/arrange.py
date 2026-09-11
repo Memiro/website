@@ -1,10 +1,12 @@
 """Forms and readings the three work scenarios share."""
 
+from collections.abc import Mapping, Sequence
 from typing import override
 
 from dishka import AsyncContainer
 
 from memiro.application.common.gateway.image_upload import ImageUpload
+from memiro.application.common.gateway.product_image import StoredVariant
 from memiro.application.common.gateway.work import WorkGateway, WorkPhotoStorage, WorkRow
 from memiro.application.manage_works import (
     ChangeWork,
@@ -47,6 +49,11 @@ class FakeWorkPhotoStorage(WorkPhotoStorage):
     async def remove(self, key: str) -> None:
         """Remember which key the caller dropped."""
         self.removed.append(key)
+
+    @override
+    async def variants(self, keys: Sequence[str]) -> Mapping[str, list[StoredVariant]]:
+        """Answer that this storage made no copies: the commands never ask, the port does."""
+        return {key: [] for key in keys}
 
 
 def photo_form(**overrides: object) -> dict[str, object]:

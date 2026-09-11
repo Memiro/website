@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Mapping, Sequence
 from pathlib import PurePosixPath
 from typing import override
 from uuid import uuid4
@@ -8,6 +9,7 @@ import structlog
 from memiro.adapters.storage.config import MediaConfig
 from memiro.adapters.storage.photo_files import PhotoFiles
 from memiro.application.common.gateway.image_upload import ImageUpload
+from memiro.application.common.gateway.product_image import StoredVariant
 from memiro.application.common.gateway.work import WorkPhotoStorage
 from memiro.application.common.input_limits import IMAGE_EXTENSIONS
 from memiro_common.logger import Logger
@@ -33,6 +35,11 @@ class LocalWorkPhotoStorage(WorkPhotoStorage):
     async def remove(self, key: str) -> None:
         """Unlink the photo and everything made from it, off the event loop, warning instead of raising."""
         await asyncio.to_thread(self._unlink, key)
+
+    @override
+    async def variants(self, keys: Sequence[str]) -> Mapping[str, list[StoredVariant]]:
+        """Look the copies of every key up in one hop off the event loop."""
+        return await asyncio.to_thread(lambda: {key: self._files.variants(key) for key in keys})
 
     def _unlink(self, key: str) -> None:
         """Drop the files; a file this process cannot drop is litter, not an answer to the owner."""

@@ -1,6 +1,7 @@
 ---
 import type { Work } from "../lib/catalog-api.ts";
-import { mediaUrl } from "../lib/media.ts";
+import { imageSrcSet, photographUrl } from "../lib/media.ts";
+import { WORK_SIZES } from "../lib/image-sizes.ts";
 import { productPath } from "../lib/navigation.ts";
 
 interface Props { work: Work; }
@@ -14,7 +15,15 @@ const link = href === null ? {} : { class: "card-link", href };
 
 <figure class="work">
   <Tile {...link}>
-    <div class="pic"><img src={mediaUrl(work.photo_key)} alt={work.title} loading="lazy" /></div>
+    <div class="pic">
+      <img
+        src={photographUrl(work.photo)}
+        srcset={imageSrcSet(work.photo)}
+        sizes={WORK_SIZES}
+        alt={work.title}
+        loading="lazy"
+      />
+    </div>
     <figcaption>
       <span>{work.title}</span>
       {work.description !== "" && <span class="work__note">{work.description}</span>}

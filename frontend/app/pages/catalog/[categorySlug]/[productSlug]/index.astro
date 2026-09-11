@@ -78,7 +78,17 @@ const crumbs = product === null ? [] : [
     <div class="pdp wrap">
       <div class="gallery">
         <div class="gallery__main">
-          <img data-gallery-main src={cover} srcset={coverSrcSet} sizes={GALLERY_SIZES} alt={product.name} />
+          {/* The photograph of the card is what the browser paints first on
+              this page, so it is fetched ahead of everything else. */}
+          <img
+            data-gallery-main
+            src={cover}
+            srcset={coverSrcSet}
+            sizes={GALLERY_SIZES}
+            alt={product.name}
+            loading="eager"
+            fetchpriority="high"
+          />
         </div>
         {photographs.length > 1 && (
           <div class="thumbs">

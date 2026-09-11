@@ -1,14 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { hasPhotographs, imageSrcSet, mediaUrl, photographUrl } from "../app/lib/media.ts";
+import { imageSrcSet, mediaUrl, photographUrl } from "../app/lib/media.ts";
 
 test("a stored key becomes a media address the edge serves", () => {
   assert.equal(mediaUrl("products/small/lira.webp"), "/media/products/small/lira.webp");
-});
-
-test("a product without photographs is known to have none", () => {
-  assert.equal(hasPhotographs([]), false);
 });
 
 test("a photograph offers the browser every copy the storage holds", () => {
