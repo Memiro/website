@@ -32,3 +32,8 @@ export function coverImage(images: readonly ProductImage[]): ProductImage | unde
   const [cover] = images;
   return cover;
 }
+
+/** The picture of a tile: the mirror it leads to, or the studio's placeholder. */
+export function tileImageUrl(image: ProductImage | null): string {
+  return image === null ? PLACEHOLDER : mediaUrl(image.key);
+}

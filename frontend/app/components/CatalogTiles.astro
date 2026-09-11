@@ -1,5 +1,7 @@
 ---
 import { ordinal } from "../lib/ordinal.ts";
+import { tileSizes } from "../lib/image-sizes.ts";
+import { imageSrcSet, tileImageUrl } from "../lib/media.ts";
 import { tileSpan, type Tile } from "../lib/tiles.ts";
 
 interface Props { tiles: Tile[]; }
@@ -14,7 +16,9 @@ const { tiles } = Astro.props;
             that shows a bento, so the flags are decided here and not by the
             calling page: a new page would otherwise bring a lazy LCP back. */}
         <img
-          src={`/img/hero-${(index % 3) + 1}.jpg`}
+          src={tileImageUrl(tile.image)}
+          srcset={imageSrcSet(tile.image ?? undefined)}
+          sizes={tileSizes(tileSpan(index))}
           alt=""
           loading={index === 0 ? "eager" : "lazy"}
           fetchpriority={index === 0 ? "high" : undefined}
