@@ -1,8 +1,10 @@
 from abc import abstractmethod
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 from memiro.application.common.gateway.image_upload import ImageUpload
+from memiro.application.common.gateway.product_image import StoredVariant
 from memiro.entities.common.identifiers import ProductId, WorkId
 
 
@@ -76,5 +78,14 @@ class WorkPhotoStorage(Protocol):
         Implementations answer instead of raising when the file is already
         gone or cannot be dropped: the row that named it is what the
         storefront reads, and it is gone by the time this is called.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    async def variants(self, keys: Sequence[str]) -> Mapping[str, list[StoredVariant]]:
+        """Answer with the narrower copies the storage holds for each of the keys.
+
+        A photo the storage made no copies of answers with an empty list: the
+        gallery still shows it, at the one size there is.
         """
         raise NotImplementedError

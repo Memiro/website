@@ -65,6 +65,8 @@ export interface WorkProduct {
 
 export interface Work {
   photo_key: string;
+  /** The same photograph with the copies the storage holds for it. */
+  photo: ProductImage | null;
   title: string;
   description: string;
   product: WorkProduct | null;
@@ -307,6 +309,7 @@ function isWork(value: unknown): value is Work {
     return false;
   }
   return typeof work.photo_key === "string"
+    && isNullableImage(work.photo)
     && typeof work.title === "string"
     && typeof work.description === "string"
     && (work.product === null || isWorkProduct(work.product));

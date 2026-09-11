@@ -9,10 +9,6 @@ export function mediaUrl(key: string): string {
   return `${MEDIA_PREFIX}${key}`;
 }
 
-export function hasPhotographs(imageKeys: readonly string[]): boolean {
-  return imageKeys.length > 0;
-}
-
 /** The candidates the browser picks from: every copy the storage holds, by its width. */
 export function imageSrcSet(image: ProductImage | undefined | null): string | undefined {
   if (image === undefined || image === null || image.variants.length === 0) {

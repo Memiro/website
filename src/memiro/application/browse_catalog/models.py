@@ -234,6 +234,9 @@ class WorkModel(BaseModel):
     """One photographed installation as the gallery shows it."""
 
     photo_key: str
+    # The same photograph with the copies the storage holds for it; the key
+    # stays for what only needs one address.
+    photo: ImageModel | None = None
     title: str
     description: str
     product: WorkProduct | None

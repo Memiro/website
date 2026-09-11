@@ -1,7 +1,14 @@
 from collections.abc import Mapping, Sequence
 
-from memiro.application.browse_catalog.models import ImageModel, ImageVariant, PhotographedTile, ProductSummary
+from memiro.application.browse_catalog.models import (
+    ImageModel,
+    ImageVariant,
+    PhotographedTile,
+    ProductSummary,
+    WorkModel,
+)
 from memiro.application.common.gateway.product_image import ProductImageStorage, StoredVariant
+from memiro.application.common.gateway.work import WorkPhotoStorage
 
 
 async def photographed[Product: ProductSummary](
@@ -26,6 +33,12 @@ async def photographed_tiles[Tile: PhotographedTile](
         tile if tile.image is None else tile.model_copy(update={"image": _described(tile.image.key, held)})
         for tile in tiles
     ]
+
+
+async def photographed_works(storage: WorkPhotoStorage, works: Sequence[WorkModel]) -> list[WorkModel]:
+    """Pair the photograph of every work with the copies the storage holds for it, in one hop."""
+    held = await storage.variants([work.photo_key for work in works])
+    return [work.model_copy(update={"photo": _described(work.photo_key, held)}) for work in works]
 
 
 def _described(key: str, held: Mapping[str, list[StoredVariant]]) -> ImageModel:

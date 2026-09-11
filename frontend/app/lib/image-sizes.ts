@@ -19,6 +19,9 @@ const QUARTER_OF_THE_PAGE = "(max-width: 900px) 50vw, 25vw";
 // 1180px, where it is the width of the page.
 export const GALLERY_SIZES = "(max-width: 1180px) 100vw, 55vw";
 
+// .works: three columns, two below 1180px, one below 640px.
+export const WORK_SIZES = "(max-width: 640px) 100vw, (max-width: 1180px) 50vw, 33vw";
+
 // .thumbs: a strip of small squares under the gallery, never more than a
 // tenth of the page wide.
 export const THUMB_SIZES = "12vw";

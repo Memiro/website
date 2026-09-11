@@ -28,14 +28,14 @@ const { category_slug: _categorySlug, category_name: _categoryName, ...cardWitho
 
 const works = {
   items: [
-    { photo_key: "works/hallway.jpg", title: "Круглое зеркало в прихожей", description: "Прихожая на Ленина.", product: { category_slug: "mirrors", slug: "lira" } },
-    { photo_key: "works/bathroom.jpg", title: "Зеркало-капля в ванной", description: "", product: null },
+    { photo_key: "works/hallway.jpg", photo: { key: "works/hallway.jpg", variants: [{ key: "works/hallway-480w.webp", width: 480 }] }, title: "Круглое зеркало в прихожей", description: "Прихожая на Ленина.", product: { category_slug: "mirrors", slug: "lira" } },
+    { photo_key: "works/bathroom.jpg", photo: null, title: "Зеркало-капля в ванной", description: "", product: null },
   ],
   total: 2,
   page: 1,
 };
 
-const workWithoutTitle = { items: [{ photo_key: "works/hallway.jpg", description: "", product: null }], total: 1, page: 1 };
+const workWithoutTitle = { items: [{ photo_key: "works/hallway.jpg", photo: null, description: "", product: null }], total: 1, page: 1 };
 
 const categories = {
   items: [{ name: "Зеркала", slug: "mirrors", updated_at: "2026-09-01T10:00:00Z", image: { key: "mirrors.jpg", variants: [] } }],
