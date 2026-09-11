@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.browse_catalog import CategoriesList, CategoryModel
 from tests.integration.api_client import ApiClient
-from tests.integration.prime import prime_second_category
+from tests.integration.prime import CATALOG_STAMP, prime_second_category
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -12,7 +12,7 @@ pytestmark = pytest.mark.usefixtures("catalog")
 async def test_a_category_holding_a_published_product_is_listed(api_client: ApiClient) -> None:
     """The storefront receives its categories inside the list envelope."""
     assert (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content() == CategoriesList(
-        items=[CategoryModel(name="Mirrors", slug="mirrors")], total=1, page=1
+        items=[CategoryModel(name="Mirrors", slug="mirrors", updated_at=CATALOG_STAMP)], total=1, page=1
     )
 
 
@@ -24,7 +24,7 @@ async def test_a_category_without_a_published_product_is_hidden(
     await prime_second_category(engine, name="Шкафы", slug="cabinets", sort_order=0, is_published=False)
 
     assert (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content() == CategoriesList(
-        items=[CategoryModel(name="Mirrors", slug="mirrors")], total=1, page=1
+        items=[CategoryModel(name="Mirrors", slug="mirrors", updated_at=CATALOG_STAMP)], total=1, page=1
     )
 
 
@@ -37,9 +37,16 @@ async def test_categories_follow_the_order_the_owner_gave_them(
 
     assert (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content() == CategoriesList(
         items=[
-            CategoryModel(name="Шкафы", slug="cabinets"),
-            CategoryModel(name="Mirrors", slug="mirrors"),
+            CategoryModel(name="Шкафы", slug="cabinets", updated_at=CATALOG_STAMP),
+            CategoryModel(name="Mirrors", slug="mirrors", updated_at=CATALOG_STAMP),
         ],
         total=2,
         page=1,
     )
+
+
+async def test_a_listed_category_carries_the_day_it_was_last_edited(api_client: ApiClient) -> None:
+    """The sitemap dates a category page by this stamp, so the listing has to carry it."""
+    listing = (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].updated_at == CATALOG_STAMP

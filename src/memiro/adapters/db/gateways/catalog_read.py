@@ -58,12 +58,12 @@ class SACatalogReadGateway(CatalogReadGateway):
         )
         rows = (
             await self._session.execute(
-                select(categories_table.c.name, categories_table.c.slug)
+                select(categories_table.c.name, categories_table.c.slug, categories_table.c.updated_at)
                 .where(published)
                 .order_by(categories_table.c.sort_order, categories_table.c.id)
             )
         ).all()
-        categories = [CategoryModel(name=row.name, slug=row.slug) for row in rows]
+        categories = [CategoryModel(name=row.name, slug=row.slug, updated_at=row.updated_at) for row in rows]
         return categories, len(categories)
 
     @override
@@ -71,10 +71,12 @@ class SACatalogReadGateway(CatalogReadGateway):
         """Resolve one category slug, whatever it holds."""
         row = (
             await self._session.execute(
-                select(categories_table.c.name, categories_table.c.slug).where(categories_table.c.slug == slug)
+                select(categories_table.c.name, categories_table.c.slug, categories_table.c.updated_at).where(
+                    categories_table.c.slug == slug
+                )
             )
         ).one_or_none()
-        return CategoryModel(name=row.name, slug=row.slug) if row is not None else None
+        return CategoryModel(name=row.name, slug=row.slug, updated_at=row.updated_at) if row is not None else None
 
     @override
     async def list_products_by_category(
@@ -90,7 +92,13 @@ class SACatalogReadGateway(CatalogReadGateway):
         ).scalar_one()
         listing = (
             await self._session.execute(
-                select(products_table.c.id, products_table.c.name, products_table.c.slug, products_table.c.price_from)
+                select(
+                    products_table.c.id,
+                    products_table.c.name,
+                    products_table.c.slug,
+                    products_table.c.price_from,
+                    products_table.c.updated_at,
+                )
                 .where(*conditions)
                 .order_by(*self._ordering(query.sort))
                 .limit(PAGE_SIZE)
@@ -116,6 +124,7 @@ class SACatalogReadGateway(CatalogReadGateway):
                     slug=row.slug,
                     price_from=row.price_from.amount if row.price_from else None,
                     image_keys=list(keys),
+                    updated_at=row.updated_at,
                 )
             )
         return products, total
@@ -188,12 +197,12 @@ class SACatalogReadGateway(CatalogReadGateway):
         """Read the published landings in the owner's order."""
         rows = (
             await self._session.execute(
-                select(landings_table.c.slug, landings_table.c.heading)
+                select(landings_table.c.slug, landings_table.c.heading, landings_table.c.updated_at)
                 .where(landings_table.c.is_published)
                 .order_by(landings_table.c.sort_order, landings_table.c.id)
             )
         ).all()
-        landings = [LandingSummary(slug=row.slug, heading=row.heading) for row in rows]
+        landings = [LandingSummary(slug=row.slug, heading=row.heading, updated_at=row.updated_at) for row in rows]
         return landings, len(landings)
 
     @override
@@ -264,6 +273,7 @@ class SACatalogReadGateway(CatalogReadGateway):
         return LandingModel(
             slug=row["slug"],
             heading=row["heading"],
+            updated_at=row["updated_at"],
             title=row["title"],
             description=row["description"],
             text=row["text"],
@@ -370,6 +380,7 @@ class SACatalogReadGateway(CatalogReadGateway):
             description=row["description"],
             price_from=row["price_from"].amount if row["price_from"] else None,
             image_keys=list(images),
+            updated_at=row["updated_at"],
             attributes=list(attributes.values()),
             variants=[
                 ProductVariant(

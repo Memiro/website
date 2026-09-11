@@ -34,6 +34,7 @@ from tests.common.factory.catalog import (
 )
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
+    CATALOG_STAMP,
     prime_hidden_calculated_price,
     prime_non_changeable_attribute,
     prime_numeric_catalog,
@@ -71,6 +72,7 @@ def _expected_card(
         category_name="Mirrors",
         price_from=price_from,
         image_keys=image_keys or [],
+        updated_at=CATALOG_STAMP,
         description="A made-to-order mirror.",
         attributes=[
             ProductAttribute(
@@ -188,9 +190,13 @@ async def test_a_card_lists_the_variants_in_the_order_the_owner_gave_them(
     variants: None,  # noqa: ARG001
 ) -> None:
     """The cheaper variant the owner put first arrives first, and the card's price starts at it."""
-    assert (await api_client.read_product("zerkalo-v-rame")).assert_status(
-        status.HTTP_200_OK
-    ).ensure_content() == _expected_card(price_from=Decimal(2660), variants=OWNER_ORDERED_VARIANTS)
+    card = (await api_client.read_product("zerkalo-v-rame")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    # Adding the variants edited the product, so its stamp left the aged catalogue behind.
+    assert card.updated_at > CATALOG_STAMP
+    assert card.model_copy(update={"updated_at": CATALOG_STAMP}) == _expected_card(
+        price_from=Decimal(2660), variants=OWNER_ORDERED_VARIANTS
+    )
 
 
 async def test_a_hidden_calculated_price_keeps_the_precalculated_variants_visible(
@@ -201,9 +207,11 @@ async def test_a_hidden_calculated_price_keeps_the_precalculated_variants_visibl
     """A product whose calculated price is hidden from customers still shows its stored price_from."""
     await prime_hidden_calculated_price(engine)
 
-    assert (await api_client.read_product("zerkalo-v-rame")).assert_status(
-        status.HTTP_200_OK
-    ).ensure_content() == _expected_card(price_from=Decimal(2660), variants=OWNER_ORDERED_VARIANTS)
+    card = (await api_client.read_product("zerkalo-v-rame")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert card.model_copy(update={"updated_at": CATALOG_STAMP}) == _expected_card(
+        price_from=Decimal(2660), variants=OWNER_ORDERED_VARIANTS
+    )
 
 
 async def test_a_card_names_the_kind_of_an_attribute_the_customer_types_a_number_into(

@@ -7,8 +7,8 @@ const SITE = new URL("https://memiro.ru");
 
 function fakeApi() {
   return {
-    categories: async () => ({ items: [{ slug: "zerkala", name: "Зеркала" }], total: 1, page: 1 }),
-    landings: async () => ({ items: [{ slug: "zerkala-s-podsvetkoy", heading: "Зеркала с подсветкой" }], total: 1, page: 1 }),
+    categories: async () => ({ items: [{ slug: "zerkala", name: "Зеркала", updated_at: "2026-09-01T10:00:00Z" }], total: 1, page: 1 }),
+    landings: async () => ({ items: [{ slug: "zerkala-s-podsvetkoy", heading: "Зеркала с подсветкой", updated_at: "2026-09-01T10:00:00Z" }], total: 1, page: 1 }),
   };
 }
 

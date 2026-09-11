@@ -27,6 +27,7 @@ from tests.common.factory.catalog import (
 )
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
+    CATALOG_STAMP,
     prime_extra_product,
     prime_numeric_catalog,
     prime_priced_neighbours,
@@ -37,24 +38,36 @@ from tests.integration.prime import (
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
-CANONICAL_SUMMARY = ProductSummary(name="Зеркало в раме", slug="zerkalo-v-rame", price_from=None, image_keys=[])
-ARCHED_SUMMARY = ProductSummary(name="Арочное зеркало", slug="arochnoe-zerkalo", price_from=None, image_keys=[])
+CANONICAL_SUMMARY = ProductSummary(
+    name="Зеркало в раме", slug="zerkalo-v-rame", price_from=None, image_keys=[], updated_at=CATALOG_STAMP
+)
+ARCHED_SUMMARY = ProductSummary(
+    name="Арочное зеркало", slug="arochnoe-zerkalo", price_from=None, image_keys=[], updated_at=CATALOG_STAMP
+)
 ROUND_SUMMARY = ProductSummary(
     name="Круглое зеркало",
     slug="krugloe-zerkalo",
     price_from=Decimal(4000),
     image_keys=[],
+    updated_at=CATALOG_STAMP,
 )
 LARGE_SUMMARY = ProductSummary(
     name="Большое зеркало",
     slug="bolshoe-zerkalo",
     price_from=Decimal(12000),
     image_keys=[],
+    updated_at=CATALOG_STAMP,
 )
 # What the canonical mirror of the fixture declares — the rows a listing of it alone counts.
 CANONICAL_DECLARATIONS = {SILVER: 1, RECTANGULAR: 1, ALUMINIUM: 1, NO_BACKLIGHT: 1, WITH_MOUNT: 1}
 # The whole category once the priced neighbours join it, in name order.
 ALL_THREE_SLUGS = ["bolshoe-zerkalo", "zerkalo-v-rame", "krugloe-zerkalo"]
+
+
+def _aged(listing: ProductsList) -> ProductsList:
+    """Put the products' stamps back at the fixture's, so the rest of the listing can be compared whole."""
+    items = [item.model_copy(update={"updated_at": CATALOG_STAMP}) for item in listing.items]
+    return listing.model_copy(update={"items": items})
 
 
 def _groups(
@@ -112,9 +125,11 @@ async def test_a_category_lists_its_published_products(
     """A listing carries the stored derived price and the photo keys inside the list envelope."""
     await prime_product_images(engine)
 
-    assert (await api_client.list_category_products("mirrors")).assert_status(
-        status.HTTP_200_OK
-    ).ensure_content() == _envelope(
+    listing = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    # Adding the variants edited the product, so its stamp left the aged catalogue behind.
+    assert listing.items[0].updated_at > CATALOG_STAMP
+    assert _aged(listing) == _envelope(
         [
             ProductSummary(
                 name="Зеркало в раме",
@@ -122,6 +137,7 @@ async def test_a_category_lists_its_published_products(
                 # The cheaper of the two variants added by the fixture.
                 price_from=Decimal(2660),
                 image_keys=["mirror-side.jpg", "mirror-front.jpg"],
+                updated_at=CATALOG_STAMP,
             )
         ],
         counts=CANONICAL_DECLARATIONS,
@@ -327,3 +343,10 @@ async def test_an_attribute_the_owner_took_out_of_the_filters_builds_no_group(ap
     page = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
 
     assert BLADE not in [group.attribute_id for group in page.groups]
+
+
+async def test_a_listed_product_carries_the_day_it_was_last_edited(api_client: ApiClient) -> None:
+    """The sitemap dates a product page by this stamp, so the listing has to carry it."""
+    listing = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].updated_at == CATALOG_STAMP

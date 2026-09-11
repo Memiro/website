@@ -22,7 +22,7 @@ slug, сузив и упорядочив выдачу фильтрами сай�
 
 | Поле | Тип | Смысл |
 |---|---|---|
-| `items` | `list[ProductSummary]` | Страница товаров: `name`, `slug`, `price_from`, `image_keys` |
+| `items` | `list[ProductSummary]` | Страница товаров: `name`, `slug`, `price_from`, `image_keys`, `updated_at` |
 | `total` | `int` | Сколько товаров подходит под сужение всего |
 | `page` | `int` | Запрошенная страница |
 | `pages` | `int` | Сколько страниц по 24 товара получилось; у пустой выдачи — одна |

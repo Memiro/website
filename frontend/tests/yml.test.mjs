@@ -13,18 +13,18 @@ function fakeApi() {
     mirrors: [
       [
         { slug: "kolo", name: "Кольцо", price_from: "8900.00", image_keys: MANY_PHOTOS },
-        { slug: "echo", name: "Эхо", price_from: null, image_keys: ["echo.jpg"] },
+        { slug: "echo", name: "Эхо", price_from: null, image_keys: ["echo.jpg"], updated_at: "2026-09-01T10:00:00Z" },
       ],
-      [{ slug: "nave", name: "Неф & Co", price_from: "12000.50", image_keys: ["nave.jpg"] }],
+      [{ slug: "nave", name: "Неф & Co", price_from: "12000.50", image_keys: ["nave.jpg"], updated_at: "2026-09-01T10:00:00Z" }],
     ],
     lights: [[
-      { slug: "halo", name: "Гало", price_from: "5000.00", image_keys: ["halo.jpg"] },
-      { slug: "mute", name: "Мьют", price_from: "700.00", image_keys: [] },
+      { slug: "halo", name: "Гало", price_from: "5000.00", image_keys: ["halo.jpg"], updated_at: "2026-09-01T10:00:00Z" },
+      { slug: "mute", name: "Мьют", price_from: "700.00", image_keys: [], updated_at: "2026-09-01T10:00:00Z" },
     ]],
   };
   const descriptions = { kolo: "Круглое зеркало.", nave: "Полотно <4 мм> в раме \"Loft\".", halo: "Свет." };
   return {
-    categories: async () => ({ items: [{ slug: "mirrors", name: "Зеркала & свет" }, { slug: "lights", name: "Свет" }] }),
+    categories: async () => ({ items: [{ slug: "mirrors", name: "Зеркала & свет", updated_at: "2026-09-01T10:00:00Z" }, { slug: "lights", name: "Свет", updated_at: "2026-09-01T10:00:00Z" }] }),
     categoryProducts: async (slug, search) => {
       const pages = products[slug];
       const page = Number(new URLSearchParams(search).get("page") ?? "1");
