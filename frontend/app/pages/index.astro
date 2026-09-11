@@ -1,4 +1,7 @@
 ---
+import { Picture } from "astro:assets";
+
+import heroBedroom from "../assets/hero-bedroom.jpg";
 import CatalogCard from "../components/CatalogCard.astro";
 import CatalogTiles from "../components/CatalogTiles.astro";
 import IndexRow from "../components/IndexRow.astro";
@@ -72,7 +75,18 @@ const sectionNumber = (): string => ordinal(++sectionCount);
     </div>
     <div class="hero__media">
       <figure>
-        <img src="/img/hero-1.jpg" alt="Арочное зеркало с контурной подсветкой в спальне" fetchpriority="high" />
+        {/* The build makes the WebP copies and the srcset of this one: a
+            picture of the repository is converted by the pipeline, not by
+            hand, and its name carries a hash that may be cached for ever. */}
+        <Picture
+          src={heroBedroom}
+          formats={["webp"]}
+          widths={[480, 960, 1200]}
+          sizes="(max-width: 900px) 100vw, 50vw"
+          alt="Арочное зеркало с контурной подсветкой в спальне"
+          loading="eager"
+          fetchpriority="high"
+        />
         <figcaption class="chip"><span class="chip__n">Арка</span>с контурной подсветкой</figcaption>
       </figure>
       {tiles.length > 0 && (

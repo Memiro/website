@@ -17,7 +17,7 @@ test("an address that already ends with a slash stays where it is", () => {
 });
 
 test("files, built assets and photographs are not pages and keep their address", () => {
-  for (const path of ["/robots.txt", "/sitemap.xml", "/llms.txt", "/yml.xml", "/favicon.ico", "/_astro/x.css", "/media/x.jpg"]) {
+  for (const path of ["/robots.txt", "/sitemap.xml", "/llms.txt", "/yml.xml", "/favicon.ico", "/_astro/x.css", "/media/x.jpg", "/_image"]) {
     assert.equal(slashRedirect(path), null, path);
   }
 });

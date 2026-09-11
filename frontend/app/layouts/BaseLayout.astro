@@ -4,7 +4,7 @@ import AnalyticsConsent from "../components/AnalyticsConsent.astro";
 import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import { absoluteUrl, breadcrumbsJsonLd, type Crumb, type JsonLdDocument } from "../lib/seo.ts";
-import { SITE_NAME } from "../lib/site.ts";
+import { OG_IMAGE, SITE_NAME } from "../lib/site.ts";
 import { readSite } from "../lib/site-api.ts";
 
 interface Props {
@@ -19,7 +19,7 @@ interface Props {
   jsonLd?: JsonLdDocument[];
 }
 
-const { title, description, robots, canonicalPath, ogType = "website", ogImage = "/img/hero-1.jpg", crumbs = [], jsonLd = [] } = Astro.props;
+const { title, description, robots, canonicalPath, ogType = "website", ogImage = OG_IMAGE, crumbs = [], jsonLd = [] } = Astro.props;
 const canonical = absoluteUrl(Astro.site, canonicalPath ?? Astro.url.pathname);
 const image = absoluteUrl(Astro.site, ogImage);
 const documents = crumbs.length > 0 ? [...jsonLd, breadcrumbsJsonLd(Astro.site, crumbs)] : jsonLd;
