@@ -16,13 +16,13 @@ const FRAME = { id: "attr-frame", name: "Рама", kind: "select", is_customer_
 function product(slug, attributes = [SHAPE, FRAME]) {
   return {
     id: slug, name: slug.toUpperCase(), slug, category_slug: "zerkala", category_name: "Зеркала",
-    price_from: null, image_keys: [], description: "", attributes, variants: [], updated_at: "2026-09-01T10:00:00Z",
+    price_from: null, image_keys: [], images: [], description: "", attributes, variants: [], updated_at: "2026-09-01T10:00:00Z",
   };
 }
 
 /** @param {string[]} slugs @returns {import("../app/lib/catalog-api.ts").ProductSummary[]} */
 function listing(slugs) {
-  return slugs.map((slug) => ({ name: slug.toUpperCase(), slug, price_from: null, image_keys: [], updated_at: "2026-09-01T10:00:00Z" }));
+  return slugs.map((slug) => ({ name: slug.toUpperCase(), slug, price_from: null, image_keys: [], images: [], updated_at: "2026-09-01T10:00:00Z" }));
 }
 
 test("the shape is the declared row of the attribute named Форма", () => {

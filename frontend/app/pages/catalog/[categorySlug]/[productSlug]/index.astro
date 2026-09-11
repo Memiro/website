@@ -6,7 +6,8 @@ import OfferNote from "../../../../components/OfferNote.astro";
 import Calculator from "../../../../islands/Calculator.vue";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { internalCatalogApi, type ProductCard, type ProductSummary } from "../../../../lib/catalog-api.ts";
-import { coverImageUrl, mediaUrl } from "../../../../lib/media.ts";
+import { coverImageUrl, imageSrcSet, mediaUrl } from "../../../../lib/media.ts";
+import { GALLERY_SIZES } from "../../../../lib/image-sizes.ts";
 import { productPath, redirectTarget } from "../../../../lib/navigation.ts";
 import { foundOrNull } from "../../../../lib/not-found.ts";
 import { relatedProducts } from "../../../../lib/related.ts";
@@ -28,7 +29,15 @@ const price = product === null || product.price_from === null
   ? null
   : new Intl.NumberFormat("ru-RU").format(Number(product.price_from));
 const cover = product === null ? "" : coverImageUrl(product.image_keys);
-const thumbs = product === null ? [] : product.image_keys.map((key) => mediaUrl(key));
+// The gallery draws one photograph at a time, so a thumbnail carries the
+// candidates of its own photo: the island swaps both, and the browser keeps
+// choosing a width instead of falling back to the original.
+const photographs = product === null ? [] : product.images.map((image, index) => ({
+  src: mediaUrl(image.key),
+  srcset: imageSrcSet(image),
+  alt: `${product.name} — фото ${index + 1}`,
+}));
+const coverSrcSet = product === null ? undefined : imageSrcSet(product.images[0]);
 const categoryName = product === null ? "" : product.category_name;
 
 let related: ProductSummary[] = [];
@@ -68,12 +77,20 @@ const crumbs = product === null ? [] : [
     <Breadcrumbs crumbs={crumbs} />
     <div class="pdp wrap">
       <div class="gallery">
-        <div class="gallery__main"><img data-gallery-main src={cover} alt={product.name} /></div>
-        {thumbs.length > 1 && (
+        <div class="gallery__main">
+          <img data-gallery-main src={cover} srcset={coverSrcSet} sizes={GALLERY_SIZES} alt={product.name} />
+        </div>
+        {photographs.length > 1 && (
           <div class="thumbs">
-            {thumbs.map((source, index) => (
-              <button class={index === 0 ? "on" : undefined} type="button" aria-pressed={index === 0 ? "true" : "false"} data-src={source}>
-                <img src={source} alt={`${product.name} — фото ${index + 1}`} loading="lazy" />
+            {photographs.map((photograph, index) => (
+              <button
+                class={index === 0 ? "on" : undefined}
+                type="button"
+                aria-pressed={index === 0 ? "true" : "false"}
+                data-src={photograph.src}
+                data-srcset={photograph.srcset}
+              >
+                <img src={photograph.src} srcset={photograph.srcset} sizes="12vw" alt={photograph.alt} loading="lazy" />
               </button>
             ))}
           </div>

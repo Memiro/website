@@ -2,16 +2,21 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from fastapi import status
+from dishka import AsyncContainer
+from fastapi import FastAPI, status
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from memiro.adapters.storage.photo_files import DERIVATIVE_WIDTHS
 from memiro.application.browse_catalog import CatalogQuery, CatalogSort, ProductsList
 from memiro.application.browse_catalog.models import (
     FilterGroup,
     FilterOption,
+    ImageModel,
     PriceBounds,
     ProductSummary,
 )
+from memiro.application.common.gateway.image_upload import ImageUpload
+from memiro.application.common.gateway.product_image import ProductImageStorage
 from memiro.entities.catalog.attribute.entity import AttributeKind
 from memiro.entities.common.identifiers import AttributeValueId
 from tests.common.factory.catalog import (
@@ -25,11 +30,13 @@ from tests.common.factory.catalog import (
     WITH_MOUNT,
     demo_attributes,
 )
+from tests.common.photograph import photograph
 from tests.integration.api_client import ApiClient
 from tests.integration.prime import (
     CATALOG_STAMP,
     prime_extra_product,
     prime_numeric_catalog,
+    prime_photograph_of_the_product,
     prime_priced_neighbours,
     prime_product_images,
     prime_product_publication,
@@ -137,6 +144,12 @@ async def test_a_category_lists_its_published_products(
                 # The cheaper of the two variants added by the fixture.
                 price_from=Decimal(2660),
                 image_keys=["mirror-side.jpg", "mirror-front.jpg"],
+                # The fixture writes rows, not files: a photograph the volume
+                # holds no copies of is still a photograph the storefront draws.
+                images=[
+                    ImageModel(key="mirror-side.jpg", variants=[]),
+                    ImageModel(key="mirror-front.jpg", variants=[]),
+                ],
                 updated_at=CATALOG_STAMP,
             )
         ],
@@ -350,3 +363,22 @@ async def test_a_listed_product_carries_the_day_it_was_last_edited(api_client: A
     listing = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
 
     assert listing.items[0].updated_at == CATALOG_STAMP
+
+
+async def test_a_photograph_of_a_listed_product_carries_the_widths_it_was_made_at(
+    api_client: ApiClient,
+    app: FastAPI,
+    engine: AsyncEngine,
+) -> None:
+    """The storefront is told which copies exist instead of spelling their addresses itself."""
+    container: AsyncContainer = app.state.dishka_container
+    storage = await container.get(ProductImageStorage)
+    key = await storage.put(ImageUpload(filename="mirror.jpg", content=photograph()))
+    await prime_photograph_of_the_product(engine, key)
+
+    listing = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
+
+    photograph_of_the_card = listing.items[0].images[0]
+    assert photograph_of_the_card.key == key
+    assert [variant.width for variant in photograph_of_the_card.variants] == list(DERIVATIVE_WIDTHS)
+    assert all(variant.key != key for variant in photograph_of_the_card.variants)

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.browse_catalog import ProductModel
 from memiro.application.browse_catalog.models import (
+    ImageModel,
     ProductAttribute,
     ProductAttributeValue,
     ProductVariant,
@@ -72,6 +73,9 @@ def _expected_card(
         category_name="Mirrors",
         price_from=price_from,
         image_keys=image_keys or [],
+        # The fixture writes rows, not files: a photograph the volume holds no
+        # copies of is still a photograph the storefront draws.
+        images=[ImageModel(key=key, variants=[]) for key in image_keys or []],
         updated_at=CATALOG_STAMP,
         description="A made-to-order mirror.",
         attributes=[

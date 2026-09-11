@@ -74,11 +74,28 @@ export interface Category {
   updated_at: string;
 }
 
+/** One narrower copy of a photograph: the key naming it and the width it was made at. */
+export interface ImageVariant {
+  key: string;
+  width: number;
+}
+
+/**
+ * One photograph as the storefront draws it. Which copies exist is answered by
+ * the backend — the storefront picks among them and never spells their
+ * addresses itself, so it cannot disagree with what lies on the volume.
+ */
+export interface ProductImage {
+  key: string;
+  variants: ImageVariant[];
+}
+
 export interface ProductSummary {
   name: string;
   slug: string;
   price_from: string | null;
   image_keys: string[];
+  images: ProductImage[];
   updated_at: string;
 }
 
@@ -312,7 +329,21 @@ function isProductSummary(value: unknown): value is ProductSummary {
     && typeof product.slug === "string"
     && isNullableString(product.price_from)
     && typeof product.updated_at === "string"
-    && isArrayOf(product.image_keys, isString);
+    && isArrayOf(product.image_keys, isString)
+    && isArrayOf(product.images, isProductImage);
+}
+
+export function isProductImage(value: unknown): value is ProductImage {
+  const image = asRecord(value);
+  if (image === null) {
+    return false;
+  }
+  return typeof image.key === "string" && isArrayOf(image.variants, isImageVariant);
+}
+
+function isImageVariant(value: unknown): value is ImageVariant {
+  const variant = asRecord(value);
+  return variant !== null && typeof variant.key === "string" && typeof variant.width === "number";
 }
 
 function isProductCard(value: unknown): value is ProductCard {
