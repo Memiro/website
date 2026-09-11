@@ -24,6 +24,7 @@ from memiro.application.browse_catalog.models import (
     CategoryModel,
     FilterGroup,
     FilterOption,
+    ImageModel,
     LandingModel,
     LandingSummary,
     PriceBounds,
@@ -63,7 +64,15 @@ class SACatalogReadGateway(CatalogReadGateway):
                 .order_by(categories_table.c.sort_order, categories_table.c.id)
             )
         ).all()
-        categories = [CategoryModel(name=row.name, slug=row.slug, updated_at=row.updated_at) for row in rows]
+        categories = [
+            CategoryModel(
+                name=row.name,
+                slug=row.slug,
+                updated_at=row.updated_at,
+                image=await self._tile_photograph(row.slug, values=()),
+            )
+            for row in rows
+        ]
         return categories, len(categories)
 
     @override
@@ -197,12 +206,30 @@ class SACatalogReadGateway(CatalogReadGateway):
         """Read the published landings in the owner's order."""
         rows = (
             await self._session.execute(
-                select(landings_table.c.slug, landings_table.c.heading, landings_table.c.updated_at)
+                select(
+                    landings_table.c.id,
+                    landings_table.c.slug,
+                    landings_table.c.heading,
+                    landings_table.c.updated_at,
+                    categories_table.c.slug.label("category_slug"),
+                )
+                .join(categories_table, landings_table.c.category_id == categories_table.c.id)
                 .where(landings_table.c.is_published)
                 .order_by(landings_table.c.sort_order, landings_table.c.id)
             )
         ).all()
-        landings = [LandingSummary(slug=row.slug, heading=row.heading, updated_at=row.updated_at) for row in rows]
+        landings = [
+            LandingSummary(
+                slug=row.slug,
+                heading=row.heading,
+                updated_at=row.updated_at,
+                # A landing stands for a narrowing of its category, so its
+                # tile shows a mirror that narrowing really leaves: two
+                # landings of one category do not show the same photograph.
+                image=await self._tile_photograph(row.category_slug, values=await self._narrowing(row.id)),
+            )
+            for row in rows
+        ]
         return landings, len(landings)
 
     @override
@@ -398,6 +425,43 @@ class SACatalogReadGateway(CatalogReadGateway):
                 )
                 for item in variants
             ],
+        )
+
+    async def _tile_photograph(self, category_slug: str, *, values: Sequence[UUID]) -> ImageModel | None:
+        """Read the first photograph of the cheapest published product the narrowing leaves.
+
+        Nothing is ordered by how the owner arranged the products, so the home
+        page looks the same from one day to the next.
+        """
+        query = CatalogQuery(value=list(values), sort=CatalogSort.CHEAPEST)
+        conditions = self._conditions(
+            category_slug, query, self._selected(await self._filterable_rows(category_slug), query)
+        )
+        key = (
+            await self._session.execute(
+                select(product_images_table.c.key)
+                .select_from(
+                    products_table.join(product_images_table, product_images_table.c.product_id == products_table.c.id)
+                )
+                .where(*conditions)
+                .order_by(*self._ordering(CatalogSort.CHEAPEST), product_images_table.c.sort_order)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        return None if key is None else ImageModel(key=key, variants=[])
+
+    async def _narrowing(self, landing_id: UUID) -> list[UUID]:
+        """Read the values one landing narrows its category by."""
+        return list(
+            (
+                await self._session.execute(
+                    select(landing_conditions_table.c.value_id).where(
+                        landing_conditions_table.c.landing_id == landing_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
         )
 
     async def _filterable_rows(self, category_slug: str) -> Sequence[Row[Any]]:

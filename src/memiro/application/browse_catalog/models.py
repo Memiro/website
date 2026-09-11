@@ -87,7 +87,19 @@ class ImageModel(BaseModel):
     variants: list[ImageVariant]
 
 
-class CategoryModel(BaseModel):
+class PhotographedTile(BaseModel):
+    """A tile of the storefront and the mirror that stands for it.
+
+    The photograph is not a field of the domain: it is the first photo of the
+    cheapest published product the tile leads to, derived from what is already
+    stored the way ``price_from`` is. A tile that leads to no photographed
+    product carries nothing, and the storefront draws its placeholder.
+    """
+
+    image: ImageModel | None = None
+
+
+class CategoryModel(PhotographedTile):
     """One category visible on the storefront."""
 
     name: str
@@ -105,7 +117,7 @@ class CategoriesList(BaseModel):
     page: int
 
 
-class LandingSummary(BaseModel):
+class LandingSummary(PhotographedTile):
     """One landing as the storefront's tiles show it."""
 
     slug: str

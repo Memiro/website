@@ -3,8 +3,9 @@ from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.browse_catalog import CategoriesList, CategoryModel
+from tests.common.factory.catalog import SECOND_PRODUCT, THIRD_PRODUCT
 from tests.integration.api_client import ApiClient
-from tests.integration.prime import CATALOG_STAMP, prime_second_category
+from tests.integration.prime import CATALOG_STAMP, prime_photograph, prime_priced_neighbours, prime_second_category
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -50,3 +51,41 @@ async def test_a_listed_category_carries_the_day_it_was_last_edited(api_client: 
     listing = (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content()
 
     assert listing.items[0].updated_at == CATALOG_STAMP
+
+
+async def test_a_category_tile_shows_a_mirror_of_that_very_category(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A tile stands for what it leads to: the first photo of the cheapest published product."""
+    await prime_priced_neighbours(engine)
+    await prime_photograph(engine, "dear-front.jpg", product_id=THIRD_PRODUCT)
+    await prime_photograph(engine, "cheap-side.jpg", product_id=SECOND_PRODUCT, sort_order=2)
+    await prime_photograph(engine, "cheap-front.jpg", product_id=SECOND_PRODUCT, sort_order=1)
+
+    listing = (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].image is not None
+    assert listing.items[0].image.key == "cheap-front.jpg"
+
+
+async def test_the_photograph_of_a_tile_does_not_move_with_the_products(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """The home page looks the same from one day to the next: only the price decides."""
+    await prime_priced_neighbours(engine)
+    await prime_photograph(engine, "cheap-front.jpg", product_id=SECOND_PRODUCT)
+
+    before = (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content()
+    await prime_photograph(engine, "dear-front.jpg", product_id=THIRD_PRODUCT)
+    after = (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert before.items[0].image == after.items[0].image
+
+
+async def test_a_category_without_photographs_carries_none(api_client: ApiClient) -> None:
+    """A category nobody photographed yet answers with nothing, and the storefront draws its placeholder."""
+    listing = (await api_client.list_categories()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].image is None

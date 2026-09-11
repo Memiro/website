@@ -37,7 +37,11 @@ const works = {
 
 const workWithoutTitle = { items: [{ photo_key: "works/hallway.jpg", description: "", product: null }], total: 1, page: 1 };
 
-const categories = { items: [{ name: "Зеркала", slug: "mirrors", updated_at: "2026-09-01T10:00:00Z" }], total: 1, page: 1 };
+const categories = {
+  items: [{ name: "Зеркала", slug: "mirrors", updated_at: "2026-09-01T10:00:00Z", image: { key: "mirrors.jpg", variants: [] } }],
+  total: 1,
+  page: 1,
+};
 
 const categoryProducts = {
   items: [{ name: "Лира", slug: "lira", price_from: "18900", image_keys: [], images: [], updated_at: "2026-09-01T10:00:00Z" }],

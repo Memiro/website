@@ -44,6 +44,8 @@ export interface LandingSummary {
   slug: string;
   heading: string;
   updated_at: string;
+  /** The mirror standing for the tile, or nothing while its products are unphotographed. */
+  image: ProductImage | null;
 }
 
 export interface Landing extends LandingSummary {
@@ -72,6 +74,8 @@ export interface Category {
   name: string;
   slug: string;
   updated_at: string;
+  /** The mirror standing for the tile, or nothing while its products are unphotographed. */
+  image: ProductImage | null;
 }
 
 /** One narrower copy of a photograph: the key naming it and the width it was made at. */
@@ -221,7 +225,8 @@ function isLandingSummary(value: unknown): value is LandingSummary {
   return landing !== null
     && typeof landing.slug === "string"
     && typeof landing.heading === "string"
-    && typeof landing.updated_at === "string";
+    && typeof landing.updated_at === "string"
+    && isNullableImage(landing.image);
 }
 
 function isLanding(value: unknown): value is Landing {
@@ -317,7 +322,8 @@ function isCategory(value: unknown): value is Category {
   return category !== null
     && typeof category.name === "string"
     && typeof category.slug === "string"
-    && typeof category.updated_at === "string";
+    && typeof category.updated_at === "string"
+    && isNullableImage(category.image);
 }
 
 function isProductSummary(value: unknown): value is ProductSummary {
@@ -339,6 +345,10 @@ export function isProductImage(value: unknown): value is ProductImage {
     return false;
   }
   return typeof image.key === "string" && isArrayOf(image.variants, isImageVariant);
+}
+
+function isNullableImage(value: unknown): value is ProductImage | null {
+  return value === null || isProductImage(value);
 }
 
 function isImageVariant(value: unknown): value is ImageVariant {

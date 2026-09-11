@@ -3,8 +3,9 @@ from fastapi import status
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from memiro.application.browse_catalog import LandingsList, LandingSummary
+from tests.common.factory.catalog import SECOND_PRODUCT
 from tests.integration.api_client import ApiClient
-from tests.integration.prime import CATALOG_STAMP, prime_landing
+from tests.integration.prime import CATALOG_STAMP, prime_landing, prime_photograph, prime_priced_neighbours
 
 pytestmark = pytest.mark.usefixtures("catalog")
 
@@ -39,3 +40,32 @@ async def test_a_listed_landing_carries_the_day_it_was_last_edited(
     listing = (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content()
 
     assert listing.items[0].updated_at == CATALOG_STAMP
+
+
+async def test_a_landing_tile_shows_a_mirror_its_own_narrowing_leaves(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """Two landings of one category do not show the same photograph: each tile keeps to its narrowing."""
+    await prime_priced_neighbours(engine)
+    await prime_landing(engine)
+    await prime_photograph(engine, "round-front.jpg", product_id=SECOND_PRODUCT)
+
+    listing = (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].image is not None
+    assert listing.items[0].image.key == "round-front.jpg"
+
+
+async def test_a_landing_whose_mirrors_are_unphotographed_carries_no_photograph(
+    api_client: ApiClient,
+    engine: AsyncEngine,
+) -> None:
+    """A narrowing that leaves no photographed mirror answers with nothing, not with somebody else's."""
+    await prime_priced_neighbours(engine)
+    await prime_landing(engine)
+    await prime_photograph(engine, "rectangular-front.jpg")
+
+    listing = (await api_client.list_landings()).assert_status(status.HTTP_200_OK).ensure_content()
+
+    assert listing.items[0].image is None

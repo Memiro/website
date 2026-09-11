@@ -36,7 +36,7 @@ from tests.integration.prime import (
     CATALOG_STAMP,
     prime_extra_product,
     prime_numeric_catalog,
-    prime_photograph_of_the_product,
+    prime_photograph,
     prime_priced_neighbours,
     prime_product_images,
     prime_product_publication,
@@ -374,7 +374,7 @@ async def test_a_photograph_of_a_listed_product_carries_the_widths_it_was_made_a
     container: AsyncContainer = app.state.dishka_container
     storage = await container.get(ProductImageStorage)
     key = await storage.put(ImageUpload(filename="mirror.jpg", content=photograph()))
-    await prime_photograph_of_the_product(engine, key)
+    await prime_photograph(engine, key)
 
     listing = (await api_client.list_category_products("mirrors")).assert_status(status.HTTP_200_OK).ensure_content()
 
