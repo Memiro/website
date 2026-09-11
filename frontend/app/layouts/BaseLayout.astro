@@ -48,6 +48,8 @@ const site = await readSite();
     {canonical && <meta property="og:url" content={canonical} />}
     {image && <meta property="og:image" content={image} />}
     <meta name="twitter:card" content="summary_large_image" />
+    {/* The .ico is what crawlers and older browsers ask for by convention at the root; the .svg is what modern ones prefer, and it alone follows the visitor's theme. */}
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     {documents.map((document) => <script is:inline type="application/ld+json" set:html={JSON.stringify(document)} />)}
   </head>
