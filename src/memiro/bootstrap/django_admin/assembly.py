@@ -11,6 +11,9 @@ def admin_settings(config: Config) -> dict[str, Any]:
     return {
         "SECRET_KEY": config.admin.secret_key,
         "DEBUG": False,
+        # Logging is already configured by the settings module: Django must
+        # not run its own dictConfig over it and take the root handler away.
+        "LOGGING_CONFIG": None,
         "ALLOWED_HOSTS": list(config.admin.allowed_hosts),
         "INSTALLED_APPS": [
             "django.contrib.admin",
